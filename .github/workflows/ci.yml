@@ -1,0 +1,68 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        echo "✅ Dependencies installed"
+    
+    - name: API Standards Check
+      run: |
+        cd backend
+        echo "🔍 Checking API standards..."
+        python lint_rules.py
+        if [ $? -ne 0 ]; then
+          echo "❌ API standards not met!"
+          exit 1
+        fi
+        echo "✅ API standards check passed!"
+    
+    - name: Run tests
+      run: |
+        cd backend
+        echo "🧪 Running tests..."
+        # Utiliser SQLite pour les tests
+        export DJANGO_DATABASE_ENGINE=sqlite3
+        python manage.py test
+        echo "✅ Tests passed!"
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm install
+    - name: Run tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false
+
+  deploy:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Deploy to production
+      run: echo "Deploy to cloud here"

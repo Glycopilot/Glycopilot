@@ -1,0 +1,52 @@
+services:
+  # Base de données MySQL
+  database:
+    image: mysql:8.0
+    container_name: glycopilot-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: glycopilot_db
+      MYSQL_USER: glycopilot_user
+      MYSQL_PASSWORD: glycopilot_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+  # Backend Django
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    image: glycopilot-backend
+    container_name: glycopilot-back
+    ports:
+      - "8006:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DB_HOST=database
+      - DB_NAME=glycopilot_db
+      - DB_USER=glycopilot_user
+      - DB_PASSWORD=glycopilot_password
+    depends_on:
+      - database
+    restart: unless-stopped
+
+  # Frontend React Native
+  frontend:
+    image: node:18-alpine
+    container_name: glycopilot-front
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./frontend:/app
+    working_dir: /app
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
