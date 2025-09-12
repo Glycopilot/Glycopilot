@@ -1,6 +1,6 @@
 from django.urls import path
 from django.http import JsonResponse
-from .standards import api_response, api_error
+from standards import api_response, api_error
 
 def api_view(request):
     """Endpoint principal de l'API"""
