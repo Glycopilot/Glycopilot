@@ -27,14 +27,27 @@ npm start
 ## Démarrage avec Docker
 
 ### Méthode simple
+
+#### Sur macOS/Linux :
 ```bash
 ./start.sh
+```
+
+#### Sur Windows :
+```cmd
+start.bat
 ```
 
 ### Méthode manuelle
 ```bash
 docker compose up --build
 ```
+
+### Prérequis
+- **Docker** et **Docker Compose** installés
+- **Python 3.x** installé
+- **Node.js** et **npm** installés
+- **Git** installé (pour les hooks de qualité)
 
 
 
