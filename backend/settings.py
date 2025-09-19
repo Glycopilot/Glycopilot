@@ -17,7 +17,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "urls"
 
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
