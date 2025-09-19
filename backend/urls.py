@@ -1,20 +1,26 @@
 from django.urls import path
 from django.http import JsonResponse
-from standards import api_response, api_error
+from datetime import datetime
 
 def api_view(request):
     """Endpoint principal de l'API"""
-    return JsonResponse(api_response(
-        data={"service": "Glycopilot API", "version": "1.0.0"},
-        message="API is running successfully"
-    ))
+    return JsonResponse({
+        "status": "success",
+        "message": "API is running successfully",
+        "data": {"service": "Glycopilot API", "version": "1.0.0"},
+        "timestamp": datetime.now().isoformat(),
+        "code": 200
+    })
 
 def health_view(request):
     """Endpoint de santé de l'API"""
-    return JsonResponse(api_response(
-        data={"status": "healthy", "database": "connected"},
-        message="Service is healthy"
-    ))
+    return JsonResponse({
+        "status": "success", 
+        "message": "Service is healthy",
+        "data": {"status": "healthy", "database": "connected"},
+        "timestamp": datetime.now().isoformat(),
+        "code": 200
+    })
 
 urlpatterns = [
     path('api/', api_view, name='api'),
