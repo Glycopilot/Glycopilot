@@ -6,9 +6,9 @@ echo "🔧 Correction automatique du code Backend..."
 cd backend
 
 echo "📝 Formatage avec Black..."
-black .
+python3 -m black .
 
 echo "📦 Organisation des imports avec isort..."
-isort .
+python3 -m isort .
 
 echo "✅ Backend: Corrections automatiques terminées!"

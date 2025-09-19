@@ -1,6 +1,7 @@
-from django.urls import path
-from django.http import JsonResponse
 from datetime import datetime
+
+from django.http import JsonResponse
+from django.urls import path
 
 
 def api_view(request):
