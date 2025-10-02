@@ -1,0 +1,17 @@
+# Environment variables example
+# Copy this file to .env and fill in your values
+
+# Database
+DB_NAME=glycopilot_db
+DB_USER=glycopilot_user
+DB_PASSWORD=glycopilot_password
+DB_HOST=localhost
+DB_PORT=3306
+
+# Django
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# API
+API_VERSION=1.0.0

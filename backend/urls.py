@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import path, include
 
 
 def api_view(request):
@@ -33,4 +33,6 @@ def health_view(request):
 urlpatterns = [
     path("api/", api_view, name="api"),
     path("api/health/", health_view, name="health"),
+    # Routes MVC
+    path("", include("routes")),
 ]
