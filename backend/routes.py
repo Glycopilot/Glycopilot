@@ -1,6 +1,8 @@
 # Routes centralisées pour l'API
-from django.urls import path, include
+from django.urls import include, path
+
 from rest_framework.routers import DefaultRouter
+
 from controllers import api_controller
 
 # Configuration du router DRF
@@ -13,11 +15,9 @@ router = DefaultRouter()
 # URLs principales
 urlpatterns = [
     # API routes
-    path('api/', include(router.urls)),
-    
+    path("api/", include(router.urls)),
     # Routes spécifiques
-    path('api/health/', api_controller.health_check, name='health_check'),
-    
+    path("api/health/", api_controller.health_check, name="health_check"),
     # Admin (si nécessaire)
     # path('admin/', admin.site.urls),
 ]

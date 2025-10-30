@@ -1,19 +1,21 @@
 # API Controller - Gestion des endpoints API
 from django.http import JsonResponse
+
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 def health_check(request):
     """
     Endpoint de vérification de santé de l'API
     """
-    return Response({
-        'status': 'healthy',
-        'message': 'API is running',
-        'version': '1.0.0'
-    }, status=status.HTTP_200_OK)
+    return Response(
+        {"status": "healthy", "message": "API is running", "version": "1.0.0"},
+        status=status.HTTP_200_OK,
+    )
+
 
 # Exemple de contrôleur pour les utilisateurs
 # @api_view(['GET', 'POST'])

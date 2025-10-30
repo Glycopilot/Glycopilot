@@ -1,7 +1,8 @@
 # Helper functions
 import uuid
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
+
 
 def generate_uuid() -> str:
     """
@@ -9,7 +10,10 @@ def generate_uuid() -> str:
     """
     return str(uuid.uuid4())
 
-def format_response(data: Any, message: str = "Success", status: int = 200) -> Dict[str, Any]:
+
+def format_response(
+    data: Any, message: str = "Success", status: int = 200
+) -> Dict[str, Any]:
     """
     Formate une réponse API standardisée
     """
@@ -18,13 +22,15 @@ def format_response(data: Any, message: str = "Success", status: int = 200) -> D
         "message": message,
         "data": data,
         "timestamp": datetime.now().isoformat(),
-        "code": status
+        "code": status,
     }
+
 
 def validate_email(email: str) -> bool:
     """
     Valide un format d'email basique
     """
     import re
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return re.match(pattern, email) is not None
