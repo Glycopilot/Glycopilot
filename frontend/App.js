@@ -15,8 +15,8 @@ export default function App() {
     try {
       const response = await axios.get('http://127.0.0.1:8000/api/');
       setMessage(response.data.message);
-    } catch (error) {
-      setMessage('Erreur de connexion à l\'API');
+    } catch (_error) {
+      setMessage("Erreur de connexion à l'API");
     } finally {
       setLoading(false);
     }

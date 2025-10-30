@@ -27,14 +27,27 @@ npm start
 ## Démarrage avec Docker
 
 ### Méthode simple
+
+#### Sur macOS/Linux :
 ```bash
 ./start.sh
+```
+
+#### Sur Windows :
+```cmd
+start.bat
 ```
 
 ### Méthode manuelle
 ```bash
 docker compose up --build
 ```
+
+### Prérequis
+- **Docker** et **Docker Compose** installés
+- **Python 3.x** installé
+- **Node.js** et **npm** installés
+- **Git** installé (pour les hooks de qualité)
 
 
 
@@ -55,3 +68,29 @@ docker compose up --build
 - `glycopilot-back` : Backend Django
 - `glycopilot-db` : Base de données MySQL
 - `glycopilot-front` : Frontend React Native
+
+## Qualité de Code
+
+### Configuration automatique
+Les outils de qualité sont **automatiquement configurés** lors du premier démarrage avec `./start.sh`. 
+
+**✅ Vérification automatique :** Avant chaque commit et push, le code est vérifié automatiquement.
+
+**⚠️ IMPORTANT :** Si le code ne respecte pas les standards, les opérations Git seront bloquées.
+
+### Outils intégrés
+- **Backend Python** : Black (formatage), Flake8 (style), isort (imports)
+- **Frontend JavaScript** : Prettier (formatage), ESLint (style)
+- **Git Hooks** : Vérification automatique avant commit/push
+
+### Commandes manuelles (optionnelles)
+```bash
+# Vérifier la qualité
+./scripts/lint_all.sh
+
+# Corriger automatiquement
+./scripts/fix_all.sh
+
+# Tester les outils
+./test_quality.sh
+```
