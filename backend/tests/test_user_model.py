@@ -1,5 +1,4 @@
 # Tests for User model
-from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from models.user import User
@@ -29,7 +28,7 @@ class UserModelTest(TestCase):
     def test_user_str_representation(self):
         """Test de la représentation string"""
         user = User.objects.create(**self.user_data)
-        expected = f"John Doe (test@example.com)"
+        expected = "John Doe (test@example.com)"
         self.assertEqual(str(user), expected)
 
     def test_user_unique_email(self):
