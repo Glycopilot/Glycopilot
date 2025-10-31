@@ -9,6 +9,12 @@ Correspond à F03.4 (visualisation avancée), F03.5 (analyse prédictive) pour l
 - `REPORT_JOBS` (nouvelle) : suivi des exports AGP (`job_id`, `user_id`, `range_start`, `range_end`, `format`, `status`, `created_at`, `completed_at`, `download_path`).
 - `USER_ALERTS` / `USER_MEDICATIONS` / `USERS_MEALS` / `USER_ACTIVITY` : utilisés pour les rapports corrélés (glycémie vs repas/activité).
 
+### Contrôle d’accès spécifique
+
+- **Patient** : agrégations calculées uniquement sur ses lectures (`user_id = request.user.id`).
+- **Doctor** : accès lecture pour patients suivis ; exports AGP générés au nom du patient (stocker `requested_by`).
+- **Admin** : peut générer rapports pour assistance, log obligatoire (`REPORT_JOBS.requested_by`).
+
 ## Métriques cliniques
 
 - **Time In Range (TIR)** = % du temps 70–180 mg/dL.

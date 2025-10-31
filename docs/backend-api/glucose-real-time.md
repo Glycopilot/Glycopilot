@@ -18,6 +18,12 @@ Ce module couvre F03.1, F03.2 et la base du système d’alertes F03.3. Il fourn
 | `USER_ALERTS` + `ALERTS` | Déclenchements d’alertes | `status` (enum), `snooze_until`, `acknowledged_at`, `source_reading_id` |
 | `SENSORS` (nouveau) | État du capteur CGM | `sensor_id`, `user_id`, `type`, `status`, `battery`, `signal_quality`, `expires_at`, `last_calibration` |
 
+### Contrôle d’accès spécifique
+
+- **Patient** : toutes les requêtes filtrent sur `user_id = request.user.id` (lectures & créations).
+- **Doctor** : utiliser une jointure sur `USERS.medical_id` ou table d’assignation (`DoctorAssignment`) pour restreindre aux patients suivis. Retourner `404` si l’accès est hors périmètre.
+- **Admin** : accès complet, mais journaliser chaque action d’écriture (`audit_logs`).
+
 ## Endpoints REST
 
 ### `POST /api/v1/glucose/manual-readings`

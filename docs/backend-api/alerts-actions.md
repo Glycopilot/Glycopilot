@@ -13,6 +13,12 @@ Ce module complète F03.3 (système d’alertes), F03.7 (protocole d’urgence) 
 | `ALERT_ACTION_LOG` (nouveau) | Historique des actions | `id`, `user_alert_id`, `action`, `payload`, `created_at`, `actor` |
 | `DASHBOARD_ACTIONS` (nouveau) | Log des actions rapides | `id`, `user_id`, `action`, `source`, `metadata`, `created_at` |
 
+### Contrôle d’accès spécifique
+
+- **Patient** : ne manipule que ses propres alertes (`user_id = request.user.id`).
+- **Doctor** : consultation des alertes possible seulement pour les patients suivis ; pas de snooze sans délégation explicite.
+- **Admin** : actions (`snooze`, `escalate`, `quick action`) doivent inclure `performed_by` dans `ALERT_ACTION_LOG`.
+
 ## Règles métier
 
 - Aucun snooze possible pour une hypo sévère (<55 mg/dL) sans override explicite.

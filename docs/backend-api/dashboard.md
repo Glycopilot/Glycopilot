@@ -17,6 +17,12 @@ Module couvrant F02 (Dashboard) et cas d’usage CU02.1 (consultation matinale) 
 | `USER_ALERTS`, `USER_MEDICATIONS`, `USERS_MEALS`, `USER_ACTIVITY` | Sources de données agrégées | lecture |
 | Services agrégés | Fonctions Python pour chaque bloc | exposition API |
 
+### Contrôle d’accès spécifique
+
+- **Patient** : `GET /dashboard/*` doit retourner uniquement les données liées à `request.user.id`.
+- **Doctor** : accès lecture aux patients suivis (filtrage par `medical_id` ou table d’assignation). Si patient non suivi → `404`.
+- **Admin** : actions de personnalisation effectuées au nom du patient doivent être loguées (`DASHBOARD_ACTIONS`, `audit_logs`).
+
 ## Endpoints
 
 ### `GET /api/v1/dashboard/summary`
