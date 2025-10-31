@@ -21,6 +21,7 @@ jobs:
         pip install -r requirements.txt
         echo "✅ Dependencies installed"
     
+    #test pipeline
     # TODO: Ajouter lint_rules.py quand les normes API seront définies
     # - name: API Standards Check
     #   run: |
