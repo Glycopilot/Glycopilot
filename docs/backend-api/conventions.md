@@ -19,33 +19,37 @@
 ## Rôles & permissions
 
 - Rôles applicatifs : `patient`, `doctor`, `admin` (issus des tables `PROFILS` / `USERS_PROFILS`).
-- Chaque méthode de contrôleur définit une liste `ALLOWED_ROLES` (ex. `['patient', 'doctor']`).
-- Middleware Django personnalisé (`RolePermissionMiddleware`) :
-  1. Extrait le rôle depuis le JWT (claim `role`) ou via base (`USERS_PROFILS`).
-  2. Vérifie que le rôle courant ∈ `ALLOWED_ROLES`; sinon `403` avec code `PERMISSION_DENIED`.
-  3. Journalise l’accès (table `audit_logs`).
-- Exemple de décorateur :
+- Chaque **méthode de contrôleur** définit une liste `ALLOWED_ROLES` (ex. `['patient', 'doctor']`). Exemple simple :
   ```python
-  class RoleRequiredMixin:
-      allowed_roles: list[str] = []
-
-      def dispatch(self, request, *args, **kwargs):
-          user_role = request.user.role
-          if user_role not in self.allowed_roles:
-              raise PermissionDenied("Role not allowed")
-          return super().dispatch(request, *args, **kwargs)
+  class GlucoseController(BaseController):
+      permissions = {
+          'get_history': ['patient', 'doctor', 'admin'],
+          'create_manual_reading': ['patient', 'admin']
+      }
   ```
-- Règle par défaut :
-  - Endpoints “patient-facing” (dashboard, glycémie, médicaments, nutrition, activité) → `patient` (et `doctor` en lecture). 
+  ou, si vous préférez l’attacher directement dans la méthode :
+  ```python
+  class GlucoseController(BaseController):
+      def get_history(self, request):
+          request.allowed_roles = ['patient', 'doctor', 'admin']
+          ...
+  ```
+- Middleware personnalisé (`RolePermissionMiddleware`) :
+  1. Extrait le rôle depuis le JWT (claim `role`) ou via la base (`USERS_PROFILS`).
+  2. Récupère la liste `ALLOWED_ROLES` associée à la méthode appelée (depuis `permissions` ou `request.allowed_roles`).
+  3. Vérifie que le rôle courant figure dans la liste ; sinon, renvoyer `403 PERMISSION_DENIED`.
+  4. Journalise l’accès (table `audit_logs`).
+- Règle par défaut :
+  - Endpoints “patient-facing” (dashboard, glycémie, médicaments, nutrition, activité) → `patient` (et `doctor` en lecture).
   - Endpoints administratifs (gestion utilisateurs, exports globaux) → `admin` uniquement.
-  - Les docteurs ont accès en lecture aux données de leurs patients (vérifier via relation `DOCTORS` ↔ `USERS`).
+  - Les docteurs n’accèdent qu’aux patients dont ils sont responsables (relation `DOCTORS` ↔ `USERS`).
 
 ### Contrôle d’accès aux données (scoping)
 
 - **Patient** : toutes les requêtes doivent filtrer sur `user_id = request.user.id`. Ne jamais exposer d’ID tiers dans les réponses.
 - **Doctor** : vérifier l’appartenance via jointure `DOCTORS.medical_id = request.user.medical_id` et `USERS.medical_id` ou table de liaison ; si non associé → `404` (masquer existence) ou `403` (selon sensibilité).
 - **Admin** : accès global mais actions d’écriture nécessitent justificatif dans `audit_logs` (`performed_by`, `reason`).
-- Mise en place d’un mixin `OwnershipQuerysetMixin` qui applique automatiquement ces filtres dans `get_queryset()`.
+- Mettre en place un helper métier (ex. `OwnershipService.scope_queryset(queryset, request.user)`) appliqué systématiquement dans les contrôleurs.
 - Pour les WebSockets, vérifier l’autorisation lors du `connect` et restreindre les messages émis au périmètre du client.
 
 ## Format d’erreur standard
