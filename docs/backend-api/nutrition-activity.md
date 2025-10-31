@@ -13,6 +13,7 @@ Fonctionnalités issues de F02.4 (widget nutrition dynamique) et F02.5 (activit�
 
 ### `GET /api/v1/nutrition/summary`
 
+- **Rôles autorisés** : `patient`, `doctor` (lecture), `admin`.
 - **Objectif** : fournir les métriques quotidiennes pour le dashboard et la page nutrition.
 - **Réponse 200** :
   ```json
@@ -36,6 +37,7 @@ Fonctionnalités issues de F02.4 (widget nutrition dynamique) et F02.5 (activit�
 
 ### `GET /api/v1/activity/today`
 
+- **Rôles autorisés** : `patient`, `doctor` (lecture), `admin`.
 - **Réponse 200** :
   ```json
   {
@@ -62,18 +64,21 @@ Fonctionnalités issues de F02.4 (widget nutrition dynamique) et F02.5 (activit�
 
 ### `POST /api/v1/activity/manual-entry`
 
+- **Rôles autorisés** : `patient`, `admin` (mise à jour de suivi). Les docteurs ne peuvent pas saisir d’activité pour le patient.
 - **Usage** : enregistrer une activité non synchronisée automatiquement.
 - **Body** : `{ "name": "Yoga", "start": "2025-10-31T18:00:00Z", "end": "2025-10-31T18:45:00Z", "caloriesBurned": 180, "intensity": "moderate" }`
 - **Persistance** : insertion dans `USER_ACTIVITY` (`source="manual"`).
 
 ### `GET /api/v1/nutrition/recommendations`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin`.
 - **Paramètres** : `timeOfDay`, `glucoseState` (`low`, `in_range`, `high`), `activityPlanned` (bool).
 - **Réponse** : liste de suggestions (`mealId`, `name`, `carbs`, `description`, `glucoseImpactEstimate`).
 - **Source** : moteur de recommandations (peut s’appuyer sur `MEALS` + IA simple). Pour MVP, renvoyer suggestions statiques basées sur `glucoseState`.
 
 ### `GET /api/v1/activity/recommendations`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin`.
 - **Paramètres** : `glucoseState`, `lastMeal`, `timeAvailable`.
 - **Réponse** : propositions d’exercices adaptés (`activityId`, `name`, `duration`, `caloriesTarget`, `warning` si glycémie trop basse).
 

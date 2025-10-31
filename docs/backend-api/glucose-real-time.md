@@ -22,6 +22,7 @@ Ce module couvre F03.1, F03.2 et la base du système d’alertes F03.3. Il fourn
 
 ### `POST /api/v1/glucose/manual-readings`
 
+- **Rôles autorisés** : `patient` (écriture), `doctor` (lecture via endpoints GET), `admin` (supervision).
 - **Objectif** : Saisie manuelle (ou import lecteur Bluetooth) pour corriger/comparer avec CGM.
 - **Headers** : `Authorization`, `Content-Type`, `X-Idempotency-Key` (UUID). 
 - **Body** :
@@ -50,6 +51,7 @@ Ce module couvre F03.1, F03.2 et la base du système d’alertes F03.3. Il fourn
 
 ### `GET /api/v1/glucose/current`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin`.
 - **Objectif** : Dernière valeur connue + métadonnées capteur.
 - **Réponse 200** :
   ```json
@@ -75,6 +77,7 @@ Ce module couvre F03.1, F03.2 et la base du système d’alertes F03.3. Il fourn
 
 ### `GET /api/v1/glucose/history`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin` (docteur uniquement pour patients associés).
 - **Query** : `start`, `end`, `granularity=5m|15m|1h`, `source=cgm|manual|all`.
 - **Réponse 200** :
   ```json
@@ -90,6 +93,7 @@ Ce module couvre F03.1, F03.2 et la base du système d’alertes F03.3. Il fourn
 
 ### `GET /api/v1/glucose/alerts`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin` (le docteur ne peut voir que les alertes de ses patients).
 - **Usage** : Liste des alertes en attente/traitées.
 - **Query** : `state=pending|acknowledged|snoozed|escalated`, `severity`, `since`.
 - **Réponse 200** :
@@ -112,6 +116,7 @@ Ce module couvre F03.1, F03.2 et la base du système d’alertes F03.3. Il fourn
 
 ### `POST /api/v1/glucose/alerts/{alertId}/acknowledge`
 
+- **Rôles autorisés** : `patient` (principal), `doctor` (si délégué), `admin` (en cas de assistance).
 - **Body** : `{ "action": "treated", "notes": "15g carbs", "followUpAt": "2025-10-31T06:30:00Z" }`
 - **Traitements** : mettre à jour `USER_ALERTS.status=acknowledged`, renseigner `acknowledged_at`, créer entrée dans `ALERT_ACTION_LOG`.
 

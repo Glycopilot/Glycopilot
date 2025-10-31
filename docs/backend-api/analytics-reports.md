@@ -21,6 +21,7 @@ Correspond à F03.4 (visualisation avancée), F03.5 (analyse prédictive) pour l
 
 ### `GET /api/v1/glucose/aggregates`
 
+- **Rôles autorisés** : `patient`, `doctor` (lecture), `admin`.
 - **Paramètres** : `period=daily|weekly|monthly`, `start` (ISO date), `compare=true` (inclure période précédente).
 - **Réponse 200** :
   ```json
@@ -51,6 +52,7 @@ Correspond à F03.4 (visualisation avancée), F03.5 (analyse prédictive) pour l
 
 ### `GET /api/v1/analytics/insights`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin`. Filtrer les données pour ne montrer au docteur que les patients suivis.
 - **Usage** : mettre en avant patterns (pic postprandial, hypos nocturnes, phénomène de l’aube).
 - **Réponse** :
   ```json
@@ -71,6 +73,7 @@ Correspond à F03.4 (visualisation avancée), F03.5 (analyse prédictive) pour l
 
 ### `GET /api/v1/analytics/reports/agp`
 
+- **Rôles autorisés** : `patient` (auto-export), `doctor` (export pour patient suivi), `admin` (support). |
 - **Paramètres** : `rangeStart`, `rangeEnd`, `format=pdf|csv|hl7`.
 - **Réponse 202** : job en cours.
 - **Flux** :

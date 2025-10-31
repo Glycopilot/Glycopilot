@@ -16,6 +16,30 @@
 - TLS 1.2 minimum, recommandation : certificate pinning sur mobile.
 - Données au repos chiffrées (AES-256 dans SQLite/Realm côté mobile, TDE côté serveur).
 
+## Rôles & permissions
+
+- Rôles applicatifs : `patient`, `doctor`, `admin` (issus des tables `PROFILS` / `USERS_PROFILS`).
+- Chaque méthode de contrôleur définit une liste `ALLOWED_ROLES` (ex. `['patient', 'doctor']`).
+- Middleware Django personnalisé (`RolePermissionMiddleware`) :
+  1. Extrait le rôle depuis le JWT (claim `role`) ou via base (`USERS_PROFILS`).
+  2. Vérifie que le rôle courant ∈ `ALLOWED_ROLES`; sinon `403` avec code `PERMISSION_DENIED`.
+  3. Journalise l’accès (table `audit_logs`).
+- Exemple de décorateur :
+  ```python
+  class RoleRequiredMixin:
+      allowed_roles: list[str] = []
+
+      def dispatch(self, request, *args, **kwargs):
+          user_role = request.user.role
+          if user_role not in self.allowed_roles:
+              raise PermissionDenied("Role not allowed")
+          return super().dispatch(request, *args, **kwargs)
+  ```
+- Règle par défaut :
+  - Endpoints “patient-facing” (dashboard, glycémie, médicaments, nutrition, activité) → `patient` (et `doctor` en lecture). 
+  - Endpoints administratifs (gestion utilisateurs, exports globaux) → `admin` uniquement.
+  - Les docteurs ont accès en lecture aux données de leurs patients (vérifier via relation `DOCTORS` ↔ `USERS`).
+
 ## Format d’erreur standard
 
 ```json

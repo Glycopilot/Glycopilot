@@ -23,6 +23,7 @@ Ce module complète F03.3 (système d’alertes), F03.7 (protocole d’urgence) 
 
 ### `POST /api/v1/glucose/alerts/snooze`
 
+- **Rôles autorisés** : `patient` (principal), `admin` (support). Les docteurs ne peuvent snoozer qu’avec délégation explicite.
 - **Body** : `{ "alertId": "uuid", "duration": 900, "reason": "Currently treating" }`
 - **Validations** :
   - `duration` ∈ [300 s, 3600 s].
@@ -35,6 +36,7 @@ Ce module complète F03.3 (système d’alertes), F03.7 (protocole d’urgence) 
 
 ### `POST /api/v1/glucose/alerts/escalate`
 
+- **Rôles autorisés** : `patient`, `admin`. `doctor` uniquement si habilité à gérer l’escalade pour un patient (vérifier relation `DOCTORS`).
 - **Body** : `{ "alertId": "uuid", "contactId": "uuid", "message": "No response detected" }`
 - **Traitements** :
   - Vérifier que le contact appartient à l’utilisateur (table `CONTACT`).
@@ -45,6 +47,7 @@ Ce module complète F03.3 (système d’alertes), F03.7 (protocole d’urgence) 
 
 ### `POST /api/v1/dashboard/actions/quick`
 
+- **Rôles autorisés** : `patient` (actions directes), `admin` (mode assistance). Les docteurs ne voient pas ces actions depuis le dashboard patient.
 - **Usage** : actions contextuelles sur le dashboard (ex. “Treat Hypo”, “Already Treated”, “Call emergency contact”).
 - **Body** :
   ```json

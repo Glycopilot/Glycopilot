@@ -20,6 +20,7 @@ Module lié à F02.3 (widget médicaments) et support des alertes d’observance
 
 ### `GET /api/v1/medications/schedule`
 
+- **Rôles autorisés** : `patient`, `doctor` (lecture), `admin`.
 - **Réponse 200** :
   ```json
   {
@@ -44,6 +45,7 @@ Module lié à F02.3 (widget médicaments) et support des alertes d’observance
 
 ### `POST /api/v1/medications/intake`
 
+- **Rôles autorisés** : `patient`, `admin` (mode assistance). `doctor` peut confirmer une prise uniquement via workflow télémédecine (à définir).
 - **Body** : `{ "scheduledDoseId": "uuid", "status": "taken", "takenAt": "2025-10-31T09:05:00Z", "notes": "After breakfast" }`
 - **Validations** :
   - `status` ∈ {`taken`, `delayed`, `skipped`}.
@@ -57,6 +59,7 @@ Module lié à F02.3 (widget médicaments) et support des alertes d’observance
 
 ### `POST /api/v1/medications/intake/{scheduledDoseId}/reschedule`
 
+- **Rôles autorisés** : `patient`, `admin`.
 - **Body** : `{ "delayMinutes": 30, "reason": "Meeting running late" }`
 - **Règles** :
   - Autoriser délais de 15, 30, 60 min ; autres valeurs → `400`.
@@ -65,6 +68,7 @@ Module lié à F02.3 (widget médicaments) et support des alertes d’observance
 
 ### `GET /api/v1/medications/stock`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin`.
 - **Réponse 200** :
   ```json
   {
