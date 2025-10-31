@@ -33,7 +33,10 @@ ROOT_URLCONF = "urls"
 
 # Configuration de la base de données
 # Utilise SQLite en mode test, MySQL en production
-if os.environ.get("TESTING") == "true" or os.environ.get("DJANGO_DATABASE_ENGINE") == "sqlite3":
+if (
+    os.environ.get("TESTING") == "true"
+    or os.environ.get("DJANGO_DATABASE_ENGINE") == "sqlite3"
+):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
