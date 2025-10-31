@@ -1,6 +1,6 @@
-# Minimal Backend API Specification
+# Backend API Specification
 
-Ce document décrit la version minimaliste de l’API backend nécessaire pour les fonctionnalités F02 (Dashboard) et F03 (Suivi de la glycémie). L’objectif est d’implémenter progressivement les routes du backend en respectant une priorité logique.
+Ce document décrit l’API backend à mettre en place pour couvrir les fonctionnalités F02 (Dashboard) et F03 (Suivi de la glycémie), en cohérence avec le modèle conceptuel de données fourni. Chaque endpoint est relié aux tables concernées du MPC afin d’assurer un alignement clair entre la couche API et la persistance.
 
 ## 1. Convention générale
 
@@ -21,20 +21,20 @@ Ce document décrit la version minimaliste de l’API backend nécessaire pour l
 }
 ```
 
-## 2. Ordre d’implémentation prioritaire
+## 2. Plan d’implémentation progressif
 
 | Priorité | Bloc fonctionnel | Objectif |
 | --- | --- | --- |
 | 0 | Authentification & Profil | Sécuriser l’accès et récupérer les préférences de base |
 | 1 | Glycémie – mesures & alertes essentielles | Saisie manuelle, lecture, alertes, WebSocket |
-| 2 | Dashboard minimal | Agrégat principal et gestion du layout |
+| 2 | Dashboard | Agrégat principal et gestion du layout |
 | 3 | Alertes avancées & actions rapides | Snooze, escalade, actions guidées |
 | 4 | Médicaments | Prochaines prises, confirmations, stocks |
 | 5 | Nutrition & activité | Résumés pour le dashboard |
 | 6 | Agrégats glycémie & rapports | TIR, AGP, exports |
 | 7 | Capteurs & prédictions | Maintenance capteurs, prédictions IA |
 
-Les sections suivantes détaillent chaque endpoint.
+Les sections suivantes détaillent chaque endpoint, leurs structures de requête/réponse et la table (ou vue) associée.
 
 ---
 
@@ -86,6 +86,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : table `USERS` (`user_id`, `email`, `first_name`, `last_name`, `unit` à ajouter), jointure facultative avec `PROFILS` via `USERS_PROFILS` pour remonter les rôles.
+
 ### `PATCH /api/v1/user/profile`
 - **Description** : met à jour partiellement le profil.
 - **Headers** : `Authorization`, `Content-Type`
@@ -120,6 +122,8 @@ Les sections suivantes détaillent chaque endpoint.
   }
 }
 ```
+
+- **Persistance** : colonnes à prévoir dans `USERS` (ex. `low_threshold`, `high_threshold`, `quiet_hours_start`, `quiet_hours_end`, `quiet_hours_critical`).
 
 ### `PATCH /api/v1/user/preferences`
 - **Description** : modifications partielles des préférences.
@@ -181,6 +185,7 @@ Les sections suivantes détaillent chaque endpoint.
 ```
 
 - **Erreurs** : `400` (plage invalide), `409` (limite 20/jour), `422` (cohérence temporelle).
+- **Persistance** : table `GLYCEMIA` (colonnes `user_id`, `measured_at`, `value`) et `GLYCEMIA_HISTO` pour l’historique. Ajouter colonnes `source`, `context`, `notes`, `photo_url`, `location_lat`, `location_lng` via migration.
 
 ### `GET /api/v1/glucose/current`
 - **Description** : renvoie la dernière mesure connue et l’état du capteur.
@@ -203,6 +208,8 @@ Les sections suivantes détaillent chaque endpoint.
   }
 }
 ```
+
+- **Persistance** : lecture depuis la dernière entrée `GLYCEMIA` et état capteur issu d’une table `SENSORS` à créer (FK `user_id`).
 
 ### `GET /api/v1/glucose/history`
 - **Description** : historique des mesures.
@@ -227,6 +234,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : dépend de `GLYCEMIA_HISTO`; prévoir index sur `(user_id, measured_at)`.
+
 ### `GET /api/v1/glucose/alerts`
 - **Description** : liste des alertes en attente ou récemment déclenchées.
 - **Headers** : `Authorization`
@@ -248,6 +257,8 @@ Les sections suivantes détaillent chaque endpoint.
   ]
 }
 ```
+
+- **Persistance** : jointure `USER_ALERTS` ↔ `ALERTS`, avec colonnes `sent_at`, `statut`. Envisager de remplacer `statut` bool par un enum (`pending`, `acknowledged`, `snoozed`, `escalated`).
 
 ### `POST /api/v1/glucose/alerts/{alertId}/acknowledge`
 - **Description** : confirmation d’une alerte avec action prise.
@@ -273,6 +284,7 @@ Les sections suivantes détaillent chaque endpoint.
 ```
 
 - **Erreurs** : `404` alerte introuvable, `409` déjà accusaée.
+- **Persistance** : mise à jour de `USER_ALERTS.statut`, ajout timestamp `acknowledged_at`.
 
 ### `WSS /api/v1/streams/glucose`
 - **Description** : flux temps réel des mesures CGM et alertes critiques.
@@ -309,10 +321,11 @@ Les sections suivantes détaillent chaque endpoint.
 
 - **Heartbeat** : `{ "type": "ping", "timestamp": "..." }` → réponse client `{ "type": "pong" }`.
 - **Gestion** : reconnexion avec back-off (5 s → 30 s).
+- **Persistance** : flux alimenté par `GLYCEMIA` (insertions réelles) et `USER_ALERTS` (événements critiques). Nécessite une file d’événements en sortie de base ou d’un broker.
 
 ---
 
-## Priorité 2 — Dashboard minimal
+## Priorité 2 — Dashboard
 
 ### `GET /api/v1/dashboard/summary`
 - **Description** : fournit la synthèse affichée sur l’écran principal.
@@ -358,6 +371,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : agrégation multi-tables (`GLYCEMIA`, `USER_ALERTS`, `USER_MEDICATIONS`, `USERS_MEALS`, `USER_ACTIVITY`). Prévoir des vues matérialisées ou un service d’agrégation.
+
 ### `GET /api/v1/dashboard/widgets`
 - **Description** : renvoie la liste des widgets et leurs métadonnées.
 - **Headers** : `Authorization`
@@ -376,6 +391,8 @@ Les sections suivantes détaillent chaque endpoint.
   ]
 }
 ```
+
+- **Persistance** : table à créer `USER_WIDGETS` (colonnes `user_id`, `widget_id`, `visible`, `refresh_interval`, `last_refreshed_at`).
 
 ### `PATCH /api/v1/dashboard/widgets/layout`
 - **Description** : sauvegarde ordre, taille et épingles.
@@ -405,6 +422,7 @@ Les sections suivantes détaillent chaque endpoint.
 
 - **Réponse 200** : structure identique + champs `updatedAt`.
 - **Erreurs** : `400` layout invalide.
+- **Persistance** : table `USER_WIDGET_LAYOUTS` (à créer) stockant la configuration (`user_id`, `widget_id`, `position`, `size`, `pinned`).
 
 ---
 
@@ -434,6 +452,7 @@ Les sections suivantes détaillent chaque endpoint.
 ```
 
 - **Erreurs** : `403` (alerte critique non snoozable).
+- **Persistance** : mise à jour de `USER_ALERTS` (`statut`, `snooze_until`) et insertion dans une table de suivi des actions (`ALERT_ACTION_LOG` à créer).
 
 ### `POST /api/v1/glucose/alerts/escalate`
 - **Description** : escalade vers contact d’urgence.
@@ -457,6 +476,8 @@ Les sections suivantes détaillent chaque endpoint.
   "status": "pending"
 }
 ```
+
+- **Persistance** : tables `CONTACT` (destinataire), `USER_ALERTS` (statut) et journal `ALERT_ACTION_LOG`.
 
 ### `POST /api/v1/dashboard/actions/quick`
 - **Description** : déclenche une action guidée depuis le dashboard.
@@ -487,6 +508,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : journal des actions utilisateur (table `DASHBOARD_ACTIONS` à créer) + enregistrement dans `USER_ALERTS` si suivi hypo.
+
 ---
 
 ## Priorité 4 — Médicaments
@@ -513,6 +536,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : tables `USER_MEDICATIONS` (colonnes `user_id`, `medication_id`, `start_date`, `taken_at`, `statut`) et `MEDICATIONS` (infos produit). Ajouter `scheduled_at`, `stock_quantity`.
+
 ### `POST /api/v1/medications/intake`
 - **Description** : confirme ou modifie le statut d’une prise.
 - **Headers** : `Authorization`, `Content-Type`
@@ -538,6 +563,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : mise à jour `USER_MEDICATIONS` (`taken_at`, `statut`), recalcul observance via vue matérialisée.
+
 ### `POST /api/v1/medications/intake/{scheduledDoseId}/reschedule`
 - **Description** : décale une prise.
 - **Headers** : `Authorization`, `Content-Type`
@@ -560,6 +587,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : même table `USER_MEDICATIONS` (ajouter colonnes `scheduled_at`, `reschedule_reason`).
+
 ### `GET /api/v1/medications/stock`
 - **Description** : surveille les stocks restants.
 - **Headers** : `Authorization`
@@ -579,6 +608,8 @@ Les sections suivantes détaillent chaque endpoint.
   ]
 }
 ```
+
+- **Persistance** : `USER_MEDICATIONS` (suivi individuel) + table `MEDICATION_STOCK` à créer (niveaux de stock, alertes).
 
 ---
 
@@ -611,6 +642,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : tables `USERS_MEALS` (dates `taken_at`) et `MEALS` (nutriments). Ajouter champs `calories`, `glucides`, `lipides`, `proteines`, `hydration_glasses`.
+
 ### `GET /api/v1/activity/today`
 - **Description** : résumé activité quotidienne.
 - **Headers** : `Authorization`
@@ -630,6 +663,8 @@ Les sections suivantes détaillent chaque endpoint.
   }
 }
 ```
+
+- **Persistance** : tables `USER_ACTIVITY` (colonnes `start`, `end`, `activity_id`) et `ACTIVITIES` (calories, durée recommandée). Ajouter compteur `steps` via intégration wearable.
 
 ---
 
@@ -658,6 +693,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : calculs effectués sur `GLYCEMIA_HISTO` et `GLYCEMIA_DATA&IA` (zones d’hyper/hypo). Créer vues/ETL pour métriques cliniques.
+
 ### `GET /api/v1/analytics/reports/agp`
 - **Description** : export AGP (job asynchrone).
 - **Headers** : `Authorization`
@@ -682,6 +719,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : génération à partir de `GLYCEMIA_HISTO`, stockage temporaire dans `REPORT_JOBS`.
+
 ---
 
 ## Priorité 7 — Capteurs & Prédictions
@@ -705,6 +744,8 @@ Les sections suivantes détaillent chaque endpoint.
   ]
 }
 ```
+
+- **Persistance** : table `SENSORS` à créer (`sensor_id`, `user_id`, `type`, `status`, `battery`, `expires_at`, `last_calibration`).
 
 ### `POST /api/v1/devices/sensors/{sensorId}/calibrations`
 - **Description** : enregistre une calibration.
@@ -734,6 +775,8 @@ Les sections suivantes détaillent chaque endpoint.
   "recordedAt": "2025-10-31T07:52:10Z"
 }
 ```
+
+- **Persistance** : table `SENSOR_CALIBRATIONS` (`sensor_id`, `user_id`, `reference_value`, `recorded_at`, `status`).
 
 ### `GET /api/v1/glucose/predictions`
 - **Description** : prévisions à court terme.
@@ -767,6 +810,8 @@ Les sections suivantes détaillent chaque endpoint.
 }
 ```
 
+- **Persistance** : stockage des prédictions dans `GLYCEMIA_DATA&IA` (`user_id`, `measured_at`, `prediction_window`, `prob_hypo`, `prob_hyper`, `recommendation`).
+
 ### `POST /api/v1/glucose/predictions/feedback`
 - **Description** : feedback utilisateur pour affiner les modèles.
 - **Headers** : `Authorization`, `Content-Type`
@@ -781,6 +826,7 @@ Les sections suivantes détaillent chaque endpoint.
 ```
 
 - **Réponse 204** : pas de contenu.
+- **Persistance** : table `PREDICTION_FEEDBACK` (à créer) pour améliorer les modèles.
 
 ---
 
@@ -798,7 +844,7 @@ Les sections suivantes détaillent chaque endpoint.
 
 ## Prochaines étapes suggérées
 
-1. Implémenter les priorités 0 et 1 pour disposer d’un MVP sécurisé et fonctionnel côté glycémie.
+1. Implémenter les priorités 0 et 1 pour constituer le socle sécurisé du suivi glycémique.
 2. Exposer le `dashboard/summary` et les actions rapides (priorités 2 & 3).
 3. Étendre progressivement avec les modules médicaments, nutrition et activité.
 4. Ajouter les agrégats, exports, maintenance capteur et prédictions selon la roadmap.
