@@ -11,6 +11,12 @@ Module couvrant F03.6 (calibration & maintenance), F03.5 (analyse prédictive) e
 | `GLYCEMIA_DATA&IA` | Données enrichies | colonnes déjà mentionnées (predictions, recommandations) |
 | `PREDICTION_FEEDBACK` (nouvelle) | Retours utilisateur sur l’IA | `id`, `prediction_id`, `user_id`, `outcome`, `user_action`, `recorded_at` |
 
+### Contrôle d’accès spécifique
+
+- **Patient** : n’accède qu’à ses capteurs/predictions (`user_id = request.user.id`).
+- **Doctor** : lecture uniquement des capteurs/predictions des patients suivis.
+- **Admin** : peut déclencher calibrations/diagnostics pour assistance ; journaliser (`SENSOR_CALIBRATIONS.performed_by`).
+
 ## Endpoints capteurs
 
 ### `GET /api/v1/devices/sensors`

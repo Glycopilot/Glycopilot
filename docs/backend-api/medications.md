@@ -16,6 +16,12 @@ Module lié à F02.3 (widget médicaments) et support des alertes d’observance
 | `USER_MEDICATIONS` | ajouter `scheduled_dose_id` (uuid), `scheduled_at`, `taken_at`, `status` enum (`pending`, `taken`, `delayed`, `skipped`), `delay_reason`, `notes`, `observance_window` |
 | `MEDICATION_STOCK` (nouvelle) | `id`, `user_id`, `medication_id`, `quantity_unit`, `units_remaining`, `days_of_supply`, `projected_depletion_date`, `threshold_warning`, `threshold_critical`, `updated_at` |
 
+### Contrôle d’accès spécifique
+
+- **Patient** : accès complet mais uniquement à ses propres traitements (`user_id = request.user.id`).
+- **Doctor** : lecture des plannings/stocks pour patients suivis ; pas de `POST` (sauf workflow télémédecine défini ultérieurement).
+- **Admin** : peut effectuer des actions pour assistance, avec journalisation (`DASHBOARD_ACTIONS`, `audit_logs`).
+
 ## Endpoints
 
 ### `GET /api/v1/medications/schedule`

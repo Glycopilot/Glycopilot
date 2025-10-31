@@ -9,6 +9,12 @@ Fonctionnalités issues de F02.4 (widget nutrition dynamique) et F02.5 (activit�
 | Nutrition | `MEALS`, `USERS_MEALS` | Ajouter `calories`, `carbs`, `proteins`, `fats`, `hydration_glasses`, `impact_glucose_estimated` dans `MEALS`. `USERS_MEALS` doit stocker `taken_at`, `portion`, `notes`, `context`. |
 | Activité | `ACTIVITIES`, `USER_ACTIVITY` | Ajouter `steps`, `intensity`, `calories_burned`, `heart_rate_avg`, `source` (`wearable`, `manual`). Indiquer `start`, `end`, `synced_at`. |
 
+### Contrôle d’accès spécifique
+
+- **Patient** : requêtes filtrées par `user_id = request.user.id`.
+- **Doctor** : lecture des données nutrition/activité limitée aux patients suivis ; pas de modifications.
+- **Admin** : peut saisir manuellement des activités/repas pour assistance (log obligatoire).
+
 ## Endpoints
 
 ### `GET /api/v1/nutrition/summary`

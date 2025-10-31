@@ -15,6 +15,21 @@ Ce document récapitule les rôles applicatifs et les autorisations associées �
 - L’authentification JWT embarque le rôle principal (`role` claim). Un middleware vérifie l’appartenance du rôle au tableau `ALLOWED_ROLES` défini sur chaque méthode de contrôleur.
 - Les docteurs ne peuvent consulter que les données des patients auxquels ils sont explicitement rattachés (`USERS.medical_id` ↔ `DOCTORS.medical_id`).
 - Les administrateurs peuvent intervenir en lecture/écriture pour assistance, mais toute action doit être auditée (`audit_logs`).
+- Les contrôleurs doivent appliquer des filtres de propriété :
+  - **Patient** : `queryset.filter(user_id=request.user.id)` (ou renvoyer `403`).
+  - **Doctor** : filtrer via une sous-requête `user_id__in=DoctorAssignment.patients_of(request.user)`.
+  - **Admin** : accès complet, mais vérifier `request.user.is_superuser` si réutilisation auth Django.
+- Définir un mixin DRF ou décorateur `@allowed_roles('patient', 'doctor')` appliqué sur chaque view.
+- Ajouter une propriété `allowed_roles` sur les classes de vue. Ex. :
+  ```python
+  class GlucoseHistoryView(RoleRequiredMixin, OwnershipQuerysetMixin, APIView):
+      allowed_roles = ['patient', 'doctor', 'admin']
+
+      def get_queryset(self):
+          qs = GlucoseReading.objects.all()
+          return self.scope_queryset(qs)
+  ```
+- Pour les vues `ViewSet`, surcharger `get_permissions()` en fonction de l’action (`self.action`).
 
 ## Autorisations par module
 

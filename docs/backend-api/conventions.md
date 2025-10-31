@@ -40,6 +40,14 @@
   - Endpoints administratifs (gestion utilisateurs, exports globaux) → `admin` uniquement.
   - Les docteurs ont accès en lecture aux données de leurs patients (vérifier via relation `DOCTORS` ↔ `USERS`).
 
+### Contrôle d’accès aux données (scoping)
+
+- **Patient** : toutes les requêtes doivent filtrer sur `user_id = request.user.id`. Ne jamais exposer d’ID tiers dans les réponses.
+- **Doctor** : vérifier l’appartenance via jointure `DOCTORS.medical_id = request.user.medical_id` et `USERS.medical_id` ou table de liaison ; si non associé → `404` (masquer existence) ou `403` (selon sensibilité).
+- **Admin** : accès global mais actions d’écriture nécessitent justificatif dans `audit_logs` (`performed_by`, `reason`).
+- Mise en place d’un mixin `OwnershipQuerysetMixin` qui applique automatiquement ces filtres dans `get_queryset()`.
+- Pour les WebSockets, vérifier l’autorisation lors du `connect` et restreindre les messages émis au périmètre du client.
+
 ## Format d’erreur standard
 
 ```json
