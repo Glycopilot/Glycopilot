@@ -12,24 +12,26 @@ Ce document récapitule les rôles applicatifs et les autorisations associées �
 
 ### Règles générales
 
-- L’authentification JWT embarque le rôle principal (`role` claim). Un middleware vérifie l’appartenance du rôle au tableau `ALLOWED_ROLES` défini sur chaque méthode de contrôleur.
-- Les docteurs ne peuvent consulter que les données des patients auxquels ils sont explicitement rattachés (`USERS.medical_id` ↔ `DOCTORS.medical_id`).
+- L’authentification JWT embarque le rôle principal (`role` claim). Un middleware inspecte **la liste `ALLOWED_ROLES` déclarée par la méthode de contrôleur** et refuse l’accès si le rôle n’est pas autorisé.
+- Les docteurs ne peuvent consulter que les données des patients auxquels ils sont explicitement rattachés (`USERS.medical_id` ↔ `DOCTORS.medical_id` ou table d’assignation dédiée).
 - Les administrateurs peuvent intervenir en lecture/écriture pour assistance, mais toute action doit être auditée (`audit_logs`).
-- Les contrôleurs doivent appliquer des filtres de propriété :
-  - **Patient** : `queryset.filter(user_id=request.user.id)` (ou renvoyer `403`).
-  - **Doctor** : filtrer via une sous-requête `user_id__in=DoctorAssignment.patients_of(request.user)`.
-  - **Admin** : accès complet, mais vérifier `request.user.is_superuser` si réutilisation auth Django.
-- Définir un mixin DRF ou décorateur `@allowed_roles('patient', 'doctor')` appliqué sur chaque view.
-- Ajouter une propriété `allowed_roles` sur les classes de vue. Ex. :
+- Les contrôleurs appliquent des filtres de propriété explicites :
+  - **Patient** : filtrer sur `user_id = request.user.id` (sinon `403`).
+  - **Doctor** : ajouter une condition `user_id__in = DoctorAssignment.for_user(request.user)`.
+  - **Admin** : accès complet, mais documenter la raison (`performed_by`, `reason`).
+- Créer un décorateur `@allowed_roles([...])` ou un helper `require_roles(['patient'])` à appliquer sur chaque méthode de contrôleur.
+- Exemple :
   ```python
-  class GlucoseHistoryView(RoleRequiredMixin, OwnershipQuerysetMixin, APIView):
-      allowed_roles = ['patient', 'doctor', 'admin']
-
-      def get_queryset(self):
-          qs = GlucoseReading.objects.all()
-          return self.scope_queryset(qs)
+  @allowed_roles(['patient', 'doctor', 'admin'])
+  def get_history(self, request):
+      readings = GlucoseService.scope(request.user).history()
+      ...
   ```
-- Pour les vues `ViewSet`, surcharger `get_permissions()` en fonction de l’action (`self.action`).
+- Centraliser la logique de filtrage dans un utilitaire (`GlucoseService.scope(user)` ci-dessus) ou un mixin `OwnershipMixin` partagé par les contrôleurs.
+- Ajouter des tests automatisés couvrant :
+  - accès refusé (`403`) pour un rôle non listé,
+  - accès autorisé pour les rôles valides,
+  - restriction docteur → patient non assigné (`404` ou `403`).
 
 ## Autorisations par module
 
@@ -117,18 +119,19 @@ Ce document récapitule les rôles applicatifs et les autorisations associées �
 
 ## Implémentation technique proposée
 
-- Définir un mixin DRF ou décorateur `@allowed_roles('patient', 'doctor')` appliqué sur chaque view.
-- Ajouter une propriété `allowed_roles` sur les classes de vue. Ex. :
+- Créer un décorateur `@allowed_roles([...])` ou une fonction utilitaire `require_roles(['patient'])` à appliquer sur chaque **méthode de contrôleur** (`controllers/api_controller.py`, etc.).
   ```python
-  class GlucoseHistoryView(RoleRequiredMixin, APIView):
-      allowed_roles = ['patient', 'doctor', 'admin']
+  @allowed_roles(['patient', 'doctor', 'admin'])
+  def get_history(self, request):
+      readings = GlucoseService.scope(request.user).history()
+      ...
   ```
-- Pour les vues `ViewSet`, surcharger `get_permissions()` en fonction de l’action (`self.action`).
-- Les contrôleurs WebSocket doivent effectuer la même vérification lors de la connexion (`connect`).
+- Centraliser le filtrage des données dans un helper (`Service.scope(user)`), appelé systématiquement en début de méthode.
+- Veiller à ce que les contrôleurs WebSocket appellent également `require_roles` au `connect`.
 - Mettre en place des tests automatisés couvrant :
   - accès refusé (`403`) pour un rôle non listé,
   - accès autorisé pour les rôles valides,
-  - visibilité restreinte pour les docteurs (vérifier qu’ils n’accèdent qu’aux patients assignés).
+  - restriction docteur ↔ patient (patient non assigné → `404` ou `403`).
 
 Cette matrice doit être synchronisée avec les tickets Trello et la documentation API pour garantir une implémentation cohérente de la sécurité.
 
