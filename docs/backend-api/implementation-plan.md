@@ -27,5 +27,36 @@ Ce plan ordonne les travaux backend selon les dépendances fonctionnelles et tec
 - Les livraisons doivent s’accompagner d’un **plan de tests** (unitaires + intégration) et d’un **rapport de migration**.
 - Les décisions d’implémentation divergentes doivent être consignées dans un paragraphe “Décisions & Hypothèses” dans le fichier module.
 
+## Travail en parallèle & dépendances
+
+### Chaîne critique
+
+1. **Préparatifs schéma & migrations** → bloqueurs pour tous les modules.
+2. **Auth & profil** → prerequisites pour toute donnée utilisateur.
+3. **Glycémie temps réel** → nécessaire avant dashboard, alertes avancées, prédictions, analytics.
+
+Ces trois étapes doivent être terminées séquentiellement avant de lancer les autres chantiers.
+
+### Modules parallélisables (après l’étape 3)
+
+| Bloc | Peut démarrer quand | Peut être mené en parallèle avec |
+| --- | --- | --- |
+| Dashboard (`dashboard.md`) | Après Glycémie temps réel | Alertes avancées, Médicaments |
+| Alertes avancées (`alerts-actions.md`) | Après Glycémie temps réel | Dashboard, Médicaments |
+| Médicaments (`medications.md`) | Après Préparatifs schéma + Auth/Glycémie (lecture données utilisateur) | Dashboard, Alertes avancées |
+| Nutrition & activité (`nutrition-activity.md`) | Après Préparatifs schéma + Auth/Glycémie | Médicaments |
+| Capteurs & prédictions (`devices-predictions.md`) | Après Glycémie temps réel (besoin des lectures) | Dashboard, Alertes, Médicaments |
+
+### Modules dépendants d’autres livraisons
+
+- **Analytics & rapports** nécessite que les données glycémie, nutrition et activité soient consolidées (idéalement après livraison des modules correspondants).
+- **QA & observabilité** progresse en continu, mais les tests E2E finaux s’exécutent après l’ensemble des modules fonctionnels.
+
+### Conseils d’organisation
+
+- Synchroniser les équipes via contrats d’API : refermer aux exemples JSON de chaque fichier (`docs/backend-api/<module>.md`).
+- Prévoir des mock services (ML, notifications) pour permettre le développement parallèle sans dépendance bloquante.
+- Communiquer dans Trello/Jira les prérequis de chaque ticket (ex. “À démarrer après merge de la carte Glycémie”).
+
 Suivre ce plan garantit la cohérence fonctionnelle et facilite l’activation progressive du dashboard F02 et du suivi glycémique F03.
 
