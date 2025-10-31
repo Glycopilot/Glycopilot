@@ -21,6 +21,7 @@ Module couvrant F02 (Dashboard) et cas d’usage CU02.1 (consultation matinale) 
 
 ### `GET /api/v1/dashboard/summary`
 
+- **Rôles autorisés** : `patient`, `doctor` (lecture), `admin`.
 - **Usage** : alimenter l’écran d’accueil en 800 ms max.
 - **Query facultative** : `include[]=nutrition&include[]=activity` (sinon tous les modules).
 - **Réponse 200** :
@@ -57,6 +58,7 @@ Module couvrant F02 (Dashboard) et cas d’usage CU02.1 (consultation matinale) 
 
 ### `GET /api/v1/dashboard/widgets`
 
+- **Rôles autorisés** : `patient`, `doctor` (lecture seule), `admin`.
 - **Usage** : construire les écrans de personnalisation.
 - **Réponse 200** :
   ```json
@@ -84,6 +86,7 @@ Module couvrant F02 (Dashboard) et cas d’usage CU02.1 (consultation matinale) 
 
 ### `PATCH /api/v1/dashboard/widgets/layout`
 
+- **Rôles autorisés** : `patient` (personnalisation personnelle), `admin` (support). Les docteurs n’ont pas accès à la personnalisation d’un patient.
 - **Body** :
   ```json
   {

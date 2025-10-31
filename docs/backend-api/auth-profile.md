@@ -10,7 +10,7 @@
 
 | Table MPC | Colonnes utiles | Actions |
 | --- | --- | --- |
-| `USERS` | `user_id`, `email`, `password`, `first_name`, `last_name`, `phone_number`, `birth_date`, `adress`, `medical_comment`, `actif`, `created_at` | Ajouter `unit`, `low_threshold`, `high_threshold`, `quiet_hours_start`, `quiet_hours_end`, `quiet_hours_critical` |
+| `USERS` | `user_id`, `email`, `password`, `first_name`, `last_name`, `phone_number`, `birth_date`, `adress`, `medical_comment`, `actif`, `created_at`, `medical_id` | Ajouter `unit`, `low_threshold`, `high_threshold`, `quiet_hours_start`, `quiet_hours_end`, `quiet_hours_critical`, `role_cache` |
 | `PROFILS`, `USERS_PROFILS` | Rôles associés | Lecture seule |
 | `CONTACT` | Contacts d’urgence | (consommé par d’autres modules) |
 
@@ -45,7 +45,8 @@ Migrations à prévoir : ajout des colonnes dans `USERS`, index sur `email`, cha
     "unit": "mg/dL",
     "lowThreshold": 70,
     "highThreshold": 180,
-    "createdAt": "2025-10-31T08:10:00Z"
+    "createdAt": "2025-10-31T08:10:00Z",
+    "role": "patient"
   }
   ```
 - **Persistance** : lecture `USERS`, optionnellement `USERS_PROFILS` pour exposer `roles`.
@@ -85,6 +86,7 @@ Migrations à prévoir : ajout des colonnes dans `USERS`, index sur `email`, cha
 - Centraliser la logique d’unité et de seuils dans un service (`services/user_preferences.py`).
 - Prévoir une tâche pour recalculer les alertes si les seuils changent (mise à jour `USER_ALERTS`).
 - Mettre en place la table `revoked_tokens` (ou Redis) pour gérer le logout.
+- Mettre en cache le rôle (champ `role_cache` ou claim JWT) pour éviter les jointures fréquentes sur `USERS_PROFILS`.
 
 ## Tests recommandés
 
@@ -98,4 +100,5 @@ Migrations à prévoir : ajout des colonnes dans `USERS`, index sur `email`, cha
 
 - Les rôles (`patient`, `clinician`, `admin`) seront exposés dans la réponse profil si la donnée `PROFILS` est pertinente pour le front.
 - Les plages silencieuses sont stockées en UTC. Le front convertit selon fuseau utilisateur.
+- La vérification de permissions utilise le rôle principal (`role_cache`) ; si un utilisateur possède plusieurs profils, définir une règle de priorité (ex. `admin` > `doctor` > `patient`).
 

@@ -13,6 +13,7 @@ Ce dossier décrit l’ensemble des APIs backend à mettre en œuvre pour les fo
 | --- | --- |
 | `conventions.md` | Standards transverses (auth, headers, erreurs, performance). |
 | `implementation-plan.md` | Priorités d’implémentation et dépendances. |
+| `permissions.md` | Modèle de rôles, règles d’autorisation par endpoint. |
 | `auth-profile.md` | Authentification, profil utilisateur, préférences. |
 | `glucose-real-time.md` | Mesures glycémie, historique, WebSocket, alertes de base. |
 | `dashboard.md` | Agrégations dashboard, gestion des widgets. |

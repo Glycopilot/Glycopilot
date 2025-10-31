@@ -15,6 +15,7 @@ Module couvrant F03.6 (calibration & maintenance), F03.5 (analyse prédictive) e
 
 ### `GET /api/v1/devices/sensors`
 
+- **Rôles autorisés** : `patient`, `doctor` (lecture), `admin`.
 - **Usage** : afficher l’état du capteur dans le widget glycémie.
 - **Réponse 200** :
   ```json
@@ -38,6 +39,7 @@ Module couvrant F03.6 (calibration & maintenance), F03.5 (analyse prédictive) e
 
 ### `POST /api/v1/devices/sensors/{sensorId}/calibrations`
 
+- **Rôles autorisés** : `patient`, `admin`. `doctor` peut uniquement consulter l’historique.
 - **Body** : `{ "referenceValue": 110, "unit": "mg/dL", "recordedAt": "2025-10-31T07:50:00Z", "stepsCompleted": ["wash_hands", "finger_prick", "enter_value"], "notes": "Calibration morning" }`
 - **Validations** :
   - `sensorId` appartient à l’utilisateur.
@@ -50,12 +52,14 @@ Module couvrant F03.6 (calibration & maintenance), F03.5 (analyse prédictive) e
 
 ### `POST /api/v1/devices/sensors/{sensorId}/diagnostics`
 
+- **Rôles autorisés** : `patient`, `admin` (support).
 - **Usage** : lancer un test de connectivité depuis l’app.
 - **Réponse** : rapport (`signalStrength`, `latency`, `recommendation`).
 - **Implémentation** : endpoint appelle un service interne (ping capteur, vérifier latence). Peut être stub en V1.
 
 ### `POST /api/v1/devices/sensors/{sensorId}/reset`
 
+- **Rôles autorisés** : `patient`, `admin`.
 - **Usage** : forcer une réinitialisation (ré-appairage). 
 - **Sécurité** : nécessite scope `patient:advanced` ou action confirmée par code.
 
@@ -63,6 +67,7 @@ Module couvrant F03.6 (calibration & maintenance), F03.5 (analyse prédictive) e
 
 ### `GET /api/v1/glucose/predictions`
 
+- **Rôles autorisés** : `patient`, `doctor`, `admin` (lecture). Les docteurs voient uniquement les patients suivis.
 - **Paramètres** : `window=30|60` (minutes).
 - **Réponse 200** :
   ```json
@@ -93,6 +98,7 @@ Module couvrant F03.6 (calibration & maintenance), F03.5 (analyse prédictive) e
 
 ### `POST /api/v1/glucose/predictions/feedback`
 
+- **Rôles autorisés** : `patient`, `admin` (support). |
 - **Body** : `{ "predictionId": "uuid", "outcome": "accurate", "userAction": "took_carbs" }`
 - **Traitements** : insertion `PREDICTION_FEEDBACK`. Peut être utilisé en ML pour améliorer modèle.
 - **Réponse** : `204 No Content`.
