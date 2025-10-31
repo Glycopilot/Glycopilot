@@ -3,8 +3,10 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+    branchess: [CI]
   pull_request:
     branches: [ main ]
+    branchess: [CI]
 
 jobs:
   test-backend:
