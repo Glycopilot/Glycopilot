@@ -2,11 +2,13 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
-    branches: [ CI ]
+    branches:
+      - main
+      - ci/cd
   pull_request:
-    branches: [ main ]
-    branches: [ CI ]
+    branches:
+      - main 
+      - ci/cd
 
 jobs:
   test-backend:
