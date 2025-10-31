@@ -39,8 +39,7 @@ jobs:
       run: |
         cd backend
         echo "🧪 Running tests..."
-        # Utiliser SQLite pour les tests
-        export DJANGO_DATABASE_ENGINE=sqlite3
+        export TESTING=true
         python manage.py test
         echo "✅ Tests passed!"
 

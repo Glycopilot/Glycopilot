@@ -31,19 +31,29 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "urls"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("DB_NAME", "glycopilot_db"),
-        "USER": os.environ.get("DB_USER", "glycopilot_user"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "glycopilot_password"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "3306"),
-        "OPTIONS": {
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+# Configuration de la base de données
+# Utilise SQLite en mode test, MySQL en production
+if os.environ.get("TESTING") == "true" or os.environ.get("DJANGO_DATABASE_ENGINE") == "sqlite3":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("DB_NAME", "glycopilot_db"),
+            "USER": os.environ.get("DB_USER", "glycopilot_user"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "glycopilot_password"),
+            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "PORT": os.environ.get("DB_PORT", "3306"),
+            "OPTIONS": {
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
 
 CORS_ALLOW_ALL_ORIGINS = True
 
