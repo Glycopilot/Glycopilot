@@ -14,26 +14,3 @@ def health_check(request):
         status=status.HTTP_200_OK,
     )
 
-
-# Exemple de contrôleur pour les utilisateurs
-# @api_view(['GET', 'POST'])
-# def user_list(request):
-#     if request.method == 'GET':
-#         # Logique pour récupérer les utilisateurs
-#         pass
-#     elif request.method == 'POST':
-#         # Logique pour créer un utilisateur
-#         pass
-
-# Exemple de contrôleur pour les produits
-# @api_view(['GET', 'PUT', 'DELETE'])
-# def product_detail(request, pk):
-#     if request.method == 'GET':
-#         # Logique pour récupérer un produit
-#         pass
-#     elif request.method == 'PUT':
-#         # Logique pour modifier un produit
-#         pass
-#     elif request.method == 'DELETE':
-#         # Logique pour supprimer un produit
-#         pass
