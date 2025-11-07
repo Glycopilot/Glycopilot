@@ -1,1 +1,0 @@
-# Controllers package - Django controllers
