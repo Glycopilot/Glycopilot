@@ -125,7 +125,7 @@ def refresh_token(request):
         access_token = str(refresh.access_token)
 
         return Response({"access": access_token}, status=status.HTTP_200_OK)
-    except Exception as e:
+    except Exception:
         return Response(
             {"error": "Token invalide ou expiré."},
             status=status.HTTP_401_UNAUTHORIZED,
@@ -162,7 +162,7 @@ def logout(request):
         token.blacklist()
 
         return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
-    except Exception as e:
+    except Exception:
         return Response(
             {"error": "Token invalide."},
             status=status.HTTP_400_BAD_REQUEST,
