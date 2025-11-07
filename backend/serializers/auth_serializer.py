@@ -86,19 +86,13 @@ class LoginSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError(
-                {"email": "Identifiants incorrects."}
-            )
+            raise serializers.ValidationError({"email": "Identifiants incorrects."})
 
         if not user.check_password(password):
-            raise serializers.ValidationError(
-                {"password": "Identifiants incorrects."}
-            )
+            raise serializers.ValidationError({"password": "Identifiants incorrects."})
 
         if not user.is_active:
-            raise serializers.ValidationError(
-                {"email": "Ce compte est désactivé."}
-            )
+            raise serializers.ValidationError({"email": "Ce compte est désactivé."})
 
         data["user"] = user
         return data

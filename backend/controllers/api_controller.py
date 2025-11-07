@@ -13,4 +13,3 @@ def health_check(request):
         {"status": "healthy", "message": "API is running", "version": "1.0.0"},
         status=status.HTTP_200_OK,
     )
-
