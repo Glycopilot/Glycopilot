@@ -161,9 +161,7 @@ def logout(request):
         token = RefreshToken(refresh_token)
         token.blacklist()
 
-        return Response(
-            {"message": "Déconnexion réussie."}, status=status.HTTP_200_OK
-        )
+        return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(
             {"error": "Token invalide."},
