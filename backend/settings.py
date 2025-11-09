@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta
 
 SECRET_KEY = "django-insecure-change-me"
@@ -7,6 +8,9 @@ ALLOWED_HOSTS = ["*"]
 
 # Modèle utilisateur personnalisé
 AUTH_USER_MODEL = "models.User"
+
+# Détection du mode test
+TESTING = "test" in sys.argv
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -17,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     # Apps locales
     "models",
@@ -40,7 +45,8 @@ ROOT_URLCONF = "urls"
 # Configuration de la base de données
 # Utilise SQLite en mode test, MySQL en production
 if (
-    os.environ.get("TESTING") == "true"
+    TESTING
+    or os.environ.get("TESTING") == "true"
     or os.environ.get("DJANGO_DATABASE_ENGINE") == "sqlite3"
 ):
     DATABASES = {
