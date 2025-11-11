@@ -7,6 +7,66 @@
   },
   "item": [
     {
+      "name": "Register patient",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"patient@example.com\",\n  \"first_name\": \"Alice\",\n  \"last_name\": \"Patient\",\n  \"password\": \"StrongPass123\",\n  \"password_confirm\": \"StrongPass123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8006/api/auth/register",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8006",
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Register support",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"support@example.com\",\n  \"first_name\": \"Sam\",\n  \"last_name\": \"Support\",\n  \"password\": \"StrongPass123\",\n  \"password_confirm\": \"StrongPass123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8006/api/auth/register",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8006",
+          "path": [
+            "api",
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Patient login",
       "request": {
         "method": "POST",
