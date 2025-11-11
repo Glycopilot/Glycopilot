@@ -26,6 +26,9 @@ build/
 dist/
 *.egg-info/
 
+# Node packages
+node_modules/
+
 # macOS metadata
 .DS_Store
 
