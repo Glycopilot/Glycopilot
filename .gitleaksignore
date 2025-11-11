@@ -1,0 +1,15 @@
+# False positives: sample JWT tokens kept for documentation purposes in historical commits
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/controllers/auth_controller.py:generic-api-key:35
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/controllers/auth_controller.py:generic-api-key:74
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/controllers/auth_controller.py:generic-api-key:112
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/AUTH_API.md:generic-api-key:84
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/AUTH_API.md:generic-api-key:119
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/AUTH_API.md:generic-api-key:153
+# False positives: documented example tokens that look like JWT strings
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/controllers/auth_controller.py:generic-api-key:35
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/controllers/auth_controller.py:generic-api-key:74
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/controllers/auth_controller.py:generic-api-key:112
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/AUTH_API.md:generic-api-key:84
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/AUTH_API.md:generic-api-key:119
+2cf86e72d247da7de30ae2b2452ded2e7a884890:backend/AUTH_API.md:generic-api-key:153
+

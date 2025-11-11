@@ -32,8 +32,8 @@ def register(request):
 
     Response 201:
     {
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "access": "<ACCESS_TOKEN>",
+        "refresh": "<REFRESH_TOKEN>",
         "user": {
             "id": 1,
             "email": "user@example.com",
@@ -71,8 +71,8 @@ def login(request):
 
     Response 200:
     {
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "access": "<ACCESS_TOKEN>",
+        "refresh": "<REFRESH_TOKEN>",
         "user": {
             "id": 1,
             "email": "user@example.com",
@@ -104,12 +104,12 @@ def refresh_token(request):
     POST /api/auth/refresh
     Body:
     {
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+        "refresh": "<REFRESH_TOKEN>"
     }
 
     Response 200:
     {
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+        "access": "<ACCESS_TOKEN>"
     }
     """
     refresh_token = request.data.get("refresh")
@@ -141,7 +141,7 @@ def logout(request):
     POST /api/auth/logout
     Body:
     {
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+        "refresh": "<REFRESH_TOKEN>"
     }
 
     Response 200:
