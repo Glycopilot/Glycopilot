@@ -94,3 +94,10 @@ Les outils de qualité sont **automatiquement configurés** lors du premier dém
 # Tester les outils
 ./test_quality.sh
 ```
+
+## Protection des secrets
+
+- **Scan local** : installez `gitleaks` (`brew install gitleaks`) puis lancez `gitleaks detect --source . --redact` pour vérifier le dépôt complet.
+- **Hook pre-commit** : Husky exécute automatiquement `gitleaks protect --staged --redact` avant chaque commit. L'opération échouera si un secret est détecté.
+- **CI GitHub Actions** : le job `secret-scan` exécute `gitleaks detect` sur chaque push/PR. Le pipeline bloque si un secret est trouvé.
+- **Faux positifs documentés** : les exemples contrôlés sont listés dans `.gitleaksignore`. Ajoutez les nouvelles exceptions si nécessaire.

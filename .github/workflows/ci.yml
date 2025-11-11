@@ -7,7 +7,18 @@ on:
     branches: [ main, CI ]
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install gitleaks
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | bash -s -- -b /usr/local/bin
+    - name: Run gitleaks scan
+      run: gitleaks detect --source . --redact --report-path gitleaks-report.json
+
   test-backend:
+    needs: secret-scan
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -43,6 +54,7 @@ jobs:
         echo "✅ Tests passed!"
 
   test-frontend:
+    needs: secret-scan
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
