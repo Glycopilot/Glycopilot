@@ -38,6 +38,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "middleware.request_logging.RequestLoggingMiddleware",
 ]
 
 ROOT_URLCONF = "urls"
@@ -135,6 +136,30 @@ STATIC_ROOT = os.path.join(os.path.dirname(__file__), "..", "static")
 # Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "..", "media")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "structured": {
+            "format": "[%(asctime)s] %(levelname)s %(message)s "
+            "path=%(path)s method=%(method)s status=%(status_code)s "
+            "user_id=%(user_id)s email=%(user_email)s role=%(user_role)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "structured",
+        },
+    },
+    "loggers": {
+        "middleware.request": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
