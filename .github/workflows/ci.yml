@@ -11,10 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Install gitleaks
+      run: |
+        GITLEAKS_VERSION="8.29.0"
+        curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz -o gitleaks.tar.gz
+        tar -xzf gitleaks.tar.gz gitleaks
+        sudo mv gitleaks /usr/local/bin/gitleaks
+        rm gitleaks.tar.gz
     - name: Run gitleaks scan
-      uses: gitleaks/gitleaks-action@v2
-      with:
-        args: detect --source . --redact --report-path gitleaks-report.json
+      run: gitleaks detect --source . --redact --report-path gitleaks-report.json
 
   test-backend:
     needs: secret-scan
