@@ -94,6 +94,25 @@
           ]
         }
       },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  try {",
+              "    const data = pm.response.json();",
+              "    pm.collectionVariables.set('patient_access_token', data.access || '');",
+              "    pm.collectionVariables.set('patient_refresh_token', data.refresh || '');",
+              "  } catch (e) {",
+              "    console.warn('Unable to parse login response:', e);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ],
       "response": []
     },
     {
@@ -184,6 +203,25 @@
           ]
         }
       },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  try {",
+              "    const data = pm.response.json();",
+              "    pm.collectionVariables.set('support_access_token', data.access || '');",
+              "    pm.collectionVariables.set('support_refresh_token', data.refresh || '');",
+              "  } catch (e) {",
+              "    console.warn('Unable to parse login response:', e);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ],
       "response": []
     },
     {
