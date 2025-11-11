@@ -41,9 +41,12 @@ class AuthRegistrationTest(TestCase):
         self.assertEqual(response.data["user"]["email"], "newuser@example.com")
         self.assertEqual(response.data["user"]["first_name"], "New")
         self.assertEqual(response.data["user"]["last_name"], "User")
+        self.assertEqual(response.data["user"]["role"], "patient")
 
         # Vérifier que l'utilisateur a été créé dans la DB
-        self.assertTrue(User.objects.filter(email="newuser@example.com").exists())
+        created_user = User.objects.get(email="newuser@example.com")
+        self.assertTrue(created_user)
+        self.assertEqual(created_user.role, "patient")
 
     def test_register_duplicate_email(self):
         """Test d'inscription avec un email déjà existant"""
@@ -110,6 +113,7 @@ class AuthRegistrationTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["user"]["email"], "uppercase@example.com")
+        self.assertEqual(response.data["user"]["role"], "patient")
 
 
 class AuthLoginTest(TestCase):
@@ -144,6 +148,7 @@ class AuthLoginTest(TestCase):
         self.assertIn("refresh", response.data)
         self.assertIn("user", response.data)
         self.assertEqual(response.data["user"]["email"], "testuser@example.com")
+        self.assertEqual(response.data["user"]["role"], "patient")
 
     def test_login_wrong_password(self):
         """Test de connexion avec un mauvais mot de passe"""
@@ -234,6 +239,7 @@ class AuthMeTest(TestCase):
         self.assertEqual(response.data["email"], "testuser@example.com")
         self.assertEqual(response.data["first_name"], "Test")
         self.assertEqual(response.data["last_name"], "User")
+        self.assertEqual(response.data["role"], "patient")
         self.assertIn("id", response.data)
         self.assertIn("created_at", response.data)
 

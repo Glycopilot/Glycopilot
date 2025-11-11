@@ -20,6 +20,7 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError("L'adresse email est obligatoire")
 
+        extra_fields.setdefault("role", User.UserRole.PATIENT)
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -33,6 +34,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("role", User.UserRole.ADMIN)
 
         return self.create_user(email, password, **extra_fields)
 
@@ -42,10 +44,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     Modèle utilisateur avec authentification
     """
 
+    class UserRole(models.TextChoices):
+        PATIENT = "patient", "Patient"
+        DOCTOR = "doctor", "Doctor"
+        ADMIN = "admin", "Admin"
+
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     password = models.CharField("password", max_length=128)
+    role = models.CharField(
+        max_length=20, choices=UserRole.choices, default=UserRole.PATIENT
+    )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)

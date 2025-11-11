@@ -24,6 +24,7 @@ class UserModelTest(TestCase):
         self.assertEqual(user.first_name, "John")
         self.assertEqual(user.last_name, "Doe")
         self.assertTrue(user.is_active)
+        self.assertEqual(user.role, "patient")
 
     def test_user_str_representation(self):
         """Test de la représentation string"""

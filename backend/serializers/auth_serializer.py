@@ -105,8 +105,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "created_at"]
-        read_only_fields = ["id", "email", "created_at"]
+        fields = ["id", "email", "first_name", "last_name", "role", "created_at"]
+        read_only_fields = ["id", "email", "role", "created_at"]
 
 
 class AuthResponseSerializer(serializers.Serializer):
@@ -124,9 +124,12 @@ class AuthResponseSerializer(serializers.Serializer):
         Génère les tokens JWT pour un utilisateur
         """
         refresh = RefreshToken.for_user(user)
+        refresh["role"] = user.role
+        access = refresh.access_token
+        access["role"] = user.role
 
         return {
-            "access": str(refresh.access_token),
+            "access": str(access),
             "refresh": str(refresh),
             "user": UserSerializer(user).data,
         }
