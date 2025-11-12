@@ -1,0 +1,9 @@
+title = "Custom Gitleaks Config"
+
+[allowlist]
+description = "Allow sample JWT tokens used in documentation strings"
+commits = [
+  "b4558782f9bb1422f3c3f418d2229e39fd627b0d"
+]
+
+

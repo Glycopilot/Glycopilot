@@ -81,8 +81,8 @@ Base URL : `http://localhost:8006/api/auth`
 **Response 201 (Success) :**
 ```json
 {
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "access": "<ACCESS_TOKEN>",
+  "refresh": "<REFRESH_TOKEN>",
   "user": {
     "id": 1,
     "email": "user@example.com",
@@ -116,8 +116,8 @@ Base URL : `http://localhost:8006/api/auth`
 **Response 200 (Success) :**
 ```json
 {
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "access": "<ACCESS_TOKEN>",
+  "refresh": "<REFRESH_TOKEN>",
   "user": {
     "id": 1,
     "email": "user@example.com",
@@ -143,14 +143,14 @@ Base URL : `http://localhost:8006/api/auth`
 **Body :**
 ```json
 {
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+  "refresh": "<REFRESH_TOKEN>"
 }
 ```
 
 **Response 200 (Success) :**
 ```json
 {
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+  "access": "<ACCESS_TOKEN>"
 }
 ```
 
@@ -173,7 +173,7 @@ Authorization: Bearer <access_token>
 **Body :**
 ```json
 {
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+  "refresh": "<REFRESH_TOKEN>"
 }
 ```
 
