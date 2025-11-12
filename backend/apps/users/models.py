@@ -3,6 +3,11 @@ from django.db import models
 
 
 class User(AbstractUser):
+    class Role(models.TextChoices):
+        PATIENT = "patient", "Patient"
+        DOCTOR = "doctor", "Doctor"
+        ADMIN = "admin", "Admin"
+
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     birth_date = models.DateField(blank=True, null=True)
@@ -10,6 +15,7 @@ class User(AbstractUser):
     medical_comment = models.TextField(blank=True, null=True)
     actif = models.BooleanField(default=True)
     linked_user_id = models.IntegerField(blank=True, null=True)
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.PATIENT)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     profiles = models.ManyToManyField(
@@ -22,6 +28,12 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.get_full_name()} ({self.email})"
+
+    def save(self, *args, **kwargs):
+        # S'assurer qu'un superuser conserve toujours le rôle admin
+        if self.is_superuser:
+            self.role = self.Role.ADMIN
+        super().save(*args, **kwargs)
 
 
 class UserProfile(models.Model):
