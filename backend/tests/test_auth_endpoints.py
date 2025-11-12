@@ -49,6 +49,7 @@ class AuthRegistrationTest(TestCase):
         """Test d'inscription avec un email déjà existant"""
         # Créer un premier utilisateur
         User.objects.create_user(
+            username="existing",
             email="existing@example.com",
             password="password123",
             first_name="Existing",
@@ -124,6 +125,7 @@ class AuthLoginTest(TestCase):
 
         # Créer un utilisateur de test
         self.user = User.objects.create_user(
+            username="testuser",
             email="testuser@example.com",
             password="testpassword123",
             first_name="Test",
@@ -215,6 +217,7 @@ class AuthMeTest(TestCase):
 
         # Créer un utilisateur de test
         self.user = User.objects.create_user(
+            username="testuser",
             email="testuser@example.com",
             password="testpassword123",
             first_name="Test",
@@ -270,6 +273,7 @@ class AuthRefreshTokenTest(TestCase):
 
         # Créer un utilisateur de test
         self.user = User.objects.create_user(
+            username="testuser",
             email="testuser@example.com",
             password="testpassword123",
             first_name="Test",
@@ -320,6 +324,7 @@ class AuthLogoutTest(TestCase):
 
         # Créer un utilisateur de test
         self.user = User.objects.create_user(
+            username="testuser",
             email="testuser@example.com",
             password="testpassword123",
             first_name="Test",
