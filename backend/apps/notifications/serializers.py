@@ -1,1 +1,1 @@
-
+"""Serializers for notifications app."""

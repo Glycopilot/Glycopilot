@@ -1,1 +1,1 @@
-
+"""Serializers for contacts app."""

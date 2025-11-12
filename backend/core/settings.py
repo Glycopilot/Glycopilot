@@ -18,16 +18,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     # Packages tiers
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
-
     # Apps locales
     "apps.auth",
-    "apps.users",  
+    "apps.users",
     "apps.profiles",
     "apps.doctors",
     "apps.contacts",
@@ -63,7 +61,9 @@ DATABASES = {
         "NAME": os.environ.get("DB_NAME", "glycopilot_db"),
         "USER": os.environ.get("DB_USER", "glycopilot_user"),
         "PASSWORD": os.environ.get("DB_PASSWORD", "glycopilot_password"),
-        "HOST": os.environ.get("DB_HOST", "glycopilot-db"),  # nom du service MySQL dans docker-compose
+        "HOST": os.environ.get(
+            "DB_HOST", "glycopilot-db"
+        ),  # nom du service MySQL dans docker-compose
         "PORT": os.environ.get("DB_PORT", "3306"),
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -128,4 +128,3 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # --- CUSTOM USER MODEL (⚠️ IMPORTANT pour ton app users) ---
 AUTH_USER_MODEL = "users.User"
-
