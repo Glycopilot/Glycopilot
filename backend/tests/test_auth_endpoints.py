@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from rest_framework import status
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from apps.users.models import User
 
@@ -41,9 +41,15 @@ class AuthRegistrationTest(TestCase):
         self.assertEqual(response.data["user"]["email"], "newuser@example.com")
         self.assertEqual(response.data["user"]["first_name"], "New")
         self.assertEqual(response.data["user"]["last_name"], "User")
+        self.assertEqual(response.data["user"]["role"], User.Role.PATIENT)
 
         # Vérifier que l'utilisateur a été créé dans la DB
-        self.assertTrue(User.objects.filter(email="newuser@example.com").exists())
+        created_user = User.objects.get(email="newuser@example.com")
+        self.assertTrue(created_user)
+        self.assertEqual(created_user.role, User.Role.PATIENT)
+
+        access = AccessToken(response.data["access"])
+        self.assertEqual(access["role"], User.Role.PATIENT)
 
     def test_register_duplicate_email(self):
         """Test d'inscription avec un email déjà existant"""
@@ -146,6 +152,10 @@ class AuthLoginTest(TestCase):
         self.assertIn("refresh", response.data)
         self.assertIn("user", response.data)
         self.assertEqual(response.data["user"]["email"], "testuser@example.com")
+        self.assertEqual(response.data["user"]["role"], User.Role.PATIENT)
+
+        access = AccessToken(response.data["access"])
+        self.assertEqual(access["role"], User.Role.PATIENT)
 
     def test_login_wrong_password(self):
         """Test de connexion avec un mauvais mot de passe"""
@@ -237,6 +247,7 @@ class AuthMeTest(TestCase):
         self.assertEqual(response.data["email"], "testuser@example.com")
         self.assertEqual(response.data["first_name"], "Test")
         self.assertEqual(response.data["last_name"], "User")
+        self.assertEqual(response.data["role"], User.Role.PATIENT)
         self.assertIn("id", response.data)
         self.assertIn("created_at", response.data)
 
