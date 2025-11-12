@@ -1,1 +1,1 @@
-
+"""Serializers for profiles app."""
