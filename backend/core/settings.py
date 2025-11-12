@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -54,22 +55,30 @@ MIDDLEWARE = [
 ROOT_URLCONF = "core.urls"
 
 # --- DATABASES ---
-# --- DATABASES ---
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get("DB_NAME", "glycopilot_db"),
-        "USER": os.environ.get("DB_USER", "glycopilot_user"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "glycopilot_password"),
-        "HOST": os.environ.get(
-            "DB_HOST", "glycopilot-db"
-        ),  # nom du service MySQL dans docker-compose
-        "PORT": os.environ.get("DB_PORT", "3306"),
-        "OPTIONS": {
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+# Utilise SQLite pour les tests, MySQL en production
+if "test" in sys.argv or "pytest" in sys.argv[0]:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("DB_NAME", "glycopilot_db"),
+            "USER": os.environ.get("DB_USER", "glycopilot_user"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "glycopilot_password"),
+            "HOST": os.environ.get(
+                "DB_HOST", "glycopilot-db"
+            ),  # nom du service MySQL dans docker-compose
+            "PORT": os.environ.get("DB_PORT", "3306"),
+            "OPTIONS": {
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
 
 
 # --- CORS ---
