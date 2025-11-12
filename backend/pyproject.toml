@@ -24,3 +24,4 @@ multi_line_output = 3
 line_length = 88
 known_django = "django"
 sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
