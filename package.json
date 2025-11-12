@@ -1,19 +1,9 @@
 {
-  "name": "glycopilot",
-  "version": "1.0.0",
-  "description": "## Technologies",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
   "devDependencies": {
     "husky": "^9.1.7"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+    "prepare": "husky",
+    "check-branch-name": "node scripts/check-branch-name.js"
+  }
 }
