@@ -1,1 +1,1 @@
-
+"""Serializers for meals app."""

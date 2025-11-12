@@ -1,1 +1,3 @@
+"""URL configuration placeholder."""
 
+urlpatterns = []

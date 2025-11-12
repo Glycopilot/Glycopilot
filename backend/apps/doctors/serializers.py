@@ -1,1 +1,1 @@
-
+"""Serializers for doctors app."""

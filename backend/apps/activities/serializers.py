@@ -1,1 +1,1 @@
-
+"""Serializers for activities app."""
