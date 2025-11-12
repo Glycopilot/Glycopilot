@@ -27,6 +27,7 @@ services:
       - ./backend:/app
     environment:
       - DB_HOST=database
+      - DJANGO_SETTINGS_MODULE=core.settings
       - DB_NAME=glycopilot_db
       - DB_USER=glycopilot_user
       - DB_PASSWORD=glycopilot_password
