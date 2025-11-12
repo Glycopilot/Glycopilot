@@ -1,1 +1,10 @@
+#!/bin/sh
+set -e
+
 npm run check-branch-name
+
+cd backend
+
+python3 -m isort --check-only .
+python3 -m black --check .
+python3 -m flake8
