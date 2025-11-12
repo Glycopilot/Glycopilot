@@ -1,5 +1,6 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
 
 class Meal(models.Model):
     meal_id = models.AutoField(primary_key=True)
@@ -13,11 +14,14 @@ class Meal(models.Model):
     class Meta:
         db_table = "meals"
 
+
 class UserMeal(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_meals")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_meals"
+    )
     meal = models.ForeignKey(Meal, on_delete=models.CASCADE, related_name="user_meals")
     taken_at = models.DateTimeField()
 
     class Meta:
         db_table = "users_meals"
-        unique_together = ("user","meal","taken_at")
+        unique_together = ("user", "meal", "taken_at")

@@ -1,5 +1,6 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
 
 class Medication(models.Model):
     medication_id = models.AutoField(primary_key=True)
@@ -12,9 +13,16 @@ class Medication(models.Model):
     class Meta:
         db_table = "medications"
 
+
 class UserMedication(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_medications")
-    medication = models.ForeignKey(Medication, on_delete=models.CASCADE, related_name="user_medications")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="user_medications",
+    )
+    medication = models.ForeignKey(
+        Medication, on_delete=models.CASCADE, related_name="user_medications"
+    )
     start_date = models.DateField()
     taken_at = models.DateTimeField(blank=True, null=True)
     statut = models.BooleanField(default=True)
