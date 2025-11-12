@@ -21,6 +21,9 @@ class RegisterSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(
         write_only=True, required=True, style={"input_type": "password"}
     )
+    role = serializers.ChoiceField(
+        choices=User.Role.choices, default=User.Role.PATIENT, required=False
+    )
 
     class Meta:
         model = User
@@ -29,6 +32,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "role",
             "password",
             "password_confirm",
         ]
@@ -58,12 +62,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         """
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
+        role = validated_data.pop("role", User.Role.PATIENT)
         user = User.objects.create_user(
             username=validated_data["email"],  # Utiliser email comme username
             email=validated_data["email"],
             password=password,
             first_name=validated_data["first_name"],
             last_name=validated_data["last_name"],
+            role=role,
         )
         return user
 
@@ -107,8 +113,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "created_at"]
-        read_only_fields = ["id", "email", "created_at"]
+        fields = ["id", "email", "first_name", "last_name", "role", "created_at"]
+        read_only_fields = ["id", "email", "role", "created_at"]
 
 
 class AuthResponseSerializer(serializers.Serializer):
@@ -126,9 +132,12 @@ class AuthResponseSerializer(serializers.Serializer):
         Génère les tokens JWT pour un utilisateur
         """
         refresh = RefreshToken.for_user(user)
+        refresh["role"] = user.role
+        access = refresh.access_token
+        access["role"] = user.role
 
         return {
-            "access": str(refresh.access_token),
+            "access": str(access),
             "refresh": str(refresh),
             "user": UserSerializer(user).data,
         }
