@@ -38,6 +38,7 @@ class UserModelTest(TestCase):
         self.assertTrue(user.is_active)
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
+        self.assertEqual(user.role, User.Role.PATIENT)
 
     def test_create_superuser(self):
         """Test de création d'un superutilisateur"""
@@ -46,6 +47,7 @@ class UserModelTest(TestCase):
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
         self.assertTrue(user.is_active)
+        self.assertEqual(user.role, User.Role.ADMIN)
 
     def test_user_str_representation(self):
         """Test de la représentation string du modèle"""
@@ -82,6 +84,7 @@ class UserModelTest(TestCase):
         self.assertEqual(user.address, "123 Main St")
         self.assertEqual(user.medical_comment, "Test comment")
         self.assertTrue(user.actif)
+        self.assertEqual(user.role, User.Role.PATIENT)
 
 
 class UserAPITest(TestCase):
@@ -98,6 +101,7 @@ class UserAPITest(TestCase):
             password="testpassword123",
             first_name="API",
             last_name="User",
+            role=User.Role.ADMIN,
         )
 
         # Générer un token JWT
@@ -116,6 +120,7 @@ class UserAPITest(TestCase):
         self.assertIn("results", response.data)
         self.assertIsInstance(response.data["results"], list)
         self.assertGreater(len(response.data["results"]), 0)
+        self.assertIn("role", response.data["results"][0])
 
     def test_get_user_detail(self):
         """Test de récupération d'un utilisateur"""
@@ -125,6 +130,7 @@ class UserAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], "apiuser@example.com")
         self.assertEqual(response.data["id"], self.user.id)
+        self.assertEqual(response.data["role"], User.Role.ADMIN)
 
     def test_update_user(self):
         """Test de mise à jour d'un utilisateur"""

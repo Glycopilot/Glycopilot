@@ -13,6 +13,7 @@ from apps.auth.serializers import (
     RegisterSerializer,
     UserSerializer,
 )
+from utils.permissions import allowed_roles
 
 
 @api_view(["POST"])
@@ -134,6 +135,7 @@ def refresh_token(request):
 
 
 @api_view(["POST"])
+@allowed_roles(["patient", "doctor", "admin"])
 def logout(request):
     """
     Endpoint pour déconnecter un utilisateur
@@ -171,6 +173,7 @@ def logout(request):
 
 
 @api_view(["GET"])
+@allowed_roles(["patient", "doctor", "admin"])
 def me(request):
     """
     Endpoint pour obtenir les informations de l'utilisateur connecté
