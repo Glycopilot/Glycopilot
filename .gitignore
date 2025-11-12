@@ -27,8 +27,11 @@ build/
 dist/
 *.egg-info/
 
-# Node packages
+# Node
 node_modules/
+
+# Security scan reports
+gitleaks-report.json
 
 # macOS metadata
 .DS_Store

@@ -33,8 +33,8 @@ def register(request):
 
     Response 201:
     {
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "access": "<access_token>",
+        "refresh": "<refresh_token>",
         "user": {
             "id": 1,
             "email": "user@example.com",
@@ -72,8 +72,8 @@ def login(request):
 
     Response 200:
     {
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "access": "<access_token>",
+        "refresh": "<refresh_token>",
         "user": {
             "id": 1,
             "email": "user@example.com",
@@ -110,7 +110,7 @@ def refresh_token(request):
 
     Response 200:
     {
-        "access": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+        "access": "<access_token>"
     }
     """
     refresh_token = request.data.get("refresh")
