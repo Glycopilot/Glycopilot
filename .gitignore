@@ -1,0 +1,38 @@
+# Virtual environments
+# Virtual environments
+backend/.venv/
+
+# Python cache
+**/__pycache__/
+*.py[cod]
+
+# Local databases
+backend/db.sqlite3
+
+# Environment files
+.env
+.env.*
+
+# Test & coverage artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Node packages
+node_modules/
+
+# macOS metadata
+.DS_Store
+
+# Editor settings
+.idea/
+.vscode/
+
