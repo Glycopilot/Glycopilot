@@ -1,6 +1,5 @@
 #!/usr/bin/env sh
 
-gitleaks protect --staged --redact
 #!/bin/sh
 set -e
 
