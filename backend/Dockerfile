@@ -18,5 +18,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Attendre la base MySQL avant de démarrer
-CMD ["sh", "-c", "while ! nc -z database 3306; do sleep 1; done && python manage.py runserver 0.0.0.0:8000 --settings=core.settings"]
+# Attendre la base MySQL avant de démarrer, puis exécuter les migrations et lancer le serveur
+CMD ["sh", "-c", "while ! nc -z database 3306; do sleep 1; done && python manage.py migrate --noinput --settings=core.settings && python manage.py runserver 0.0.0.0:8000 --settings=core.settings"]
