@@ -10,7 +10,7 @@ const branchName = execSync('git rev-parse --abbrev-ref HEAD')
 // Définir le pattern autorisé
 // Format: type/description
 // Exemples: feature/login, fix/button-crash, hotfix/security
-const branchPattern = /^(feature|fix|hotfix|release|chore)\/[a-z0-9-]+$/;
+const branchPattern = /^(feat-front|feat-back|fix|hotfix|release|refactor|docs|test|chore)\/[a-z0-9-]+$/;
 
 if (!branchPattern.test(branchName)) {
   console.error(`
@@ -19,16 +19,25 @@ if (!branchPattern.test(branchName)) {
 Le nom doit suivre ce format: type/description
 
 Types autorisés:
-  - feature/  : Nouvelle fonctionnalité
-  - fix/      : Correction de bug
-  - hotfix/   : Correction urgente
-  - release/  : Préparation de release
+  - feat-front/  : Nouvelle fonctionnalité front-end
+  - feat-back/   : Nouvelle fonctionnalité back-end
+  - fix/         : Correction de bug
+  - hotfix/      : Correction urgente
+  - release/  : Préparation de versions
+  - refactor/ : Refactorisation
+  - docs/     : Documentation
+  - test/     : Tests
   - chore/    : Tâches techniques
 
 Exemples valides:
-  ✅ feature/user-authentication
+  ✅ feat-front/user-authentication
+  ✅ feat-back/api-endpoint 
   ✅ fix/login-button
   ✅ hotfix/security-patch
+  ✅ release/v1.2.0
+  ✅ refactor/code-cleanup
+  ✅ docs/api-documentation
+  ✅ test/unit-tests
 
 Exemples invalides:
   ❌ Feature/Login (majuscule)
