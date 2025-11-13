@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# Exécuter commitlint et capturer le résultat
+npx commitlint --edit $1 --verbose
+
+# Si commitlint échoue, afficher un message d'aide
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "❌ Votre message de commit ne respecte pas les conventions"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "📋 Format requis:"
+  echo "   type: description courte en minuscules"
+  echo ""
+  echo "🏷️  Types autorisés:"
+  echo "   feat      - Nouvelle fonctionnalité"
+  echo "   fix       - Correction de bug"
+  echo "   docs      - Documentation"
+  echo "   style     - Formatage (pas de changement logique)"
+  echo "   refactor  - Refactorisation"
+  echo "   perf      - Amélioration de performance"
+  echo "   test      - Ajout/modification de tests"
+  echo "   chore     - Tâches techniques"
+  echo "   revert    - Annulation d'un commit"
+  echo ""
+  echo "✅ Exemples valides:"
+  echo "   feat: add user authentication"
+  echo "   fix: resolve login redirect issue"
+  echo "   docs: update API documentation"
+  echo ""
+  echo "❌ Erreurs courantes:"
+  echo "   • Pas de majuscule au début de la description"
+  echo "   • Pas de point à la fin"
+  echo "   • Maximum 100 caractères"
+  echo ""
+  echo "📚 Documentation complète: docs/commit-conventions.md"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  exit 1
+fi
