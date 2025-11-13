@@ -2,9 +2,14 @@ import os
 import sys
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Charger le .env
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # --- CLÉ SECRÈTE & DEBUG ---
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me")
@@ -68,13 +73,13 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
-            "NAME": os.environ.get("DB_NAME", "glycopilot_db"),
-            "USER": os.environ.get("DB_USER", "glycopilot_user"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", "glycopilot_password"),
+            "NAME": os.environ.get("DB_NAME"),
+            "USER": os.environ.get("DB_USER"),
+            "PASSWORD": os.environ.get("DB_PASSWORD"),
             "HOST": os.environ.get(
-                "DB_HOST", "glycopilot-db"
-            ),  # nom du service MySQL dans docker-compose
-            "PORT": os.environ.get("DB_PORT", "3306"),
+                "DB_HOST"
+            ),
+            "PORT": os.environ.get("DB_PORT"),
             "OPTIONS": {
                 "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
             },
