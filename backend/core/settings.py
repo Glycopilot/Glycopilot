@@ -11,10 +11,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Charger le .env
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
+# ENVIRONNEMENT (Dev and Prod)
+ENV = os.environ.get("Django_ENV")
+
 # --- CLÉ SECRÈTE & DEBUG ---
-SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me")
-DEBUG = os.environ.get("DEBUG", "True") == "True"
-ALLOWED_HOSTS = ["*"]
+SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY_ADMIN = os.environ.get("SECRET_KEY_ADMIN")
+DEBUG = ENV=="development"
+
+
+if ENV == "development":
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = ["localhost"]
 
 # --- APPS INSTALLÉES ---
 INSTALLED_APPS = [
@@ -61,7 +70,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = "core.urls"
 
 # --- DATABASES ---
-# Utilise SQLite pour les tests, MySQL en production
+
 if "test" in sys.argv or "pytest" in sys.argv[0]:
     DATABASES = {
         "default": {
@@ -102,13 +111,23 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
 }
 
+ACCESS_TOKEN_LIFETIME = timedelta(
+    minutes=int(os.environ.get("ACCESS_TOKEN_MINUTES", 60))
+)
+
+REFRESH_TOKEN_LIFETIME = timedelta(
+    days=int(os.environ.get("REFRESH_TOKEN_DAYS", 7))
+)
 # --- JWT CONFIG ---
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ACCESS_TOKEN_LIFETIME": ACCESS_TOKEN_LIFETIME,
+    "REFRESH_TOKEN_LIFETIME": REFRESH_TOKEN_LIFETIME,
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
+
+    #For admin only
+    "SIGNING_KEY": SECRET_KEY,
 }
 
 # --- TEMPLATES ---
@@ -141,5 +160,5 @@ STATIC_ROOT = BASE_DIR / "static"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# --- CUSTOM USER MODEL (⚠️ IMPORTANT pour ton app users) ---
+
 AUTH_USER_MODEL = "users.User"
