@@ -17,38 +17,11 @@ from serializers.auth_serializer import (
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def register(request):
-    """
-    Endpoint pour l'inscription d'un nouvel utilisateur
-
-    POST /api/auth/register
-    Body:
-    {
-        "email": "user@example.com",
-        "first_name": "John",
-        "last_name": "Doe",
-        "password": "securepassword123",
-        "password_confirm": "securepassword123"
-    }
-
-    Response 201:
-    {
-        "access": "<ACCESS_TOKEN>",
-        "refresh": "<REFRESH_TOKEN>",
-        "user": {
-            "id": 1,
-            "email": "user@example.com",
-            "first_name": "John",
-            "last_name": "Doe",
-            "created_at": "2025-11-05T21:00:00Z"
-        }
-    }
-    """
     serializer = RegisterSerializer(data=request.data)
 
     if serializer.is_valid():
         user = serializer.save()
 
-        # Générer les tokens JWT
         tokens = AuthResponseSerializer.get_tokens_for_user(user)
 
         return Response(tokens, status=status.HTTP_201_CREATED)
@@ -59,37 +32,11 @@ def register(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login(request):
-    """
-    Endpoint pour la connexion d'un utilisateur
-
-    POST /api/auth/login
-    Body:
-    {
-        "email": "user@example.com",
-        "password": "securepassword123"
-    }
-
-    Response 200:
-    {
-        "access": "<ACCESS_TOKEN>",
-        "refresh": "<REFRESH_TOKEN>",
-        "user": {
-            "id": 1,
-            "email": "user@example.com",
-            "first_name": "John",
-            "last_name": "Doe",
-            "created_at": "2025-11-05T21:00:00Z"
-        }
-    }
-    """
     serializer = LoginSerializer(data=request.data)
 
     if serializer.is_valid():
         user = serializer.validated_data["user"]
-
-        # Générer les tokens JWT
         tokens = AuthResponseSerializer.get_tokens_for_user(user)
-
         return Response(tokens, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -171,23 +118,7 @@ def logout(request):
 
 @api_view(["GET"])
 def me(request):
-    """
-    Endpoint pour obtenir les informations de l'utilisateur connecté
 
-    GET /api/auth/me
-    Headers:
-        Authorization: Bearer <access_token>
-
-    Response 200:
-    {
-        "id": 1,
-        "email": "user@example.com",
-        "first_name": "John",
-        "last_name": "Doe",
-        "created_at": "2025-11-05T21:00:00Z"
-    }
-    """
     from serializers.auth_serializer import UserSerializer
-
     serializer = UserSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
