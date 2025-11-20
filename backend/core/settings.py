@@ -3,7 +3,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-
+import logging  # <-- Ajout du module logging
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -11,23 +11,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Charger le .env
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
-# ENVIRONNEMENT (Dev and Prod)
+# --- ENVIRONNEMENT ---
 ENV = os.environ.get("Django_ENV")
+DEBUG = ENV == "development"
+ALLOWED_HOSTS = ["*"] if DEBUG else ["localhost"]
 
-# --- CLÉ SECRÈTE & DEBUG ---
+# --- CLÉS SECRÈTES ---
 SECRET_KEY = os.environ.get("SECRET_KEY")
 SECRET_KEY_ADMIN = os.environ.get("SECRET_KEY_ADMIN")
-DEBUG = ENV=="development"
-
-
-if ENV == "development":
-    ALLOWED_HOSTS = ["*"]
-else:
-    ALLOWED_HOSTS = ["localhost"]
 
 # --- APPS INSTALLÉES ---
 INSTALLED_APPS = [
     # Django core apps
+    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -52,7 +48,6 @@ INSTALLED_APPS = [
     "apps.notifications",
 ]
 
-
 # --- MIDDLEWARE ---
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -70,7 +65,6 @@ MIDDLEWARE = [
 ROOT_URLCONF = "core.urls"
 
 # --- DATABASES ---
-
 if "test" in sys.argv or "pytest" in sys.argv[0]:
     DATABASES = {
         "default": {
@@ -85,9 +79,7 @@ else:
             "NAME": os.environ.get("DB_NAME"),
             "USER": os.environ.get("DB_USER"),
             "PASSWORD": os.environ.get("DB_PASSWORD"),
-            "HOST": os.environ.get(
-                "DB_HOST"
-            ),
+            "HOST": os.environ.get("DB_HOST"),
             "PORT": os.environ.get("DB_PORT"),
             "OPTIONS": {
                 "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -95,6 +87,17 @@ else:
         }
     }
 
+# --- LOGGING ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(asctime)s %(name)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# --- Log de la configuration DB (mot de passe masqué) ---
+dataconfig_safe = DATABASES["default"].copy()
+dataconfig_safe["PASSWORD"] = "==========***hidden***========"
+logger.info(f"Database configuration: {dataconfig_safe}")
 
 # --- CORS ---
 CORS_ALLOW_ALL_ORIGINS = True
@@ -114,10 +117,10 @@ REST_FRAMEWORK = {
 ACCESS_TOKEN_LIFETIME = timedelta(
     minutes=int(os.environ.get("ACCESS_TOKEN_MINUTES", 60))
 )
-
 REFRESH_TOKEN_LIFETIME = timedelta(
     days=int(os.environ.get("REFRESH_TOKEN_DAYS", 7))
 )
+
 # --- JWT CONFIG ---
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": ACCESS_TOKEN_LIFETIME,
@@ -125,8 +128,6 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
-
-    #For admin only
     "SIGNING_KEY": SECRET_KEY,
 }
 
@@ -156,9 +157,8 @@ USE_TZ = True
 # --- STATIC & MEDIA FILES ---
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "static"
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-
+# --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.User"
