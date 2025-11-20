@@ -54,6 +54,14 @@ if %errorlevel% neq 0 (
     echo ✅ Outils JavaScript déjà installés
 )
 
+REM Appliquer les migrations Django
+echo.
+echo  Appliquer les migrations Django...
+cd backend
+%PYTHON_CMD% manage.py makemigrations
+%PYTHON_CMD% manage.py migrate
+cd ..
+
 REM Vérifier et configurer les Git hooks (une seule fois)
 if not exist ".git\hooks\pre-push" (
     echo.

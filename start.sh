@@ -45,8 +45,8 @@ fi
 
 # Vérifier et installer les outils JavaScript
 if ! command -v npm > /dev/null 2>&1; then
-    echo "❌ npm n'est pas installé sur ce système"
-    echo "💡 Installez Node.js pour continuer"
+    echo "npm n'est pas installé sur ce système"
+    echo " Installez Node.js pour continuer"
     exit 1
 fi
 
@@ -60,6 +60,11 @@ else
     echo "✅ Outils JavaScript déjà installés"
 fi
 
+echo "🔄 Application des migrations Django dans Docker..."
+
+# Lancer les migrations dans le container backend
+docker compose run --rm backend python manage.py makemigrations
+docker compose run --rm backend python manage.py migrate
 # Vérifier et configurer les Git hooks (une seule fois)
 if [ ! -f ".git/hooks/pre-push" ]; then
     echo ""
