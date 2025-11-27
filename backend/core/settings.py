@@ -3,7 +3,7 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 from dotenv import load_dotenv
-import logging  # <-- Ajout du module logging
+import logging
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.medications",
     "apps.alerts",
     "apps.notifications",
+    "django_rest_passwordreset",
 ]
 
 # --- MIDDLEWARE ---
@@ -147,6 +148,27 @@ TEMPLATES = [
         },
     },
 ]
+
+
+# EMAIL CONFIG
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("SMTP_HOST")
+EMAIL_PORT = int(os.getenv("SMTP_PORT"))
+EMAIL_HOST_USER = os.getenv("SMTP_USERNAME")
+EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD")
+EMAIL_USE_TLS = os.getenv("SMTP_USE_TLS") == "true"
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# Choisis selon ton port
+if EMAIL_PORT == 465:
+    EMAIL_USE_TLS = False
+    EMAIL_USE_SSL = True
+else:
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+
 
 # --- INTERNATIONALIZATION ---
 LANGUAGE_CODE = "fr-fr"
