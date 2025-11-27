@@ -12,8 +12,6 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
     user_email = reset_password_token.user.email
     token = reset_password_token.key
 
-    # Construire le lien complet pour réinitialiser le mot de passe
-    # Remplace 'FRONTEND_URL' par l'URL de ton frontend ou endpoint de reset
     reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token}"
 
     # Envoi de l'email
