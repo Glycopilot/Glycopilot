@@ -147,3 +147,7 @@ EMAIL_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
 EMAIL_HOST_USER = os.environ.get("SMTP_USERNAME", "")
 EMAIL_HOST_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("SMTP_USERNAME", "noreply@glycopilot.com")
+
+# En mode test, utiliser le backend console
+if "test" in sys.argv or "pytest" in sys.argv[0]:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
