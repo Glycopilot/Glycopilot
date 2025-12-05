@@ -5,8 +5,7 @@ from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto
 
 @admin.register(Glycemia)
 class GlycemiaAdmin(admin.ModelAdmin):
-    """Configuration de l'admin pour Glycemia."""
-
+    
     list_display = ("user", "value", "measured_at")
     list_filter = ("measured_at",)
     search_fields = ("user__username", "user__email")
@@ -16,7 +15,7 @@ class GlycemiaAdmin(admin.ModelAdmin):
 
 @admin.register(GlycemiaHisto)
 class GlycemiaHistoAdmin(admin.ModelAdmin):
-    """Configuration de l'admin pour GlycemiaHisto."""
+    
 
     list_display = ("user", "value", "measured_at")
     list_filter = ("measured_at",)
@@ -28,11 +27,10 @@ class GlycemiaHistoAdmin(admin.ModelAdmin):
 
 @admin.register(GlycemiaDataIA)
 class GlycemiaDataIAAdmin(admin.ModelAdmin):
-    """Configuration de l'admin pour GlycemiaDataIA."""
 
-    list_display = ("user", "value", "measured_at")
-    list_filter = ("measured_at",)
+    list_display = ("user", "prediction_start", "prediction_end", "prob_hypo", "prob_hyper")
+    list_filter = ("prediction_start", "prediction_end")
     search_fields = ("user__username", "user__email")
     raw_id_fields = ("user",)
-    date_hierarchy = "measured_at"
+    date_hierarchy = "prediction_start"
     list_per_page = 50
