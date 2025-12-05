@@ -153,7 +153,7 @@ TEMPLATES = [
 # EMAIL CONFIG
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("SMTP_HOST", "")
-EMAIL_PORT = int(os.getenv("SMTP_PORT", "587"))
+EMAIL_PORT = int(os.getenv("SMTP_PORT") or 587)
 EMAIL_HOST_USER = os.getenv("SMTP_USERNAME", "")
 EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 EMAIL_USE_TLS = os.getenv("SMTP_USE_TLS", "true") == "true"
