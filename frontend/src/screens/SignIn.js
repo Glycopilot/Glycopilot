@@ -7,6 +7,9 @@ import {
   Image,
   useWindowDimensions,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react-native';
@@ -95,108 +98,119 @@ export default function SignInScreen({ navigation }) {
   };
 
   return (
-    <View style={[styles.container, { minHeight: windowHeight }]}>
-      <Decorations />
-      <Text
-        style={{
-          marginTop: 20,
-          color: colors.primary,
-          backgroundColor: colors.lightBg,
-          padding: 10,
-          borderRadius: 10,
-        }}
-        onPress={() => navigation.navigate('Login')}
-      >
-        Avez vous compte ? Connectez-vous
-      </Text>
+    <View
+      style={[styles.container, { minHeight: windowHeight }]}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <Decorations />
+        <Text
+          style={{
+            marginTop: 20,
+            color: colors.primary,
+            backgroundColor: colors.lightBg,
+            padding: 10,
+            borderRadius: 10,
+          }}
+          onPress={() => navigation.navigate('Login')}
+        >
+          Avez vous compte ? Connectez-vous
+        </Text>
 
-      {/* Logo */}
-      <Image
-        source={require('../../assets/glycopilot.png')}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-
-      {/* === FORMULAIRE === */}
-
-      <View style={styles.form}>
-        {/* NOM ET PRÉNOM (CÔTE À CÔTE) */}
-        <View style={styles.rowContainer}>
-          <View style={[styles.inputWrapper, styles.halfWidth]}>
-            <Text style={styles.label}>Nom</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={lastName}
-                onChangeText={setlastName}
-              />
-            </View>
-          </View>
-
-          <View style={[styles.inputWrapper, styles.halfWidth]}>
-            <Text style={styles.label}>Prénom</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={firstName}
-                onChangeText={setfirstName}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* EMAIL */}
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.inputContainer}>
-            <Mail size={20} color="#666" style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
-        </View>
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}> Confirmation d'email</Text>
-          <View style={styles.inputContainer}>
-            <Mail size={20} color="#666" style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              value={Confirmationemail}
-              onChangeText={setConfirmationEmail}
-            />
-          </View>
-        </View>
-        {/* PASSWORD */}
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>Mot de passe</Text>
-          <View style={styles.inputContainer}>
-            <Lock size={20} color="#666" style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              value={password}
-              secureTextEntry={true}
-              onChangeText={setPassword}
-            />
-          </View>
-        </View>
-
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>Confirmation du mot de passe</Text>
-          <View style={styles.inputContainer}>
-            <Lock size={20} color="#666" style={styles.icon} />
-            <TextInput
-              style={styles.input}
-              value={ConfirmationPassword}
-              secureTextEntry={true}
-              onChangeText={setConfirmationPassword}
-            />
-          </View>
-        </View>
-
-        <CustomButton title="S'inscrire" onPress={handleSingIn} />
+        {/* Logo */}
+        <Image
+          source={require('../../assets/glycopilot.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
+        scrollEventThrottle={16}
+        style={styles.formContainer}
+      >
+        <View style={styles.form}>
+          <View style={styles.rowContainer}>
+            <View style={[styles.inputWrapper, styles.halfWidth]}>
+              <Text style={styles.label}>Nom</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={lastName}
+                  onChangeText={setlastName}
+                />
+              </View>
+            </View>
+
+            <View style={[styles.inputWrapper, styles.halfWidth]}>
+              <Text style={styles.label}>Prénom</Text>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={firstName}
+                  onChangeText={setfirstName}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* EMAIL */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Email</Text>
+            <View style={styles.inputContainer}>
+              <Mail size={20} color="#666" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+          </View>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}> Confirmation d'email</Text>
+            <View style={styles.inputContainer}>
+              <Mail size={20} color="#666" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={Confirmationemail}
+                onChangeText={setConfirmationEmail}
+              />
+            </View>
+          </View>
+          {/* PASSWORD */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Mot de passe</Text>
+            <View style={styles.inputContainer}>
+              <Lock size={20} color="#666" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={password}
+                secureTextEntry={true}
+                onChangeText={setPassword}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Confirmation du mot de passe</Text>
+            <View style={styles.inputContainer}>
+              <Lock size={20} color="#666" style={styles.icon} />
+              <TextInput
+                style={styles.input}
+                value={ConfirmationPassword}
+                secureTextEntry={true}
+                onChangeText={setConfirmationPassword}
+              />
+            </View>
+          </View>
+
+          <CustomButton title="S'inscrire" onPress={handleSingIn} />
+        </View>
+      </ScrollView>
       <StatusBar style="auto" />
     </View>
   );
@@ -205,10 +219,24 @@ export default function SignInScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.backgroundColor,
+    flex: 1,
+  },
+
+  header: {
     alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
     paddingHorizontal: 30,
+    paddingTop: 20,
+  },
+
+  formContainer: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingVertical: 20,
+    paddingBottom: 400,
   },
 
   logo: {
