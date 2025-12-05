@@ -77,20 +77,19 @@ else
     echo "✅ Git hooks déjà configurés"
 fi
 
-# Lancer Docker Compose avec logs en temps réel
+# Lancer le backend avec Docker et le frontend directement
 echo ""
-echo "📱 Le QR code Expo va apparaître ci-dessous..."
-echo "   Installez Expo Go sur votre téléphone pour scanner le QR code"
+echo "🚀 Démarrage du backend avec Docker..."
 echo ""
 
 # Détecter la commande Docker Compose disponible
 if command -v docker > /dev/null 2>&1; then
     if docker compose version > /dev/null 2>&1; then
-        # Nouveau format: docker compose
-        docker compose up --build
+        # Nouveau format: docker compose (en background)
+        docker compose up -d --build
     elif docker-compose version > /dev/null 2>&1; then
-        # Ancien format: docker-compose
-        docker-compose up --build
+        # Ancien format: docker-compose (en background)
+        docker-compose up -d --build
     else
         echo "❌ Docker Compose n'est pas installé"
         echo "💡 Installez Docker Compose pour continuer"
@@ -101,6 +100,20 @@ else
     echo "💡 Installez Docker pour continuer"
     exit 1
 fi
+
+# Attendre que le backend soit prêt
+echo "⏳ Attente du backend (15 secondes)..."
+sleep 15
+
+# Lancer le frontend directement
+echo ""
+echo "📱 Démarrage du frontend Expo..."
+echo "   Le QR code va apparaître ci-dessous"
+echo "   Appuyez sur 'w' pour ouvrir dans le navigateur"
+echo ""
+
+cd frontend
+npm start
 
 echo ""
 echo "✅ Glycopilot démarré !"
