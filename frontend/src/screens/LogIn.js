@@ -27,7 +27,7 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      const result = await authService.login(email, password);
+      await authService.login(email, password);
       toastSuccess('Connexion réussie', 'Bienvenue !');
 
       setEmail('');

@@ -141,7 +141,7 @@ const authService = {
         } else {
           try {
             message = JSON.stringify(error.response.data);
-          } catch (e) {
+          } catch (_e) {
             // fallback
             message = "Erreur lors de l'inscription (voir logs)";
           }

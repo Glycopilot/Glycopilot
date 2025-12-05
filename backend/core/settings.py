@@ -136,18 +136,3 @@ STATIC_ROOT = BASE_DIR / "static"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-
-# --- CUSTOM USER MODEL (⚠️ IMPORTANT pour ton app users) ---
-AUTH_USER_MODEL = "users.User"
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.environ.get("SMTP_PORT", "587"))
-EMAIL_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
-EMAIL_HOST_USER = os.environ.get("SMTP_USERNAME", "")
-EMAIL_HOST_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("SMTP_USERNAME", "noreply@glycopilot.com")
-
-# En mode test, utiliser le backend console
-if "test" in sys.argv or "pytest" in sys.argv[0]:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
