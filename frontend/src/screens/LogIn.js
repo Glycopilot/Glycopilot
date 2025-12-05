@@ -6,7 +6,6 @@ import {
   TextInput,
   Image,
   useWindowDimensions,
-  Alert,
 } from 'react-native';
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react-native';
@@ -14,38 +13,29 @@ import authService from '../services/authService';
 import CustomButton from '../components/common/CustomButton';
 import Decorations from '../components/common/Decorations';
 import { colors } from '../themes/colors';
+import { toastError, toastSuccess } from '../services/toastService';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
   const { height: windowHeight } = useWindowDimensions();
 
   const handleLogin = async () => {
-    // Validation basique
     if (!email || !password) {
-      setMessage('Erreur Veuillez remplir tous les champs');
+      toastError('Champs manquants', 'Veuillez remplir tous les champs.');
       return;
     }
 
-    setMessage('');
-
     try {
       const result = await authService.login(email, password);
-      // Vider le formulaire
+      toastSuccess('Connexion réussie', 'Bienvenue !');
+
       setEmail('');
       setPassword('');
 
-      // Rediriger vers l'écran d'accueil
-      if (navigation && navigation.reset) {
-        // reset stack so user can't go back to login
-        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
-      } else if (navigation && navigation.navigate) {
-        navigation.navigate('Home');
-      }
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (error) {
-      setMessage(`✗ ${error.message}`);
-      Alert.alert('Erreur de connexion', error.message);
+      toastError('Erreur de connexion', error.message);
     }
   };
 
@@ -58,7 +48,6 @@ export default function LoginScreen({ navigation }) {
         style={styles.logo}
         resizeMode="contain"
       />
-      {message ? <Text style={styles.message}>{message}</Text> : null}
       {/* === FORMULAIRE === */}
       <View style={styles.form}>
         {/* EMAIL */}
@@ -120,14 +109,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 200,
     height: 150,
-  },
-
-  message: {
-    fontSize: 16,
-    color: colors.errorRed,
-    textAlign: 'center',
-    marginBottom: 30,
-    paddingHorizontal: 20,
   },
 
   form: {

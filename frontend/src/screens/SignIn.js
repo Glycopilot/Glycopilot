@@ -14,6 +14,7 @@ import authService from '../services/authService';
 import CustomButton from '../components/common/CustomButton';
 import Decorations from '../components/common/Decorations';
 import { colors } from '../themes/colors';
+import { toastError, toastSuccess } from '../services/toastService';
 
 export default function SignInScreen({ navigation }) {
   const [firstName, setfirstName] = useState('');
@@ -24,45 +25,44 @@ export default function SignInScreen({ navigation }) {
 
   const [password, setPassword] = useState('');
   const [ConfirmationPassword, setConfirmationPassword] = useState('');
-
-  const [message, setMessage] = useState('');
   const { height: windowHeight } = useWindowDimensions();
 
   const handleSingIn = async () => {
     // basic presence checks for names
     if (!firstName || !lastName) {
-      setMessage('Erreur Veuillez fournir le nom et le prénom');
+      toastError('Erreur', 'Veuillez fournir le nom et le prénom');
       return;
     }
     if (Confirmationemail !== email) {
-      setMessage('Erreur Les emails ne correspondent pas');
+      toastError('Erreur', 'Les emails ne correspondent pas');
       return;
     }
     if (ConfirmationPassword !== password) {
-      setMessage('Erreur Les mots de passe ne correspondent pas');
+      toastError('Erreur', 'Les mots de passe ne correspondent pas');
       return;
     }
     if (!email || !password) {
-      setMessage('Erreur Veuillez remplir tous les champs');
+      toastError('Erreur', 'Veuillez remplir tous les champs');
       return;
     } else if (password.length < 8) {
-      // backend requires min_length=8
-      setMessage('Erreur Le mot de passe doit contenir au moins 8 caractères');
+      toastError(
+        'Erreur',
+        'Le mot de passe doit contenir au moins 8 caractères'
+      );
       return;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      setMessage("Erreur L'adresse email n'est pas valide");
+      toastError('Erreur', "L'adresse email n'est pas valide");
       return;
     } else if (!/\d/.test(password)) {
-      setMessage('Erreur Le mot de passe doit contenir au moins un chiffre');
+      toastError('Erreur', 'Le mot de passe doit contenir au moins un chiffre');
       return;
     } else if (!/[A-Z]/.test(password)) {
-      setMessage(
-        'Erreur Le mot de passe doit contenir au moins une lettre majuscule'
+      toastError(
+        'Erreur',
+        'Le mot de passe doit contenir au moins une lettre majuscule'
       );
       return;
     } else {
-      setMessage('');
-
       try {
         const result = await authService.register({
           email,
@@ -71,7 +71,7 @@ export default function SignInScreen({ navigation }) {
           password,
           passwordConfirm: ConfirmationPassword,
         });
-        setMessage('✓ inscription réussie!');
+        toastSuccess('Inscription réussie!', 'Bienvenue !');
         console.log('Utilisateur ajouté:', result.user);
 
         // Vider le formulaire
@@ -84,14 +84,12 @@ export default function SignInScreen({ navigation }) {
 
         // Rediriger vers l'écran d'accueil
         if (navigation && navigation.reset) {
-          // reset stack so user can't go back to login
           navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
         } else if (navigation && navigation.navigate) {
           navigation.navigate('Login');
         }
       } catch (error) {
-        setMessage(`✗ ${error.message}`);
-        Alert.alert('Erreur inscription ', error.message);
+        toastError('Erreur inscription', error.message);
       }
     }
   };
@@ -118,8 +116,6 @@ export default function SignInScreen({ navigation }) {
         style={styles.logo}
         resizeMode="contain"
       />
-
-      {message ? <Text style={styles.message}>{message}</Text> : null}
 
       {/* === FORMULAIRE === */}
 
