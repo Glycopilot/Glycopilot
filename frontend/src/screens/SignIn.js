@@ -6,10 +6,7 @@ import {
   TextInput,
   Image,
   useWindowDimensions,
-  Alert,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react-native';
@@ -98,15 +95,13 @@ export default function SignInScreen({ navigation }) {
   };
 
   return (
-    <View
-      style={[styles.container, { minHeight: windowHeight }]}
-    >
+    <View style={[styles.container, { minHeight: windowHeight }]}>
       {/* Header */}
       <View style={styles.header}>
         <Decorations />
         <Text
           style={{
-            marginTop: 20,
+            marginTop: 40,
             color: colors.primary,
             backgroundColor: colors.lightBg,
             padding: 10,
