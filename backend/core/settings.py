@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.medications",
     "apps.alerts",
     "apps.notifications",
+    "apps.dashboard",
     "django_rest_passwordreset",
 ]
 
