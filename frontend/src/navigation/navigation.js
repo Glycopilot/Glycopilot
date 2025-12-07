@@ -4,6 +4,10 @@ import LoginScreen from '../screens/LogIn';
 import SignInScreen from '../screens/SignIn';
 import ResetPasswordScreen from '../screens/ResetPassword';
 import HomeScreen from '../screens/Home';
+import JournalScreen from '../screens/Journal';
+import StatsScreen from '../screens/Stats';
+import ProfileScreen from '../screens/Profile';
+import NotificationScreen from '../screens/Notifications';
 
 export default function AppNavigator() {
   const [currentScreen, setCurrentScreen] = useState('Login');
@@ -59,4 +63,18 @@ export default function AppNavigator() {
   if (currentScreen === 'Home') {
     return <HomeScreen navigation={navigation} />;
   }
+  if (currentScreen === 'Journal') {
+    return <JournalScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Stats') {
+    return <StatsScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Profile') {
+    return <ProfileScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Notifications') {
+    return <NotificationScreen navigation={navigation} />;
+  }
+
+  return null;
 }
