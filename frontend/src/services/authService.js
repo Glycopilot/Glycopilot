@@ -31,6 +31,21 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Mécanisme de gestion des refreshes concurrents
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Intercepteur pour gérer le rafraîchissement automatique du token
 apiClient.interceptors.response.use(
   response => response,
@@ -38,7 +53,20 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // Si un refresh est en cours, attendre son résultat
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch(err => Promise.reject(err));
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const refreshToken = await AsyncStorage.getItem('refresh_token');
@@ -46,6 +74,7 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
+        // Créer une requête sans les intercepteurs pour éviter les boucles
         const response = await axios.post(`${API_URL}/auth/refresh`, {
           refresh: refreshToken,
         });
@@ -54,6 +83,8 @@ apiClient.interceptors.response.use(
         await AsyncStorage.setItem('access_token', access);
 
         originalRequest.headers.Authorization = `Bearer ${access}`;
+        processQueue(null, access);
+        isRefreshing = false;
         return apiClient(originalRequest);
       } catch (refreshError) {
         // Token invalide, nettoyer le stockage
@@ -63,6 +94,8 @@ apiClient.interceptors.response.use(
           'Erreur lors du rafraîchissement du token:',
           refreshError
         );
+        processQueue(refreshError, null);
+        isRefreshing = false;
         return Promise.reject(refreshError);
       }
     }
@@ -223,7 +256,9 @@ const authService = {
       await AsyncStorage.removeItem('access_token');
       await AsyncStorage.removeItem('refresh_token');
       const message =
-        error.message || 'Erreur lors du rafraîchissement du token';
+        error.response?.data?.error ||
+        error.message ||
+        'Erreur lors du rafraîchissement du token';
       throw new Error(message);
     }
   },

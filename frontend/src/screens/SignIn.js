@@ -3,15 +3,16 @@ import {
   StyleSheet,
   Text,
   View,
-  TextInput,
   Image,
   useWindowDimensions,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { useState } from 'react';
-import { Mail, Lock } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import authService from '../services/authService';
 import CustomButton from '../components/common/CustomButton';
+import InputField from '../components/common/InputField';
 import Decorations from '../components/common/Decorations';
 import { colors } from '../themes/colors';
 import { toastError, toastSuccess } from '../services/toastService';
@@ -25,6 +26,10 @@ export default function SignInScreen({ navigation }) {
 
   const [password, setPassword] = useState('');
   const [ConfirmationPassword, setConfirmationPassword] = useState('');
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const { height: windowHeight } = useWindowDimensions();
 
   const handleSingIn = async () => {
@@ -64,7 +69,7 @@ export default function SignInScreen({ navigation }) {
       return;
     } else {
       try {
-        const result = await authService.register({
+        await authService.register({
           email,
           firstName,
           lastName,
@@ -72,7 +77,6 @@ export default function SignInScreen({ navigation }) {
           passwordConfirm: ConfirmationPassword,
         });
         toastSuccess('Inscription réussie!', 'Bienvenue !');
-        console.log('Utilisateur ajouté:', result.user);
 
         // Vider le formulaire
         setEmail('');
@@ -130,78 +134,82 @@ export default function SignInScreen({ navigation }) {
       >
         <View style={styles.form}>
           <View style={styles.rowContainer}>
-            <View style={[styles.inputWrapper, styles.halfWidth]}>
-              <Text style={styles.label}>Nom</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={lastName}
-                  onChangeText={setlastName}
-                />
-              </View>
+            <View style={styles.halfWidth}>
+              <InputField
+                label="Nom"
+                value={lastName}
+                onChangeText={setlastName}
+                placeholder="Nom"
+              />
             </View>
 
-            <View style={[styles.inputWrapper, styles.halfWidth]}>
-              <Text style={styles.label}>Prénom</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={firstName}
-                  onChangeText={setfirstName}
-                />
-              </View>
+            <View style={styles.halfWidth}>
+              <InputField
+                label="Prénom"
+                value={firstName}
+                onChangeText={setfirstName}
+                placeholder="Prénom"
+              />
             </View>
           </View>
 
           {/* EMAIL */}
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Email</Text>
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#666" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-          </View>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}> Confirmation d'email</Text>
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#666" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={Confirmationemail}
-                onChangeText={setConfirmationEmail}
-              />
-            </View>
-          </View>
-          {/* PASSWORD */}
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Mot de passe</Text>
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={password}
-                secureTextEntry={true}
-                onChangeText={setPassword}
-              />
-            </View>
-          </View>
+          <InputField
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            icon={<Mail size={20} color="#666" />}
+            placeholder="user@example.com"
+            keyboardType="email-address"
+          />
 
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Confirmation du mot de passe</Text>
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666" style={styles.icon} />
-              <TextInput
-                style={styles.input}
-                value={ConfirmationPassword}
-                secureTextEntry={true}
-                onChangeText={setConfirmationPassword}
-              />
-            </View>
-          </View>
+          <InputField
+            label="Confirmation d'email"
+            value={Confirmationemail}
+            onChangeText={setConfirmationEmail}
+            icon={<Mail size={20} color="#666" />}
+            placeholder="user@example.com"
+            keyboardType="email-address"
+          />
+
+          {/* PASSWORD */}
+          <InputField
+            label="Mot de passe"
+            value={password}
+            onChangeText={setPassword}
+            icon={<Lock size={20} color="#666" />}
+            secureTextEntry={!showPassword}
+            placeholder="••••••••"
+            rightElement={
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {showPassword ? (
+                  <EyeOff size={20} color="#666" />
+                ) : (
+                  <Eye size={20} color="#666" />
+                )}
+              </TouchableOpacity>
+            }
+          />
+
+          <InputField
+            label="Confirmation du mot de passe"
+            value={ConfirmationPassword}
+            onChangeText={setConfirmationPassword}
+            icon={<Lock size={20} color="#666" />}
+            secureTextEntry={!showConfirmPassword}
+            placeholder="••••••••"
+            rightElement={
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff size={20} color="#666" />
+                ) : (
+                  <Eye size={20} color="#666" />
+                )}
+              </TouchableOpacity>
+            }
+          />
 
           <CustomButton title="S'inscrire" onPress={handleSingIn} />
         </View>
@@ -261,41 +269,5 @@ const styles = StyleSheet.create({
 
   halfWidth: {
     flex: 1,
-    marginBottom: 0,
-  },
-
-  inputWrapper: {
-    marginBottom: 18,
-  },
-
-  label: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    fontWeight: '600',
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 12,
-    backgroundColor: colors.backgroundColor,
-    paddingHorizontal: 12,
-    height: 50,
-  },
-
-  icon: {
-    marginRight: 10,
-  },
-
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-    outlineColor: colors.transparent,
   },
 });
