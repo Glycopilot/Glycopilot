@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "",
+    "slug": "glycopilot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/glycopilot.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
     "ios": {
