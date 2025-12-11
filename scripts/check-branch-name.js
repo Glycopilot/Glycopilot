@@ -10,7 +10,7 @@ const branchName = execSync('git rev-parse --abbrev-ref HEAD')
 // Définir le pattern autorisé
 // Format: type/description
 // Exemples: feature/login, fix/button-crash, hotfix/security
-const branchPattern = /^(feat-front|feat-back|fix|hotfix|release|refactor|docs|test|chore)\/[a-z0-9-]+$/;
+const branchPattern = /^(feat|fix|hotfix|release|refactor|docs|test|chore)\/[a-z0-9-]+$/;
 
 if (!branchPattern.test(branchName)) {
   console.error(`
