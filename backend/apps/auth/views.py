@@ -49,12 +49,19 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
 
     if serializer.is_valid():
-        user = serializer.save()
+        try:
+            user = serializer.save()
+            # Générer les tokens JWT
+            tokens = AuthResponseSerializer.get_tokens_for_user(user)
+            return Response(tokens, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            import traceback
 
-        # Générer les tokens JWT
-        tokens = AuthResponseSerializer.get_tokens_for_user(user)
-
-        return Response(tokens, status=status.HTTP_201_CREATED)
+            traceback.print_exc()
+            return Response(
+                {"code": "registration_error", "detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
