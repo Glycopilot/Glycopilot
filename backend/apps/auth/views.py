@@ -1,6 +1,7 @@
 """
 Contrôleur pour l'authentification
 """
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -162,6 +163,14 @@ def logout(request):
 
     try:
         token = RefreshToken(refresh_token)
+        token_user_id = token.payload.get("user_id")
+
+        if token_user_id != request.user.id:
+            return Response(
+                {"error": "Token ne correspond pas à l'utilisateur connecté."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         token.blacklist()
 
         return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)

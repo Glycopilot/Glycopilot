@@ -1,6 +1,8 @@
 """
 Serializers pour l'authentification
 """
+import os
+
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -118,10 +120,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class AuthResponseSerializer(serializers.Serializer):
-    """
-    Serializer pour la réponse d'authentification avec tokens JWT
-    """
-
     access = serializers.CharField()
     refresh = serializers.CharField()
     user = UserSerializer()
@@ -129,12 +127,23 @@ class AuthResponseSerializer(serializers.Serializer):
     @staticmethod
     def get_tokens_for_user(user):
         """
-        Génère les tokens JWT pour un utilisateur
+        Génère les tokens JWT pour les user si l'utilisateur est ADMIN utilise SECRET_KEY_ADMIN
+        Sinon SECRET_KEY pour toute les roles sauf ADNIN
         """
         refresh = RefreshToken.for_user(user)
+
+        #  payload
         refresh["role"] = user.role
+
         access = refresh.access_token
         access["role"] = user.role
+
+        if user.role == User.Role.ADMIN or user.is_superuser:
+            admin_key = os.environ.get("SECRET_KEY_ADMIN")
+
+            # Permet de signer le token  la cle admin
+            refresh.access_token.set_signature_key(admin_key)
+            refresh.set_signature_key(admin_key)
 
         return {
             "access": str(access),

@@ -1,7 +1,27 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
+# Custom Manager
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("L'email doit être fourni")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Le superuser doit avoir is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Le superuser doit avoir is_superuser=True.")
+        return self.create_user(email, password, **extra_fields)
+
+# Modèle User
 class User(AbstractUser):
     class Role(models.TextChoices):
         PATIENT = "patient", "Patient"
@@ -22,6 +42,11 @@ class User(AbstractUser):
         "profiles.Profile", through="UserProfile", related_name="users"
     )
 
+    objects = CustomUserManager()  # Relie le CustomUserManager
+
+    USERNAME_FIELD = "email"  # email comme identifiant
+    REQUIRED_FIELDS = []       # pas de champs obligatoires supplémentaires
+
     class Meta:
         db_table = "users"
         ordering = ["-created_at"]
@@ -36,6 +61,7 @@ class User(AbstractUser):
         super().save(*args, **kwargs)
 
 
+# Modèle UserProfile
 class UserProfile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     profil = models.ForeignKey("profiles.Profile", on_delete=models.CASCADE)

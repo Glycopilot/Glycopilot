@@ -41,6 +41,9 @@ class Glycemia(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.value} {self.unit}"
 
+    def __str__(self):
+        return f"{self.user.email} - {self.value} {self.unit}"
+
 
 class GlycemiaHisto(models.Model):
 
