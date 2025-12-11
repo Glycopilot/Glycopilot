@@ -17,11 +17,12 @@ class Glycemia(models.Model):
     ]
 
      
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        primary_key=True
+        related_name="glycemia_month"
     )
+
     measured_at = models.DateTimeField()
     value = models.FloatField()
     unit = models.CharField(max_length=10, default='mg/dL')
@@ -31,6 +32,11 @@ class Glycemia(models.Model):
 
     class Meta:
         db_table = "glycemia"
+        ordering = ['-measured_at'] 
+        indexes = [
+            models.Index(fields=["user", "measured_at"]),
+        ]
+
 
     def __str__(self):
         return f"{self.user.email} - {self.value} {self.unit}"
