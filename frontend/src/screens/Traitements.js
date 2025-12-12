@@ -264,7 +264,6 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 
-  // tabs
   tabsRow: {
     flexDirection: 'row',
     marginTop: 16,
@@ -292,7 +291,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
 
-  // list
   listContainer: {
     paddingHorizontal: 16,
     marginTop: 12,
@@ -304,7 +302,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
-    // shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,

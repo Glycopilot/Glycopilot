@@ -67,8 +67,8 @@ export default function ActiviteScreen({ navigation }) {
         activeOpacity={0.8}
       >
         <View style={styles.activityLeft}>
-          <View style={[styles.iconCircle, { backgroundColor: '#e8f1ffff' }]}>
-            <ActivityIcon size={18} color="#007AFF" strokeWidth={2.5} />
+          <View style={[styles.iconCircle, { backgroundColor: '#efefefff' }]}>
+            <ActivityIcon size={18} color="#000" strokeWidth={2.5} />
           </View>
 
           <View style={styles.activityInfo}>
@@ -145,7 +145,7 @@ export default function ActiviteScreen({ navigation }) {
             <View style={styles.sheetHandle} />
 
             <View style={styles.modalHeader}>
-              <Bike size={20} color="#007AFF" strokeWidth={2.5} />
+              <Bike size={20} color="#000" strokeWidth={2.5} />
               <Text style={styles.modalTitle}>Nouvelle Activité</Text>
             </View>
 
@@ -235,19 +235,24 @@ const styles = StyleSheet.create({
   },
   periodCard: {
     flex: 1,
-    backgroundColor: '#e8f1ffff',
+    backgroundColor: '#ffffffff',
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   periodNumber: {
     fontSize: 24,
-    color: '#007AFF',
+    color: '#000',
     fontWeight: '800',
   },
   periodLabel: {
     fontSize: 12,
-    color: '#007AFF',
+    color: '#000',
     fontWeight: '700',
     marginTop: 6,
   },
@@ -308,7 +313,7 @@ const styles = StyleSheet.create({
   },
   kcalUnit: {
     fontSize: 12,
-    color: colors.textSecondary || '#8E8E93',
+    color: '#007AFF',
     marginTop: 2,
   },
 
