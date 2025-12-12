@@ -185,13 +185,28 @@ export default function HomeScreen({ navigation }) {
           />
           <ActionButton
             type="repas"
-            onPress={() => console.log('Repas action')}
+            onPress={() => {
+              if (navigation && navigation.navigate) {
+                navigation.navigate('Repas');
+              }
+            }}
           />
           <ActionButton
             type="medic"
-            onPress={() => console.log('Médic action')}
+            onPress={() => {
+              if (navigation && navigation.navigate) {
+                navigation.navigate('Traitements');
+              }
+            }}
           />
-          <ActionButton type="action" onPress={() => console.log('Action')} />
+          <ActionButton
+            type="activite"
+            onPress={() => {
+              if (navigation && navigation.navigate) {
+                navigation.navigate('Activite');
+              }
+            }}
+          />
         </View>
 
         {/* 3. Notifications */}
