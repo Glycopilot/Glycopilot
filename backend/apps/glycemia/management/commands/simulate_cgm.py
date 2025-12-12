@@ -1,0 +1,215 @@
+"""
+Management command pour simuler un capteur CGM (Continuous Glucose Monitoring)
+Génère des données de glycémie toutes les 5 minutes
+"""
+import time
+import random
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from apps.users.models import User
+from apps.glycemia.models import Glycemia, GlycemiaHisto
+import uuid
+
+
+class Command(BaseCommand):
+    help = 'Simule un capteur CGM qui génère des données toutes les 5 minutes'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'email',
+            type=str,
+            help='Email de l\'utilisateur pour lequel simuler le CGM'
+        )
+        parser.add_argument(
+            '--interval',
+            type=int,
+            default=5,
+            help='Intervalle en minutes entre chaque mesure (défaut: 5)'
+        )
+        parser.add_argument(
+            '--duration',
+            type=int,
+            default=0,
+            help='Durée totale de simulation en minutes (0 = infini)'
+        )
+        parser.add_argument(
+            '--base-value',
+            type=float,
+            default=120.0,
+            help='Valeur de base autour de laquelle osciller (défaut: 120 mg/dL)'
+        )
+
+    def handle(self, *args, **options):
+        email = options['email']
+        interval_minutes = options['interval']
+        duration_minutes = options['duration']
+        base_value = options['base_value']
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            self.stdout.write(
+                self.style.ERROR(f'Utilisateur {email} introuvable')
+            )
+            return
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'🔄 Démarrage simulation CGM pour {user.email}'
+            )
+        )
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'📊 Mesure toutes les {interval_minutes} minute(s)'
+            )
+        )
+        if duration_minutes > 0:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'⏱️  Durée: {duration_minutes} minutes'
+                )
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING(
+                    '⏱️  Durée: infinie (appuyez Ctrl+C pour arrêter)'
+                )
+            )
+
+        start_time = time.time()
+        measurement_count = 0
+        current_value = base_value
+
+        # Variables pour simuler les tendances
+        trend_direction = random.choice(['stable', 'rising', 'falling'])
+        trend_counter = 0
+        trend_duration = random.randint(3, 8)  # Combien de mesures pour cette tendance
+
+        try:
+            while True:
+                # Vérifier si on a atteint la durée maximale
+                if duration_minutes > 0:
+                    elapsed_minutes = (time.time() - start_time) / 60
+                    if elapsed_minutes >= duration_minutes:
+                        self.stdout.write(
+                            self.style.SUCCESS(
+                                f'\n✅ Simulation terminée après {duration_minutes} minutes'
+                            )
+                        )
+                        break
+
+                # Générer une nouvelle valeur avec tendance réaliste
+                current_value = self._generate_realistic_value(
+                    current_value,
+                    trend_direction,
+                    base_value
+                )
+
+                # Changer de tendance périodiquement
+                trend_counter += 1
+                if trend_counter >= trend_duration:
+                    trend_direction = self._get_next_trend(trend_direction)
+                    trend_counter = 0
+                    trend_duration = random.randint(3, 8)
+
+                # Déterminer le trend pour l'affichage
+                if trend_direction == 'rising':
+                    trend = 'rising'
+                    rate = random.uniform(1.0, 3.0)
+                elif trend_direction == 'falling':
+                    trend = 'falling'
+                    rate = random.uniform(-3.0, -1.0)
+                else:
+                    trend = 'stable'
+                    rate = random.uniform(-0.5, 0.5)
+
+                now = timezone.now()
+                reading_id = str(uuid.uuid4())
+
+                # Créer/Mettre à jour l'entrée dans Glycemia (valeur actuelle)
+                Glycemia.objects.update_or_create(
+                    user=user,
+                    defaults={
+                        'measured_at': now,
+                        'value': round(current_value, 1),
+                        'unit': 'mg/dL',
+                        'trend': trend,
+                        'rate': round(rate, 2),
+                        'source': 'cgm',
+                    }
+                )
+
+                # Ajouter dans GlycemiaHisto (historique)
+                GlycemiaHisto.objects.create(
+                    reading_id=reading_id,
+                    user=user,
+                    measured_at=now,
+                    value=round(current_value, 1),
+                    unit='mg/dL',
+                    trend=trend,
+                    rate=round(rate, 2),
+                    source='cgm',
+                )
+
+                measurement_count += 1
+
+                # Afficher le status
+                trend_arrow = {
+                    'rising': '↗️',
+                    'falling': '↘️',
+                    'stable': '→'
+                }.get(trend, '→')
+
+                self.stdout.write(
+                    f'[{now.strftime("%H:%M:%S")}] '
+                    f'Mesure #{measurement_count}: '
+                    f'{current_value:.1f} mg/dL {trend_arrow} '
+                    f'(rate: {rate:+.1f})'
+                )
+
+                # Attendre le prochain intervalle
+                time.sleep(interval_minutes * 60)
+
+        except KeyboardInterrupt:
+            self.stdout.write(
+                self.style.WARNING(
+                    f'\n⚠️  Simulation interrompue après {measurement_count} mesures'
+                )
+            )
+        except Exception as e:
+            self.stdout.write(
+                self.style.ERROR(f'\n❌ Erreur: {str(e)}')
+            )
+
+    def _generate_realistic_value(self, current, trend, base):
+        """Génère une valeur réaliste basée sur la tendance"""
+        if trend == 'rising':
+            # Augmentation progressive
+            delta = random.uniform(1.0, 4.0)
+        elif trend == 'falling':
+            # Diminution progressive
+            delta = random.uniform(-4.0, -1.0)
+        else:  # stable
+            # Petites variations
+            delta = random.uniform(-1.5, 1.5)
+
+        new_value = current + delta
+
+        # Limites de sécurité
+        new_value = max(60, min(250, new_value))
+
+        # Tendance à revenir vers la base
+        if abs(new_value - base) > 40:
+            correction = (base - new_value) * 0.1
+            new_value += correction
+
+        return new_value
+
+    def _get_next_trend(self, current_trend):
+        """Détermine la prochaine tendance de façon réaliste"""
+        if current_trend == 'rising':
+            return random.choice(['stable', 'stable', 'falling'])
+        elif current_trend == 'falling':
+            return random.choice(['stable', 'stable', 'rising'])
+        else:  # stable
+            return random.choice(['stable', 'rising', 'falling'])

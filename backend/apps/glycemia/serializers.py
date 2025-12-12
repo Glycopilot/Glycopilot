@@ -66,6 +66,16 @@ class GlycemiaHistoCreateSerializer(serializers.ModelSerializer):
         return value
 
 
+class GlycemiaHistoryResponseSerializer(serializers.Serializer):
+    """Serializer pour la réponse de l'historique de glycémie"""
+    id = serializers.IntegerField()
+    measured_at = serializers.DateTimeField()
+    value = serializers.FloatField()
+    unit = serializers.CharField(default='mg/dL')
+    trend = serializers.CharField(required=False, allow_null=True)
+    source = serializers.CharField(required=False, allow_null=True)
+
+
 class GlycemiaDataIASerializer(serializers.ModelSerializer):
 
     class Meta:

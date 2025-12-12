@@ -1,5 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+} from 'react-native';
 import { Activity, Pill } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
@@ -14,6 +20,49 @@ export default function StatCard({
   subtitle,
   onPress,
 }) {
+  // Animation pour le fade
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const previousValue = useRef(value);
+
+  // Animer quand la valeur change
+  useEffect(() => {
+    if (
+      previousValue.current !== value &&
+      previousValue.current !== undefined
+    ) {
+      // Animation de fade + pulse
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 0.4,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0.96,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 5,
+            tension: 100,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    }
+    previousValue.current = value;
+  }, [value, fadeAnim, scaleAnim]);
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <Text style={styles.cardTitle}>{title}</Text>
@@ -23,7 +72,15 @@ export default function StatCard({
           <IconComponent size={24} color={iconColor} strokeWidth={2.5} />
         </View>
 
-        <View style={styles.valueSection}>
+        <Animated.View
+          style={[
+            styles.valueSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
           <View style={styles.valueRow}>
             <Text style={styles.mainValue}>{value?.toLocaleString()}</Text>
             {secondaryValue && (
@@ -34,7 +91,7 @@ export default function StatCard({
             )}
           </View>
           <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
+        </Animated.View>
       </View>
     </TouchableOpacity>
   );

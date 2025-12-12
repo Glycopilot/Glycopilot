@@ -1,9 +1,79 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+} from 'react-native';
 import { Gauge } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
-export default function GlycemieCard({ value, status = 'normal', onPress }) {
+export default function GlycemieCard({
+  value,
+  status = 'normal',
+  timestamp,
+  onPress,
+}) {
+  // Animation pour le fade
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const previousValue = useRef(value);
+
+  // Formater le timestamp en heure lisible
+  const formatTime = isoString => {
+    if (!isoString) return '';
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  // Animer quand la valeur change
+  useEffect(() => {
+    if (
+      previousValue.current !== value &&
+      previousValue.current !== undefined
+    ) {
+      // Animation de fade + pulse
+      Animated.sequence([
+        // Fade out + scale down légèrement
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 0.3,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0.95,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Fade in + scale up avec un petit bounce
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 4,
+            tension: 80,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    }
+    previousValue.current = value;
+  }, [value, fadeAnim, scaleAnim]);
+
   // Déterminer la couleur et le label selon le status
   const getStatusConfig = status => {
     switch (status.toLowerCase()) {
@@ -54,16 +124,33 @@ export default function GlycemieCard({ value, status = 'normal', onPress }) {
         </View>
       </View>
 
-      {/* Valeur principale */}
-      <View style={styles.valueContainer}>
+      {/* Valeur principale avec animation */}
+      <Animated.View
+        style={[
+          styles.valueContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
         <View
           style={[styles.iconCircle, { backgroundColor: statusConfig.bgColor }]}
         >
           <Gauge size={28} color={statusConfig.color} strokeWidth={2.5} />
         </View>
-        <Text style={styles.value}>{value}</Text>
-        <Text style={styles.unit}>mg/dl</Text>
-      </View>
+        <View style={styles.valueWithTime}>
+          <View style={styles.valueRow}>
+            <Text style={styles.value}>{value}</Text>
+            <Text style={styles.unit}>mg/dl</Text>
+          </View>
+          {timestamp && (
+            <Text style={styles.timestamp}>
+              prise à: {formatTime(timestamp)}
+            </Text>
+          )}
+        </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 }
@@ -115,6 +202,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  valueWithTime: {
+    flex: 1,
+  },
+  valueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   value: {
     fontSize: 48,
     fontWeight: '700',
@@ -126,5 +221,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.textSecondary || '#8E8E93',
     marginTop: 12,
+  },
+  timestamp: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary || '#8E8E93',
+    marginTop: 4,
   },
 });

@@ -1,35 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { ChevronDown } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
+import glycemiaService from '../../services/glycemiaService';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function GlycemieChart({ data, currentValue = 0 }) {
   const [selectedPeriod, setSelectedPeriod] = useState("Aujourd'hui");
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [chartData, setChartData] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // Données par défaut si aucune donnée n'est fournie
-  const defaultData = {
-    labels: ['12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
-    datasets: [
-      {
-        data: [100, 50, 110, 120, 105, 60, 145, 120],
-        strokeWidth: 3,
-      },
-    ],
-  };
-
-  const chartData = data || defaultData;
+  // Animation pour le fade du chart
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const periods = ["Aujourd'hui", 'Semaine', 'Mois'];
+
+  // Charger les données de glycémie selon la période
+  const loadHistory = async period => {
+    setLoading(true);
+    try {
+      let history;
+      let periodKey;
+
+      if (period === "Aujourd'hui") {
+        history = await glycemiaService.getTodayHistory();
+        periodKey = 'day';
+      } else if (period === 'Semaine') {
+        history = await glycemiaService.getWeekHistory();
+        periodKey = 'week';
+      } else if (period === 'Mois') {
+        history = await glycemiaService.getMonthHistory();
+        periodKey = 'month';
+      }
+
+      // Transformer les données pour le chart
+      const transformed = glycemiaService.transformForChart(history, periodKey);
+      setChartData(transformed);
+    } catch (error) {
+      console.error('Error loading glucose history:', error);
+      // En cas d'erreur, utiliser des données par défaut
+      setChartData({
+        labels: ['--'],
+        datasets: [{ data: [100] }],
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Charger les données au montage et quand la période change
+  useEffect(() => {
+    loadHistory(selectedPeriod);
+  }, [selectedPeriod]);
+
+  // Animer quand chartData change (nouvelles données chargées)
+  useEffect(() => {
+    if (chartData && !loading) {
+      // Animation fade rapide
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 0.3,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [chartData, loading, fadeAnim]);
 
   const handlePeriodSelect = period => {
     setSelectedPeriod(period);
@@ -87,49 +139,66 @@ export default function GlycemieChart({ data, currentValue = 0 }) {
         <Text style={styles.currentValue}>
           (
           {currentValue ||
-            chartData.datasets[0].data[chartData.datasets[0].data.length - 1]}
+            (chartData?.datasets?.[0]?.data?.[
+              chartData.datasets[0].data.length - 1
+            ] ??
+              '--')}
           )
         </Text>
       </View>
 
-      {/* Chart */}
-      <LineChart
-        data={chartData}
-        width={screenWidth - 32}
-        height={220}
-        chartConfig={{
-          backgroundColor: '#FFFFFF',
-          backgroundGradientFrom: '#FFFFFF',
-          backgroundGradientTo: '#FFFFFF',
-          decimalPlaces: 0,
-          color: (opacity = 1) => `rgba(255, 159, 28, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(142, 142, 147, ${opacity})`,
-          style: {
-            borderRadius: 16,
-          },
-          propsForDots: {
-            r: '6',
-            strokeWidth: '3',
-            stroke: '#FFFFFF',
-            fill: '#FF9F1C',
-          },
-          propsForBackgroundLines: {
-            strokeDasharray: '',
-            stroke: '#F0F0F0',
-            strokeWidth: 1,
-          },
-        }}
-        bezier
-        style={styles.chart}
-        withInnerLines={true}
-        withOuterLines={true}
-        withVerticalLines={false}
-        withHorizontalLines={true}
-        withVerticalLabels={true}
-        withHorizontalLabels={true}
-        fromZero={true}
-        segments={4}
-      />
+      {/* Chart avec animation */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF9F1C" />
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </View>
+      ) : (
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <LineChart
+            data={
+              chartData || {
+                labels: ['--'],
+                datasets: [{ data: [100] }],
+              }
+            }
+            width={screenWidth - 32}
+            height={220}
+            chartConfig={{
+              backgroundColor: '#FFFFFF',
+              backgroundGradientFrom: '#FFFFFF',
+              backgroundGradientTo: '#FFFFFF',
+              decimalPlaces: 0,
+              color: (opacity = 1) => `rgba(255, 159, 28, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(142, 142, 147, ${opacity})`,
+              style: {
+                borderRadius: 16,
+              },
+              propsForDots: {
+                r: '6',
+                strokeWidth: '3',
+                stroke: '#FFFFFF',
+                fill: '#FF9F1C',
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: '',
+                stroke: '#F0F0F0',
+                strokeWidth: 1,
+              },
+            }}
+            bezier
+            style={styles.chart}
+            withInnerLines={true}
+            withOuterLines={true}
+            withVerticalLines={false}
+            withHorizontalLines={true}
+            withVerticalLabels={true}
+            withHorizontalLabels={true}
+            fromZero={true}
+            segments={4}
+          />
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -230,5 +299,15 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 16,
     marginLeft: -16,
+  },
+  loadingContainer: {
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#8E8E93',
   },
 });
