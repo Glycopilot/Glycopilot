@@ -23,7 +23,6 @@ export default function RepasScreen({ navigation }) {
       time: '12:30',
       glucides: 25,
     },
-    // Ajoute d'autres repas si besoin
   ];
 
   const [meals, setMeals] = useState(initialMeals);
@@ -78,7 +77,6 @@ export default function RepasScreen({ navigation }) {
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
             <Text style={styles.title}>Nutrition</Text>
-            {/* Floating Add */}
             <TouchableOpacity style={styles.addButton} onPress={() => setIsModalVisible(true)} activeOpacity={0.9}>
               <Plus color="#FFFFFF" size={20} />
             </TouchableOpacity>
@@ -127,7 +125,6 @@ export default function RepasScreen({ navigation }) {
   );
 }
 
-/* Styles */
 const styles = StyleSheet.create({
   scrollContent: {
     flex: 1,
@@ -158,7 +155,6 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 
-  /* Stats row */
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -197,7 +193,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    // shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,

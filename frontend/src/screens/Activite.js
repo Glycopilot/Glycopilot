@@ -14,13 +14,6 @@ import { Activity as ActivityIcon, Plus, Bike, Walk } from 'lucide-react-native'
 import Layout from '../components/common/Layout';
 import { colors } from '../themes/colors';
 
-/**
- * Activite Screen:
- * - Title "Activité"
- * - Add floating action button to open a modal bottom-sheet
- * - Add new activity (type + duration) with an estimation display
- * - Keep same colors and card style from Home.js
- */
 export default function ActiviteScreen({ navigation }) {
   const initialData = [
     {
@@ -34,15 +27,13 @@ export default function ActiviteScreen({ navigation }) {
 
   const [activities, setActivities] = useState(initialData);
 
-  // Modal form fields
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [activityType, setActivityType] = useState('Marche');
   const [duration, setDuration] = useState('30');
 
-  // Simple mapping (per-minute estimate)
   const caloriesPerMinute = useMemo(() => {
     return {
-      Marche: 4.3, // approx
+      Marche: 4.3,
       Vélo: 6.2,
       Course: 8.0,
     };
@@ -104,12 +95,10 @@ export default function ActiviteScreen({ navigation }) {
       onNotificationPress={() => console.log('Notifications')}
     >
       <View style={{ flex: 1 }}>
-        {/* Scroll content */}
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
             <Text style={styles.title}>Activité</Text>
 
-            {/* Floating Add button (positioned inside topRow so it sits closer to title) */}
             <TouchableOpacity
               onPress={() => setIsModalVisible(true)}
               activeOpacity={0.9}
@@ -119,7 +108,6 @@ export default function ActiviteScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Weekly / Monthly cards like Home */}
           <View style={styles.statsRow}>
             <View style={styles.periodCard}>
               <Text style={styles.periodNumber}>2</Text>
@@ -131,7 +119,6 @@ export default function ActiviteScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Activities list */}
           <View style={styles.listContainer}>
             {activities.map(item => (
               <ActivityItem item={item} key={item.id} />
@@ -141,7 +128,6 @@ export default function ActiviteScreen({ navigation }) {
           <View style={styles.bottomPadding} />
         </ScrollView>
 
-        {/* Modal bottom-sheet for "Nouvelle Activité" */}
         <Modal
           visible={isModalVisible}
           animationType="slide"
@@ -163,13 +149,11 @@ export default function ActiviteScreen({ navigation }) {
               <Text style={styles.modalTitle}>Nouvelle Activité</Text>
             </View>
 
-            {/* Activity type picker (simple) */}
             <View style={styles.formRow}>
               <View style={styles.selectBox}>
                 <TouchableOpacity
                   style={styles.selectInner}
                   onPress={() => {
-                    // Simple cycle between types (Marche -> Vélo -> Course)
                     const types = ['Marche', 'Vélo', 'Course'];
                     const idx = types.indexOf(activityType);
                     const next = types[(idx + 1) % types.length];
@@ -181,7 +165,6 @@ export default function ActiviteScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Duration input */}
             <View style={styles.formRow}>
               <TextInput
                 keyboardType="numeric"
@@ -193,7 +176,6 @@ export default function ActiviteScreen({ navigation }) {
               />
             </View>
 
-            {/* Estimation box */}
             <View style={styles.estimationBox}>
               <Text style={styles.estimationHeading}>Estimation</Text>
               <Text style={styles.estimationSubtitle}>Calories approx.</Text>
@@ -204,7 +186,6 @@ export default function ActiviteScreen({ navigation }) {
               </View>
             </View>
 
-            {/* Add button */}
             <TouchableOpacity style={styles.addActivityButton} onPress={addActivity} activeOpacity={0.8}>
               <Text style={styles.addActivityText}>Ajouter</Text>
             </TouchableOpacity>
@@ -246,7 +227,6 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
 
-  /** Period cards (week / month) */
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -272,7 +252,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  /** Activities list */
   listContainer: {
     paddingHorizontal: 16,
     marginTop: 12,
@@ -286,7 +265,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
-    // shadows
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -338,7 +316,6 @@ const styles = StyleSheet.create({
     height: 100,
   },
 
-  /** Modal / bottom sheet */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.35)',

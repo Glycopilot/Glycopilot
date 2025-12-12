@@ -1,4 +1,3 @@
-// frontend/src/screens/Traitements.js
 import React, { useState } from 'react';
 import {
   View,
@@ -16,7 +15,6 @@ import Layout from '../components/common/Layout';
 import { colors } from '../themes/colors';
 
 export default function TraitementsScreen({ navigation }) {
-  // sample data for the two tabs: "toTake" and "history"
   const initialToTake = [
     {
       id: 't1',
@@ -37,9 +35,8 @@ export default function TraitementsScreen({ navigation }) {
   const [toTake, setToTake] = useState(initialToTake);
   const [history, setHistory] = useState(initialHistory);
 
-  const [currentTab, setCurrentTab] = useState('toTake'); // 'toTake' | 'history'
+  const [currentTab, setCurrentTab] = useState('toTake');
 
-  // modal form state
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
@@ -53,7 +50,6 @@ export default function TraitementsScreen({ navigation }) {
       dosage,
       time,
     };
-    // Add to the 'toTake' list
     setToTake(prev => [newItem, ...prev]);
     setModalVisible(false);
     setName('');
@@ -62,7 +58,6 @@ export default function TraitementsScreen({ navigation }) {
   }
 
   function markAsTaken(itemId) {
-    // find in toTake
     const item = toTake.find(t => t.id === itemId);
     if (!item) return;
     setToTake(prev => prev.filter(t => t.id !== itemId));
@@ -134,7 +129,6 @@ export default function TraitementsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Tabs */}
           <View style={styles.tabsRow}>
             <TouchableOpacity
               style={[styles.tab, currentTab === 'toTake' ? styles.tabActive : null]}
@@ -156,7 +150,6 @@ export default function TraitementsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* List */}
           <View style={styles.listContainer}>
             {currentTab === 'toTake' ? (
               toTake.map(item => (
@@ -192,7 +185,6 @@ export default function TraitementsScreen({ navigation }) {
           <View style={styles.bottomPadding} />
         </ScrollView>
 
-        {/* Modal bottom sheet to create a new treatment */}
         <Modal
           visible={modalVisible}
           animationType="slide"
@@ -243,7 +235,6 @@ export default function TraitementsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  // container & header
   container: {
     flex: 1,
   },
