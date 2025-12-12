@@ -216,14 +216,14 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Afficher les alertes actives */}
-        {alerts && alerts.length > 0 && alerts[0].type && (
+        {/* {alerts && alerts.length > 0 && alerts[0].type && (
           <NotificationCard
             type="alert"
             title="Alerte"
             message={String(alerts[0].type)}
             onPress={() => console.log('Alert pressed', alerts[0])}
           />
-        )}
+        )} */}
 
         {/* Afficher le prochain médicament */}
         {medication?.nextDose?.name && medication?.nextDose?.scheduledAt && (
@@ -249,7 +249,7 @@ export default function HomeScreen({ navigation }) {
         {(!alerts || alerts.length === 0) && !medication?.nextDose && (
           <NotificationCard
             type="recommandation"
-            message="Tout va bien ! Continuez comme ça 👍"
+            message="Tout va bien ! Continuez comme ça "
             onPress={() => console.log('Notification pressed')}
           />
         )}

@@ -20,10 +20,10 @@ export default function BottomNavBar({ navigation, currentRoute = 'Home' }) {
       name: 'Stats',
       icon: ChartColumn,
     },
-    {
-      name: 'Journal',
-      icon: Newspaper,
-    },
+    // {
+    //   name: 'Journal',
+    //   icon: Newspaper,
+    // },
     {
       name: 'Profile',
       icon: User,
