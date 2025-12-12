@@ -50,8 +50,8 @@ export default function RepasScreen({ navigation }) {
     return (
       <View style={styles.mealCard}>
         <View style={styles.mealLeft}>
-          <View style={[styles.iconCircle, { backgroundColor: '#ecf5ffff' }]}>
-            <Utensils size={18} color={'#007AFF'} />
+          <View style={[styles.iconCircle, { backgroundColor: '#f1f1f1ff' }]}>
+            <Utensils size={18} color={colors.textPrimary} />
           </View>
           <View style={styles.mealInfo}>
             <Text style={styles.mealTitle}>{item.title}</Text>
@@ -106,7 +106,7 @@ export default function RepasScreen({ navigation }) {
           <View style={[styles.modalContainer, Platform.OS === 'ios' ? { paddingBottom: 34 } : null]}>
             <View style={styles.sheetHandle} />
             <View style={styles.modalHeader}>
-              <Utensils size={18} color={'#007AFF'} />
+              <Utensils size={18} color={'#000'} />
               <Text style={styles.modalTitle}>Nouveau Repas</Text>
             </View>
 
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#007AFF',
+    color: colors.textPrimary,
   },
   addButton: {
     width: 44,
@@ -163,20 +163,25 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#e9f1fbff',
+    backgroundColor: '#ffffffff',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   statNumber: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#007AFF',
+    color: colors.textPrimary,
   },
   statLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#007AFF',
+    color: colors.textPrimary,
     marginTop: 8,
   },
 
@@ -218,7 +223,7 @@ const styles = StyleSheet.create({
   mealTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#007AFF',
+    color: colors.textPrimary,
   },
   mealMeta: {
     flexDirection: 'row',
@@ -227,7 +232,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   mealTime: {
-    color: '#007AFF',
+    color: colors.textPrimary,
     fontSize: 13,
   },
 
@@ -236,7 +241,7 @@ const styles = StyleSheet.create({
   },
 
   glucBadge: {
-    backgroundColor: '#ecf5ffff',
+    backgroundColor: '#e1e7fcff',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -250,7 +255,6 @@ const styles = StyleSheet.create({
     height: 100,
   },
 
-  /* Modal */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.34)',
@@ -270,7 +274,7 @@ const styles = StyleSheet.create({
   sheetHandle: {
     height: 6,
     width: 60,
-    backgroundColor: '#ecf5ffff',
+    backgroundColor: '#eaeaeaff',
     alignSelf: 'center',
     borderRadius: 3,
     marginBottom: 10,
@@ -284,7 +288,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#007AFF',
+    color: colors.textPrimary,
   },
   modalForm: {
     marginTop: 8,
@@ -296,7 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom: 12,
     fontSize: 15,
-    color: '#007AFF',
+    color: '#000',
   },
   addModalBtn: {
     backgroundColor: '#007AFF',
