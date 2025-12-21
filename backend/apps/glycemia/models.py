@@ -1,42 +1,43 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
-import uuid
+
 
 # Cache temps réel
 class Glycemia(models.Model):
-
     TREND_CHOICES = [
-        ('rising', 'Rising'),
-        ('falling', 'Falling'),
-        ('flat', 'Flat'),
+        ("rising", "Rising"),
+        ("falling", "Falling"),
+        ("flat", "Flat"),
     ]
 
     SOURCE_CHOICES = [
-        ('cgm', 'CGM'),
-        ('manual', 'Manual'),
+        ("cgm", "CGM"),
+        ("manual", "Manual"),
     ]
 
-     
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="glycemia_month"
+        related_name="glycemia_month",
     )
 
     measured_at = models.DateTimeField()
     value = models.FloatField()
-    unit = models.CharField(max_length=10, default='mg/dL')
-    trend = models.CharField(max_length=20, choices=TREND_CHOICES, null=True, blank=True)
+    unit = models.CharField(max_length=10, default="mg/dL")
+    trend = models.CharField(
+        max_length=20, choices=TREND_CHOICES, null=True, blank=True
+    )
     rate = models.FloatField(null=True, blank=True, help_text="mg/dL per minute")
-    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual')
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
 
     class Meta:
         db_table = "glycemia"
-        ordering = ['-measured_at'] 
+        ordering = ["-measured_at"]
         indexes = [
             models.Index(fields=["user", "measured_at"]),
         ]
-
 
     def __str__(self):
         return f"{self.user.email} - {self.value} {self.unit}"
@@ -46,27 +47,26 @@ class Glycemia(models.Model):
 
 
 class GlycemiaHisto(models.Model):
-
     TREND_CHOICES = [
-        ('rising', 'Rising'),
-        ('falling', 'Falling'),
-        ('flat', 'Flat'),
+        ("rising", "Rising"),
+        ("falling", "Falling"),
+        ("flat", "Flat"),
     ]
 
     SOURCE_CHOICES = [
-        ('cgm', 'CGM'),
-        ('manual', 'Manual'),
+        ("cgm", "CGM"),
+        ("manual", "Manual"),
     ]
 
     CONTEXT_CHOICES = [
-        ('fasting', 'Fasting'),
-        ('preprandial', 'Preprandial'),
-        ('postprandial_1h', 'Postprandial 1h'),
-        ('postprandial_2h', 'Postprandial 2h'),
-        ('bedtime', 'Bedtime'),
-        ('exercise', 'Exercise'),
-        ('stress', 'Stress'),
-        ('correction', 'Correction'),
+        ("fasting", "Fasting"),
+        ("preprandial", "Preprandial"),
+        ("postprandial_1h", "Postprandial 1h"),
+        ("postprandial_2h", "Postprandial 2h"),
+        ("bedtime", "Bedtime"),
+        ("exercise", "Exercise"),
+        ("stress", "Stress"),
+        ("correction", "Correction"),
     ]
 
     id = models.BigAutoField(primary_key=True)
@@ -75,19 +75,23 @@ class GlycemiaHisto(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="glycemia_histo"
+        related_name="glycemia_histo",
     )
 
     measured_at = models.DateTimeField(db_index=True)
     recorded_at = models.DateTimeField(auto_now_add=True)
 
     value = models.FloatField()
-    unit = models.CharField(max_length=10, default='mg/dL')
-    trend = models.CharField(max_length=20, choices=TREND_CHOICES, null=True, blank=True)
+    unit = models.CharField(max_length=10, default="mg/dL")
+    trend = models.CharField(
+        max_length=20, choices=TREND_CHOICES, null=True, blank=True
+    )
     rate = models.FloatField(null=True, blank=True)
-    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual')
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
 
-    context = models.CharField(max_length=30, choices=CONTEXT_CHOICES, null=True, blank=True)
+    context = models.CharField(
+        max_length=30, choices=CONTEXT_CHOICES, null=True, blank=True
+    )
     notes = models.TextField(blank=True, null=True)
     photo_url = models.URLField(blank=True, null=True)
     location_lat = models.FloatField(null=True, blank=True)
@@ -95,7 +99,7 @@ class GlycemiaHisto(models.Model):
 
     class Meta:
         db_table = "glycemia_histo"
-        ordering = ['-measured_at']
+        ordering = ["-measured_at"]
         indexes = [
             models.Index(fields=["user", "measured_at"]),
             models.Index(fields=["user", "source", "measured_at"]),
@@ -119,9 +123,7 @@ class GlycemiaDataIA(models.Model):
     id = models.BigAutoField(primary_key=True)
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="glycemia_ai"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="glycemia_ai"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -143,4 +145,6 @@ class GlycemiaDataIA(models.Model):
         ]
 
     def __str__(self):
-        return f"AI - {self.user.email} ({self.prediction_start} → {self.prediction_end})"
+        return (
+            f"AI - {self.user.email} ({self.prediction_start} → {self.prediction_end})"
+        )

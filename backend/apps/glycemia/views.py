@@ -1,19 +1,19 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+import statistics
+from datetime import timedelta
 
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import now
 
-from datetime import timedelta
-import statistics
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import Glycemia, GlycemiaHisto
 from .serializers import (
-    GlycemiaSerializer,
-    GlycemiaHistoSerializer,
     GlycemiaHistoCreateSerializer,
+    GlycemiaHistoSerializer,
+    GlycemiaSerializer,
 )
 
 
@@ -29,10 +29,11 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Renvoie l'historique complet (GlycemiaHisto) du user."""
-        return GlycemiaHisto.objects.filter(user=self.request.user).order_by("-measured_at")
+        return GlycemiaHisto.objects.filter(user=self.request.user).order_by(
+            "-measured_at"
+        )
 
-   
-    @action(detail=False, methods=['get'], url_path='current')
+    @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
         """
         GET /api/v1/glucose/current/
@@ -42,23 +43,23 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         """
 
         # Dernière valeur dans Glycemia (30 jours)
-        current = Glycemia.objects.filter(user=request.user).order_by('-measured_at').first()
+        current = (
+            Glycemia.objects.filter(user=request.user).order_by("-measured_at").first()
+        )
 
         if current:
             return Response(GlycemiaSerializer(current).data)
 
-        
         latest = self.get_queryset().first()
         if not latest:
             return Response(
-                {'error': 'No glucose readings found'},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "No glucose readings found"}, status=status.HTTP_404_NOT_FOUND
             )
 
         return Response(GlycemiaHistoSerializer(latest).data)
 
     #
-    @action(detail=False, methods=['get'], url_path='range')
+    @action(detail=False, methods=["get"], url_path="range")
     def range(self, request):
         """
         GET /api/v1/glucose/range/?days=X
@@ -66,28 +67,28 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         Utilise uniquement la table Glycemia (cache 30 jours).
         """
 
-        days = int(request.query_params.get('days', 7))
+        days = int(request.query_params.get("days", 7))
 
         if days < 1 or days > 30:
-            return Response({'error': 'Days must be between 1 and 30'}, status=400)
+            return Response({"error": "Days must be between 1 and 30"}, status=400)
 
         limit = now() - timedelta(days=days)
 
         entries = Glycemia.objects.filter(
-            user=request.user,
-            measured_at__gte=limit
-        ).order_by('-measured_at')
+            user=request.user, measured_at__gte=limit
+        ).order_by("-measured_at")
 
         serializer = GlycemiaSerializer(entries, many=True)
 
-        return Response({
-            'entries': serializer.data,
-            'stats': self._calculate_stats(entries),
-            'range_days': days,
-        })
+        return Response(
+            {
+                "entries": serializer.data,
+                "stats": self._calculate_stats(entries),
+                "range_days": days,
+            }
+        )
 
-    
-    @action(detail=False, methods=['post'], url_path='manual-readings')
+    @action(detail=False, methods=["post"], url_path="manual-readings")
     def manual_readings(self, request):
         """
         POST /api/v1/glucose/manual-readings/
@@ -102,18 +103,13 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors, status=400)
 
-
-        histo_entry = serializer.save(
-            user=request.user,
-            source='manual'
-        )
+        histo_entry = serializer.save(user=request.user, source="manual")
 
         self._add_to_month_history(histo_entry)
 
         self._clean_old_entries(request.user)
 
         return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
-
 
     def _add_to_month_history(self, histo_entry):
         """Ajoute une mesure dans Glycemia (historique 30 jours)."""
@@ -139,9 +135,11 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
             return {}
 
         return {
-            'min': min(values),
-            'max': max(values),
-            'avg': round(sum(values) / len(values), 2),
-            'median': round(statistics.median(values), 2) if len(values) > 1 else values[0],
-            'count': len(values),
+            "min": min(values),
+            "max": max(values),
+            "avg": round(sum(values) / len(values), 2),
+            "median": round(statistics.median(values), 2)
+            if len(values) > 1
+            else values[0],
+            "count": len(values),
         }
