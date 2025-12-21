@@ -118,7 +118,7 @@ def logout(request):
 
 @api_view(["GET"])
 def me(request):
-
     from serializers.auth_serializer import UserSerializer
+
     serializer = UserSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
