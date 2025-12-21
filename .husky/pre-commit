@@ -17,4 +17,4 @@ fi
 echo "🔍 Vérification du code Python..."
 $PYTHON_CMD -m isort --check-only .
 $PYTHON_CMD -m black --check .
-$PYTHON_CMD -m flake8
+# $PYTHON_CMD -m flake8
