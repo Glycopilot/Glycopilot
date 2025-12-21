@@ -1,193 +1,147 @@
-"""Views for glycemia app."""
-import statistics
-from datetime import datetime, timedelta
-
-from django.db.models import Avg, Count, Max, Min
-from django.utils.dateparse import parse_datetime
-
-from rest_framework import status, viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
-from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto
+from django.utils.dateparse import parse_datetime
+from django.utils.timezone import now
+
+from datetime import timedelta
+import statistics
+
+from .models import Glycemia, GlycemiaHisto
 from .serializers import (
-    GlycemiaHistoCreateSerializer,
-    GlycemiaHistoryResponseSerializer,
-    GlycemiaHistoSerializer,
     GlycemiaSerializer,
+    GlycemiaHistoSerializer,
+    GlycemiaHistoCreateSerializer,
 )
 
 
 class GlycemiaViewSet(viewsets.ModelViewSet):
-    """ViewSet pour gérer les données de glycémie."""
+    """
+    ViewSet principal pour gérer la glycémie :
+    - Glycemia = historique limité à 30 jours (cache étendu)
+    - GlycemiaHisto = historique complet (jamais supprimé)
+    """
 
     permission_classes = [IsAuthenticated]
     serializer_class = GlycemiaHistoSerializer
 
     def get_queryset(self):
-        """Filtrer par utilisateur connecté."""
-        return GlycemiaHisto.objects.filter(user=self.request.user)
+        """Renvoie l'historique complet (GlycemiaHisto) du user."""
+        return GlycemiaHisto.objects.filter(user=self.request.user).order_by("-measured_at")
 
-    @action(detail=False, methods=["get"], url_path="current")
+   
+    @action(detail=False, methods=['get'], url_path='current')
     def current(self, request):
         """
-        GET /api/v1/glucose/current
-
-        Retourne la dernière mesure de glycémie.
+        GET /api/v1/glucose/current/
+        Retourne la dernière valeur de glycémie :
+        - Cherchée d'abord dans Glycemia (30 jours)
+        - Sinon fallback dans GlycemiaHisto
         """
-        try:
-            # Essayer d'abord le cache
-            current = Glycemia.objects.get(user=request.user)
-            serializer = GlycemiaSerializer(current)
-            return Response(serializer.data)
-        except Glycemia.DoesNotExist:
-            # Sinon, prendre la dernière de l'historique
-            latest = self.get_queryset().first()
-            if not latest:
-                return Response(
-                    {"error": "No glucose readings found"},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            serializer = GlycemiaHistoSerializer(latest)
-            return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="history")
-    def history(self, request):
+        # Dernière valeur dans Glycemia (30 jours)
+        current = Glycemia.objects.filter(user=request.user).order_by('-measured_at').first()
+
+        if current:
+            return Response(GlycemiaSerializer(current).data)
+
+        
+        latest = self.get_queryset().first()
+        if not latest:
+            return Response(
+                {'error': 'No glucose readings found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(GlycemiaHistoSerializer(latest).data)
+
+    #
+    @action(detail=False, methods=['get'], url_path='range')
+    def range(self, request):
         """
-        GET /api/v1/glucose/history
-
-        Paramètres query:
-        - start: date de début (ISO 8601) ex: 2025-12-04T00:00:00Z
-        - end: date de fin (ISO 8601)
-        - granularity: 5m, 15m, 1h (optionnel, non implémenté pour V1)
-        - source: cgm, manual, all (défaut: all)
-        - limit: nombre max de résultats (défaut: 1000)
-
-        Exemple:
-        /api/v1/glucose/history/?start=2025-12-03T00:00:00Z&end=2025-12-04T23:59:59Z&source=cgm
+        GET /api/v1/glucose/range/?days=X
+        Retourne l'historique des X derniers jours (1 ≤ X ≤ 30).
+        Utilise uniquement la table Glycemia (cache 30 jours).
         """
-        # Récupérer les paramètres
-        start = request.query_params.get("start")
-        end = request.query_params.get("end")
-        source = request.query_params.get("source", "all")
-        limit = int(request.query_params.get("limit", 1000))
 
-        # Construire la query
-        queryset = self.get_queryset()
+        days = int(request.query_params.get('days', 7))
 
-        # Filtrer par dates
-        if start:
-            start_dt = parse_datetime(start)
-            if start_dt:
-                queryset = queryset.filter(measured_at__gte=start_dt)
-            else:
-                return Response(
-                    {"error": "Invalid start date format. Use ISO 8601 format."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        if days < 1 or days > 30:
+            return Response({'error': 'Days must be between 1 and 30'}, status=400)
 
-        if end:
-            end_dt = parse_datetime(end)
-            if end_dt:
-                queryset = queryset.filter(measured_at__lte=end_dt)
-            else:
-                return Response(
-                    {"error": "Invalid end date format. Use ISO 8601 format."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        limit = now() - timedelta(days=days)
 
-        # Filtrer par source
-        if source != "all":
-            if source not in ["cgm", "manual"]:
-                return Response(
-                    {"error": "Invalid source. Must be: cgm, manual, or all"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            queryset = queryset.filter(source=source)
+        entries = Glycemia.objects.filter(
+            user=request.user,
+            measured_at__gte=limit
+        ).order_by('-measured_at')
 
-        # Limiter les résultats
-        queryset = queryset[:limit]
+        serializer = GlycemiaSerializer(entries, many=True)
 
-        # Exécuter la requête
-        entries = list(queryset)
+        return Response({
+            'entries': serializer.data,
+            'stats': self._calculate_stats(entries),
+            'range_days': days,
+        })
 
-        # Sérialiser
-        serializer = GlycemiaHistoSerializer(entries, many=True)
-
-        # Calculer les stats
-        stats = self._calculate_stats(entries)
-
-        # Construire la réponse
-        response_data = {
-            "entries": serializer.data,
-            "next_cursor": None,  # TODO: implémenter pagination cursor-based
-            "stats": stats,
-        }
-
-        return Response(response_data)
-
-    @action(detail=False, methods=["post"], url_path="manual-readings")
+    
+    @action(detail=False, methods=['post'], url_path='manual-readings')
     def manual_readings(self, request):
         """
-        POST /api/v1/glucose/manual-readings
-
-        Créer une nouvelle mesure manuelle de glycémie.
-
-        Body:
-        {
-            "value": 120,
-            "unit": "mg/dL",
-            "measured_at": "2025-12-04T08:30:00Z",
-            "context": "preprandial",
-            "notes": "Before breakfast"
-        }
+        POST /api/v1/glucose/manual-readings/
+        Ajoute une mesure manuelle :
+        - crée une entrée dans GlycemiaHisto (historique complet)
+        - crée une entrée dans Glycemia (historique 30 jours)
+        - nettoie les valeurs Glycemia > 30 jours
         """
+
         serializer = GlycemiaHistoCreateSerializer(data=request.data)
 
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=400)
 
-        # Créer l'entrée dans l'historique
-        histo_entry = serializer.save(user=request.user, source="manual")
 
-        # Mettre à jour le cache (Glycemia)
-        self._update_current_cache(histo_entry)
+        histo_entry = serializer.save(
+            user=request.user,
+            source='manual'
+        )
 
-        # Retourner la lecture créée
-        response_serializer = GlycemiaHistoSerializer(histo_entry)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        self._add_to_month_history(histo_entry)
+
+        self._clean_old_entries(request.user)
+
+        return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
+
+
+    def _add_to_month_history(self, histo_entry):
+        """Ajoute une mesure dans Glycemia (historique 30 jours)."""
+        Glycemia.objects.create(
+            user=histo_entry.user,
+            measured_at=histo_entry.measured_at,
+            value=histo_entry.value,
+            unit=histo_entry.unit,
+            trend=histo_entry.trend,
+            rate=histo_entry.rate,
+            source=histo_entry.source,
+        )
+
+    def _clean_old_entries(self, user):
+        """Supprime les entrées Glycemia plus vieilles que 30 jours."""
+        limit = now() - timedelta(days=30)
+        Glycemia.objects.filter(user=user, measured_at__lt=limit).delete()
 
     def _calculate_stats(self, entries):
-        """Calculer les statistiques sur les entrées."""
-        if not entries:
+        """Calcule des statistiques simples sur les valeurs renvoyées."""
+        values = [e.value for e in entries]
+        if not values:
             return {}
 
-        values = [entry.value for entry in entries]
-
-        stats = {
-            "min": min(values),
-            "max": max(values),
-            "avg": round(sum(values) / len(values), 2),
-            "count": len(values),
+        return {
+            'min': min(values),
+            'max': max(values),
+            'avg': round(sum(values) / len(values), 2),
+            'median': round(statistics.median(values), 2) if len(values) > 1 else values[0],
+            'count': len(values),
         }
-
-        # Calculer la médiane
-        if len(values) > 0:
-            stats["median"] = round(statistics.median(values), 2)
-
-        return stats
-
-    def _update_current_cache(self, histo_entry):
-        """Mettre à jour le cache Glycemia avec la dernière mesure."""
-        Glycemia.objects.update_or_create(
-            user=histo_entry.user,
-            defaults={
-                "measured_at": histo_entry.measured_at,
-                "value": histo_entry.value,
-                "unit": histo_entry.unit,
-                "trend": histo_entry.trend,
-                "rate": histo_entry.rate,
-                "source": histo_entry.source,
-            },
-        )
