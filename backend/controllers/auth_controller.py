@@ -1,6 +1,7 @@
 """
 Contrôleur pour l'authentification
 """
+
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -118,7 +119,7 @@ def logout(request):
 
 @api_view(["GET"])
 def me(request):
-
     from serializers.auth_serializer import UserSerializer
+
     serializer = UserSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)

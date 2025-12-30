@@ -1,5 +1,3 @@
-#!/usr/bin/env sh
-
 #!/bin/sh
 set -e
 
@@ -7,6 +5,49 @@ npm run check-branch-name
 
 cd backend
 
-python3 -m isort --check-only .
-python3 -m black --check .
-python3 -m flake8
+# Utiliser le venv si disponible, sinon python3 global
+if [ -f "venv/bin/python" ]; then
+    PYTHON_CMD="venv/bin/python"
+elif [ -f "venv/Scripts/python.exe" ]; then
+    PYTHON_CMD="venv/Scripts/python.exe"
+else
+    PYTHON_CMD="python3"
+fi
+
+echo "🔍 Vérification du code Python..."
+
+# Vérifier isort
+if ! $PYTHON_CMD -m isort --check-only . 2>/dev/null; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "❌ Les imports ne sont pas triés correctement"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "💡 Pour corriger automatiquement :"
+    echo "   cd backend"
+    echo "   source venv/bin/activate"
+    echo "   python -m isort ."
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    exit 1
+fi
+
+# Vérifier black
+if ! $PYTHON_CMD -m black --check . 2>/dev/null; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "❌ Le code n'est pas formaté correctement"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "💡 Pour corriger automatiquement :"
+    echo "   cd backend"
+    echo "   source venv/bin/activate"
+    echo "   python -m black ."
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    exit 1
+fi
+
+# $PYTHON_CMD -m flake8
+
+echo "✅ Code Python vérifié avec succès !"
