@@ -1,6 +1,7 @@
 """
 Helpers liés aux permissions applicatives.
 """
+
 from functools import wraps
 
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied

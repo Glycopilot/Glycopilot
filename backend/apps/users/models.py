@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
+
 # Custom Manager
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -20,6 +21,7 @@ class CustomUserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Le superuser doit avoir is_superuser=True.")
         return self.create_user(email, password, **extra_fields)
+
 
 # Modèle User
 class User(AbstractUser):
@@ -45,7 +47,7 @@ class User(AbstractUser):
     objects = CustomUserManager()  # Relie le CustomUserManager
 
     USERNAME_FIELD = "email"  # email comme identifiant
-    REQUIRED_FIELDS = []       # pas de champs obligatoires supplémentaires
+    REQUIRED_FIELDS = []  # pas de champs obligatoires supplémentaires
 
     class Meta:
         db_table = "users"

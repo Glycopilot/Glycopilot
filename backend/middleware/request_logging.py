@@ -2,6 +2,7 @@
 Middleware simple qui journalise les requêtes entrantes avec quelques
 informations supplémentaires (utilisateur, rôle...).
 """
+
 import logging
 
 logger = logging.getLogger("middleware.request")

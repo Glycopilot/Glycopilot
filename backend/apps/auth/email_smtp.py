@@ -1,10 +1,10 @@
 # apps/auth/email_smtp.py
 
-from django.core.mail import send_mail
 from django.conf import settings
+from django.core.mail import send_mail
+
 
 def send_reset_password_email(user_email: str, reset_link: str):
-
     sujet = "Réinitialisation de votre mot de passe"
     message = f"""
     Bonjour,

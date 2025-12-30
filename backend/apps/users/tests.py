@@ -1,6 +1,7 @@
 """
 Tests pour le modèle User
 """
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 

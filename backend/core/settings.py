@@ -1,15 +1,16 @@
+import logging
 import os
 import sys
 from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
-import logging
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Charger le .env
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # --- ENVIRONNEMENT ---
 ENV = os.environ.get("Django_ENV")
@@ -118,9 +119,7 @@ REST_FRAMEWORK = {
 ACCESS_TOKEN_LIFETIME = timedelta(
     minutes=int(os.environ.get("ACCESS_TOKEN_MINUTES", 60))
 )
-REFRESH_TOKEN_LIFETIME = timedelta(
-    days=int(os.environ.get("REFRESH_TOKEN_DAYS", 7))
-)
+REFRESH_TOKEN_LIFETIME = timedelta(days=int(os.environ.get("REFRESH_TOKEN_DAYS", 7)))
 
 # --- JWT CONFIG ---
 SIMPLE_JWT = {
@@ -152,11 +151,11 @@ TEMPLATES = [
 
 # EMAIL CONFIG
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("SMTP_HOST")
-EMAIL_PORT = int(os.getenv("SMTP_PORT"))
-EMAIL_HOST_USER = os.getenv("SMTP_USERNAME")
-EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD")
-EMAIL_USE_TLS = os.getenv("SMTP_USE_TLS") == "true"
+EMAIL_HOST = os.getenv("SMTP_HOST", "")
+EMAIL_PORT = int(os.getenv("SMTP_PORT") or 587)
+EMAIL_HOST_USER = os.getenv("SMTP_USERNAME", "")
+EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("SMTP_USE_TLS", "true") == "true"
 EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
