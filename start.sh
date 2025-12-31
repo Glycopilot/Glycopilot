@@ -17,9 +17,9 @@ elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     true
 fi
 
-# Vérifier et installer les outils de qualité
+# Configuration de l'environnement virtuel Python
 echo ""
-echo "🔧 Vérification des outils de qualité..."
+echo "🔧 Configuration de l'environnement Python..."
 
 # Détecter la commande Python disponible
 PYTHON_CMD=""
@@ -32,16 +32,30 @@ else
     exit 1
 fi
 
-# Vérifier et installer les outils Python
-if ! $PYTHON_CMD -m black --version > /dev/null 2>&1; then
-    echo "📦 Installation des outils Python (Black, Flake8, isort)..."
+# Créer le venv s'il n'existe pas
+if [ ! -d "backend/venv" ]; then
+    echo "📦 Création de l'environnement virtuel Python..."
     cd backend
-    $PYTHON_CMD -m pip install -r requirements.txt > /dev/null 2>&1
+    $PYTHON_CMD -m venv venv
+    echo "✅ Environnement virtuel créé"
     cd ..
-    echo "✅ Outils Python installés"
-else
-    echo "✅ Outils Python déjà installés"
 fi
+
+# Activer le venv et installer/mettre à jour les dépendances
+echo "📦 Installation des dépendances Python dans le venv..."
+cd backend
+
+# Activer le venv (compatible multi-plateformes)
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+elif [ -f "venv/Scripts/activate" ]; then
+    source venv/Scripts/activate
+fi
+
+# Installer les dépendances
+pip install -q -r requirements.txt
+echo "✅ Dépendances Python installées dans le venv"
+cd ..
 
 # Vérifier et installer les outils JavaScript
 if ! command -v npm > /dev/null 2>&1; then
@@ -87,20 +101,19 @@ else
     echo "✅ Git hooks déjà configurés"
 fi
 
-# Lancer Docker Compose avec logs en temps réel
+# Lancer le backend avec Docker et le frontend directement
 echo ""
-echo "📱 Le QR code Expo va apparaître ci-dessous..."
-echo "   Installez Expo Go sur votre téléphone pour scanner le QR code"
+echo "🚀 Démarrage du backend avec Docker..."
 echo ""
 
 # Détecter la commande Docker Compose disponible
 if command -v docker > /dev/null 2>&1; then
     if docker compose version > /dev/null 2>&1; then
-        # Nouveau format: docker compose
-        docker compose up --build
+        # Nouveau format: docker compose (en background)
+        docker compose up -d --build
     elif docker-compose version > /dev/null 2>&1; then
-        # Ancien format: docker-compose
-        docker-compose up --build
+        # Ancien format: docker-compose (en background)
+        docker-compose up -d --build
     else
         echo "❌ Docker Compose n'est pas installé"
         echo "💡 Installez Docker Compose pour continuer"
@@ -111,6 +124,20 @@ else
     echo "💡 Installez Docker pour continuer"
     exit 1
 fi
+
+# Attendre que le backend soit prêt
+echo "⏳ Attente du backend (15 secondes)..."
+sleep 15
+
+# Lancer le frontend directement
+echo ""
+echo "📱 Démarrage du frontend Expo..."
+echo "   Le QR code va apparaître ci-dessous"
+echo "   Appuyez sur 'w' pour ouvrir dans le navigateur"
+echo ""
+
+cd frontend
+npm start
 
 echo ""
 echo "✅ Glycopilot démarré !"

@@ -21,7 +21,9 @@ class UserViewSet(viewsets.ModelViewSet):
         if user.is_superuser or getattr(user, "role", None) == User.Role.ADMIN:
             serializer.save()
         else:
-            raise PermissionDenied("Seuls les administrateurs peuvent créer des utilisateurs.")
+            raise PermissionDenied(
+                "Seuls les administrateurs peuvent créer des utilisateurs."
+            )
 
     def perform_update(self, serializer):
         user = self.request.user
