@@ -9,5 +9,5 @@ urlpatterns = [
     ),
     path("api/auth/", include("apps.auth.urls")),
     path("api/users/", include("apps.users.urls")),
-    path("api/glycemia/", include("apps.glycemia.urls")),
+    path("api/activities/", include("apps.activities.urls")),
 ]
