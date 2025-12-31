@@ -65,6 +65,11 @@ echo "🔄 Application des migrations Django dans Docker..."
 # Lancer les migrations dans le container backend
 docker compose run --rm backend python manage.py makemigrations
 docker compose run --rm backend python manage.py migrate
+# Importer les données initiales
+echo "📥 Importation des données..."
+docker compose run --rm backend python manage.py import_meals
+docker compose run --rm backend python manage.py import_medications
+docker compose run --rm backend python manage.py import_activities
 # Vérifier et configurer les Git hooks (une seule fois)
 if [ ! -f ".git/hooks/pre-push" ]; then
     echo ""
