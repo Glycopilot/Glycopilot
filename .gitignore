@@ -33,6 +33,10 @@ node_modules/
 # Security scan reports
 gitleaks-report.json
 
+# SSH keys
+*.pem
+*.key
+
 # macOS metadata
 .DS_Store
 
