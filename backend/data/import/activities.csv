@@ -1,0 +1,21 @@
+id,name,recommended_duration,calories_burned,sugar_used
+1,Marche rapide,30,300,1.5
+2,Natation,45,500,2.5
+3,Yoga,30,200,1.0
+4,Course à pied,40,600,3.0
+5,Vélo d'appartement,35,400,2.0
+6,Musculation,50,350,1.8
+7,Pilates,40,250,1.2
+8,Marche lente,60,200,1.0
+9,Aquagym,40,300,1.5
+10,Zumba,50,500,2.5
+11,Tai chi,35,200,1.0
+12,Randonnée,120,400,2.0
+13,Crossfit,40,700,3.5
+14,Vélo spinning,45,600,3.0
+15,Boxe,50,800,4.0
+16,Danse classique,45,400,2.0
+17,Aérobic,40,450,2.2
+18,Trail running,70,700,3.5
+19,Vélo de route,80,600,3.0
+20,Body pump,55,500,2.5

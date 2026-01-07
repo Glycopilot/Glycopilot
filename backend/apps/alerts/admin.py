@@ -1,24 +1,52 @@
 from django.contrib import admin
 
-from .models import Alert, UserAlert
+from .models import AlertEvent, AlertRule, UserAlertRule
 
 
-@admin.register(Alert)
-class AlertAdmin(admin.ModelAdmin):
-    """Configuration de l'admin pour Alert."""
+@admin.register(AlertRule)
+class AlertRuleAdmin(admin.ModelAdmin):
+    list_display = (
+        "code",
+        "name",
+        "severity",
+        "min_glycemia",
+        "max_glycemia",
+        "is_active",
+    )
+    list_filter = ("severity", "is_active")
+    search_fields = ("code", "name", "description")
+    ordering = ("severity", "code")
 
-    list_display = ("name", "glycemia_interval", "danger_level")
-    list_filter = ("danger_level",)
-    search_fields = ("name", "description")
-    ordering = ("danger_level", "name")
+
+@admin.register(UserAlertRule)
+class UserAlertRuleAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "rule",
+        "enabled",
+        "cooldown_seconds",
+        "min_glycemia_override",
+        "max_glycemia_override",
+    )
+    list_filter = ("enabled", "rule")
+    search_fields = ("user__username", "user__email", "rule__code", "rule__name")
+    raw_id_fields = ("user", "rule")
 
 
-@admin.register(UserAlert)
-class UserAlertAdmin(admin.ModelAdmin):
-    """Configuration de l'admin pour UserAlert."""
-
-    list_display = ("user", "alert", "sent_at", "statut")
-    list_filter = ("statut", "alert", "sent_at")
-    search_fields = ("user__username", "user__email", "alert__name")
-    raw_id_fields = ("user", "alert")
-    date_hierarchy = "sent_at"
+@admin.register(AlertEvent)
+class AlertEventAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "rule",
+        "glycemia_value",
+        "status",
+        "triggered_at",
+        "push_sent_at",
+        "acked_at",
+        "resolved_at",
+    )
+    list_filter = ("status", "rule")
+    search_fields = ("user__username", "user__email", "rule__code", "rule__name")
+    raw_id_fields = ("user", "rule")
+    date_hierarchy = "triggered_at"
+    ordering = ("-triggered_at",)

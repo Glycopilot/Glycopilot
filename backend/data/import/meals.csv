@@ -1,0 +1,11 @@
+id,name,ingredients,recipe,glucose,calories
+1,Petit-déjeuner standard,"Pain complet 60g, Confiture 20g, Beurre 10g","Toast pain complet avec confiture et beurre",65,280
+2,Déjeuner équilibré,"Pâtes 100g, Poulet 150g, Légumes vapeur","Pâtes avec poulet grillé et légumes",50,520
+3,Salade de saumon,"Saumon 120g, Salade verte, Avocat, Tomates","Saumon grillé sur lit de salade",45,380
+4,Collation fruits,"Yaourt nature, Pomme, Noix","Yaourt mélangé avec fruits et noix",35,180
+5,Omelette légumes,"Oeufs x2, Fromage, Poivrons, Oignons","Omelette aux légumes",25,320
+6,Sandwich jambon,"Pain de mie, Jambon blanc, Fromage, Beurre","Sandwich jambon-fromage",55,350
+7,Riz au poisson,"Riz blanc 80g, Filet de poisson, Brocolis","Riz avec poisson vapeur",60,420
+8,Smoothie énergie,"Banane, Lait amande, Miel, Flocons avoine","Smoothie énergétique",70,300
+9,Bowl quinoa,"Quinoa 100g, Avocat, Graines, Vinaigrette","Bowl quinoa avocat",45,450
+10,Soupe légumes,"Courge, Carottes, Pommes de terre, Crème","Soupe de légumes",30,220

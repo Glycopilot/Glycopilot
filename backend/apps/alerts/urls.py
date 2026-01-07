@@ -1,3 +1,23 @@
-"""URL configuration placeholder."""
+from django.urls import path
 
-urlpatterns = []
+from .views import (
+    AckAlertEventView,
+    InAppAlertEventListView,
+    UserAlertRuleDetailView,
+    UserAlertRuleListCreateView,
+)
+
+urlpatterns = [
+    path(
+        "user-rules/",
+        UserAlertRuleListCreateView.as_view(),
+        name="alerts-user-rules-list",
+    ),
+    path(
+        "user-rules/<int:pk>/",
+        UserAlertRuleDetailView.as_view(),
+        name="alerts-user-rules-detail",
+    ),
+    path("events/", InAppAlertEventListView.as_view(), name="alerts-events-list"),
+    path("events/ack/", AckAlertEventView.as_view(), name="alerts-events-ack"),
+]
