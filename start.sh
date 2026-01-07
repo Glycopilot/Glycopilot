@@ -17,9 +17,9 @@ elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     true
 fi
 
-# Vérifier et installer les outils de qualité
+# Configuration de l'environnement virtuel Python
 echo ""
-echo "🔧 Vérification des outils de qualité..."
+echo "🔧 Configuration de l'environnement Python..."
 
 # Détecter la commande Python disponible
 PYTHON_CMD=""
@@ -32,16 +32,30 @@ else
     exit 1
 fi
 
-# Vérifier et installer les outils Python
-if ! $PYTHON_CMD -m black --version > /dev/null 2>&1; then
-    echo "📦 Installation des outils Python (Black, Flake8, isort)..."
+# Créer le venv s'il n'existe pas
+if [ ! -d "backend/venv" ]; then
+    echo "📦 Création de l'environnement virtuel Python..."
     cd backend
-    $PYTHON_CMD -m pip install -r requirements.txt > /dev/null 2>&1
+    $PYTHON_CMD -m venv venv
+    echo "✅ Environnement virtuel créé"
     cd ..
-    echo "✅ Outils Python installés"
-else
-    echo "✅ Outils Python déjà installés"
 fi
+
+# Activer le venv et installer/mettre à jour les dépendances
+echo "📦 Installation des dépendances Python dans le venv..."
+cd backend
+
+# Activer le venv (compatible multi-plateformes)
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+elif [ -f "venv/Scripts/activate" ]; then
+    source venv/Scripts/activate
+fi
+
+# Installer les dépendances
+pip install -q -r requirements.txt
+echo "✅ Dépendances Python installées dans le venv"
+cd ..
 
 # Vérifier et installer les outils JavaScript
 if ! command -v npm > /dev/null 2>&1; then
@@ -65,6 +79,11 @@ echo "🔄 Application des migrations Django dans Docker..."
 # Lancer les migrations dans le container backend
 docker compose run --rm backend python manage.py makemigrations
 docker compose run --rm backend python manage.py migrate
+# Importer les données initiales
+echo "📥 Importation des données..."
+docker compose run --rm backend python manage.py import_meals
+docker compose run --rm backend python manage.py import_medications
+docker compose run --rm backend python manage.py import_activities
 # Vérifier et configurer les Git hooks (une seule fois)
 if [ ! -f ".git/hooks/pre-push" ]; then
     echo ""

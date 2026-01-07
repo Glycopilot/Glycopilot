@@ -1,0 +1,16 @@
+id,name,type,dosage,interval_h,max_duration_d
+1,Metformine,Comprimé,500 mg,12,365
+2,Insuline rapide,Injection,10 UI,4,365
+3,Gliclazide,Comprimé,30 mg,24,365
+4,Insuline lente,Injection,25 UI,24,365
+5,Victoza,Injection,1.2 mg,24,365
+6,Januvia,Comprimé,100 mg,24,365
+7,Insuline basale,Injection,20 UI,24,365
+8,Diamicron,Comprimé,60 mg,24,365
+9,Lantus,Injection,30 UI,24,365
+10,Novorapid,Injection,15 UI,6,365
+11,Levemir,Injection,25 UI,24,365
+12,Humalog,Injection,12 UI,4,365
+13,Glucophage,Comprimé,850 mg,12,365
+14,Amaryl,Comprimé,2 mg,24,365
+15,Toujeo,Injection,40 UI,24,365

@@ -1,15 +1,16 @@
+import logging
 import os
 import sys
 from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
-import logging
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Charger le .env
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # --- ENVIRONNEMENT ---
 ENV = os.environ.get("Django_ENV")
@@ -119,9 +120,7 @@ REST_FRAMEWORK = {
 ACCESS_TOKEN_LIFETIME = timedelta(
     minutes=int(os.environ.get("ACCESS_TOKEN_MINUTES", 60))
 )
-REFRESH_TOKEN_LIFETIME = timedelta(
-    days=int(os.environ.get("REFRESH_TOKEN_DAYS", 7))
-)
+REFRESH_TOKEN_LIFETIME = timedelta(days=int(os.environ.get("REFRESH_TOKEN_DAYS", 7)))
 
 # --- JWT CONFIG ---
 SIMPLE_JWT = {
