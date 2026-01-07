@@ -150,6 +150,11 @@ const authService = {
 
       const { access, refresh, user } = response.data;
 
+      if (!access || !refresh || !user) {
+        console.error('Invalid response structure:', response.data);
+        throw new Error('Réponse invalide du serveur');
+      }
+
       // Stocker les tokens
       await AsyncStorage.setItem('access_token', access);
       await AsyncStorage.setItem('refresh_token', refresh);
@@ -157,11 +162,12 @@ const authService = {
 
       return response.data;
     } catch (error) {
-      // Log full backend validation payload to help debugging (temporary)
-      console.error(
-        'authService.register error response:',
-        error.response?.data
-      );
+      // Log full backend validation payload to help debugging
+      console.error('authService.register error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
 
       // Prefer explicit backend error message(s) when present
       let message = "Erreur lors de l'inscription";
@@ -171,13 +177,17 @@ const authService = {
           message = error.response.data;
         } else if (error.response.data.error) {
           message = error.response.data.error;
-        } else {
-          try {
-            message = JSON.stringify(error.response.data);
-          } catch (_e) {
-            // fallback
-            message = "Erreur lors de l'inscription (voir logs)";
-          }
+        } else if (error.response.data.detail) {
+          message = error.response.data.detail;
+        } else if (typeof error.response.data === 'object') {
+          // Try to extract field error messages
+          const fieldErrors = Object.entries(error.response.data)
+            .map(([field, errs]) => {
+              const errArray = Array.isArray(errs) ? errs : [errs];
+              return `${field}: ${errArray.join(', ')}`;
+            })
+            .join('\n');
+          message = fieldErrors || "Erreur lors de l'inscription (voir logs)";
         }
       }
 

@@ -6,9 +6,9 @@ import { StatusBar } from 'expo-status-bar';
 export default function App() {
   return (
     <>
-      <AppNavigator />
-      <Toast />
       <StatusBar style="auto" />
+      <AppNavigator />
+      <Toast style={{ topOffset: 50, zIndex: 9999 }} />
     </>
   );
 }

@@ -4,6 +4,13 @@ import LoginScreen from '../screens/LogIn';
 import SignInScreen from '../screens/SignIn';
 import ResetPasswordScreen from '../screens/ResetPassword';
 import HomeScreen from '../screens/Home';
+import JournalScreen from '../screens/Journal';
+import StatsScreen from '../screens/Stats';
+import ProfileScreen from '../screens/Profile';
+import NotificationScreen from '../screens/Notifications';
+import ActiviteScreen from '../screens/Activite';
+import TraitementsScreen from '../screens/Traitements';
+import RepasScreen from '../screens/Repas';
 
 export default function AppNavigator() {
   const [currentScreen, setCurrentScreen] = useState('Login');
@@ -59,4 +66,28 @@ export default function AppNavigator() {
   if (currentScreen === 'Home') {
     return <HomeScreen navigation={navigation} />;
   }
+  if (currentScreen === 'Journal') {
+    return <JournalScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Stats') {
+    return <StatsScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Profile') {
+    return <ProfileScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Notifications') {
+    return <NotificationScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Activite') {
+    return <ActiviteScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Traitement' || currentScreen === 'Traitements') {
+    return <TraitementsScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Repas') {
+    return <RepasScreen navigation={navigation} />;
+  }
+
+
+  return null;
 }
