@@ -1,8 +1,9 @@
-import pytest
 from django.contrib.auth import get_user_model
+
+import pytest
 from rest_framework.test import APIClient
 
-from apps.alerts.models import AlertRule, UserAlertRule, AlertEvent
+from apps.alerts.models import AlertEvent, AlertRule, UserAlertRule
 from apps.alerts.services.trigger import trigger_for_value
 
 User = get_user_model()
@@ -27,7 +28,9 @@ def mk_rule(code="HYPO", min_g=80, max_g=120):
 def test_trigger_creates_inapp_event():
     user = mk_user()
     rule = mk_rule()
-    UserAlertRule.objects.create(user=user, rule=rule, enabled=True, cooldown_seconds=600)
+    UserAlertRule.objects.create(
+        user=user, rule=rule, enabled=True, cooldown_seconds=600
+    )
 
     events = trigger_for_value(user=user, glycemia_value=70)
 
@@ -41,7 +44,9 @@ def test_trigger_creates_inapp_event():
 def test_ack_endpoint_sets_acked_at():
     user = mk_user()
     rule = mk_rule()
-    UserAlertRule.objects.create(user=user, rule=rule, enabled=True, cooldown_seconds=600)
+    UserAlertRule.objects.create(
+        user=user, rule=rule, enabled=True, cooldown_seconds=600
+    )
 
     event = trigger_for_value(user=user, glycemia_value=70)[0]
 
@@ -60,7 +65,9 @@ def test_ack_endpoint_sets_acked_at():
 def test_cooldown_allows_history_but_limits_push():
     user = mk_user()
     rule = mk_rule()
-    UserAlertRule.objects.create(user=user, rule=rule, enabled=True, cooldown_seconds=600)
+    UserAlertRule.objects.create(
+        user=user, rule=rule, enabled=True, cooldown_seconds=600
+    )
 
     trigger_for_value(user=user, glycemia_value=70)
     trigger_for_value(user=user, glycemia_value=70)

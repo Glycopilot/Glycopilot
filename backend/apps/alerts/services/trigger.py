@@ -1,19 +1,25 @@
 from datetime import timedelta
+
 from django.db import transaction
 from django.utils import timezone
 
-from apps.alerts.models import (
-    AlertRule,
-    UserAlertRule,
-    AlertEvent,
-    AlertEventStatus,
-)
-from apps.alerts.services.push import send_push, PushSendError
+from apps.alerts.models import AlertEvent, AlertEventStatus, AlertRule, UserAlertRule
+from apps.alerts.services.push import PushSendError, send_push
 
 
-def compute_thresholds(user_rule: UserAlertRule, rule: AlertRule) -> tuple[int | None, int | None]:
-    min_v = user_rule.min_glycemia_override if user_rule.min_glycemia_override is not None else rule.min_glycemia
-    max_v = user_rule.max_glycemia_override if user_rule.max_glycemia_override is not None else rule.max_glycemia
+def compute_thresholds(
+    user_rule: UserAlertRule, rule: AlertRule
+) -> tuple[int | None, int | None]:
+    min_v = (
+        user_rule.min_glycemia_override
+        if user_rule.min_glycemia_override is not None
+        else rule.min_glycemia
+    )
+    max_v = (
+        user_rule.max_glycemia_override
+        if user_rule.max_glycemia_override is not None
+        else rule.max_glycemia
+    )
     return min_v, max_v
 
 
@@ -45,9 +51,8 @@ def trigger_for_value(*, user, glycemia_value: int) -> list[AlertEvent]:
     """
     events: list[AlertEvent] = []
 
-    user_rules = (
-        UserAlertRule.objects.select_related("rule")
-        .filter(user=user, enabled=True, rule__is_active=True)
+    user_rules = UserAlertRule.objects.select_related("rule").filter(
+        user=user, enabled=True, rule__is_active=True
     )
 
     now = timezone.now()

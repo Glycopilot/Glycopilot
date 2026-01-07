@@ -1,10 +1,18 @@
 from django.contrib import admin
-from .models import AlertRule, UserAlertRule, AlertEvent
+
+from .models import AlertEvent, AlertRule, UserAlertRule
 
 
 @admin.register(AlertRule)
 class AlertRuleAdmin(admin.ModelAdmin):
-    list_display = ("code", "name", "severity", "min_glycemia", "max_glycemia", "is_active")
+    list_display = (
+        "code",
+        "name",
+        "severity",
+        "min_glycemia",
+        "max_glycemia",
+        "is_active",
+    )
     list_filter = ("severity", "is_active")
     search_fields = ("code", "name", "description")
     ordering = ("severity", "code")

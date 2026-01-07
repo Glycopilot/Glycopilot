@@ -2,8 +2,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import UserAlertRule, AlertEvent
-from .serializers import UserAlertRuleSerializer, AlertEventSerializer, AckSerializer
+from .models import AlertEvent, UserAlertRule
+from .serializers import AckSerializer, AlertEventSerializer, UserAlertRuleSerializer
 from .services.trigger import ack_event
 
 
@@ -12,7 +12,9 @@ class UserAlertRuleListCreateView(generics.ListCreateAPIView):
     serializer_class = UserAlertRuleSerializer
 
     def get_queryset(self):
-        return UserAlertRule.objects.select_related("rule").filter(user=self.request.user)
+        return UserAlertRule.objects.select_related("rule").filter(
+            user=self.request.user
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -23,7 +25,9 @@ class UserAlertRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserAlertRuleSerializer
 
     def get_queryset(self):
-        return UserAlertRule.objects.select_related("rule").filter(user=self.request.user)
+        return UserAlertRule.objects.select_related("rule").filter(
+            user=self.request.user
+        )
 
 
 class InAppAlertEventListView(generics.ListAPIView):

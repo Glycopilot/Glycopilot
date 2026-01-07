@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import AlertRule, UserAlertRule, AlertEvent
+
+from .models import AlertEvent, AlertRule, UserAlertRule
 
 
 class AlertRuleSerializer(serializers.ModelSerializer):

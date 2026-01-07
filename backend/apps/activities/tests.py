@@ -1,17 +1,19 @@
 """
 Tests for Activities Endpoints
 """
+from datetime import timedelta
+
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
 
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.users.models import User
 from apps.activities.models import Activity, UserActivity
+from apps.users.models import User
+
 
 class ActivityTypesTest(TestCase):
     """
@@ -20,7 +22,7 @@ class ActivityTypesTest(TestCase):
 
     def setUp(self):
         self.client = APIClient()
-        self.types_url = reverse("activity-types-list") 
+        self.types_url = reverse("activity-types-list")
 
         # Create user and token
         self.user = User.objects.create_user(
@@ -28,7 +30,7 @@ class ActivityTypesTest(TestCase):
             email="test@example.com",
             password="password123",
             first_name="Test",
-            last_name="User"
+            last_name="User",
         )
         refresh = RefreshToken.for_user(self.user)
         self.access_token = str(refresh.access_token)
@@ -70,7 +72,7 @@ class UserActivityHistoryTest(TestCase):
             email="test@example.com",
             password="password123",
             first_name="Test",
-            last_name="User"
+            last_name="User",
         )
         refresh = RefreshToken.for_user(self.user)
         self.access_token = str(refresh.access_token)
@@ -79,33 +81,31 @@ class UserActivityHistoryTest(TestCase):
         # Create a reference activity with known rates
         # 600 calories per hour, 3.0g sugar per hour
         self.activity_run = Activity.objects.create(
-            name="Running", 
-            calories_burned=600, 
-            sugar_used=3.0
+            name="Running", calories_burned=600, sugar_used=3.0
         )
 
     def test_create_activity_log_success(self):
         """Test creating a log entry calculates duration, calories, and sugar"""
         start_time = timezone.now()
-        end_time = start_time + timedelta(hours=1, minutes=30) # 1.5 hours
+        end_time = start_time + timedelta(hours=1, minutes=30)  # 1.5 hours
 
         payload = {
             "activity": self.activity_run.pk,
             "start": start_time,
-            "end": end_time
+            "end": end_time,
         }
 
         response = self.client.post(self.history_url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
+
         # Verify calculations
         # Duration: 90 minutes
         self.assertEqual(response.data["duration_minutes"], 90)
-        
+
         # Calories: 600 * 1.5 = 900
         self.assertEqual(response.data["total_calories_burned"], 900)
-        
+
         # Sugar: 3.0 * 1.5 = 4.5
         self.assertEqual(response.data["total_sugar_used"], 4.5)
 
@@ -117,7 +117,7 @@ class UserActivityHistoryTest(TestCase):
         payload = {
             "activity": self.activity_run.pk,
             "start": start_time,
-            "end": end_time
+            "end": end_time,
         }
 
         response = self.client.post(self.history_url, payload, format="json")
@@ -132,7 +132,7 @@ class UserActivityHistoryTest(TestCase):
             user=self.user,
             activity=self.activity_run,
             start=timezone.now(),
-            end=timezone.now() + timedelta(hours=1)
+            end=timezone.now() + timedelta(hours=1),
         )
 
         response = self.client.get(self.history_url)
@@ -141,7 +141,9 @@ class UserActivityHistoryTest(TestCase):
         # Handle pagination
         if "results" in response.data:
             self.assertEqual(len(response.data["results"]), 1)
-            self.assertEqual(response.data["results"][0]["activity"], self.activity_run.pk)
+            self.assertEqual(
+                response.data["results"][0]["activity"], self.activity_run.pk
+            )
         else:
             self.assertEqual(len(response.data), 1)
             self.assertEqual(response.data[0]["activity"], self.activity_run.pk)

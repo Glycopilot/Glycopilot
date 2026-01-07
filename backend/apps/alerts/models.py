@@ -1,6 +1,6 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class AlertSeverity(models.IntegerChoices):
@@ -23,6 +23,7 @@ class AlertRule(models.Model):
     """
     Règle générique, seuils en mg/dL (bornes inclusives).
     """
+
     code = models.SlugField(max_length=50, unique=True)  # ex: "HYPO", "HYPER"
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)
@@ -54,6 +55,7 @@ class UserAlertRule(models.Model):
     """
     Activation + overrides + anti-spam (cooldown) par user.
     """
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="alert_rules"
     )
@@ -85,12 +87,11 @@ class AlertEvent(models.Model):
     """
     Occurrence (historique) + delivery push/in-app + ack.
     """
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="alert_events"
     )
-    rule = models.ForeignKey(
-        AlertRule, on_delete=models.PROTECT, related_name="events"
-    )
+    rule = models.ForeignKey(AlertRule, on_delete=models.PROTECT, related_name="events")
 
     glycemia_value = models.IntegerField()
     triggered_at = models.DateTimeField(auto_now_add=True)
