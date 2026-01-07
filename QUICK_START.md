@@ -1,4 +1,4 @@
-# 🚀 Glycopilot - Guide Rapide
+# Glycopilot - Guide Rapide
 
 ## 1. Démarrer le projet
 
@@ -20,8 +20,11 @@ docker exec glycopilot-back python manage.py seed_user_data votre.email@example.
 ## 4. Lancer le simulateur CGM
 
 ```bash
-# Démarrer le CGM (données toutes les 5 minutes, en continu)
+# Démarrer le CGM (mode normal : 1 mesure toutes les 5 minutes, en continu)
 ./start_cgm.sh votre.email@example.com
+
+# Démarrer le CGM en mode rapide pour dev/demo (intervalle réduit à 1 minute)
+./start_cgm.sh votre.email@example.com 5 0 120 true
 
 # Arrêter le CGM
 ./stop_cgm.sh
@@ -42,4 +45,6 @@ for e in GlycemiaHisto.objects.filter(user=user).order_by('-measured_at')[:10]:
 
 ---
 
-**C'est tout !** Le backend est prêt avec des données historiques et le CGM génère des nouvelles données en temps réel.
+Le backend est prêt avec des données historiques, et le simulateur CGM génère des nouvelles données en temps réel.
+
+---

@@ -16,8 +16,9 @@ export default function Banner({ date }) {
     if (!dateStr) {
       const today = new Date();
       const day = today.getDate();
-      const month = today.toLocaleDateString('fr-FR', { month: 'short' });
-      return `${day} ${month}`;
+      const month = today.toLocaleDateString('fr-FR', { month: 'long' });
+      const year = today.getFullYear();
+      return `${day} ${month} ${year}`;
     }
     return dateStr;
   };
@@ -30,7 +31,7 @@ export default function Banner({ date }) {
       </View>
 
       <View style={styles.dateContainer}>
-        <Calendar size={20} color="#FFFFFF" strokeWidth={2} />
+        <Calendar size={18} color="#FFFFFF" strokeWidth={2.5} />
         <Text style={styles.dateText}>{formatDate(date)}</Text>
       </View>
     </View>
@@ -67,12 +68,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
-    gap: 8,
+    gap: 6,
     marginTop: 4,
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#FFFFFF',
-    fontWeight: '500',
+    fontWeight: '600',
+    opacity: 0.95,
   },
 });

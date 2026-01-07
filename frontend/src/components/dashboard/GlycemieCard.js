@@ -88,10 +88,12 @@ export default function GlycemieCard({
         return {
           color: '#FF9500',
           bgColor: '#FFF4E5',
-          label: 'Attention',
+          label: 'Élevé',
         };
       case 'danger':
       case 'alert':
+      case 'high':
+      case 'low':
         return {
           color: '#FF3B30',
           bgColor: '#FFE5E5',

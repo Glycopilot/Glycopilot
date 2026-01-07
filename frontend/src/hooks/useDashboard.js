@@ -31,26 +31,29 @@ export const useDashboard = (options = {}) => {
     async (showLoading = true) => {
       if (showLoading) {
         setLoading(true);
-      } else {
-        setRefreshing(true);
+        setError('');
       }
-      setError('');
+      // Ne pas mettre de refreshing ni effacer l'erreur pour les refresh automatiques (silencieux)
 
       try {
         const data = await dashboardService.getSummary(modules);
         if (isMountedRef.current) {
           setSummary(data);
+          // Effacer l'erreur seulement si le chargement réussit
+          setError('');
         }
         return data;
       } catch (err) {
         if (isMountedRef.current) {
-          setError(err.message);
+          // Ne pas montrer d'erreur pour les refresh silencieux
+          if (showLoading) {
+            setError(err.message);
+          }
         }
         throw err;
       } finally {
         if (isMountedRef.current) {
           setLoading(false);
-          setRefreshing(false);
         }
       }
     },
@@ -138,7 +141,7 @@ export const useDashboard = (options = {}) => {
    */
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    setError('');
+    // Ne pas effacer les erreurs pendant le refresh pour éviter les sauts
 
     try {
       const [summaryData, widgetsData, layoutsData] = await Promise.all([
@@ -151,6 +154,8 @@ export const useDashboard = (options = {}) => {
         setSummary(summaryData);
         setWidgets(widgetsData);
         setLayouts(layoutsData);
+        // Effacer l'erreur seulement si tout réussit
+        setError('');
       }
 
       return {
@@ -265,7 +270,10 @@ export const useDashboard = (options = {}) => {
   useEffect(() => {
     if (refreshInterval > 0) {
       refreshIntervalRef.current = setInterval(() => {
-        loadSummary(false);
+        // Refresh silencieux en arrière-plan - pas de loading UI
+        loadSummary(false).catch(() => {
+          // Ignore les erreurs en arrière-plan pour ne pas perturber l'UI
+        });
       }, refreshInterval);
 
       return () => {

@@ -134,6 +134,10 @@ export default function ProfileScreen({ navigation }) {
           </View>
           <Text style={styles.userName}>{displayName}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
+          <Text style={styles.userDiabetesType}>
+            {' '}
+            type de diabète: {user?.diabetes_type || 'Non renseigné'}
+          </Text>
         </View>
 
         {/* Alerte informations manquantes */}
@@ -387,6 +391,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   userEmail: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  userDiabetesType: {
+    marginTop: 14,
     fontSize: 14,
     color: '#FFFFFF',
     opacity: 0.9,

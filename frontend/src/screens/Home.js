@@ -15,7 +15,6 @@ import {
   Zap,
   Lightbulb,
 } from 'lucide-react-native';
-import authService from '../services/authService';
 import { useDashboard } from '../hooks/useDashboard';
 import Layout from '../components/common/Layout';
 import GlycemieCard from '../components/dashboard/GlycemieCard';
@@ -40,65 +39,53 @@ export default function HomeScreen({ navigation }) {
     refresh,
   } = useDashboard({
     modules: ['glucose', 'alerts', 'medication', 'nutrition', 'activity'],
-    refreshInterval: null, // Pas de refresh automatique - les composants animent déjà les changements
+    refreshInterval: 30000, // Refresh toutes les 30 secondes pour récupérer les nouvelles données CGM
     autoLoad: true,
   });
-
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      // Reset navigation to Login
-      if (navigation && navigation.reset) {
-        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-      }
-    } catch (err) {
-      Alert.alert('Erreur', 'Impossible de se déconnecter');
-      console.warn('Logout error', err);
-    }
-  };
 
   // Déterminer le statut de la glycémie
   const getGlycemieStatus = value => {
     if (!value) return 'normal';
-    if (value < 70) return 'low';
-    if (value > 180) return 'high';
-    if (value >= 140) return 'warning';
-    return 'normal';
+    if (value < 70) return 'danger'; // Hypoglycémie
+    if (value > 180) return 'danger'; // Hyperglycémie
+    if (value >= 140) return 'warning'; // Légèrement élevé
+    if (value >= 100) return 'warning'; // Au-dessus de la normale
+    return 'normal'; // 70-100 mg/dL
   };
 
   // Afficher un loader pendant le chargement initial
-  if (loading && !glucose) {
-    return (
-      <Layout
-        navigation={navigation}
-        currentRoute="Home"
-        userName="Utilisateur"
-        onNotificationPress={() => console.log('Notifications')}
-      >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Chargement du dashboard...</Text>
-        </View>
-      </Layout>
-    );
-  }
+  // if (loading && !glucose) {
+  //   return (
+  //     <Layout
+  //       navigation={navigation}
+  //       currentRoute="Home"
+  //       userName="Utilisateur"
+  //       onNotificationPress={() => console.log('Notifications')}
+  //     >
+  //       <View style={styles.loadingContainer}>
+  //         <ActivityIndicator size="large" color="#007AFF" />
+  //         <Text style={styles.loadingText}>Chargement du dashboard...</Text>
+  //       </View>
+  //     </Layout>
+  //   );
+  // }
 
-  // Afficher une erreur si le chargement échoue
-  if (error && !glucose) {
-    return (
-      <Layout
-        navigation={navigation}
-        currentRoute="Home"
-        userName="Utilisateur"
-        onNotificationPress={() => console.log('Notifications')}
-      >
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Button title="Réessayer" onPress={refresh} />
-        </View>
-      </Layout>
-    );
-  }
+  // // Afficher une erreur si le chargement échoue
+  // if (error && !glucose) {
+  //   return (
+  //     <Layout
+  //       navigation={navigation}
+  //       currentRoute="Home"
+  //       userName="Utilisateur"
+  //       onNotificationPress={() => console.log('Notifications')}
+  //     >
+  //       <View style={styles.errorContainer}>
+  //         <Text style={styles.errorText}>{error}</Text>
+  //         <Button title="Réessayer" onPress={refresh} />
+  //       </View>
+  //     </Layout>
+  //   );
+  // }
 
   return (
     <Layout
