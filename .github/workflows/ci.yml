@@ -113,7 +113,7 @@ jobs:
   deploy:
     needs: [test-backend, test-frontend, sonarqube]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/setup-deployement-aws'
+    if: github.ref == 'refs/heads/main' 
     steps:
     - uses: actions/checkout@v3
     
