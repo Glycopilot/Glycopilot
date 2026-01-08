@@ -12,7 +12,8 @@ python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install psycopg2-binary
-pip install -r requirements.txt || pip install --no-deps -r requirements.txt
+grep -v "mysqlclient" requirements.txt > requirements-prod.txt
+pip install -r requirements-prod.txt
 
 echo "Running migrations..."
 python manage.py migrate --noinput
