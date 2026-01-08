@@ -19,7 +19,8 @@ if (!branchPattern.test(branchName)) {
 Le nom doit suivre ce format: type/description
 
 Types autorisés:
-  - feat/  : Nouvelle fonctionnalité front-end
+  - feat-front/  : Nouvelle fonctionnalité front-end
+  - feat-back/  : Nouvelle fonctionnalité back-end
   - fix/         : Correction de bug
   - hotfix/      : Correction urgente
   - release/  : Préparation de versions

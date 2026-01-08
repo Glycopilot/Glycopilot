@@ -4,22 +4,21 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-from dotenv import load_dotenv
+from decouple import config
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Charger le .env
-load_dotenv(os.path.join(BASE_DIR, ".env"))
-
 # --- ENVIRONNEMENT ---
-ENV = os.environ.get("Django_ENV")
-DEBUG = ENV == "development"
-ALLOWED_HOSTS = ["*"] if DEBUG else ["localhost"]
+ENV = config("Django_ENV", default="production")
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = (
+    config("ALLOWED_HOSTS", default="localhost").split(",") if not DEBUG else ["*"]
+)
 
 # --- CLÉS SECRÈTES ---
-SECRET_KEY = os.environ.get("SECRET_KEY")
-SECRET_KEY_ADMIN = os.environ.get("SECRET_KEY_ADMIN")
+SECRET_KEY = config("SECRET_KEY")
+SECRET_KEY_ADMIN = config("SECRET_KEY_ADMIN", default="")
 
 # --- APPS INSTALLÉES ---
 INSTALLED_APPS = [
@@ -53,6 +52,7 @@ INSTALLED_APPS = [
 # --- MIDDLEWARE ---
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -75,19 +75,36 @@ if "test" in sys.argv or "pytest" in sys.argv[0]:
         }
     }
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": os.environ.get("DB_NAME"),
-            "USER": os.environ.get("DB_USER"),
-            "PASSWORD": os.environ.get("DB_PASSWORD"),
-            "HOST": os.environ.get("DB_HOST"),
-            "PORT": os.environ.get("DB_PORT"),
-            "OPTIONS": {
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
+    # Detect database engine: PostgreSQL for production, MySQL for local development
+    DB_ENGINE = config("DB_ENGINE", default="mysql")
+
+    if DB_ENGINE == "postgresql":
+        # PostgreSQL configuration for AWS/production
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": config("DB_NAME"),
+                "USER": config("DB_USER"),
+                "PASSWORD": config("DB_PASSWORD"),
+                "HOST": config("DB_HOST"),
+                "PORT": config("DB_PORT", default=5432, cast=int),
+            }
         }
-    }
+    else:
+        # MySQL configuration for local development
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.mysql",
+                "NAME": config("DB_NAME"),
+                "USER": config("DB_USER"),
+                "PASSWORD": config("DB_PASSWORD"),
+                "HOST": config("DB_HOST"),
+                "PORT": config("DB_PORT", default=3306, cast=int),
+                "OPTIONS": {
+                    "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                },
+            }
+        }
 
 # --- LOGGING ---
 logging.basicConfig(
@@ -117,9 +134,11 @@ REST_FRAMEWORK = {
 }
 
 ACCESS_TOKEN_LIFETIME = timedelta(
-    minutes=int(os.environ.get("ACCESS_TOKEN_MINUTES", 60))
+    minutes=config("ACCESS_TOKEN_MINUTES", default=60, cast=int)
 )
-REFRESH_TOKEN_LIFETIME = timedelta(days=int(os.environ.get("REFRESH_TOKEN_DAYS", 7)))
+REFRESH_TOKEN_LIFETIME = timedelta(
+    days=config("REFRESH_TOKEN_DAYS", default=7, cast=int)
+)
 
 # --- JWT CONFIG ---
 SIMPLE_JWT = {
@@ -151,14 +170,14 @@ TEMPLATES = [
 
 # EMAIL CONFIG
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("SMTP_HOST", "")
-EMAIL_PORT = int(os.getenv("SMTP_PORT") or 587)
-EMAIL_HOST_USER = os.getenv("SMTP_USERNAME", "")
-EMAIL_HOST_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-EMAIL_USE_TLS = os.getenv("SMTP_USE_TLS", "true") == "true"
+EMAIL_HOST = config("SMTP_HOST", default="")
+EMAIL_PORT = config("SMTP_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("SMTP_USERNAME", default="")
+EMAIL_HOST_PASSWORD = config("SMTP_PASSWORD", default="")
+EMAIL_USE_TLS = config("SMTP_USE_TLS", default=True, cast=bool)
 EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 # Choisis selon ton port
 if EMAIL_PORT == 465:
@@ -175,11 +194,30 @@ TIME_ZONE = "Europe/Paris"
 USE_I18N = True
 USE_TZ = True
 
-# --- STATIC & MEDIA FILES ---
+# --- AWS S3 CONFIGURATION ---
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="eu-west-3")
+
+# Use S3 for media files in production
+if AWS_STORAGE_BUCKET_NAME and not DEBUG:
+    AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_S3_OBJECT_PARAMETERS = {
+        "CacheControl": "max-age=86400",
+    }
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+else:
+    # Local media storage for development
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+
+# --- STATIC FILES ---
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "static"
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.User"
