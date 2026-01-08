@@ -132,6 +132,7 @@ jobs:
           SECRET_KEY=${{ secrets.SECRET_KEY }}
           SECRET_KEY_ADMIN=${{ secrets.SECRET_KEY_ADMIN }}
           ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+          DB_ENGINE=postgresql
           DB_NAME=django_db
           DB_USER=django_user
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}

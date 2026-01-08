@@ -30,8 +30,18 @@ python manage.py migrate --noinput
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
+echo "Checking Django configuration..."
+python manage.py check --deploy
+
 echo "Restarting services..."
 sudo systemctl restart gunicorn
-sudo systemctl restart nginx
+if sudo systemctl is-active --quiet gunicorn; then
+    echo "Gunicorn restarted successfully"
+else
+    echo "ERROR: Gunicorn failed to start"
+    sudo systemctl status gunicorn
+    exit 1
+fi
 
+sudo systemctl reload nginx
 echo "Deployment completed successfully!"
