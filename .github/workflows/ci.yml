@@ -150,7 +150,13 @@ jobs:
           EOF
           
           if [ ! -d ".git" ]; then
-            git clone https://github.com/Glycopilot/Glycopilot.git .
+            rm -rf *
+            git clone https://github.com/Glycopilot/Glycopilot.git temp_clone
+            mv temp_clone/.git .
+            mv temp_clone/* .
+            mv temp_clone/.* . 2>/dev/null || true
+            rm -rf temp_clone
+            git reset --hard origin/main
           else
             git fetch origin
             git reset --hard origin/main
