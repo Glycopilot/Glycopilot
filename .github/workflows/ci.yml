@@ -66,26 +66,32 @@ jobs:
       continue-on-error: true
 
   sonarqube:
-    needs: test-backend
+    needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Nécessaire pour l'analyse complète de l'historique
     
-    - name: SonarQube Scan
-      uses: sonarsource/sonarqube-scan-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    - name: Download Backend Coverage
+      uses: actions/download-artifact@v3
+      with:
+        name: coverage-backend
+        path: backend/
       continue-on-error: true
     
-    - name: SonarQube Quality Gate
-      uses: sonarsource/sonarqube-quality-gate-action@master
-      timeout-minutes: 5
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    - name: Download Frontend Coverage
+      uses: actions/download-artifact@v3
+      with:
+        name: coverage-frontend
+        path: frontend/
       continue-on-error: true
+    
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Nécessaire pour PR decoration
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   test-frontend:
     needs: secret-scan
