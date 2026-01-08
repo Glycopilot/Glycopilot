@@ -11,7 +11,8 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install psycopg2-binary
+pip install -r requirements.txt || pip install --no-deps -r requirements.txt
 
 echo "Running migrations..."
 python manage.py migrate --noinput
