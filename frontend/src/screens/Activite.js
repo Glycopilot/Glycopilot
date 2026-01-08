@@ -12,16 +12,19 @@ import {
 } from 'react-native';
 import { Activity as ActivityIcon, Plus, Bike, Walk } from 'lucide-react-native';
 import Layout from '../components/common/Layout';
+import SelectList from '../components/common/SelectList';
+import IndicatorCard from '../components/common/IndicatorCard';
 import { colors } from '../themes/colors';
+import { loadActivities } from '../data/sources';
 
 export default function ActiviteScreen({ navigation }) {
   const initialData = [
     {
       id: '1',
       title: 'Marche',
-      date: '10/12/2025',
+      date: new Date().toLocaleDateString('fr-FR'),
       duration: 30,
-      kcal: 105,
+      kcal: 4.3 * 30,
     },
   ];
 
@@ -31,19 +34,26 @@ export default function ActiviteScreen({ navigation }) {
   const [activityType, setActivityType] = useState('Marche');
   const [duration, setDuration] = useState('30');
 
-  const caloriesPerMinute = useMemo(() => {
-    return {
-      Marche: 4.3,
-      Vélo: 6.2,
-      Course: 8.0,
-    };
+  const [activityOptions, setActivityOptions] = useState([]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    loadActivities().then(list => {
+      if (!mounted) return;
+      setActivityOptions(list);
+      if (list && list.length) setActivityType(list[0].name);
+    }).catch(() => {});
+    return () => { mounted = false; };
   }, []);
 
+  const calorieMap = useMemo(() => {
+    return (activityOptions || []).reduce((m, a) => ({ ...m, [a.name]: a.caloriesPerMin }), {});
+  }, [activityOptions]);
   const estimatedKcal = useMemo(() => {
     const d = parseInt(duration || '0', 10) || 0;
-    const kcalPerMin = caloriesPerMinute[activityType] || 4.3;
+    const kcalPerMin = calorieMap[activityType] || (activityOptions[0] && activityOptions[0].caloriesPerMin) || 4.3;
     return Math.round(kcalPerMin * d);
-  }, [activityType, duration, caloriesPerMinute]);
+  }, [activityType, duration, calorieMap, activityOptions]);
 
   function addActivity() {
     const newActivity = {
@@ -56,7 +66,15 @@ export default function ActiviteScreen({ navigation }) {
     setActivities(prev => [newActivity, ...prev]);
     setIsModalVisible(false);
     setDuration('30');
-    setActivityType('Marche');
+    setActivityType((activityOptions && activityOptions[0] && activityOptions[0].name) || 'Marche');
+
+    // if this activity is new, add to suggestions and persist
+    if (!activityOptions.find(a => a.name === newActivity.title)) {
+      const suggestion = { id: `act-sugg-${Date.now()}`, name: newActivity.title, caloriesPerMin: Math.round((newActivity.kcal / Math.max(1, newActivity.duration)) * 10) / 10 };
+      const updated = [suggestion, ...(activityOptions || [])];
+      setActivityOptions(updated);
+      import('../data/storage').then(m => m.storage.setActivities(updated)).catch(() => {});
+    }
   }
 
   const ActivityItem = ({ item }) => {
@@ -67,13 +85,13 @@ export default function ActiviteScreen({ navigation }) {
         activeOpacity={0.8}
       >
         <View style={styles.activityLeft}>
-          <View style={[styles.iconCircle, { backgroundColor: '#efefefff' }]}>
-            <ActivityIcon size={18} color="#000" strokeWidth={2.5} />
+          <View style={styles.iconCircle}>
+            <ActivityIcon size={20} color="#007AFF" strokeWidth={2.5} />
           </View>
 
           <View style={styles.activityInfo}>
-            <Text style={styles.activityTitle}>{item.title}</Text>
-            <Text style={styles.activitySubtitle}>
+            <Text style={styles.activityTitle} numberOfLines={1} ellipsizeMode={'tail'}>{item.title}</Text>
+            <Text style={styles.activitySubtitle} numberOfLines={1} ellipsizeMode={'tail'}>
               {item.date} • {item.duration} min
             </Text>
           </View>
@@ -94,7 +112,7 @@ export default function ActiviteScreen({ navigation }) {
       userName="Utilisateur"
       onNotificationPress={() => console.log('Notifications')}
     >
-      <View style={{ flex: 1 }}>
+      <View style={styles.container}>
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
             <Text style={styles.title}>Activité</Text>
@@ -104,19 +122,60 @@ export default function ActiviteScreen({ navigation }) {
               activeOpacity={0.9}
               style={styles.addButton}
             >
-              <Plus color="#fff" size={20} />
+              <Plus color="#fff" size={22} strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.statsRow}>
-            <View style={styles.periodCard}>
-              <Text style={styles.periodNumber}>2</Text>
-              <Text style={styles.periodLabel}>SEMAINE</Text>
-            </View>
-            <View style={[styles.periodCard, { marginLeft: 12 }]}>
-              <Text style={styles.periodNumber}>2</Text>
-              <Text style={styles.periodLabel}>MOIS</Text>
-            </View>
+          {/* Activity indicators (computed) */}
+          <View style={styles.statsRow}> 
+            <IndicatorCard title="Sessions (7j)" value={(() => {
+              try {
+                const parseFR = s => {
+                  if (!s) return null;
+                  if (s.includes('-')) return new Date(s);
+                  const parts = s.split('/');
+                  if (parts.length === 3) return new Date(parts[2], parseInt(parts[1],10)-1, parts[0]);
+                  return new Date(s);
+                };
+                const now = new Date();
+                const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate()-6);
+                return activities.filter(a => {
+                  const d = parseFR(a.date);
+                  return d && d >= weekAgo;
+                }).length;
+              } catch (e) { return '—'; }
+            })()} subtitle={(() => {
+              const kcalWeek = (() => {
+                try {
+                  const parseFR = s => {
+                    if (!s) return null;
+                    if (s.includes('-')) return new Date(s);
+                    const parts = s.split('/');
+                    if (parts.length === 3) return new Date(parts[2], parseInt(parts[1],10)-1, parts[0]);
+                    return new Date(s);
+                  };
+                  const now = new Date();
+                  const weekAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate()-6);
+                  return (activities || []).filter(a => { const d = parseFR(a.date); return d && d >= weekAgo; }).reduce((s,a)=> s + (a.kcal || 0), 0);
+                } catch (e) { return 0; }
+              })();
+              return `~${kcalWeek} kcal (7j)`;
+            })()} />
+
+            <IndicatorCard title="Sessions (30j)" value={(() => {
+              try {
+                const parseFR = s => {
+                  if (!s) return null;
+                  if (s.includes('-')) return new Date(s);
+                  const parts = s.split('/');
+                  if (parts.length === 3) return new Date(parts[2], parseInt(parts[1],10)-1, parts[0]);
+                  return new Date(s);
+                };
+                const now = new Date();
+                const monthAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate()-29);
+                return activities.filter(a => { const d = parseFR(a.date); return d && d >= monthAgo; }).length;
+              } catch (e) { return '—'; }
+            })()} style={{ marginLeft: 12 }} />
           </View>
 
           <View style={styles.listContainer}>
@@ -145,50 +204,52 @@ export default function ActiviteScreen({ navigation }) {
             <View style={styles.sheetHandle} />
 
             <View style={styles.modalHeader}>
-              <Bike size={20} color="#000" strokeWidth={2.5} />
+              <View style={styles.modalIconCircle}>
+                <Bike size={22} color="#007AFF" strokeWidth={2.5} />
+              </View>
               <Text style={styles.modalTitle}>Nouvelle Activité</Text>
             </View>
 
-            <View style={styles.formRow}>
-              <View style={styles.selectBox}>
-                <TouchableOpacity
-                  style={styles.selectInner}
-                  onPress={() => {
-                    const types = ['Marche', 'Vélo', 'Course'];
-                    const idx = types.indexOf(activityType);
-                    const next = types[(idx + 1) % types.length];
-                    setActivityType(next);
-                  }}
-                >
-                  <Text style={styles.selectLabel}> {activityType} </Text>
-                </TouchableOpacity>
+            <ScrollView 
+              style={styles.modalScrollView}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              <View style={styles.formRow}>
+                <SelectList
+                  options={activityOptions}
+                  value={activityType}
+                  onValueChange={setActivityType}
+                  placeholder="Sélectionner une activité"
+                  renderItemLabel={a => `${a.name} (${a.caloriesPerMin} kcal/min)`}
+                />
               </View>
-            </View>
 
-            <View style={styles.formRow}>
-              <TextInput
-                keyboardType="numeric"
-                style={styles.durationInput}
-                value={duration}
-                onChangeText={setDuration}
-                placeholder="Durée (min)"
-                placeholderTextColor="#bdbdbd"
-              />
-            </View>
-
-            <View style={styles.estimationBox}>
-              <Text style={styles.estimationHeading}>Estimation</Text>
-              <Text style={styles.estimationSubtitle}>Calories approx.</Text>
-
-              <View style={styles.estimationValueRow}>
-                <Text style={styles.estimatedValue}>~{estimatedKcal}</Text>
-                <Text style={styles.estimatedUnit}>kcal</Text>
+              <View style={styles.formRow}>
+                <TextInput
+                  keyboardType="numeric"
+                  style={styles.durationInput}
+                  value={duration}
+                  onChangeText={setDuration}
+                  placeholder="Durée (min)"
+                  placeholderTextColor="#bdbdbd"
+                />
               </View>
-            </View>
 
-            <TouchableOpacity style={styles.addActivityButton} onPress={addActivity} activeOpacity={0.8}>
-              <Text style={styles.addActivityText}>Ajouter</Text>
-            </TouchableOpacity>
+              <View style={styles.estimationBox}>
+                <Text style={styles.estimationHeading}>Estimation</Text>
+                <Text style={styles.estimationSubtitle}>Calories approximatives</Text>
+
+                <View style={styles.estimationValueRow}>
+                  <Text style={styles.estimatedValue}>~{estimatedKcal}</Text>
+                  <Text style={styles.estimatedUnit}>kcal</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.addActivityButton} onPress={addActivity} activeOpacity={0.8}>
+                <Text style={styles.addActivityText}>Ajouter</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </Modal>
       </View>
@@ -197,6 +258,9 @@ export default function ActiviteScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   scrollContent: {
     flex: 1,
   },
@@ -204,67 +268,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingBottom: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
     color: colors.textPrimary || '#333',
+    letterSpacing: -0.5,
   },
   addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#007AFF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.24,
-    shadowRadius: 18,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 6,
   },
 
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginTop: 18,
-    marginBottom: 10,
-  },
-  periodCard: {
-    flex: 1,
-    backgroundColor: '#ffffffff',
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  periodNumber: {
-    fontSize: 24,
-    color: '#000',
-    fontWeight: '800',
-  },
-  periodLabel: {
-    fontSize: 12,
-    color: '#000',
-    fontWeight: '700',
-    marginTop: 6,
+    marginTop: 20,
+    marginBottom: 8,
   },
 
   listContainer: {
     paddingHorizontal: 16,
-    marginTop: 12,
+    marginTop: 16,
   },
 
   activityCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -279,42 +321,47 @@ const styles = StyleSheet.create({
   activityLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     flex: 1,
+    marginRight: 16,
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#F0F7FF',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 14,
   },
   activityInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   activityTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: colors.textPrimary || '#333',
+    marginBottom: 4,
   },
   activitySubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.textSecondary || '#8E8E93',
-    marginTop: 4,
+    fontWeight: '400',
   },
   activityRight: {
     alignItems: 'flex-end',
-    marginLeft: 12,
+    justifyContent: 'center',
   },
   kcal: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#007AFF',
+    marginBottom: 2,
   },
   kcalUnit: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
     color: '#007AFF',
-    marginTop: 2,
   },
 
   bottomPadding: {
@@ -323,7 +370,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   modalContainer: {
     position: 'absolute',
@@ -331,106 +378,106 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#fff',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    paddingHorizontal: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     paddingTop: 12,
-    paddingBottom: 34,
+    maxHeight: '80%',
+  },
+  modalScrollView: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   sheetHandle: {
-    height: 6,
-    width: 60,
-    backgroundColor: '#E7E7EE',
+    height: 5,
+    width: 40,
+    backgroundColor: '#D1D1D6',
     alignSelf: 'center',
     borderRadius: 3,
-    marginBottom: 10,
+    marginBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  modalIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F7FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary || '#333',
-    marginLeft: 6,
+    letterSpacing: -0.3,
   },
   formRow: {
-    marginBottom: 12,
-  },
-  selectBox: {
-    backgroundColor: '#FAFAFB',
-    borderRadius: 12,
-    padding: 12,
-  },
-  selectInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  selectLabel: {
-    fontSize: 16,
-    color: colors.textPrimary || '#333',
-    fontWeight: '600',
+    marginBottom: 16,
   },
   durationInput: {
-    backgroundColor: '#FAFAFB',
+    backgroundColor: '#F5F5F7',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48,
+    paddingHorizontal: 16,
+    height: 52,
     fontSize: 16,
+    fontWeight: '500',
     color: colors.textPrimary || '#333',
   },
   estimationBox: {
-    backgroundColor: '#e8f1ffff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#F0F7FF',
+    borderRadius: 14,
+    padding: 18,
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   estimationHeading: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#007AFF',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   estimationSubtitle: {
     fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 12,
+    color: '#8E8E93',
+    marginBottom: 14,
+    fontWeight: '400',
   },
   estimationValueRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'baseline',
   },
   estimatedValue: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 32,
+    fontWeight: '700',
     color: '#007AFF',
+    letterSpacing: -0.5,
   },
   estimatedUnit: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#007AFF',
   },
   addActivityButton: {
-    marginTop: 8,
     backgroundColor: '#007AFF',
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 8,
   },
   addActivityText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 17,
   },
 });
