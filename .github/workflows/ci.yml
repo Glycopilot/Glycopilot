@@ -2,7 +2,7 @@ name: Deploy to AWS EC2
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, chore/setup-deployement-aws ]
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
@@ -106,9 +106,19 @@ jobs:
   deploy:
     needs: [test-backend, test-frontend, sonarqube]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/setup-deployement-aws'
     steps:
     - uses: actions/checkout@v3
+    
+    - name: Copy files to EC2
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "."
+        target: "/var/www/glycopilot_app"
+        rm: false
     
     - name: Deploy to AWS EC2
       uses: appleboy/ssh-action@master
@@ -117,15 +127,7 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          sudo mkdir -p /var/www/glycopilot_app
-          sudo chown -R ubuntu:ubuntu /var/www/glycopilot_app
-          
           cd /var/www/glycopilot_app
-          
-          if [ ! -f ".env" ]; then
-            touch .env
-          fi
-          cp .env .env.backup || true
           
           cat > .env << EOF
           DEBUG=False
@@ -148,20 +150,6 @@ jobs:
           AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}
           AWS_S3_REGION_NAME=eu-west-3
           EOF
-          
-          if [ ! -d ".git" ]; then
-            rm -rf *
-            git clone https://github.com/Glycopilot/Glycopilot.git temp_clone
-            mv temp_clone/.git .
-            mv temp_clone/* .
-            mv temp_clone/.* . 2>/dev/null || true
-            rm -rf temp_clone
-            git reset --hard origin/main
-          else
-            git fetch origin
-            git reset --hard origin/main
-            git pull origin main
-          fi
           
           chmod +x deploy.sh
           ./deploy.sh
