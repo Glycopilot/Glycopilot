@@ -92,7 +92,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Nécessaire pour PR decoration
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      continue-on-error: true  # Temporaire: SonarCloud nécessite un premier scan de main pour initialiser le projet
 
   test-frontend:
     needs: secret-scan
