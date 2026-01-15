@@ -9,7 +9,7 @@ def send_reset_password_email(user_email: str, reset_link: str):
     message = f"""
     Bonjour,
 
-    Vous avez demandé à réinitialiser votre mot de passe. 
+    Vous avez demandé à réinitialiser votre mot de passe.
     Cliquez sur le lien ci-dessous pour créer un nouveau mot de passe :
 
     {reset_link}
