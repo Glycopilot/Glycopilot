@@ -55,7 +55,7 @@ def test_ack_endpoint_sets_acked_at():
     client = APIClient()
     client.login(username="u1", password="x")
 
-    resp = client.post("/alerts/events/ack/", {"event_id": event.id}, format="json")
+    resp = client.post("/api/alerts/events/ack/", {"event_id": event.id}, format="json")
     assert resp.status_code == 200
 
     event.refresh_from_db()
