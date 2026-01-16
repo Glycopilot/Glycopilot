@@ -2,7 +2,7 @@ name: Deploy to AWS EC2
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master, main, sonar/fix ]
   pull_request:
     branches: [ master, main, develop, sonar/fix ]
   workflow_dispatch:
