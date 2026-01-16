@@ -280,57 +280,35 @@ export default function HomeScreen({ navigation }) {
         <div className="sidebar-header">
           <div className="logo-container">
             <img src="/glycopilot.png" alt="Logo" className="sidebar-logo" />
-            <h2>GlycoPilot</h2>
+            <h2>GLYCOPILOT</h2>
           </div>
           <button className="close-sidebar" onClick={() => setSidebarOpen(false)}>
             <X size={24} />
           </button>
         </div>
 
-        <div className="doctor-profile" onClick={() => setShowProfile(true)}>
-          <div className="doctor-avatar">
-            {doctor.first_name?.[0]}{doctor.last_name?.[0]}
-          </div>
-          <div className="doctor-details">
-            <h3>Dr. {doctor.first_name} {doctor.last_name}</h3>
-            <p>{doctor.email}</p>
-          </div>
-          <Settings size={18} className="profile-edit-icon" />
-        </div>
-
         <nav className="sidebar-nav">
           <button className="nav-item active">
-            <User size={20} />
-            <span>Mes patients</span>
-          </button>
-          <button className="nav-item">
-            <FileText size={20} />
-            <span>Prescriptions</span>
-          </button>
-          <button className="nav-item">
             <Activity size={20} />
-            <span>Statistiques</span>
+            <span>Dashboard</span>
+          </button>
+          <button className="nav-item">
+            <User size={20} />
+            <span>Patients</span>
           </button>
           <button className="nav-item">
             <Bell size={20} />
-            <span>Alertes</span>
+            <span>Alerts</span>
+          </button>
+          <button className="nav-item">
+            <FileText size={20} />
+            <span>Reports</span>
+          </button>
+          <button className="nav-item">
+            <Settings size={20} />
+            <span>Settings</span>
           </button>
         </nav>
-
-        <div className="sidebar-stats">
-          <div className="stat-item">
-            <span className="stat-value">{stats.totalPatients}</span>
-            <span className="stat-label">Patients</span>
-          </div>
-          <div className="stat-item critical">
-            <span className="stat-value">{stats.criticalPatients}</span>
-            <span className="stat-label">Critiques</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">{stats.averageCompliance}%</span>
-            <span className="stat-label">Observance</span>
-          </div>
-        </div>
 
         <button className="logout-btn" onClick={handleLogout}>
           <LogOut size={20} />
@@ -345,120 +323,107 @@ export default function HomeScreen({ navigation }) {
           <button className="menu-btn" onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
-          <h1>Mes Patients</h1>
+          <h1>Hello, {doctor.first_name} {doctor.last_name}</h1>
           <div className="top-bar-actions">
-            <button className="icon-btn add-patient-btn" onClick={() => setShowAddPatient(true)}>
-              <UserPlus size={20} />
-              <h4>Ajouter un patient</h4>
-            </button>
-            <button className="icon-btn">
-              <MoreVertical size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="search-container">
-          <div className="search-bar-modern">
-            <Search size={20} />
-            <input
-              type="text"
-              placeholder="Rechercher un patient..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Filter Chips */}
-        <div className="filter-chips">
-          <button 
-            className={`chip ${selectedFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('all')}
-          >
-            Tous ({patients.length})
-          </button>
-          <button 
-            className={`chip critical ${selectedFilter === 'critical' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('critical')}
-          >
-            <AlertTriangle size={14} />
-            Critiques ({stats.criticalPatients})
-          </button>
-          <button 
-            className={`chip ${selectedFilter === 'normal' ? 'active' : ''}`}
-            onClick={() => setSelectedFilter('normal')}
-          >
-            Normaux
-          </button>
-        </div>
-
-        {/* Patients List */}
-        <div className="patients-list">
-          {filteredPatients.map((patient) => (
-            <div 
-              key={patient.id}
-              className="patient-item"
-              onClick={() => handlePatientClick(patient)}
-            >
-              <div className="patient-avatar-container">
-                <img 
-                  src={patient.avatar} 
-                  alt={`${patient.firstName} ${patient.lastName}`}
-                  className="patient-avatar-img"
-                />
-                {patient.unreadAlerts > 0 && (
-                  <div className="avatar-badge">{patient.unreadAlerts}</div>
-                )}
+            <div className="user-profile" onClick={() => setShowProfile(true)}>
+              <div className="user-avatar">
+                {doctor.first_name?.[0]}{doctor.last_name?.[0]}
               </div>
-
-              <div className="patient-content">
-                <div className="patient-header">
-                  <div className="patient-name-row">
-                    <h3 className="patient-name">
-                      {patient.firstName} {patient.lastName}
-                    </h3>
-                    <span className="patient-time">{patient.lastUpdate}</span>
-                  </div>
-                </div>
-
-                <div className="patient-info-row">
-                  <div className="patient-status-info">
-                    <div 
-                      className="glycemia-badge"
-                      style={{ background: getStatusColor(patient.status) }}
-                    >
-                      <span className="glycemia-value">{patient.lastGlycemia} g/L</span>
-                      {getTrendIcon(patient.trend)}
-                    </div>
-                    <span className="patient-message">{patient.lastMessage}</span>
-                  </div>
-                  <ChevronRight size={20} className="chevron-icon" />
-                </div>
-
-                <div className="patient-meta">
-                  <div className="meta-item">
-                    <Pill size={14} />
-                    <span>{patient.medicationCompliance}%</span>
-                  </div>
-                  {patient.pendingPrescriptions > 0 && (
-                    <div className="meta-item warning">
-                      <FileText size={14} />
-                      <span>{patient.pendingPrescriptions} prescription(s)</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <span className="user-name">{doctor.first_name} {doctor.last_name}</span>
             </div>
-          ))}
+          </div>
         </div>
 
-        {filteredPatients.length === 0 && (
-          <div className="empty-state">
-            <User size={64} />
-            <p>Aucun patient trouvé</p>
+        {/* Dashboard Stats */}
+        <div className="dashboard-stats">
+          <div className="stat-card">
+            <div className="stat-number">{stats.totalPatients}</div>
+            <div className="stat-label">Patients</div>
           </div>
-        )}
+          <div className="stat-card">
+            <div className="stat-number">{Math.floor(stats.averageCompliance)}%</div>
+            <div className="stat-label">Patients with TIR &lt; 70%</div>
+            <div className="stat-sublabel">&lt; 70 %</div>
+          </div>
+          <div className="stat-card alert">
+            <div className="stat-number">{stats.criticalPatients}</div>
+            <div className="stat-label">Critical alerts</div>
+            <div className="stat-sublabel">last 24 h</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">{Math.floor(stats.totalPatients * 0.35)}</div>
+            <div className="stat-label">Patients with nighttime</div>
+            <div className="stat-sublabel">hypo</div>
+          </div>
+        </div>
+
+        {/* High-Risk Patients Table */}
+        <div className="patients-table-container">
+          <div className="table-header">
+            <h2>High-Risk Patients</h2>
+            <div className="table-filters">
+              <select className="table-select">
+                <option>TIR</option>
+              </select>
+              <select className="table-select">
+                <option>Hypo</option>
+              </select>
+              <select className="table-select">
+                <option>Status</option>
+              </select>
+            </div>
+          </div>
+          
+          <table className="patients-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>TIR (7d)</th>
+                <th>Hypo / day</th>
+                <th>Last alert</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPatients.slice(0, 5).map((patient) => (
+                <tr key={patient.id}>
+                  <td className="patient-name-cell">{patient.firstName} {patient.lastName}</td>
+                  <td>Type {Math.random() > 0.5 ? '1' : '2'}</td>
+                  <td>{Math.floor(patient.medicationCompliance)}%</td>
+                  <td>{(Math.random() * 2).toFixed(1)}</td>
+                  <td>{patient.lastUpdate} ago</td>
+                  <td>
+                    <button className="view-chart-btn">View chart</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Time in Range Distribution */}
+        <div className="chart-container">
+          <h2>Time in Range Distribution</h2>
+          <div className="chart-bars">
+            <div className="bar-group">
+              <div className="bar" style={{ height: '120px' }}></div>
+              <div className="bar-label">0-40%</div>
+            </div>
+            <div className="bar-group">
+              <div className="bar" style={{ height: '140px' }}></div>
+              <div className="bar-label">40-60%</div>
+            </div>
+            <div className="bar-group">
+              <div className="bar" style={{ height: '200px' }}></div>
+              <div className="bar-label">60-80%</div>
+            </div>
+            <div className="bar-group">
+              <div className="bar" style={{ height: '100px' }}></div>
+              <div className="bar-label">&gt;80%</div>
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* Overlay for mobile */}
