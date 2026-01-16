@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import LoginScreen from './screens/LoginScreen';
 import SignInScreen from './screens/SignInScreen';
 import HomeScreen from './screens/HomeScreen';
+import AddPatient from './screens/AddPatient';
 import './App.css';
 
 // OPTION 1 : Navigation simple avec useState (SANS React Router)
@@ -20,6 +21,8 @@ function App() {
         setCurrentPage('signin');
       } else if (page === '/home' || page === 'Home') {
         setCurrentPage('home');
+      } else if (page === '/add-patient' || page === 'AddPatient') {
+        setCurrentPage('add-patient');
       }
     }
   };
@@ -44,6 +47,7 @@ function App() {
         {currentPage === 'login' && <LoginScreen navigation={navigation} />}
         {currentPage === 'signin' && <SignInScreen navigation={navigation} />}
         {currentPage === 'home' && <HomeScreen navigation={navigation} />}
+        {currentPage === 'add-patient' && <AddPatient navigation={navigation} />}
       </div>
     </>
   );

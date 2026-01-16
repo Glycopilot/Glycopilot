@@ -1,7 +1,7 @@
 /* Variables de couleurs (à adapter selon votre thème) */
 :root {
   --primary-color: #4A90E2;
-  --primary-dark: #2E5C8A;
+  --primary-dark: #2563EB;
   --background-color: #F5F7FA;
   --light-bg: #FFFFFF;
   --text-primary: #333333;
@@ -287,6 +287,28 @@
     width: 130px;
     height: 90px;
   }
+
+  .role-selector {
+    flex-direction: column;
+  }
+
+  .role-option {
+    padding: 12px;
+  }
+
+  .role-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .role-title {
+    font-size: 14px;
+  }
+
+  .role-description {
+    font-size: 12px;
+  }
 }
 
 /* Pour les écrans très petits, ajuster le comportement du scroll */
@@ -305,4 +327,103 @@
     padding: 8px 16px;
     font-size: 13px;
   }
+}
+
+/* Role Selector */
+.role-selector {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.role-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--light-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.role-option:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
+}
+
+.role-option.active {
+  border-color: var(--primary-color);
+  background: linear-gradient(135deg, rgba(74, 144, 226, 0.1) 0%, rgba(46, 92, 138, 0.05) 100%);
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+}
+
+.role-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.role-icon.doctor {
+  background: linear-gradient(135deg, #4A90E2, #2E5C8A);
+}
+
+.role-icon.patient {
+  background: linear-gradient(135deg, #2ECC71, #27AE60);
+}
+
+.role-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.role-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.role-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.role-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+
+/* Message d'erreur */
+.error-message {
+  margin: 16px 0;
+  padding: 12px;
+  background-color: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  color: #c33;
+  font-size: 14px;
+  text-align: center;
 }

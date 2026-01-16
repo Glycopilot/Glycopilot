@@ -14,11 +14,15 @@ import {
   ChevronRight,
   Bell,
   Menu,
-  X
+  X,
+  UserPlus,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import authService from '../services/authService';
 import { toastSuccess, toastError } from '../services/toastService';
+import AddPatient from './AddPatient';
+import Profile from './Profile';
 import './css/HomeScreen.css';
 
 export default function HomeScreen({ navigation }) {
@@ -28,101 +32,10 @@ export default function HomeScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [showAddPatient, setShowAddPatient] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const { logout } = useAuth();
-
-  // Données de démonstration
-  const mockPatients = [
-    {
-      id: 1,
-      firstName: 'Marie',
-      lastName: 'Dubois',
-      age: 45,
-      lastGlycemia: 1.85,
-      status: 'critical',
-      trend: 'up',
-      lastUpdate: '2 min',
-      medicationCompliance: 85,
-      avatar: 'https://ui-avatars.com/api/?name=Marie+Dubois&background=E74C3C&color=fff&bold=true',
-      pendingPrescriptions: 1,
-      unreadAlerts: 3,
-      lastMessage: 'Glycémie critique détectée'
-    },
-    {
-      id: 2,
-      firstName: 'Jean',
-      lastName: 'Martin',
-      age: 62,
-      lastGlycemia: 1.15,
-      status: 'normal',
-      trend: 'stable',
-      lastUpdate: '15 min',
-      medicationCompliance: 95,
-      avatar: 'https://ui-avatars.com/api/?name=Jean+Martin&background=2ECC71&color=fff&bold=true',
-      pendingPrescriptions: 0,
-      unreadAlerts: 0,
-      lastMessage: 'Tout va bien'
-    },
-    {
-      id: 3,
-      firstName: 'Sophie',
-      lastName: 'Bernard',
-      age: 38,
-      lastGlycemia: 0.65,
-      status: 'low',
-      trend: 'down',
-      lastUpdate: '5 min',
-      medicationCompliance: 78,
-      avatar: 'https://ui-avatars.com/api/?name=Sophie+Bernard&background=3498DB&color=fff&bold=true',
-      pendingPrescriptions: 2,
-      unreadAlerts: 5,
-      lastMessage: 'Hypoglycémie légère'
-    },
-    {
-      id: 4,
-      firstName: 'Pierre',
-      lastName: 'Leroy',
-      age: 55,
-      lastGlycemia: 1.45,
-      status: 'high',
-      trend: 'up',
-      lastUpdate: '30 min',
-      medicationCompliance: 90,
-      avatar: 'https://ui-avatars.com/api/?name=Pierre+Leroy&background=F39C12&color=fff&bold=true',
-      pendingPrescriptions: 0,
-      unreadAlerts: 1,
-      lastMessage: 'Glycémie en hausse'
-    },
-    {
-      id: 5,
-      firstName: 'Claire',
-      lastName: 'Moreau',
-      age: 41,
-      lastGlycemia: 1.10,
-      status: 'normal',
-      trend: 'stable',
-      lastUpdate: '1h',
-      medicationCompliance: 100,
-      avatar: 'https://ui-avatars.com/api/?name=Claire+Moreau&background=2ECC71&color=fff&bold=true',
-      pendingPrescriptions: 0,
-      unreadAlerts: 0,
-      lastMessage: 'Médicament pris à 9h'
-    },
-    {
-      id: 6,
-      firstName: 'Thomas',
-      lastName: 'Petit',
-      age: 52,
-      lastGlycemia: 1.28,
-      status: 'normal',
-      trend: 'stable',
-      lastUpdate: '45 min',
-      medicationCompliance: 88,
-      avatar: 'https://ui-avatars.com/api/?name=Thomas+Petit&background=2ECC71&color=fff&bold=true',
-      pendingPrescriptions: 0,
-      unreadAlerts: 0,
-      lastMessage: 'Valeurs stables'
-    }
-  ];
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -139,14 +52,80 @@ export default function HomeScreen({ navigation }) {
         const storedUser = authService.getStoredUser();
         if (storedUser) {
           setDoctor(storedUser);
-          setTimeout(() => {
-            setPatients(mockPatients);
-            setLoading(false);
-          }, 500);
+          
+          // Récupération de tous les utilisateurs depuis la base de données
+          try {
+            const response = await fetch('/api/users', {
+              headers: {
+                'Authorization': `Bearer ${authService.getTokens().accessToken}`
+              }
+            });
+            
+            if (response.ok) {
+              const users = await response.json();
+              setAllUsers(users);
+              
+              // Transformation des utilisateurs en format patients avec des données aléatoires
+              const transformedPatients = users.map((user, index) => {
+                const glycemiaValues = [0.65, 0.85, 1.10, 1.15, 1.28, 1.45, 1.65, 1.85];
+                const statuses = ['low', 'normal', 'normal', 'normal', 'normal', 'high', 'high', 'critical'];
+                const trends = ['down', 'stable', 'stable', 'stable', 'stable', 'up', 'up', 'up'];
+                const messages = [
+                  'Hypoglycémie légère',
+                  'Tout va bien',
+                  'Valeurs stables',
+                  'Médicament pris à 9h',
+                  'Glycémie en hausse',
+                  'À surveiller',
+                  'Glycémie critique détectée',
+                  'Consultation recommandée'
+                ];
+                
+                const randomIndex = index % glycemiaValues.length;
+                const glycemia = glycemiaValues[randomIndex];
+                const status = statuses[randomIndex];
+                const firstName = user.first_name || 'Patient';
+                const lastName = user.last_name || 'Inconnu';
+                
+                // Couleur de fond selon le statut
+                let bgColor = '2ECC71';
+                if (status === 'critical') bgColor = 'E74C3C';
+                else if (status === 'high') bgColor = 'F39C12';
+                else if (status === 'low') bgColor = '3498DB';
+                
+                return {
+                  id: user.id,
+                  firstName,
+                  lastName,
+                  email: user.email,
+                  age: Math.floor(Math.random() * 40) + 30,
+                  lastGlycemia: glycemia,
+                  status,
+                  trend: trends[randomIndex],
+                  lastUpdate: ['2 min', '5 min', '15 min', '30 min', '45 min', '1h'][Math.floor(Math.random() * 6)],
+                  medicationCompliance: Math.floor(Math.random() * 30) + 70,
+                  avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}+${encodeURIComponent(lastName)}&background=${bgColor}&color=fff&bold=true`,
+                  pendingPrescriptions: Math.floor(Math.random() * 3),
+                  unreadAlerts: status === 'critical' || status === 'low' ? Math.floor(Math.random() * 5) + 1 : 0,
+                  lastMessage: messages[randomIndex]
+                };
+              });
+              
+              setPatients(transformedPatients);
+            } else {
+              toastError('Erreur', 'Impossible de récupérer la liste des patients');
+            }
+          } catch (fetchError) {
+            console.error('Erreur lors de la récupération des utilisateurs:', fetchError);
+            toastError('Erreur', 'Impossible de récupérer les patients');
+          }
+          
+          setLoading(false);
         }
       } catch (error) {
         console.error('Erreur:', error);
         toastError('Erreur', 'Impossible de récupérer vos informations');
+        setLoading(false);
       }
     };
 
@@ -170,6 +149,78 @@ export default function HomeScreen({ navigation }) {
 
   const handlePatientClick = (patient) => {
     toastSuccess('Patient sélectionné', `${patient.firstName} ${patient.lastName}`);
+  };
+
+  const handleProfileUpdated = (updatedUser) => {
+    setDoctor(updatedUser);
+  };
+
+  const handlePatientAdded = (newPatient) => {
+    // Recharger la liste des patients
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/users', {
+          headers: {
+            'Authorization': `Bearer ${authService.getTokens().accessToken}`
+          }
+        });
+        
+        if (response.ok) {
+          const users = await response.json();
+          setAllUsers(users);
+          
+          const transformedPatients = users.map((user, index) => {
+            const glycemiaValues = [0.65, 0.85, 1.10, 1.15, 1.28, 1.45, 1.65, 1.85];
+            const statuses = ['low', 'normal', 'normal', 'normal', 'normal', 'high', 'high', 'critical'];
+            const trends = ['down', 'stable', 'stable', 'stable', 'stable', 'up', 'up', 'up'];
+            const messages = [
+              'Hypoglycémie légère',
+              'Tout va bien',
+              'Valeurs stables',
+              'Médicament pris à 9h',
+              'Glycémie en hausse',
+              'À surveiller',
+              'Glycémie critique détectée',
+              'Consultation recommandée'
+            ];
+            
+            const randomIndex = index % glycemiaValues.length;
+            const glycemia = glycemiaValues[randomIndex];
+            const status = statuses[randomIndex];
+            const firstName = user.first_name || 'Patient';
+            const lastName = user.last_name || 'Inconnu';
+            
+            let bgColor = '2ECC71';
+            if (status === 'critical') bgColor = 'E74C3C';
+            else if (status === 'high') bgColor = 'F39C12';
+            else if (status === 'low') bgColor = '3498DB';
+            
+            return {
+              id: user.id,
+              firstName,
+              lastName,
+              email: user.email,
+              age: Math.floor(Math.random() * 40) + 30,
+              lastGlycemia: glycemia,
+              status,
+              trend: trends[randomIndex],
+              lastUpdate: ['2 min', '5 min', '15 min', '30 min', '45 min', '1h'][Math.floor(Math.random() * 6)],
+              medicationCompliance: Math.floor(Math.random() * 30) + 70,
+              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}+${encodeURIComponent(lastName)}&background=${bgColor}&color=fff&bold=true`,
+              pendingPrescriptions: Math.floor(Math.random() * 3),
+              unreadAlerts: status === 'critical' || status === 'low' ? Math.floor(Math.random() * 5) + 1 : 0,
+              lastMessage: messages[randomIndex]
+            };
+          });
+          
+          setPatients(transformedPatients);
+        }
+      } catch (error) {
+        console.error('Erreur lors du rechargement des patients:', error);
+      }
+    };
+    
+    checkAuth();
   };
 
   const getStatusColor = (status) => {
@@ -206,7 +257,7 @@ export default function HomeScreen({ navigation }) {
   const stats = {
     totalPatients: patients.length,
     criticalPatients: patients.filter(p => p.status === 'critical' || p.status === 'low').length,
-    averageCompliance: Math.round(patients.reduce((acc, p) => acc + p.medicationCompliance, 0) / patients.length)
+    averageCompliance: Math.round(patients.reduce((acc, p) => acc + p.medicationCompliance, 0) / patients.length) || 0
   };
 
   if (loading) {
@@ -236,7 +287,7 @@ export default function HomeScreen({ navigation }) {
           </button>
         </div>
 
-        <div className="doctor-profile">
+        <div className="doctor-profile" onClick={() => setShowProfile(true)}>
           <div className="doctor-avatar">
             {doctor.first_name?.[0]}{doctor.last_name?.[0]}
           </div>
@@ -244,6 +295,7 @@ export default function HomeScreen({ navigation }) {
             <h3>Dr. {doctor.first_name} {doctor.last_name}</h3>
             <p>{doctor.email}</p>
           </div>
+          <Settings size={18} className="profile-edit-icon" />
         </div>
 
         <nav className="sidebar-nav">
@@ -295,6 +347,10 @@ export default function HomeScreen({ navigation }) {
           </button>
           <h1>Mes Patients</h1>
           <div className="top-bar-actions">
+            <button className="icon-btn add-patient-btn" onClick={() => setShowAddPatient(true)}>
+              <UserPlus size={20} />
+              <h4>Ajouter un patient</h4>
+            </button>
             <button className="icon-btn">
               <MoreVertical size={20} />
             </button>
@@ -337,7 +393,7 @@ export default function HomeScreen({ navigation }) {
           </button>
         </div>
 
-        {/* Patients List - WhatsApp Style */}
+        {/* Patients List */}
         <div className="patients-list">
           {filteredPatients.map((patient) => (
             <div 
@@ -409,6 +465,21 @@ export default function HomeScreen({ navigation }) {
       {sidebarOpen && (
         <div className="overlay" onClick={() => setSidebarOpen(false)}></div>
       )}
+
+      {/* Add Patient Modal */}
+      <AddPatient 
+        isOpen={showAddPatient}
+        onClose={() => setShowAddPatient(false)}
+        onPatientAdded={handlePatientAdded}
+      />
+
+      {/* Profile Modal */}
+      <Profile
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        doctor={doctor}
+        onProfileUpdated={handleProfileUpdated}
+      />
     </div>
   );
 }

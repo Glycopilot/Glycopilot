@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
 import './css/SignInScreen.css';
 
@@ -57,9 +57,8 @@ export default function SignInScreen({ navigation }) {
   const [confirmationPassword, setConfirmationPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Utilisation du hook useAuth
-  const { register, loading, error } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [role, setRole] = useState('doctor'); // Rôle par défaut: doctor
 
   const handleSignIn = async () => {
     // Validation du nom et prénom
@@ -110,14 +109,16 @@ export default function SignInScreen({ navigation }) {
       return;
     }
 
-    // Soumission du formulaire avec le hook
+    // Soumission du formulaire
+    setIsLoading(true);
     try {
-      await register({
+      await authService.register({
         email,
         firstName,
         lastName,
         password,
         passwordConfirm: confirmationPassword,
+        role, // Ajouter le rôle à l'inscription
       });
       
       toastSuccess('Inscription réussie!', 'Bienvenue !');
@@ -129,6 +130,7 @@ export default function SignInScreen({ navigation }) {
       setPassword('');
       setConfirmationPassword('');
       setConfirmationEmail('');
+      setRole('doctor'); // Réinitialiser le rôle
 
       // Rediriger vers la page de connexion
       if (navigation?.navigate) {
@@ -138,6 +140,8 @@ export default function SignInScreen({ navigation }) {
       }
     } catch (error) {
       toastError('Erreur inscription', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -210,6 +214,38 @@ export default function SignInScreen({ navigation }) {
             type="email"
           />
 
+          {/* ROLE SELECTOR */}
+          <div className="input-field">
+            <label>Type de compte</label>
+            <div className="role-selector">
+              <button
+                type="button"
+                className={`role-option ${role === 'doctor' ? 'active' : ''}`}
+                onClick={() => setRole('doctor')}
+              >
+                <div className="role-icon doctor">👨‍⚕️</div>
+                <div className="role-content">
+                  <span className="role-title">Médecin</span>
+                  <span className="role-description">Suivre mes patients</span>
+                </div>
+                {role === 'doctor' && <div className="role-check">✓</div>}
+              </button>
+
+              <button
+                type="button"
+                className={`role-option ${role === 'patient' ? 'active' : ''}`}
+                onClick={() => setRole('patient')}
+              >
+                <div className="role-icon patient">👤</div>
+                <div className="role-content">
+                  <span className="role-title">Patient</span>
+                  <span className="role-description">Suivre ma santé</span>
+                </div>
+                {role === 'patient' && <div className="role-check">✓</div>}
+              </button>
+            </div>
+          </div>
+
           {/* PASSWORD */}
           <InputField
             label="Mot de passe"
@@ -255,17 +291,10 @@ export default function SignInScreen({ navigation }) {
             }
           />
 
-          {/* Afficher l'erreur si elle existe */}
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-
           <CustomButton 
-            title={loading ? "Inscription..." : "S'inscrire"} 
+            title={isLoading ? "Inscription..." : "S'inscrire"} 
             onPress={handleSignIn}
-            disabled={loading}
+            disabled={isLoading}
           />
         </div>
       </div>

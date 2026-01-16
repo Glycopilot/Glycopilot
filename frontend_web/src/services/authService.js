@@ -151,6 +151,7 @@ const authService = {
         last_name: userData.lastName,
         password: userData.password,
         password_confirm: userData.passwordConfirm,
+        role: userData.role || 'doctor', // Rôle par défaut: doctor
       });
 
       const { access, refresh, user } = response.data;
