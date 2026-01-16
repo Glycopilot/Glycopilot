@@ -10,7 +10,9 @@ User = get_user_model()
 
 
 def mk_user(username="u1"):
-    return User.objects.create_user(username=username, password="x")
+    return User.objects.create_user(
+        username=username, email=f"{username}@test.com", password="x"
+    )
 
 
 def mk_rule(code="HYPO", min_g=80, max_g=120):
@@ -51,9 +53,9 @@ def test_ack_endpoint_sets_acked_at():
     event = trigger_for_value(user=user, glycemia_value=70)[0]
 
     client = APIClient()
-    client.login(username="u1", password="x")
+    client.force_authenticate(user=user)
 
-    resp = client.post("/alerts/events/ack/", {"event_id": event.id}, format="json")
+    resp = client.post("/api/alerts/events/ack/", {"event_id": event.id}, format="json")
     assert resp.status_code == 200
 
     event.refresh_from_db()
