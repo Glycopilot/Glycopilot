@@ -10,7 +10,9 @@ User = get_user_model()
 
 
 def mk_user(username="u1"):
-    return User.objects.create_user(username=username, password="x")
+    return User.objects.create_user(
+        username=username, email=f"{username}@test.com", password="x"
+    )
 
 
 def mk_rule(code="HYPO", min_g=80, max_g=120):
