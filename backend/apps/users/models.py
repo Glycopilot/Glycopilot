@@ -44,6 +44,14 @@ class User(AbstractUser):
         "profiles.Profile", through="UserProfile", related_name="users"
     )
 
+    medical_id = models.ForeignKey(
+        "doctors.Doctor",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="patients",
+        help_text="Doctor associated with this patient (One doctor per patient)"
+    )
     objects = CustomUserManager()  # Relie le CustomUserManager
 
     USERNAME_FIELD = "email"  # email comme identifiant
