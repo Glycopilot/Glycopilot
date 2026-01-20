@@ -1,3 +1,6 @@
-"""URL configuration placeholder."""
+from django.urls import path
+from .views import DoctorAssociationsView
 
-urlpatterns = []
+urlpatterns = [
+    path("medecins-patients/", DoctorAssociationsView.as_view(), name="doctor-associations"),
+]
