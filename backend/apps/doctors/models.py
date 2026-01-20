@@ -19,5 +19,8 @@ class Doctor(models.Model):
         related_name="validated_doctors",
     )
 
+
     class Meta:
         db_table = "doctors"
+
+
