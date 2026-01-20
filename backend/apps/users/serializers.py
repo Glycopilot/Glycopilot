@@ -19,6 +19,7 @@ class UserSerializer(serializers.ModelSerializer):
             "medical_comment",
             "actif",
             "linked_user_id",
+            "medical_id",
             "is_active",
             "is_staff",
             "created_at",
