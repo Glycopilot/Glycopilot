@@ -13,7 +13,7 @@ services:
 
   # Backend Django
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
@@ -40,6 +40,8 @@ services:
     command: sh -c "npm install && npx expo start --lan"
     depends_on:
       - backend
+    stdin_open: true
+    tty: true
     restart: unless-stopped
 
 volumes:
