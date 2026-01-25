@@ -48,5 +48,4 @@ gitleaks-report.json
 .idea/
 .vscode/
 
-# Postman
-backend/glycopilot_postman_collection.json
+

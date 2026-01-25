@@ -3,17 +3,18 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-from decouple import config
+from decouple import config, Csv
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- ENVIRONNEMENT ---
-ENV = config("Django_ENV", default="production")
+# "production" or "development"
+ENV = config("Django_ENV", default="development")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = (
-    config("ALLOWED_HOSTS", default="localhost").split(",") if not DEBUG else ["*"]
-)
+
+# Hosts autorisés (séparés par des virgules)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
 # --- CLÉS SECRÈTES ---
 SECRET_KEY = config("SECRET_KEY")
@@ -38,7 +39,6 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.profiles",
     "apps.doctors",
-    "apps.contacts",
     "apps.glycemia",
     "apps.meals",
     "apps.activities",
@@ -67,6 +67,7 @@ ROOT_URLCONF = "core.urls"
 
 # --- DATABASES ---
 if "test" in sys.argv or "pytest" in sys.argv[0]:
+    # Base de test en mémoire (rapide et isolée)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -74,11 +75,10 @@ if "test" in sys.argv or "pytest" in sys.argv[0]:
         }
     }
 else:
-    # Detect database engine: PostgreSQL for production, MySQL for local development
-    DB_ENGINE = config("DB_ENGINE", default="mysql")
+    # Choix du moteur via .env (mysql, postgresql, sqlite)
+    DB_ENGINE = config("DB_ENGINE", default="sqlite")
 
     if DB_ENGINE == "postgresql":
-        # PostgreSQL configuration for AWS/production
         DATABASES = {
             "default": {
                 "ENGINE": "django.db.backends.postgresql",
@@ -89,19 +89,26 @@ else:
                 "PORT": config("DB_PORT", default=5432, cast=int),
             }
         }
-    else:
-        # MySQL configuration for local development
+    elif DB_ENGINE == "mysql":
         DATABASES = {
             "default": {
                 "ENGINE": "django.db.backends.mysql",
                 "NAME": config("DB_NAME"),
                 "USER": config("DB_USER"),
                 "PASSWORD": config("DB_PASSWORD"),
-                "HOST": config("DB_HOST"),
+                "HOST": config("DB_HOST", "localhost"),
                 "PORT": config("DB_PORT", default=3306, cast=int),
                 "OPTIONS": {
                     "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
                 },
+            }
+        }
+    else:
+        # Fallback SQLite pour dev local simple
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
             }
         }
 
@@ -112,13 +119,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- Log de la configuration DB (mot de passe masqué) ---
-dataconfig_safe = DATABASES["default"].copy()
-dataconfig_safe["PASSWORD"] = "==========***hidden***========"
-logger.info(f"Database configuration: {dataconfig_safe}")
+# Log secure de la DB utilisée
+if not "test" in sys.argv:
+    logger.info(f"Running in {ENV.upper()} mode")
+    logger.info(f"Database Engine: {DATABASES['default']['ENGINE']}")
 
 # --- CORS ---
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # En dev uniquement
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 
 # --- REST FRAMEWORK CONFIG ---
 REST_FRAMEWORK = {
@@ -147,6 +156,7 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "SIGNING_KEY": SECRET_KEY,
+    "USER_ID_FIELD": "id_auth",
 }
 
 # --- TEMPLATES ---
@@ -168,23 +178,19 @@ TEMPLATES = [
 
 
 # EMAIL CONFIG
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = config("SMTP_HOST", default="")
 EMAIL_PORT = config("SMTP_PORT", default=587, cast=int)
 EMAIL_HOST_USER = config("SMTP_USERNAME", default="")
 EMAIL_HOST_PASSWORD = config("SMTP_PASSWORD", default="")
 EMAIL_USE_TLS = config("SMTP_USE_TLS", default=True, cast=bool)
-EMAIL_USE_SSL = False
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_USE_SSL = config("SMTP_USE_SSL", default=False, cast=bool)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
-# Choisis selon ton port
 if EMAIL_PORT == 465:
     EMAIL_USE_TLS = False
     EMAIL_USE_SSL = True
-else:
-    EMAIL_USE_TLS = True
-    EMAIL_USE_SSL = False
 
 
 # --- INTERNATIONALIZATION ---
@@ -199,7 +205,7 @@ AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="eu-west-3")
 
-# Use S3 for media files in production
+# Use S3 for media files in production AND if keys are present
 if AWS_STORAGE_BUCKET_NAME and not DEBUG:
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     AWS_DEFAULT_ACL = "public-read"
@@ -209,7 +215,7 @@ if AWS_STORAGE_BUCKET_NAME and not DEBUG:
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 else:
-    # Local media storage for development
+    # Place locale pour dev
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
 
@@ -219,4 +225,4 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # --- AUTH USER MODEL ---
-AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "users.AuthAccount"

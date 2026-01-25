@@ -74,16 +74,127 @@ else
     echo "✅ Outils JavaScript déjà installés"
 fi
 
-echo "🔄 Application des migrations Django dans Docker..."
+# Gestion des fichiers d'environnement (.env vs .env.prod)
+ENV_FILE="backend/.env"
+if [ "$1" == "prod" ]; then
+    ENV_FILE="backend/.env.prod"
+    echo "🔌 UTILISATION DE LA CONFIG PRODUCTION ($ENV_FILE)"
+else
+    echo "🔌 Utilisation de la config par défaut ($ENV_FILE)"
+fi
 
-# Lancer les migrations dans le container backend
-docker compose run --rm backend python manage.py makemigrations
-docker compose run --rm backend python manage.py migrate
-# Importer les données initiales
-echo "📥 Importation des données..."
-docker compose run --rm backend python manage.py import_meals
-docker compose run --rm backend python manage.py import_medications
-docker compose run --rm backend python manage.py import_activities
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Fichier $ENV_FILE introuvable !"
+    exit 1
+fi
+
+# Charger les variables dans l'environnement courant pour que Python les voit
+set -a
+source $ENV_FILE
+set +a
+
+# OVERRIDE DB_HOST for Host Execution
+# Because the script runs on the host but the DB is in Docker (mapped to localhost:3306),
+# we must use 127.0.0.1 instead of 'database'.
+export DB_HOST=127.0.0.1
+
+# Détection de l'environnement (Supporte Django_ENV et DJANGO_ENV)
+CURRENT_ENV=""
+if [ -n "$Django_ENV" ]; then
+    CURRENT_ENV=$Django_ENV
+elif [ -n "$DJANGO_ENV" ]; then
+    CURRENT_ENV=$DJANGO_ENV
+fi
+
+# Normaliser en minuscule pour la comparaison
+CURRENT_ENV=$(echo "$CURRENT_ENV" | tr '[:upper:]' '[:lower:]')
+
+# IMPORTANT: On exporte la variable normalisée pour que Python (settings.py) la trouve
+# car config('Django_ENV') est sensible à la casse sur Linux.
+export Django_ENV=$CURRENT_ENV
+
+echo "ℹ️  Environment détecté: $CURRENT_ENV"
+
+if [ "$CURRENT_ENV" == "production" ]; then
+    if [ "$2" == "--reset" ]; then
+        echo "🚨 ATTENTION: MODE PRODUCTION + RESET FORCÉ DEMANDÉ 🚨"
+        echo "⚠️  Cela va EFFACER toutes les données de la base de production !"
+        echo "⏳ Vous avez 5 secondes pour annuler (Ctrl+C)..."
+        sleep 5
+        
+        cd backend
+        if [ -f "venv/bin/activate" ]; then
+            source venv/bin/activate
+        elif [ -f "venv/Scripts/activate" ]; then
+            source venv/Scripts/activate
+        fi
+        
+        # On force le reset en production
+        python3 reset_db.py --force
+        if [ $? -ne 0 ]; then
+            echo "❌ Erreur lors du Reset DB Production"
+            exit 1
+        fi
+        cd ..
+        echo "✅ Base de Production Réinitialisée et Peuplée !"
+    else
+        echo "⚠️  MODE PRODUCTION DÉTECTÉ : Mise à jour SÉCURISÉE (Migrate + CollectStatic)"
+        echo "   (Migrate + CollectStatic sans perte de données)"
+        
+        cd backend
+        if [ -f "venv/bin/activate" ]; then
+            source venv/bin/activate
+        elif [ -f "venv/Scripts/activate" ]; then
+            source venv/Scripts/activate
+        fi
+
+        # 1. Appliquer les migrations uniquement (PAS DE RESET)
+        echo "🏗️  Application des migrations..."
+        python3 manage.py migrate
+        if [ $? -ne 0 ]; then
+            echo "❌ Erreur lors des migrations"
+            exit 1
+        fi
+
+        # 2. Collecter les fichiers statiques
+        echo "🎨 Collection des fichiers statiques..."
+        python3 manage.py collectstatic --noinput
+
+        cd ..
+        echo "✅ Mise à jour Production terminée avec succès !"
+    fi
+else
+    echo "🔄 [DEV] Reset & Initialisation de la Base de Données..."
+    
+    # Assurer que la DB est démarrée
+    echo "📦 Démarrage du conteneur de base de données..."
+    if command -v docker > /dev/null 2>&1; then
+        if docker compose version > /dev/null 2>&1; then
+            docker compose up -d database
+        elif docker-compose version > /dev/null 2>&1; then
+            docker-compose up -d database
+        fi
+    fi
+    
+    # Attendre que la DB soit prête (simple sleep ou boucle)
+    echo "⏳ Attente de la disponibilité de la DB (10s)..."
+    sleep 10
+    
+    cd backend
+    if [ -f "venv/bin/activate" ]; then
+        source venv/bin/activate
+    elif [ -f "venv/Scripts/activate" ]; then
+        source venv/Scripts/activate
+    fi
+    
+    python3 reset_db.py
+    if [ $? -ne 0 ]; then
+        echo "❌ Erreur lors du Reset DB"
+        exit 1
+    fi
+    cd ..
+    echo "✅ Base de données réinitialisée et peuplée !"
+fi
 # Vérifier et configurer les Git hooks (une seule fois)
 if [ ! -f ".git/hooks/pre-push" ]; then
     echo ""
@@ -129,17 +240,17 @@ fi
 echo "⏳ Attente du backend (15 secondes)..."
 sleep 15
 
-# Lancer le frontend directement
-echo ""
-echo "📱 Démarrage du frontend Expo..."
-echo "   Le QR code va apparaître ci-dessous"
-echo "   Appuyez sur 'w' pour ouvrir dans le navigateur"
-echo ""
-
-cd frontend
-npm start
-
+# Frontend est déjà lancé par Docker Compose (voir docker-compose.yml)
 echo ""
 echo "✅ Glycopilot démarré !"
-echo "Backend: http://localhost:8000"
+echo "Backend: http://localhost:8006"
 echo "Frontend: http://localhost:8081"
+echo ""
+echo "📱 QR Code Frontend :"
+docker logs glycopilot-front
+
+echo ""
+echo "🚀 Passage aux logs BACKEND (Emails, Requêtes API)..."
+echo "   (Appuyez sur Ctrl+C pour quitter les logs, le serveur continuera de tourner)"
+echo "----------------------------------------------------------------------------"
+docker logs -f glycopilot-back
