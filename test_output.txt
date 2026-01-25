@@ -1,0 +1,328 @@
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+_____________ TestAuthEndpoints.test_register_creates_all_entities _____________
+
+self = <backend.tests.Auth.test_auth_endpoints.TestAuthEndpoints object at 0x796d773047a0>
+client = <django.test.client.Client object at 0x796d75bc7a10>
+
+    def test_register_creates_all_entities(self, client):
+        """
+        Verify /register creates User, AuthAccount and Profile
+        """
+        url = reverse("register")
+        data = {
+            "email": "test@gmail.com",
+            "password": "StrongPassword123!",
+            "password_confirm": "StrongPassword123!",
+            "first_name": "John",
+            "last_name": "Doe",
+            "role": "PATIENT"
+        }
+    
+>       response = client.post(url, data)
+
+backend/tests/Auth/test_auth_endpoints.py:30: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/venv/lib/python3.12/site-packages/django/test/client.py:948: in post
+    response = super().post(
+backend/venv/lib/python3.12/site-packages/django/test/client.py:482: in post
+    return self.generic(
+backend/venv/lib/python3.12/site-packages/django/test/client.py:609: in generic
+    return self.request(**r)
+backend/venv/lib/python3.12/site-packages/django/test/client.py:891: in request
+    self.check_exception(response)
+backend/venv/lib/python3.12/site-packages/django/test/client.py:738: in check_exception
+    raise exc_value
+backend/venv/lib/python3.12/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+backend/venv/lib/python3.12/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+backend/venv/lib/python3.12/site-packages/django/views/decorators/csrf.py:56: in wrapper_view
+    return view_func(*args, **kwargs)
+backend/venv/lib/python3.12/site-packages/django/views/generic/base.py:104: in view
+    return self.dispatch(request, *args, **kwargs)
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:509: in dispatch
+    response = self.handle_exception(exc)
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:469: in handle_exception
+    self.raise_uncaught_exception(exc)
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:480: in raise_uncaught_exception
+    raise exc
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:506: in dispatch
+    response = handler(request, *args, **kwargs)
+backend/venv/lib/python3.12/site-packages/rest_framework/decorators.py:50: in handler
+    return func(*args, **kwargs)
+backend/apps/auth/views.py:55: in register
+    tokens = AuthResponseSerializer.get_tokens_for_user(user)
+backend/apps/auth/serializers.py:126: in get_tokens_for_user
+    refresh = RefreshToken.for_user(auth_account)
+backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py:283: in for_user
+    token = super().for_user(user)  # type: ignore
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'rest_framework_simplejwt.tokens.RefreshToken'>
+user = <AuthAccount: test@gmail.com>
+
+    @classmethod
+    def for_user(cls, user: AuthUser) -> "Token":
+        """
+        Returns an authorization token for the given user that will be provided
+        after authenticating the user's credentials.
+        """
+>       user_id = getattr(user, api_settings.USER_ID_FIELD)
+E       AttributeError: 'AuthAccount' object has no attribute 'id'
+
+backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py:203: AttributeError
+----------------------------- Captured stderr call -----------------------------
+[ERROR] 2026-01-23 23:34:49,149 django.request: Internal Server Error: /api/auth/register
+Traceback (most recent call last):
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/views.py", line 55, in register
+    tokens = AuthResponseSerializer.get_tokens_for_user(user)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/serializers.py", line 126, in get_tokens_for_user
+    refresh = RefreshToken.for_user(auth_account)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 283, in for_user
+    token = super().for_user(user)  # type: ignore
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 203, in for_user
+    user_id = getattr(user, api_settings.USER_ID_FIELD)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AuthAccount' object has no attribute 'id'
+[INFO] 2026-01-23 23:34:49,232 middleware.request: Request handled
+------------------------------ Captured log call -------------------------------
+ERROR    django.request:log.py:241 Internal Server Error: /api/auth/register
+Traceback (most recent call last):
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/views.py", line 55, in register
+    tokens = AuthResponseSerializer.get_tokens_for_user(user)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/serializers.py", line 126, in get_tokens_for_user
+    refresh = RefreshToken.for_user(auth_account)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 283, in for_user
+    token = super().for_user(user)  # type: ignore
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 203, in for_user
+    user_id = getattr(user, api_settings.USER_ID_FIELD)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AuthAccount' object has no attribute 'id'
+INFO     middleware.request:request_logging.py:23 Request handled
+_____________________ TestAuthEndpoints.test_login_success _____________________
+
+self = <backend.tests.Auth.test_auth_endpoints.TestAuthEndpoints object at 0x796d77304aa0>
+client = <django.test.client.Client object at 0x796d75bc4230>
+
+    def test_login_success(self, client):
+        # Setup User
+        identity = User.objects.create(first_name="Jane", last_name="Doe")
+        account = AuthAccount.objects.create_user(
+            email="jane@gmail.com",
+            password="Password123",
+            user_identity=identity
+        )
+        Profile.objects.create(user=identity, role=self.patient_role)
+    
+        url = reverse("login")
+        data = {"email": "jane@gmail.com", "password": "Password123"}
+>       response = client.post(url, data)
+
+backend/tests/Auth/test_auth_endpoints.py:57: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+backend/venv/lib/python3.12/site-packages/django/test/client.py:948: in post
+    response = super().post(
+backend/venv/lib/python3.12/site-packages/django/test/client.py:482: in post
+    return self.generic(
+backend/venv/lib/python3.12/site-packages/django/test/client.py:609: in generic
+    return self.request(**r)
+backend/venv/lib/python3.12/site-packages/django/test/client.py:891: in request
+    self.check_exception(response)
+backend/venv/lib/python3.12/site-packages/django/test/client.py:738: in check_exception
+    raise exc_value
+backend/venv/lib/python3.12/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+backend/venv/lib/python3.12/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+backend/venv/lib/python3.12/site-packages/django/views/decorators/csrf.py:56: in wrapper_view
+    return view_func(*args, **kwargs)
+backend/venv/lib/python3.12/site-packages/django/views/generic/base.py:104: in view
+    return self.dispatch(request, *args, **kwargs)
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:509: in dispatch
+    response = self.handle_exception(exc)
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:469: in handle_exception
+    self.raise_uncaught_exception(exc)
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:480: in raise_uncaught_exception
+    raise exc
+backend/venv/lib/python3.12/site-packages/rest_framework/views.py:506: in dispatch
+    response = handler(request, *args, **kwargs)
+backend/venv/lib/python3.12/site-packages/rest_framework/decorators.py:50: in handler
+    return func(*args, **kwargs)
+backend/apps/auth/views.py:94: in login
+    tokens = AuthResponseSerializer.get_tokens_for_user(user)
+backend/apps/auth/serializers.py:126: in get_tokens_for_user
+    refresh = RefreshToken.for_user(auth_account)
+backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py:283: in for_user
+    token = super().for_user(user)  # type: ignore
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'rest_framework_simplejwt.tokens.RefreshToken'>
+user = <AuthAccount: jane@gmail.com>
+
+    @classmethod
+    def for_user(cls, user: AuthUser) -> "Token":
+        """
+        Returns an authorization token for the given user that will be provided
+        after authenticating the user's credentials.
+        """
+>       user_id = getattr(user, api_settings.USER_ID_FIELD)
+E       AttributeError: 'AuthAccount' object has no attribute 'id'
+
+backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py:203: AttributeError
+----------------------------- Captured stderr call -----------------------------
+[ERROR] 2026-01-23 23:34:50,421 django.request: Internal Server Error: /api/auth/login
+Traceback (most recent call last):
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/views.py", line 94, in login
+    tokens = AuthResponseSerializer.get_tokens_for_user(user)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/serializers.py", line 126, in get_tokens_for_user
+    refresh = RefreshToken.for_user(auth_account)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 283, in for_user
+    token = super().for_user(user)  # type: ignore
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 203, in for_user
+    user_id = getattr(user, api_settings.USER_ID_FIELD)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AuthAccount' object has no attribute 'id'
+[INFO] 2026-01-23 23:34:50,436 middleware.request: Request handled
+------------------------------ Captured log call -------------------------------
+ERROR    django.request:log.py:241 Internal Server Error: /api/auth/login
+Traceback (most recent call last):
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 56, in wrapper_view
+    return view_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework/decorators.py", line 50, in handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/views.py", line 94, in login
+    tokens = AuthResponseSerializer.get_tokens_for_user(user)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/apps/auth/serializers.py", line 126, in get_tokens_for_user
+    refresh = RefreshToken.for_user(auth_account)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 283, in for_user
+    token = super().for_user(user)  # type: ignore
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/rest_framework_simplejwt/tokens.py", line 203, in for_user
+    user_id = getattr(user, api_settings.USER_ID_FIELD)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AuthAccount' object has no attribute 'id'
+INFO     middleware.request:request_logging.py:23 Request handled
+=============================== warnings summary ===============================
+backend/venv/lib/python3.12/site-packages/django/conf/__init__.py:289
+  /home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/conf/__init__.py:289: RemovedInDjango51Warning: The STATICFILES_STORAGE setting is deprecated. Use STORAGES instead.
+    warnings.warn(STATICFILES_STORAGE_DEPRECATED_MSG, RemovedInDjango51Warning)
+
+tests/Auth/test_auth_endpoints.py::TestAuthEndpoints::test_register_creates_all_entities
+tests/Auth/test_auth_endpoints.py::TestAuthEndpoints::test_login_success
+tests/Auth/test_auth_endpoints.py::TestAuthEndpoints::test_forgot_password_sends_email
+  /home/lys-yoyo/Desktop/Glycopilot/backend/venv/lib/python3.12/site-packages/django/core/handlers/base.py:61: UserWarning: No directory at: /home/lys-yoyo/Desktop/Glycopilot/backend/staticfiles/
+    mw_instance = middleware(adapted_handler)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/tests/Auth/test_auth_endpoints.py::TestAuthEndpoints::test_register_creates_all_entities
+FAILED backend/tests/Auth/test_auth_endpoints.py::TestAuthEndpoints::test_login_success
+2 failed, 1 passed, 4 warnings in 4.07s

@@ -3,7 +3,7 @@ Contrôleur pour l'authentification
 """
 
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,12 +12,13 @@ from apps.auth.serializers import (
     AuthResponseSerializer,
     LoginSerializer,
     RegisterSerializer,
-    UserSerializer,
+    AuthAccountSerializer,
 )
 from utils.permissions import allowed_roles
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def register(request):
     """
@@ -200,5 +201,5 @@ def me(request):
         "created_at": "2025-11-05T21:00:00Z"
     }
     """
-    serializer = UserSerializer(request.user)
+    serializer = AuthAccountSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
