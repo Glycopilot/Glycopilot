@@ -5,7 +5,7 @@ from .views import AlertRuleViewSet, UserAlertSettingsViewSet, AlertHistoryViewS
 router = DefaultRouter()
 router.register(r'rules', AlertRuleViewSet, basename='alert-rules')
 router.register(r'settings', UserAlertSettingsViewSet, basename='alert-settings')
-router.register(r'history', AlertHistoryViewSet, basename='alert-history')
+router.register(r'events', AlertHistoryViewSet, basename='alert-events')
 
 urlpatterns = [
     path('', include(router.urls)),
