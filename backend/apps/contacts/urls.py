@@ -1,3 +1,0 @@
-"""URL configuration placeholder."""
-
-urlpatterns = []
