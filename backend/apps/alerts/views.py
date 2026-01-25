@@ -1,4 +1,7 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils import timezone
 from .models import AlertRule, UserAlertRule, AlertEvent
 from .serializers import AlertRuleSerializer, UserAlertRuleSerializer, AlertEventSerializer
 
@@ -32,3 +35,18 @@ class AlertHistoryViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return AlertEvent.objects.filter(user=self.request.user).order_by("-triggered_at")
+
+    @action(detail=False, methods=['post'], url_path='ack')
+    def ack(self, request):
+        event_id = request.data.get("event_id")
+        if not event_id:
+            return Response({"error": "event_id required"}, status=400)
+            
+        try:
+            event = AlertEvent.objects.get(id=event_id, user=request.user)
+            event.acked_at = timezone.now()
+            event.status = "ACKED"
+            event.save()
+            return Response({"status": "acked"})
+        except AlertEvent.DoesNotExist:
+             return Response({"error": "Event not found"}, status=404)
