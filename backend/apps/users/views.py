@@ -81,7 +81,7 @@ class UserViewSet(viewsets.ModelViewSet):
                      except Profile.DoesNotExist:
                          raise ValidationError("L'utilisateur n'a pas de profil patient.")
 
-                from apps.doctors.models import DoctorProfile, PatientDoctorRelation, InvitationStatus
+                from apps.doctors.models import DoctorProfile, PatientCareTeam, InvitationStatus
                 from rest_framework.exceptions import ValidationError, NotFound
 
                 try:
@@ -89,19 +89,23 @@ class UserViewSet(viewsets.ModelViewSet):
                 except DoctorProfile.DoesNotExist:
                     raise NotFound(f"Aucun médecin trouvé avec l'identifiant {medical_id}")
 
-                # Create or update relation
-                # Default status PENDING or ACTIVE? 
-                # Postman says "Select Doctor", assuming REQUESTING association.
-                # Let's set to PENDING (InvitationStatus id=1 usually) or whatever default is.
-                # Assuming id=1 is PENDING.
+                # Create or update relation (Association)
+                # Patient selects a doctor -> Creates a PENDING request
+                pending_status, _ = InvitationStatus.objects.get_or_create(label="PENDING")
                 
-                relation, created = PatientDoctorRelation.objects.get_or_create(
-                    patient_profile=patient_profile,
-                    doctor_profile=doctor
-                )
-                if created:
-                   # Default status is 1 (PENDING) by model definition
-                   pass
+                # Check if exists
+                existing_team = PatientCareTeam.objects.filter(
+                    patient_profile=patient_profile_obj.patient_profile,
+                    member_profile=doctor.profile
+                ).exists()
+
+                if not existing_team:
+                    PatientCareTeam.objects.create(
+                        patient_profile=patient_profile_obj.patient_profile,
+                        member_profile=doctor.profile,
+                        role="REFERENT_DOCTOR",
+                        status=pending_status
+                    )
             
             serializer = self.get_serializer(user_identity, data=data, partial=True)
             serializer.is_valid(raise_exception=True)
