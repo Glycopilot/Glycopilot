@@ -199,31 +199,70 @@ TEMPLATES = [
 ]
 
 
-# EMAIL CONFIG
-# Utiliser SMTP si les identifiants sont présents dans .env, sinon console en dev
-_smtp_host = config("SMTP_HOST", default="")
-_smtp_user = config("SMTP_USERNAME", default="")
-_smtp_pass = config("SMTP_PASSWORD", default="")
-if _smtp_host and _smtp_user and _smtp_pass:
-    EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
-else:
+# --- EMAIL / SMTP ---
+# Configuration optionnelle : si SMTP_* non renseignés ou vides, backend console en dev.
+# Ne jamais mettre de secrets en défaut ; valeur vide = config non fournie.
+
+def _env(key: str, default: str = "") -> str:
+    """Lit une variable d'environnement ; chaîne vide si absente ou non renseignée."""
+    value = config(key, default=default)
+    return (value or "").strip() if value is not None else ""
+
+
+def _env_int(key: str, default: int, min_val: int = 1, max_val: int = 65535) -> int:
+    """Lit un entier (ex. port) ; ignore les valeurs vides ou invalides."""
+    raw = _env(key, str(default))
+    if not raw:
+        return default
+    try:
+        n = int(raw)
+        return max(min_val, min(max_val, n))
+    except (ValueError, TypeError):
+        return default
+
+
+def _env_bool(key: str, default: bool) -> bool:
+    """Lit un booléen (true/1/yes vs false/0/no)."""
+    raw = _env(key, "true" if default else "false").lower()
+    if not raw:
+        return default
+    if raw in ("true", "1", "yes", "on"):
+        return True
+    if raw in ("false", "0", "no", "off"):
+        return False
+    return default
+
+
+_smtp_host = _env("SMTP_HOST")
+_smtp_user = _env("SMTP_USERNAME")
+_smtp_pass = _env("SMTP_PASSWORD")
+_smtp_configured = bool(_smtp_host and _smtp_user and _smtp_pass)
+
+if _smtp_configured:
     EMAIL_BACKEND = config(
         "EMAIL_BACKEND",
-        default="django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+        default="django.core.mail.backends.smtp.EmailBackend",
+    )
+else:
+    EMAIL_BACKEND = (
+        "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend"
     )
 
-EMAIL_HOST = _smtp_host
-EMAIL_PORT = config("SMTP_PORT", default=587, cast=int)
-EMAIL_HOST_USER = _smtp_user
-EMAIL_HOST_PASSWORD = _smtp_pass
-EMAIL_USE_TLS = config("SMTP_USE_TLS", default=True, cast=bool)
-EMAIL_USE_SSL = config("SMTP_USE_SSL", default=False, cast=bool)
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "noreply@glycopilot.com")
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
+EMAIL_HOST = _smtp_host or ""
+EMAIL_PORT = _env_int("SMTP_PORT", 587)
+EMAIL_HOST_USER = _smtp_user or ""
+EMAIL_HOST_PASSWORD = _smtp_pass or ""
+EMAIL_USE_TLS = _env_bool("SMTP_USE_TLS", True)
+EMAIL_USE_SSL = _env_bool("SMTP_USE_SSL", False)
 
 if EMAIL_PORT == 465:
     EMAIL_USE_TLS = False
     EMAIL_USE_SSL = True
+
+DEFAULT_FROM_EMAIL = _env("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "noreply@glycopilot.com"
+FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 
 
 # --- INTERNATIONALIZATION ---
@@ -232,13 +271,13 @@ TIME_ZONE = "Europe/Paris"
 USE_I18N = True
 USE_TZ = True
 
-# --- AWS S3 CONFIGURATION ---
-AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
-AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
-AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
-AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="eu-west-3")
+# --- AWS S3 ---
+# Secrets uniquement via variables d'environnement ; pas de valeur par défaut pour les clés.
+AWS_ACCESS_KEY_ID = _env("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = _env("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = _env("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = _env("AWS_S3_REGION_NAME") or "eu-west-3"
 
-# Use S3 for media files in production AND if keys are present
 if AWS_STORAGE_BUCKET_NAME and not DEBUG:
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     AWS_DEFAULT_ACL = "public-read"
