@@ -4,6 +4,7 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y \
     pkg-config \
     default-libmysqlclient-dev \
+    default-mysql-client \
     gcc \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
@@ -17,7 +18,10 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Rendre le script entrypoint exécutable
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
 
-# Attendre la base MySQL avant de démarrer, puis exécuter les migrations et lancer le serveur
-CMD ["sh", "-c", "while ! nc -z database 3306; do sleep 1; done && python manage.py migrate --noinput --settings=core.settings && python manage.py runserver 0.0.0.0:8000 --settings=core.settings"]
+# Utiliser le script entrypoint qui gère les migrations intelligemment
+CMD ["bash", "/app/entrypoint.sh"]
