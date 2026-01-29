@@ -38,7 +38,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Dupont\",\n    \"password\": \"password123\",\n    \"password_confirm\": \"password123\",\n    \"role\": \"PATIENT\"\n}",
+                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Dupont\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"PATIENT\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -53,10 +53,8 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) {",
-                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
-                                            "    console.log(\"Token updated successfully\");",
-                                            "}"
+                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
+                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -89,7 +87,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"password\": \"password123\"\n}",
+                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -104,10 +102,8 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) {",
-                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
-                                            "    console.log(\"Token updated successfully\");",
-                                            "}"
+                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
+                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -119,11 +115,6 @@
                             "request": {
                                 "method": "POST",
                                 "header": [
-                                    {
-                                        "key": "Authorization",
-                                        "value": "Bearer {{token}}",
-                                        "type": "text"
-                                    },
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json",
@@ -141,10 +132,10 @@
                                         ""
                                     ]
                                 },
-                                "description": "Initiate password reset.",
+                                "description": "Demande de réinitialisation du mot de passe (sans token).",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"user@example.com\"\n}",
+                                    "raw": "{\n    \"email\": \"patient@example.com\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -159,11 +150,6 @@
                             "request": {
                                 "method": "POST",
                                 "header": [
-                                    {
-                                        "key": "Authorization",
-                                        "value": "Bearer {{token}}",
-                                        "type": "text"
-                                    },
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json",
@@ -182,7 +168,7 @@
                                         ""
                                     ]
                                 },
-                                "description": "",
+                                "description": "Obtenir un nouvel access token à partir du refresh token.",
                                 "body": {
                                     "mode": "raw",
                                     "raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}",
@@ -193,7 +179,19 @@
                                     }
                                 }
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Logout",
@@ -362,6 +360,48 @@
                             "response": []
                         },
                         {
+                            "name": "Add Family Member (Famille / Aidant / Nurse)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/add-family/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "add-family",
+                                        ""
+                                    ]
+                                },
+                                "description": "Patient ajoute un membre de la famille, un aidant ou une infirmière. Rôles acceptés : FAMILY, CAREGIVER, NURSE.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"first_name\": \"Marie\",\n    \"last_name\": \"Dupont\",\n    \"phone_number\": \"0612345678\",\n    \"address\": \"\",\n    \"relation_type\": \"Épouse\",\n    \"role\": \"FAMILY\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
                             "name": "Get My Team",
                             "request": {
                                 "method": "GET",
@@ -391,6 +431,48 @@
                                     ]
                                 },
                                 "description": ""
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Accept Invitation",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/accept-invitation/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "accept-invitation",
+                                        ""
+                                    ]
+                                },
+                                "description": "Accepter une invitation (médecin ou patient). Body: id_team_member (UUID).",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_team_member\": \"{{id_team_member}}\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
                             },
                             "response": []
                         }
@@ -540,7 +622,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"first_name\": \"Dr.\",\n    \"last_name\": \"House\",\n    \"password\": \"password123\",\n    \"password_confirm\": \"password123\",\n    \"role\": \"DOCTOR\"\n}",
+                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"first_name\": \"Dr.\",\n    \"last_name\": \"House\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"DOCTOR\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -555,10 +637,8 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) {",
-                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
-                                            "    console.log(\"Token updated successfully\");",
-                                            "}"
+                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
+                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -591,7 +671,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"password\": \"password123\"\n}",
+                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -606,10 +686,8 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) {",
-                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
-                                            "    console.log(\"Token updated successfully\");",
-                                            "}"
+                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
+                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -621,11 +699,6 @@
                             "request": {
                                 "method": "POST",
                                 "header": [
-                                    {
-                                        "key": "Authorization",
-                                        "value": "Bearer {{token}}",
-                                        "type": "text"
-                                    },
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json",
@@ -643,10 +716,10 @@
                                         ""
                                     ]
                                 },
-                                "description": "Initiate password reset.",
+                                "description": "Demande de réinitialisation du mot de passe (sans token).",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"user@example.com\"\n}",
+                                    "raw": "{\n    \"email\": \"doctor@example.com\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -661,11 +734,6 @@
                             "request": {
                                 "method": "POST",
                                 "header": [
-                                    {
-                                        "key": "Authorization",
-                                        "value": "Bearer {{token}}",
-                                        "type": "text"
-                                    },
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json",
@@ -684,7 +752,7 @@
                                         ""
                                     ]
                                 },
-                                "description": "",
+                                "description": "Obtenir un nouvel access token à partir du refresh token.",
                                 "body": {
                                     "mode": "raw",
                                     "raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}",
@@ -695,7 +763,19 @@
                                     }
                                 }
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Logout",
@@ -853,7 +933,49 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"patient@example.com\"\n}",
+                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"phone_number\": \"\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Accept Invitation",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/accept-invitation/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "accept-invitation",
+                                        ""
+                                    ]
+                                },
+                                "description": "Accepter une invitation (médecin ou patient). Body: id_team_member (UUID).",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_team_member\": \"{{id_team_member}}\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -899,6 +1021,268 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "Admin (Validation Docteurs)",
+            "item": [
+                {
+                    "name": "Login (Superadmin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login",
+                                ""
+                            ]
+                        },
+                        "description": "Se connecter en superadmin pour obtenir le token (ex. superadmin@example.com / StrongPass123! après reset_db). Ensuite utiliser Créer compte Admin / Superadmin ou les requêtes de validation docteurs.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"superadmin@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
+                                    "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Créer compte Admin (superadmin requis)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/create-admin/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "create-admin",
+                                ""
+                            ]
+                        },
+                        "description": "Créer un compte ADMIN. Réservé au superadmin (is_superuser).",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@example.com\",\n    \"first_name\": \"Admin\",\n    \"last_name\": \"User\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"account_type\": \"ADMIN\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Créer compte Superadmin (superadmin requis)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/create-admin/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "create-admin",
+                                ""
+                            ]
+                        },
+                        "description": "Créer un compte SUPERADMIN. Réservé au superadmin (is_superuser).",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"superadmin2@example.com\",\n    \"first_name\": \"Super\",\n    \"last_name\": \"Admin\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"account_type\": \"SUPERADMIN\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Liste Docteurs en attente (PENDING)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/doctors/verification/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "doctors",
+                                "verification",
+                                ""
+                            ]
+                        },
+                        "description": "Liste des docteurs en attente de validation (is_staff ou is_superuser requis). Enregistre automatiquement doctor_id du premier résultat pour Accepter/Refuser Docteur."
+                    },
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.results && jsonData.results.length > 0) {",
+                                    "    pm.collectionVariables.set(\"doctor_id\", jsonData.results[0].doctor_id);",
+                                    "    console.log(\"doctor_id défini: \" + jsonData.results[0].doctor_id);",
+                                    "} else {",
+                                    "    pm.collectionVariables.unset(\"doctor_id\");",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Accepter Docteur (VERIFIED)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/doctors/verification/{{doctor_id}}/accept/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "doctors",
+                                "verification",
+                                "{{doctor_id}}",
+                                "accept",
+                                ""
+                            ]
+                        },
+                        "description": "Valider un compte docteur (passer en VERIFIED). Exécuter d'abord « Liste Docteurs en attente » pour remplir automatiquement doctor_id, ou définir la variable doctor_id (UUID, ex. 1d34972b-e155-4ff8-952a-3c36251bfa13)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Refuser Docteur (REJECTED + message)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/doctors/verification/{{doctor_id}}/decline/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "doctors",
+                                "verification",
+                                "{{doctor_id}}",
+                                "decline",
+                                ""
+                            ]
+                        },
+                        "description": "Refuser un compte docteur (REJECTED) avec un message optionnel pour le docteur.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"rejection_reason\": \"Documents non conformes. Merci de renvoyer une copie lisible de votre carte professionnelle.\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    },
+                    "response": []
+                }
+            ]
         }
     ],
     "variable": [
@@ -910,6 +1294,21 @@
         {
             "key": "token",
             "value": "YOUR_ACCESS_TOKEN_HERE",
+            "type": "string"
+        },
+        {
+            "key": "refresh_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "id_team_member",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "doctor_id",
+            "value": "",
             "type": "string"
         }
     ]
