@@ -113,16 +113,38 @@ else:
         }
 
 # --- LOGGING ---
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(levelname)s] %(asctime)s %(name)s: %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-# Log secure de la DB utilisée
-if not "test" in sys.argv:
-    logger.info(f"Running in {ENV.upper()} mode")
-    logger.info(f"Database Engine: {DATABASES['default']['ENGINE']}")
+# Configuration Django standard : pas de PII, niveaux adaptés prod/dev
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {name}: {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "django": {"level": "WARNING"},
+        "django.request": {"level": "WARNING"},
+        "django.security": {"level": "WARNING"},
+        "apps": {"level": "INFO" if DEBUG else "WARNING"},
+        "middleware.request": {"level": "INFO" if DEBUG else "WARNING"},
+    },
+}
 
 # --- CORS ---
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # En dev uniquement
@@ -132,7 +154,7 @@ if not DEBUG:
 # --- REST FRAMEWORK CONFIG ---
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "utils.jwt_auth.JWTAuthenticationDualKey",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -178,14 +200,25 @@ TEMPLATES = [
 
 
 # EMAIL CONFIG
-EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = config("SMTP_HOST", default="")
+# Utiliser SMTP si les identifiants sont présents dans .env, sinon console en dev
+_smtp_host = config("SMTP_HOST", default="")
+_smtp_user = config("SMTP_USERNAME", default="")
+_smtp_pass = config("SMTP_PASSWORD", default="")
+if _smtp_host and _smtp_user and _smtp_pass:
+    EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+else:
+    EMAIL_BACKEND = config(
+        "EMAIL_BACKEND",
+        default="django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend",
+    )
+
+EMAIL_HOST = _smtp_host
 EMAIL_PORT = config("SMTP_PORT", default=587, cast=int)
-EMAIL_HOST_USER = config("SMTP_USERNAME", default="")
-EMAIL_HOST_PASSWORD = config("SMTP_PASSWORD", default="")
+EMAIL_HOST_USER = _smtp_user
+EMAIL_HOST_PASSWORD = _smtp_pass
 EMAIL_USE_TLS = config("SMTP_USE_TLS", default=True, cast=bool)
 EMAIL_USE_SSL = config("SMTP_USE_SSL", default=False, cast=bool)
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "noreply@glycopilot.com")
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 if EMAIL_PORT == 465:
@@ -223,6 +256,7 @@ else:
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 # --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.AuthAccount"
