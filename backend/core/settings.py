@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,7 +18,13 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
 # --- CLÉS SECRÈTES ---
-SECRET_KEY = config("SECRET_KEY")
+# En CI/tests : fallback pour que pytest puisse tourner (SECRET_KEY non définie).
+# En production : SECRET_KEY doit être définie dans l'environnement.
+SECRET_KEY = config("SECRET_KEY", default="")
+if not SECRET_KEY.strip():
+    if ENV == "production":
+        raise ImproperlyConfigured("SECRET_KEY must be set in production (environment variable).")
+    SECRET_KEY = "django-insecure-ci-tests-only-do-not-use-in-production-xxxxxxxxxx"
 SECRET_KEY_ADMIN = config("SECRET_KEY_ADMIN", default="")
 
 # --- APPS INSTALLÉES ---
