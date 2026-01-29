@@ -70,7 +70,8 @@ fi
 
 # Charger les variables dans l'environnement courant
 set -a
-source $ENV_FILE
+# shellcheck source=/dev/null
+. "$ENV_FILE"
 set +a
 
 # Détection de l'environnement (Supporte Django_ENV et DJANGO_ENV)
