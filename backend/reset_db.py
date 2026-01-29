@@ -4,7 +4,7 @@ import glob
 import sys
 from decouple import config
 from django.core.management import execute_from_command_line
-from django.db import connection, transaction
+from django.db import connection
 
 def reset_database():
     print("=== STARTING DATABASE RESET ===")
@@ -35,7 +35,6 @@ def reset_database():
             import time
             time.sleep(5)
 
-    # 1. Clear Database (SQLite or MySQL/Postgres)
     db_engine = connection.settings_dict['ENGINE']
     print(f"... Detected Database Engine: {db_engine} ...")
     
@@ -72,7 +71,7 @@ def reset_database():
                 else:
                     print("✓ DB was already empty")
     
-    # 2. Clear Migrations (Local files)
+
     apps_list = ["users", "profiles", "doctors", "auth", "glycemia", "meals", "activities", "alerts", "medications", "notifications"]
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
@@ -84,8 +83,8 @@ def reset_database():
                 if "__init__.py" not in f:
                     try:
                         os.remove(f)
-                    except:
-                        pass
+                    except OSError as e:
+                        print(f"warning: Could not remove {f}: {e}")
             
             # Remove __pycache__
             pycache = os.path.join(migration_path, "__pycache__")
@@ -97,23 +96,20 @@ def reset_database():
             with open(os.path.join(migration_path, "__init__.py"), "w") as f:
                 pass
 
-    # 3. Make Migrations
     print("... Making Migrations ...")
     execute_from_command_line(["manage.py", "makemigrations"])
     
-    # 4. Migrate
+
     print("... Migrating ...")
     execute_from_command_line(["manage.py", "migrate"])
     
-    # 5. Seed Data
-    print("... Seeding Initial Data ...")
-    from apps.profiles.models.role import Role
-    from apps.doctors.models.status import VerificationStatus, InvitationStatus
 
+    print("... Seeding Initial Data ...")
+    from apps.profiles.models import Role
+    from apps.doctors.models.status import VerificationStatus, InvitationStatus
     from apps.doctors.models.specialty import Specialty
 
     # Roles
-    # System roles defining the main account type/permissions
     roles = ["SUPERADMIN", "ADMIN", "PATIENT", "DOCTOR"]
     for r in roles:
         Role.objects.get_or_create(name=r)
@@ -142,10 +138,10 @@ def reset_database():
         print("... Seeding Test Users ...")
         from apps.users.models import User
         from django.contrib.auth import get_user_model
-        from apps.profiles.models import Profile, Role
+        from apps.profiles.models import Profile
         AuthAccount = get_user_model()
 
-        # 1. Patient
+
         if not AuthAccount.objects.filter(email="patient@example.com").exists():
             u = User.objects.create(first_name="Jean", last_name="Dupont", phone_number="0600000000")
             AuthAccount.objects.create_user(email="patient@example.com", password="StrongPass123!", user_identity=u)
@@ -153,53 +149,36 @@ def reset_database():
             Profile.objects.create(user=u, role=role)
             print("  -> Created patient@example.com / StrongPass123!")
 
-        # 2. Doctor
+
         if not AuthAccount.objects.filter(email="doctor@example.com").exists():
             u = User.objects.create(first_name="Gregory", last_name="House")
             AuthAccount.objects.create_user(email="doctor@example.com", password="StrongPass123!", user_identity=u)
             role = Role.objects.get(name="DOCTOR")
             p = Profile.objects.create(user=u, role=role)
             
-            # Verify doctor
+
             if hasattr(p, 'doctor_profile'):
                 v_status = VerificationStatus.objects.get(label="VERIFIED")
                 p.doctor_profile.verification_status = v_status
                 p.doctor_profile.license_number = "123456789"
                 p.doctor_profile.save()
             print("  -> Created doctor@example.com / StrongPass123! (VERIFIED)")
+
+        # Superadmin (pour créer d'autres admins et valider les docteurs)
+        if not AuthAccount.objects.filter(email="superadmin@example.com").exists():
+            u = User.objects.create(first_name="Super", last_name="Admin")
+            AuthAccount.objects.create_user(
+                email="superadmin@example.com",
+                password="StrongPass123!",
+                user_identity=u,
+                is_staff=True,
+                is_superuser=True,
+            )
+            role = Role.objects.get(name="SUPERADMIN")
+            Profile.objects.create(user=u, role=role)
+            print("  -> Created superadmin@example.com / StrongPass123! (SUPERADMIN)")
 
     
-    # Seed Users (Dev only)
-    if current_env != "production":
-        print("... Seeding Test Users ...")
-        from apps.users.models import User
-        from django.contrib.auth import get_user_model
-        from apps.profiles.models import Profile, Role
-        AuthAccount = get_user_model()
-
-        # 1. Patient
-        if not AuthAccount.objects.filter(email="patient@example.com").exists():
-            u = User.objects.create(first_name="Jean", last_name="Dupont", phone_number="0600000000")
-            AuthAccount.objects.create_user(email="patient@example.com", password="StrongPass123!", user_identity=u)
-            role = Role.objects.get(name="PATIENT")
-            Profile.objects.create(user=u, role=role)
-            print("  -> Created patient@example.com / StrongPass123!")
-
-        # 2. Doctor
-        if not AuthAccount.objects.filter(email="doctor@example.com").exists():
-            u = User.objects.create(first_name="Gregory", last_name="House")
-            AuthAccount.objects.create_user(email="doctor@example.com", password="StrongPass123!", user_identity=u)
-            role = Role.objects.get(name="DOCTOR")
-            p = Profile.objects.create(user=u, role=role)
-            
-            # Verify doctor
-            if hasattr(p, 'doctor_profile'):
-                v_status = VerificationStatus.objects.get(label="VERIFIED")
-                p.doctor_profile.verification_status = v_status
-                p.doctor_profile.license_number = "123456789"
-                p.doctor_profile.save()
-            print("  -> Created doctor@example.com / StrongPass123! (VERIFIED)")
-
     print("=== DATABASE RESET COMPLETE ===")
 
 if __name__ == "__main__":
