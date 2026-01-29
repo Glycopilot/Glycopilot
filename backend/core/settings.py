@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,7 +18,13 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
 # --- CLÉS SECRÈTES ---
-SECRET_KEY = config("SECRET_KEY")
+# En CI/tests : fallback pour que pytest puisse tourner (SECRET_KEY non définie).
+# En production : SECRET_KEY doit être définie dans l'environnement.
+SECRET_KEY = config("SECRET_KEY", default="")
+if not SECRET_KEY.strip():
+    if ENV == "production":
+        raise ImproperlyConfigured("SECRET_KEY must be set in production (environment variable).")
+    SECRET_KEY = "django-insecure-ci-tests-only-do-not-use-in-production-xxxxxxxxxx"
 SECRET_KEY_ADMIN = config("SECRET_KEY_ADMIN", default="")
 
 # --- APPS INSTALLÉES ---
@@ -113,16 +120,38 @@ else:
         }
 
 # --- LOGGING ---
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(levelname)s] %(asctime)s %(name)s: %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-# Log secure de la DB utilisée
-if not "test" in sys.argv:
-    logger.info(f"Running in {ENV.upper()} mode")
-    logger.info(f"Database Engine: {DATABASES['default']['ENGINE']}")
+# Configuration Django standard : pas de PII, niveaux adaptés prod/dev
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {name}: {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "django": {"level": "WARNING"},
+        "django.request": {"level": "WARNING"},
+        "django.security": {"level": "WARNING"},
+        "apps": {"level": "INFO" if DEBUG else "WARNING"},
+        "middleware.request": {"level": "INFO" if DEBUG else "WARNING"},
+    },
+}
 
 # --- CORS ---
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # En dev uniquement
@@ -132,7 +161,7 @@ if not DEBUG:
 # --- REST FRAMEWORK CONFIG ---
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "utils.jwt_auth.JWTAuthenticationDualKey",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -177,20 +206,70 @@ TEMPLATES = [
 ]
 
 
-# EMAIL CONFIG
-EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = config("SMTP_HOST", default="")
-EMAIL_PORT = config("SMTP_PORT", default=587, cast=int)
-EMAIL_HOST_USER = config("SMTP_USERNAME", default="")
-EMAIL_HOST_PASSWORD = config("SMTP_PASSWORD", default="")
-EMAIL_USE_TLS = config("SMTP_USE_TLS", default=True, cast=bool)
-EMAIL_USE_SSL = config("SMTP_USE_SSL", default=False, cast=bool)
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
+# --- EMAIL / SMTP ---
+# Configuration optionnelle : si SMTP_* non renseignés ou vides, backend console en dev.
+# Ne jamais mettre de secrets en défaut ; valeur vide = config non fournie.
+
+def _env(key: str, default: str = "") -> str:
+    """Lit une variable d'environnement ; chaîne vide si absente ou non renseignée."""
+    value = config(key, default=default)
+    return (value or "").strip() if value is not None else ""
+
+
+def _env_int(key: str, default: int, min_val: int = 1, max_val: int = 65535) -> int:
+    """Lit un entier (ex. port) ; ignore les valeurs vides ou invalides."""
+    raw = _env(key, str(default))
+    if not raw:
+        return default
+    try:
+        n = int(raw)
+        return max(min_val, min(max_val, n))
+    except (ValueError, TypeError):
+        return default
+
+
+def _env_bool(key: str, default: bool) -> bool:
+    """Lit un booléen (true/1/yes vs false/0/no)."""
+    raw = _env(key, "true" if default else "false").lower()
+    if not raw:
+        return default
+    if raw in ("true", "1", "yes", "on"):
+        return True
+    if raw in ("false", "0", "no", "off"):
+        return False
+    return default
+
+
+_smtp_host = _env("SMTP_HOST")
+_smtp_user = _env("SMTP_USERNAME")
+_smtp_pass = _env("SMTP_PASSWORD")
+_smtp_configured = bool(_smtp_host and _smtp_user and _smtp_pass)
+
+if _smtp_configured:
+    EMAIL_BACKEND = config(
+        "EMAIL_BACKEND",
+        default="django.core.mail.backends.smtp.EmailBackend",
+    )
+else:
+    EMAIL_BACKEND = (
+        "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend"
+    )
+
+EMAIL_HOST = _smtp_host or ""
+EMAIL_PORT = _env_int("SMTP_PORT", 587)
+EMAIL_HOST_USER = _smtp_user or ""
+EMAIL_HOST_PASSWORD = _smtp_pass or ""
+EMAIL_USE_TLS = _env_bool("SMTP_USE_TLS", True)
+EMAIL_USE_SSL = _env_bool("SMTP_USE_SSL", False)
 
 if EMAIL_PORT == 465:
     EMAIL_USE_TLS = False
     EMAIL_USE_SSL = True
+
+DEFAULT_FROM_EMAIL = _env("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "noreply@glycopilot.com"
+FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 
 
 # --- INTERNATIONALIZATION ---
@@ -199,13 +278,13 @@ TIME_ZONE = "Europe/Paris"
 USE_I18N = True
 USE_TZ = True
 
-# --- AWS S3 CONFIGURATION ---
-AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
-AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
-AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
-AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="eu-west-3")
+# --- AWS S3 ---
+# Secrets uniquement via variables d'environnement ; pas de valeur par défaut pour les clés.
+AWS_ACCESS_KEY_ID = _env("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = _env("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = _env("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = _env("AWS_S3_REGION_NAME") or "eu-west-3"
 
-# Use S3 for media files in production AND if keys are present
 if AWS_STORAGE_BUCKET_NAME and not DEBUG:
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
     AWS_DEFAULT_ACL = "public-read"
@@ -223,6 +302,7 @@ else:
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 # --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.AuthAccount"

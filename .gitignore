@@ -25,6 +25,7 @@ backend/db.sqlite3
 .coverage
 coverage.xml
 htmlcov/
+test_output.txt
 
 # Build artifacts
 build/
@@ -47,5 +48,17 @@ gitleaks-report.json
 # Editor settings
 .idea/
 .vscode/
+
+# Caches & fichiers inutiles (ne pas versionner)
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+.cache/
+
+# SMTP / config email : ne pas versionner les secrets (rester en .env)
+# *.env déjà ignoré ci-dessus
 
 

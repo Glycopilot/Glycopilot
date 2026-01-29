@@ -59,8 +59,8 @@ cd ..
 
 # Vérifier et installer les outils JavaScript
 if ! command -v npm > /dev/null 2>&1; then
-    echo "npm n'est pas installé sur ce système"
-    echo " Installez Node.js pour continuer"
+    echo "❌ npm n'est pas installé sur ce système"
+    echo "   Installez Node.js pour continuer"
     exit 1
 fi
 
@@ -90,7 +90,8 @@ fi
 
 # Charger les variables dans l'environnement courant pour que Python les voit
 set -a
-source $ENV_FILE
+# shellcheck source=/dev/null
+. "$ENV_FILE"
 set +a
 
 # OVERRIDE DB_HOST for Host Execution
@@ -130,7 +131,7 @@ if [ "$CURRENT_ENV" == "production" ]; then
         fi
         
         # On force le reset en production
-        python3 reset_db.py --force
+        $PYTHON_CMD reset_db.py --force
         if [ $? -ne 0 ]; then
             echo "❌ Erreur lors du Reset DB Production"
             exit 1
@@ -150,7 +151,7 @@ if [ "$CURRENT_ENV" == "production" ]; then
 
         # 1. Appliquer les migrations uniquement (PAS DE RESET)
         echo "🏗️  Application des migrations..."
-        python3 manage.py migrate
+        $PYTHON_CMD manage.py migrate
         if [ $? -ne 0 ]; then
             echo "❌ Erreur lors des migrations"
             exit 1
@@ -158,7 +159,7 @@ if [ "$CURRENT_ENV" == "production" ]; then
 
         # 2. Collecter les fichiers statiques
         echo "🎨 Collection des fichiers statiques..."
-        python3 manage.py collectstatic --noinput
+        $PYTHON_CMD manage.py collectstatic --noinput
 
         cd ..
         echo "✅ Mise à jour Production terminée avec succès !"
@@ -187,7 +188,7 @@ else
         source venv/Scripts/activate
     fi
     
-    python3 reset_db.py
+    $PYTHON_CMD reset_db.py
     if [ $? -ne 0 ]; then
         echo "❌ Erreur lors du Reset DB"
         exit 1
@@ -195,21 +196,13 @@ else
     cd ..
     echo "✅ Base de données réinitialisée et peuplée !"
 fi
-# Vérifier et configurer les Git hooks (une seule fois)
-if [ ! -f ".git/hooks/pre-push" ]; then
+# Vérifier les Git hooks (informatif)
+if [ -d ".git" ] && [ ! -f ".git/hooks/pre-push" ]; then
     echo ""
-    echo "🔧 Configuration des Git hooks (première fois)..."
-    
-    # Vérifier si on est dans un repo Git
-    if [ -d ".git" ]; then
-        # Le hook pre-push est déjà créé
-        echo "✅ Git hooks configurés !"
-        echo "   → Vérification automatique avant chaque push"
-    else
-        echo "⚠️  Pas de repository Git détecté"
-    fi
-else
-    echo "✅ Git hooks déjà configurés"
+    echo "ℹ️  Aucun hook pre-push configuré. Pour en ajouter un, créez .git/hooks/pre-push"
+elif [ -d ".git" ] && [ -f ".git/hooks/pre-push" ]; then
+    echo ""
+    echo "✅ Git hook pre-push présent"
 fi
 
 # Lancer le backend avec Docker et le frontend directement

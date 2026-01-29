@@ -24,6 +24,7 @@ class SimpleUserSerializer(serializers.ModelSerializer):
 
 
 class DoctorSerializer(serializers.ModelSerializer):
+    profile_id = serializers.SerializerMethodField()
     user_details = serializers.SerializerMethodField()
     valide = serializers.SerializerMethodField()
     verification_status = serializers.StringRelatedField() # serialize label
@@ -44,6 +45,9 @@ class DoctorSerializer(serializers.ModelSerializer):
             "user_details",
             "valide",
         ]
+
+    def get_profile_id(self, obj):
+        return str(obj.profile.id_profile) if obj.profile else None
 
     def get_user_details(self, obj):
         return SimpleUserSerializer(obj.profile.user).data

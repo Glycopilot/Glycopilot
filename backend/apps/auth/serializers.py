@@ -1,7 +1,8 @@
-import os
-
+import jwt
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth import get_user_model
 
 from apps.users.models import User
@@ -41,8 +42,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value.lower()
 
     def validate_role(self, value):
+        allowed_public = ("PATIENT", "DOCTOR")
+        if value not in allowed_public:
+            raise serializers.ValidationError(
+                "Seuls les rôles PATIENT et DOCTOR sont autorisés à l'inscription. "
+                "Les comptes admin/superadmin sont créés par un superadmin."
+            )
         if not Role.objects.filter(name=value).exists():
-            raise serializers.ValidationError(f"Role '{value}' does not exist.")
+            raise serializers.ValidationError(f"Rôle '{value}' inexistant.")
         return value
 
     def validate(self, data):
@@ -76,6 +83,41 @@ class RegisterSerializer(serializers.ModelSerializer):
         Profile.objects.create(user=user_identity, role=role_obj)
         
         return account
+
+
+class CreateAdminAccountSerializer(serializers.Serializer):
+    """Création d'un compte ADMIN ou SUPERADMIN (réservé au superadmin)."""
+    email = serializers.EmailField(required=True)
+    first_name = serializers.CharField(required=True, max_length=150)
+    last_name = serializers.CharField(required=True, max_length=150)
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        min_length=8,
+        style={"input_type": "password"},
+    )
+    password_confirm = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={"input_type": "password"},
+    )
+    account_type = serializers.ChoiceField(
+        choices=[("ADMIN", "Admin"), ("SUPERADMIN", "Superadmin")],
+        required=True,
+    )
+
+    def validate_email(self, value):
+        value = value.lower()
+        if AuthAccount.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Cet email est déjà utilisé.")
+        return value
+
+    def validate(self, data):
+        if data["password"] != data["password_confirm"]:
+            raise serializers.ValidationError(
+                {"password_confirm": "Les mots de passe ne correspondent pas."}
+            )
+        return data
 
 
 class LoginSerializer(serializers.Serializer):
@@ -160,13 +202,19 @@ class AuthResponseSerializer(serializers.Serializer):
 
         access = refresh.access_token
         access["role"] = primary_role
-        
 
-        if "ADMIN" in roles or "SUPERADMIN" in roles or auth_account.is_superuser:
-            admin_key = os.environ.get("SECRET_KEY_ADMIN")
-            if admin_key:
-                refresh.access_token.set_signature_key(admin_key)
-                refresh.set_signature_key(admin_key)
+        # Admin et superadmin : jetons signés avec SECRET_KEY_ADMIN (validation via JWTAuthenticationDualKey).
+        # Patient et docteur : jetons signés avec SECRET_KEY.
+        admin_key = getattr(settings, "SECRET_KEY_ADMIN", None)
+        if admin_key and ("ADMIN" in roles or "SUPERADMIN" in roles or auth_account.is_superuser):
+            algo = getattr(api_settings, "ALGORITHM", "HS256")
+            access_str = jwt.encode(access.payload, admin_key, algorithm=algo)
+            refresh_str = jwt.encode(refresh.payload, admin_key, algorithm=algo)
+            return {
+                "access": access_str if isinstance(access_str, str) else access_str.decode(),
+                "refresh": refresh_str if isinstance(refresh_str, str) else refresh_str.decode(),
+                "user": AuthAccountSerializer(auth_account).data,
+            }
 
         return {
             "access": str(access),
