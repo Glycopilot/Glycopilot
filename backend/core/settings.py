@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.medications",
     "apps.alerts",
     "apps.notifications",
+    "apps.dashboard",
     "django_rest_passwordreset",
 ]
 
@@ -71,6 +72,7 @@ MIDDLEWARE = [
 
 # --- URL ROOT ---
 ROOT_URLCONF = "core.urls"
+APPEND_SLASH = False
 
 # --- DATABASES ---
 if "test" in sys.argv or "pytest" in sys.argv[0]:
