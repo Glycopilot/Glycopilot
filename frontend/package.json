@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "index.tsx",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -25,15 +26,21 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "^0.81.5",
+    "react-native-chart-kit": "^6.12.0",
     "react-native-safe-area-context": "^5.6.2",
-    "react-native-screens": "^4.18.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
     "react-native-toast-message": "^2.3.3",
     "react-native-web": "^0.21.0"
   },
   "devDependencies": {
+    "@types/react": "~19.1.10",
+    "@types/react-dom": "~19.1.7",
+    "@types/react-native": "^0.72.8",
     "eslint": "^8.56.0",
     "eslint-config-expo": "~10.0.0",
-    "prettier": "^3.1.1"
+    "prettier": "^3.1.1",
+    "typescript": "^5.9.3"
   },
   "private": true
 }

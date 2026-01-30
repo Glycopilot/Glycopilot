@@ -1,11 +1,29 @@
-import axios from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type {
+  LoginResponse,
+  RegisterData,
+  User,
+  ApiError,
+} from '../types/auth.types';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8006/api';
-const API_TIMEOUT = parseInt(process.env.EXPO_PUBLIC_API_TIMEOUT || '10000');
+const API_TIMEOUT = parseInt(
+  process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',
+  10
+);
+
+interface QueueItem {
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}
 
 // Créer une instance axios
-const apiClient = axios.create({
+const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
   timeout: API_TIMEOUT,
   headers: {
@@ -15,10 +33,10 @@ const apiClient = axios.create({
 
 // Intercepteur pour ajouter le token à chaque requête
 apiClient.interceptors.request.use(
-  async config => {
+  async (config: InternalAxiosRequestConfig) => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      if (token) {
+      if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
@@ -26,20 +44,20 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  error => {
+  (error: AxiosError) => {
     return Promise.reject(error);
   }
 );
 
 // Mécanisme de gestion des refreshes concurrents
 let isRefreshing = false;
-let failedQueue = [];
+let failedQueue: QueueItem[] = [];
 
-const processQueue = (error, token = null) => {
+const processQueue = (error: unknown, token: string | null = null): void => {
   failedQueue.forEach(prom => {
     if (error) {
       prom.reject(error);
-    } else {
+    } else if (token) {
       prom.resolve(token);
     }
   });
@@ -49,8 +67,10 @@ const processQueue = (error, token = null) => {
 // Intercepteur pour gérer le rafraîchissement automatique du token
 apiClient.interceptors.response.use(
   response => response,
-  async error => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
@@ -59,7 +79,9 @@ apiClient.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then(token => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
             return apiClient(originalRequest);
           })
           .catch(err => Promise.reject(err));
@@ -75,14 +97,19 @@ apiClient.interceptors.response.use(
         }
 
         // Créer une requête sans les intercepteurs pour éviter les boucles
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
-          refresh: refreshToken,
-        });
+        const response = await axios.post<{ access: string }>(
+          `${API_URL}/auth/refresh`,
+          {
+            refresh: refreshToken,
+          }
+        );
 
         const { access } = response.data;
         await AsyncStorage.setItem('access_token', access);
 
-        originalRequest.headers.Authorization = `Bearer ${access}`;
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${access}`;
+        }
         processQueue(null, access);
         isRefreshing = false;
         return apiClient(originalRequest);
@@ -108,13 +135,10 @@ apiClient.interceptors.response.use(
 const authService = {
   /**
    * Connexion utilisateur
-   * @param {string} email - Email de l'utilisateur
-   * @param {string} password - Mot de passe de l'utilisateur
-   * @returns {Promise} Réponse contenant les tokens et les infos utilisateur
    */
-  async login(email, password) {
+  async login(email: string, password: string): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post('/auth/login', {
+      const response = await apiClient.post<LoginResponse>('/auth/login', {
         email,
         password,
       });
@@ -128,19 +152,21 @@ const authService = {
 
       return response.data;
     } catch (error) {
-      const message = error.response?.data?.error || 'Erreur de connexion';
+      const axiosError = error as AxiosError<ApiError>;
+      const message =
+        axiosError.response?.data?.message || 'Erreur de connexion';
       throw new Error(message);
     }
   },
 
   /**
    * Inscription utilisateur
-   * @param {object} userData - Données utilisateur
-   * @returns {Promise} Réponse contenant les tokens et les infos utilisateur
    */
-  async register(userData) {
+  async register(
+    userData: RegisterData & { passwordConfirm: string }
+  ): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post('/auth/register', {
+      const response = await apiClient.post<LoginResponse>('/auth/register', {
         email: userData.email,
         first_name: userData.firstName,
         last_name: userData.lastName,
@@ -157,25 +183,27 @@ const authService = {
 
       return response.data;
     } catch (error) {
+      const axiosError = error as AxiosError<
+        ApiError | Record<string, unknown>
+      >;
+
       // Log full backend validation payload to help debugging (temporary)
       console.error(
         'authService.register error response:',
-        error.response?.data
+        axiosError.response?.data
       );
 
-      // Prefer explicit backend error message(s) when present
       let message = "Erreur lors de l'inscription";
-      if (error.response?.data) {
-        // If backend returns an object with field errors, stringify it for visibility
-        if (typeof error.response.data === 'string') {
-          message = error.response.data;
-        } else if (error.response.data.error) {
-          message = error.response.data.error;
+      if (axiosError.response?.data) {
+        const data = axiosError.response.data;
+        if (typeof data === 'string') {
+          message = data;
+        } else if ('message' in data && typeof data.message === 'string') {
+          message = data.message;
         } else {
           try {
-            message = JSON.stringify(error.response.data);
-          } catch (_e) {
-            // fallback
+            message = JSON.stringify(data);
+          } catch {
             message = "Erreur lors de l'inscription (voir logs)";
           }
         }
@@ -187,9 +215,8 @@ const authService = {
 
   /**
    * Déconnexion utilisateur
-   * @returns {Promise} Confirmation de déconnexion
    */
-  async logout() {
+  async logout(): Promise<{ message: string }> {
     try {
       const refreshToken = await AsyncStorage.getItem('refresh_token');
 
@@ -211,22 +238,24 @@ const authService = {
       await AsyncStorage.removeItem('refresh_token');
       await AsyncStorage.removeItem('user');
 
-      const message = error.response?.data?.error || 'Erreur de déconnexion';
+      const axiosError = error as AxiosError<ApiError>;
+      const message =
+        axiosError.response?.data?.message || 'Erreur de déconnexion';
       throw new Error(message);
     }
   },
 
   /**
    * Récupérer les infos utilisateur actuel
-   * @returns {Promise} Données utilisateur
    */
-  async getCurrentUser() {
+  async getCurrentUser(): Promise<User> {
     try {
-      const response = await apiClient.get('/auth/me');
+      const response = await apiClient.get<User>('/auth/me');
       return response.data;
     } catch (error) {
+      const axiosError = error as AxiosError<ApiError>;
       const message =
-        error.response?.data?.detail ||
+        axiosError.response?.data?.message ||
         "Erreur lors de la récupération de l'utilisateur";
       throw new Error(message);
     }
@@ -234,9 +263,8 @@ const authService = {
 
   /**
    * Rafraîchir le token d'accès
-   * @returns {Promise} Nouveau token d'accès
    */
-  async refreshToken() {
+  async refreshToken(): Promise<{ access: string }> {
     try {
       const refreshToken = await AsyncStorage.getItem('refresh_token');
 
@@ -244,9 +272,12 @@ const authService = {
         throw new Error('No refresh token available');
       }
 
-      const response = await axios.post(`${API_URL}/auth/refresh`, {
-        refresh: refreshToken,
-      });
+      const response = await axios.post<{ access: string }>(
+        `${API_URL}/auth/refresh`,
+        {
+          refresh: refreshToken,
+        }
+      );
 
       const { access } = response.data;
       await AsyncStorage.setItem('access_token', access);
@@ -255,9 +286,9 @@ const authService = {
     } catch (error) {
       await AsyncStorage.removeItem('access_token');
       await AsyncStorage.removeItem('refresh_token');
+      const axiosError = error as AxiosError<ApiError>;
       const message =
-        error.response?.data?.error ||
-        error.message ||
+        axiosError.response?.data?.message ||
         'Erreur lors du rafraîchissement du token';
       throw new Error(message);
     }
@@ -265,9 +296,11 @@ const authService = {
 
   /**
    * Récupérer les tokens stockés
-   * @returns {Promise} Objet contenant access_token et refresh_token
    */
-  async getTokens() {
+  async getTokens(): Promise<{
+    accessToken: string | null;
+    refreshToken: string | null;
+  }> {
     try {
       const accessToken = await AsyncStorage.getItem('access_token');
       const refreshToken = await AsyncStorage.getItem('refresh_token');
@@ -287,9 +320,8 @@ const authService = {
 
   /**
    * Récupérer l'utilisateur stocké localement
-   * @returns {Promise} Données utilisateur
    */
-  async getStoredUser() {
+  async getStoredUser(): Promise<User | null> {
     try {
       const user = await AsyncStorage.getItem('user');
       return user ? JSON.parse(user) : null;
@@ -301,9 +333,8 @@ const authService = {
 
   /**
    * Vérifier si l'utilisateur est connecté
-   * @returns {Promise} Booléen indiquant si l'utilisateur est connecté
    */
-  async isAuthenticated() {
+  async isAuthenticated(): Promise<boolean> {
     try {
       const token = await AsyncStorage.getItem('access_token');
       return !!token;
@@ -318,9 +349,8 @@ const authService = {
 
   /**
    * Obtenir l'instance axios configurée
-   * @returns {object} Instance axios
    */
-  getApiClient() {
+  getApiClient(): AxiosInstance {
     return apiClient;
   },
 };

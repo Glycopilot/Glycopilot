@@ -1,3 +1,4 @@
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
@@ -16,8 +17,13 @@ import InputField from '../components/common/InputField';
 import Decorations from '../components/common/Decorations';
 import { colors } from '../themes/colors';
 import { toastError, toastSuccess } from '../services/toastService';
+import type { NavigationProps } from '../types/components.types';
 
-export default function LoginScreen({ navigation }) {
+interface LoginScreenProps {
+  navigation: NavigationProps;
+}
+
+export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -40,7 +46,8 @@ export default function LoginScreen({ navigation }) {
       setPassword('');
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (error) {
-      toastError('Erreur de connexion', error.message);
+      const err = error as Error;
+      toastError('Erreur de connexion', err.message);
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +74,8 @@ export default function LoginScreen({ navigation }) {
       setResetEmail('');
       setIsPasswordResetMode(false);
     } catch (error) {
-      toastError('Erreur', error.message);
+      const err = error as Error;
+      toastError('Erreur', err.message);
     } finally {
       setIsLoading(false);
     }
@@ -137,6 +145,7 @@ export default function LoginScreen({ navigation }) {
               title="Se connecter"
               onPress={handleLogin}
               disabled={isLoading}
+              loading={isLoading}
             />
           </>
         ) : (
@@ -167,6 +176,7 @@ export default function LoginScreen({ navigation }) {
               title="Envoyer le lien"
               onPress={handlePasswordReset}
               disabled={isLoading}
+              loading={isLoading}
             />
 
             <TouchableOpacity
