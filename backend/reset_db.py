@@ -72,7 +72,7 @@ def reset_database():
                     print("✓ DB was already empty")
     
 
-    apps_list = ["users", "profiles", "doctors", "auth", "glycemia", "meals", "activities", "alerts", "medications", "notifications"]
+    apps_list = ["users", "profiles", "doctors", "auth", "glycemia", "meals", "activities", "alerts", "medications", "notifications", "dashboard"]
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
     for app in apps_list:

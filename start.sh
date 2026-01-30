@@ -17,61 +17,41 @@ elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
     true
 fi
 
-# Configuration de l'environnement virtuel Python
+# Vérifier que Docker est installé
+if ! command -v docker > /dev/null 2>&1; then
+    echo "❌ Docker n'est pas installé"
+    echo "💡 Installez Docker pour continuer"
+    exit 1
+fi
+
+# Détecter la commande Docker Compose disponible
+DOCKER_COMPOSE=""
+if docker compose version > /dev/null 2>&1; then
+    DOCKER_COMPOSE="docker compose"
+elif docker-compose version > /dev/null 2>&1; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    echo "❌ Docker Compose n'est pas installé"
+    echo "💡 Installez Docker Compose pour continuer"
+    exit 1
+fi
+
+# Vérifier et installer les outils JavaScript (pour le linting local)
 echo ""
-echo "🔧 Configuration de l'environnement Python..."
+echo "🔧 Configuration des outils de développement..."
 
-# Détecter la commande Python disponible
-PYTHON_CMD=""
-if command -v python3 > /dev/null 2>&1; then
-    PYTHON_CMD="python3"
-elif command -v python > /dev/null 2>&1; then
-    PYTHON_CMD="python"
+if command -v npm > /dev/null 2>&1; then
+    if ! npm list eslint > /dev/null 2>&1; then
+        echo "📦 Installation des outils JavaScript (ESLint, Prettier)..."
+        cd frontend
+        npm install > /dev/null 2>&1
+        cd ..
+        echo "✅ Outils JavaScript installés"
+    else
+        echo "✅ Outils JavaScript déjà installés"
+    fi
 else
-    echo "❌ Python n'est pas installé sur ce système"
-    exit 1
-fi
-
-# Créer le venv s'il n'existe pas
-if [ ! -d "backend/venv" ]; then
-    echo "📦 Création de l'environnement virtuel Python..."
-    cd backend
-    $PYTHON_CMD -m venv venv
-    echo "✅ Environnement virtuel créé"
-    cd ..
-fi
-
-# Activer le venv et installer/mettre à jour les dépendances
-echo "📦 Installation des dépendances Python dans le venv..."
-cd backend
-
-# Activer le venv (compatible multi-plateformes)
-if [ -f "venv/bin/activate" ]; then
-    source venv/bin/activate
-elif [ -f "venv/Scripts/activate" ]; then
-    source venv/Scripts/activate
-fi
-
-# Installer les dépendances
-pip install -q -r requirements.txt
-echo "✅ Dépendances Python installées dans le venv"
-cd ..
-
-# Vérifier et installer les outils JavaScript
-if ! command -v npm > /dev/null 2>&1; then
-    echo "❌ npm n'est pas installé sur ce système"
-    echo "   Installez Node.js pour continuer"
-    exit 1
-fi
-
-if ! npm list eslint > /dev/null 2>&1; then
-    echo "📦 Installation des outils JavaScript (ESLint, Prettier)..."
-    cd frontend
-    npm install > /dev/null 2>&1
-    cd ..
-    echo "✅ Outils JavaScript installés"
-else
-    echo "✅ Outils JavaScript déjà installés"
+    echo "⚠️  npm non trouvé - outils JS non installés (optionnel)"
 fi
 
 # Gestion des fichiers d'environnement (.env vs .env.prod)
@@ -88,16 +68,11 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-# Charger les variables dans l'environnement courant pour que Python les voit
+# Charger les variables dans l'environnement courant
 set -a
 # shellcheck source=/dev/null
 . "$ENV_FILE"
 set +a
-
-# OVERRIDE DB_HOST for Host Execution
-# Because the script runs on the host but the DB is in Docker (mapped to localhost:3306),
-# we must use 127.0.0.1 instead of 'database'.
-export DB_HOST=127.0.0.1
 
 # Détection de l'environnement (Supporte Django_ENV et DJANGO_ENV)
 CURRENT_ENV=""
@@ -109,12 +84,14 @@ fi
 
 # Normaliser en minuscule pour la comparaison
 CURRENT_ENV=$(echo "$CURRENT_ENV" | tr '[:upper:]' '[:lower:]')
-
-# IMPORTANT: On exporte la variable normalisée pour que Python (settings.py) la trouve
-# car config('Django_ENV') est sensible à la casse sur Linux.
 export Django_ENV=$CURRENT_ENV
 
 echo "ℹ️  Environment détecté: $CURRENT_ENV"
+
+# Construire l'image Docker du backend
+echo ""
+echo "🔨 Construction de l'image Docker backend..."
+$DOCKER_COMPOSE build backend
 
 if [ "$CURRENT_ENV" == "production" ]; then
     if [ "$2" == "--reset" ]; then
@@ -122,125 +99,82 @@ if [ "$CURRENT_ENV" == "production" ]; then
         echo "⚠️  Cela va EFFACER toutes les données de la base de production !"
         echo "⏳ Vous avez 5 secondes pour annuler (Ctrl+C)..."
         sleep 5
-        
-        cd backend
-        if [ -f "venv/bin/activate" ]; then
-            source venv/bin/activate
-        elif [ -f "venv/Scripts/activate" ]; then
-            source venv/Scripts/activate
-        fi
-        
-        # On force le reset en production
-        $PYTHON_CMD reset_db.py --force
+
+        # Démarrer la DB
+        $DOCKER_COMPOSE up -d database
+        echo "⏳ Attente de la disponibilité de la DB (10s)..."
+        sleep 10
+
+        # Reset via Docker
+        echo "🔄 Reset de la base de données via Docker..."
+        $DOCKER_COMPOSE run --rm backend python reset_db.py --force
         if [ $? -ne 0 ]; then
             echo "❌ Erreur lors du Reset DB Production"
             exit 1
         fi
-        cd ..
         echo "✅ Base de Production Réinitialisée et Peuplée !"
     else
-        echo "⚠️  MODE PRODUCTION DÉTECTÉ : Mise à jour SÉCURISÉE (Migrate + CollectStatic)"
-        echo "   (Migrate + CollectStatic sans perte de données)"
-        
-        cd backend
-        if [ -f "venv/bin/activate" ]; then
-            source venv/bin/activate
-        elif [ -f "venv/Scripts/activate" ]; then
-            source venv/Scripts/activate
-        fi
-
-        # 1. Appliquer les migrations uniquement (PAS DE RESET)
-        echo "🏗️  Application des migrations..."
-        $PYTHON_CMD manage.py migrate
-        if [ $? -ne 0 ]; then
-            echo "❌ Erreur lors des migrations"
-            exit 1
-        fi
-
-        # 2. Collecter les fichiers statiques
-        echo "🎨 Collection des fichiers statiques..."
-        $PYTHON_CMD manage.py collectstatic --noinput
-
-        cd ..
-        echo "✅ Mise à jour Production terminée avec succès !"
+        echo "⚠️  MODE PRODUCTION DÉTECTÉ : Mise à jour SÉCURISÉE"
+        echo "   (Les migrations seront appliquées au démarrage du container)"
     fi
 else
     echo "🔄 [DEV] Reset & Initialisation de la Base de Données..."
-    
-    # Assurer que la DB est démarrée
+
+    # Démarrer la DB
     echo "📦 Démarrage du conteneur de base de données..."
-    if command -v docker > /dev/null 2>&1; then
-        if docker compose version > /dev/null 2>&1; then
-            docker compose up -d database
-        elif docker-compose version > /dev/null 2>&1; then
-            docker-compose up -d database
-        fi
-    fi
-    
-    # Attendre que la DB soit prête (simple sleep ou boucle)
+    $DOCKER_COMPOSE up -d database
+
+    # Attendre que la DB soit prête
     echo "⏳ Attente de la disponibilité de la DB (10s)..."
     sleep 10
-    
-    cd backend
-    if [ -f "venv/bin/activate" ]; then
-        source venv/bin/activate
-    elif [ -f "venv/Scripts/activate" ]; then
-        source venv/Scripts/activate
-    fi
-    
-    $PYTHON_CMD reset_db.py
+
+    # Reset via Docker (utilise l'image construite)
+    echo "🔄 Reset de la base de données via Docker..."
+    $DOCKER_COMPOSE run --rm backend python reset_db.py
     if [ $? -ne 0 ]; then
         echo "❌ Erreur lors du Reset DB"
         exit 1
     fi
-    cd ..
     echo "✅ Base de données réinitialisée et peuplée !"
 fi
-# Vérifier les Git hooks (informatif)
-if [ -d ".git" ] && [ ! -f ".git/hooks/pre-push" ]; then
-    echo ""
-    echo "ℹ️  Aucun hook pre-push configuré. Pour en ajouter un, créez .git/hooks/pre-push"
-elif [ -d ".git" ] && [ -f ".git/hooks/pre-push" ]; then
-    echo ""
-    echo "✅ Git hook pre-push présent"
-fi
 
-# Lancer le backend avec Docker et le frontend directement
-echo ""
-echo "🚀 Démarrage du backend avec Docker..."
-echo ""
+# Vérifier et configurer les Git hooks (une seule fois)
+if [ ! -f ".git/hooks/pre-push" ]; then
+    echo ""
+    echo "🔧 Configuration des Git hooks (première fois)..."
 
-# Détecter la commande Docker Compose disponible
-if command -v docker > /dev/null 2>&1; then
-    if docker compose version > /dev/null 2>&1; then
-        # Nouveau format: docker compose (en background)
-        docker compose up -d --build
-    elif docker-compose version > /dev/null 2>&1; then
-        # Ancien format: docker-compose (en background)
-        docker-compose up -d --build
+    if [ -d ".git" ]; then
+        echo "✅ Git hooks configurés !"
+        echo "   → Vérification automatique avant chaque push"
     else
-        echo "❌ Docker Compose n'est pas installé"
-        echo "💡 Installez Docker Compose pour continuer"
-        exit 1
+        echo "⚠️  Pas de repository Git détecté"
     fi
 else
-    echo "❌ Docker n'est pas installé"
-    echo "💡 Installez Docker pour continuer"
-    exit 1
+    echo "✅ Git hooks déjà configurés"
 fi
+
+# Lancer tous les services avec Docker
+echo ""
+echo "🚀 Démarrage de tous les services avec Docker..."
+echo ""
+
+$DOCKER_COMPOSE up -d
 
 # Attendre que le backend soit prêt
 echo "⏳ Attente du backend (15 secondes)..."
 sleep 15
 
-# Frontend est déjà lancé par Docker Compose (voir docker-compose.yml)
+# Afficher le statut
 echo ""
 echo "✅ Glycopilot démarré !"
 echo "Backend: http://localhost:8006"
 echo "Frontend: http://localhost:8081"
 echo ""
 echo "📱 QR Code Frontend :"
-docker logs glycopilot-front
+# Attendre que le QR code soit généré
+sleep 5
+# Afficher les logs du frontend avec plus de lignes pour capturer le QR code
+docker logs glycopilot-front 2>&1 | tail -50
 
 echo ""
 echo "🚀 Passage aux logs BACKEND (Emails, Requêtes API)..."
