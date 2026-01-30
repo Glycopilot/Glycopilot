@@ -10,6 +10,15 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysql -h localhost -u root -p$MYSQL_ROOT_PASSWORD -e 'SELECT 1' || exit 1"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   # Redis for WebSocket channel layer
   redis:
@@ -35,9 +44,18 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - database
-      - redis
+       database:
+         condition: service_healthy
     restart: unless-stopped
+    command: >
+      sh -C "
+      echo 'waiting for mysql to be ready....';
+      echo 'MYSQL is up, running migration ....';
+      python manager.py migrate;
+      python manger.py runserver 0.0.0.0:80000
+      "
+    
+  
 
   # Frontend React Native
   frontend:
