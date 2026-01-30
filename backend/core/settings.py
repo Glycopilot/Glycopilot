@@ -29,6 +29,8 @@ SECRET_KEY_ADMIN = config("SECRET_KEY_ADMIN", default="")
 
 # --- APPS INSTALLÉES ---
 INSTALLED_APPS = [
+    # ASGI server (must be first for channels)
+    "daphne",
     # Django core apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -37,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Packages tiers
+    "channels",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -308,3 +311,14 @@ STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 # --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.AuthAccount"
+
+# --- ASGI / CHANNELS ---
+ASGI_APPLICATION = "core.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(config("REDIS_HOST", default="redis"), config("REDIS_PORT", default=6379, cast=int))],
+        },
+    },
+}

@@ -171,7 +171,10 @@ echo "Backend: http://localhost:8006"
 echo "Frontend: http://localhost:8081"
 echo ""
 echo "📱 QR Code Frontend :"
-docker logs glycopilot-front 2>/dev/null | tail -20
+# Attendre que le QR code soit généré
+sleep 5
+# Afficher les logs du frontend avec plus de lignes pour capturer le QR code
+docker logs glycopilot-front 2>&1 | tail -50
 
 echo ""
 echo "🚀 Passage aux logs BACKEND (Emails, Requêtes API)..."
