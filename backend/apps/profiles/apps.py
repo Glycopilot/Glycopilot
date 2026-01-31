@@ -7,4 +7,4 @@ class ProfilesConfig(AppConfig):
     label = "profiles"
 
     def ready(self):
-        import apps.profiles.signals
+        import apps.profiles.signals  # noqa: F401

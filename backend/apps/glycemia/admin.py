@@ -26,13 +26,14 @@ class GlycemiaHistoAdmin(admin.ModelAdmin):
 class GlycemiaDataIAAdmin(admin.ModelAdmin):
     list_display = (
         "user",
-        "prediction_start",
-        "prediction_end",
-        "prob_hypo",
-        "prob_hyper",
+        "for_time",
+        "input_start",
+        "input_end",
+        "risk_hypo_15",
+        "risk_hyper_15",
     )
-    list_filter = ("prediction_start", "prediction_end")
+    list_filter = ("for_time", "status", "source")
     search_fields = ("user__username", "user__email")
-    raw_id_fields = ("user",)
-    date_hierarchy = "prediction_start"
+    raw_id_fields = ("user", "device")
+    date_hierarchy = "for_time"
     list_per_page = 50

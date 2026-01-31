@@ -1,12 +1,14 @@
-import jwt
 from django.conf import settings
-from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth import get_user_model
 
+import jwt
+from rest_framework import serializers
+from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.doctors.models import DoctorProfile
+from apps.profiles.models import PatientProfile, Profile, Role
 from apps.users.models import User
-from apps.profiles.models import Profile, Role
 
 AuthAccount = get_user_model()
 
@@ -65,7 +67,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         role_name = validated_data.pop("role", "PATIENT")
         first_name = validated_data.pop("first_name")
         last_name = validated_data.pop("last_name")
-        
+
         email = validated_data["email"]
 
         user_identity = User.objects.create(
@@ -81,12 +83,13 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         role_obj = Role.objects.get(name=role_name)
         Profile.objects.create(user=user_identity, role=role_obj)
-        
+
         return account
 
 
 class CreateAdminAccountSerializer(serializers.Serializer):
     """Création d'un compte ADMIN ou SUPERADMIN (réservé au superadmin)."""
+
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(required=True, max_length=150)
     last_name = serializers.CharField(required=True, max_length=150)
@@ -145,33 +148,51 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 
-from apps.profiles.models import PatientProfile
-from apps.doctors.models import DoctorProfile
-
 class TinyPatientProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientProfile
         fields = ["diabetes_type", "diagnosis_date"]
 
+
 class TinyDoctorProfileSerializer(serializers.ModelSerializer):
     verification_status = serializers.StringRelatedField()
     specialty = serializers.StringRelatedField()
+
     class Meta:
         model = DoctorProfile
-        fields = ["license_number", "verification_status", "specialty", "medical_center_name"]
+        fields = [
+            "license_number",
+            "verification_status",
+            "specialty",
+            "medical_center_name",
+        ]
+
 
 class SimpleProfileSerializer(serializers.ModelSerializer):
-    role_name = serializers.CharField(source='role.name', read_only=True)
-    patient_details = TinyPatientProfileSerializer(source='patient_profile', read_only=True)
-    doctor_details = TinyDoctorProfileSerializer(source='doctor_profile', read_only=True)
-    
+    role_name = serializers.CharField(source="role.name", read_only=True)
+    patient_details = TinyPatientProfileSerializer(
+        source="patient_profile", read_only=True
+    )
+    doctor_details = TinyDoctorProfileSerializer(
+        source="doctor_profile", read_only=True
+    )
+
     class Meta:
         model = Profile
-        fields = ["id_profile", "role_name", "label", "is_active", "patient_details", "doctor_details", "created_at"]
+        fields = [
+            "id_profile",
+            "role_name",
+            "label",
+            "is_active",
+            "patient_details",
+            "doctor_details",
+            "created_at",
+        ]
+
 
 class UserIdentitySerializer(serializers.ModelSerializer):
     profiles = SimpleProfileSerializer(many=True, read_only=True)
-    
+
     class Meta:
         model = User
         fields = ["id_user", "first_name", "last_name", "created_at", "profiles"]
@@ -206,13 +227,19 @@ class AuthResponseSerializer(serializers.Serializer):
         # Admin et superadmin : jetons signés avec SECRET_KEY_ADMIN (validation via JWTAuthenticationDualKey).
         # Patient et docteur : jetons signés avec SECRET_KEY.
         admin_key = getattr(settings, "SECRET_KEY_ADMIN", None)
-        if admin_key and ("ADMIN" in roles or "SUPERADMIN" in roles or auth_account.is_superuser):
+        if admin_key and (
+            "ADMIN" in roles or "SUPERADMIN" in roles or auth_account.is_superuser
+        ):
             algo = getattr(api_settings, "ALGORITHM", "HS256")
             access_str = jwt.encode(access.payload, admin_key, algorithm=algo)
             refresh_str = jwt.encode(refresh.payload, admin_key, algorithm=algo)
             return {
-                "access": access_str if isinstance(access_str, str) else access_str.decode(),
-                "refresh": refresh_str if isinstance(refresh_str, str) else refresh_str.decode(),
+                "access": access_str
+                if isinstance(access_str, str)
+                else access_str.decode(),
+                "refresh": refresh_str
+                if isinstance(refresh_str, str)
+                else refresh_str.decode(),
                 "user": AuthAccountSerializer(auth_account).data,
             }
 

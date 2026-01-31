@@ -1,6 +1,8 @@
 from rest_framework import serializers
+
 from apps.users.models import User
-from .models import DoctorProfile, VerificationStatus, PatientCareTeam
+
+from .models import DoctorProfile, PatientCareTeam
 
 
 class SimpleUserSerializer(serializers.ModelSerializer):
@@ -19,7 +21,7 @@ class SimpleUserSerializer(serializers.ModelSerializer):
     def get_email(self, obj):
         try:
             return obj.auth_account.email
-        except:
+        except AttributeError:
             return None
 
 
@@ -27,8 +29,8 @@ class DoctorSerializer(serializers.ModelSerializer):
     profile_id = serializers.SerializerMethodField()
     user_details = serializers.SerializerMethodField()
     valide = serializers.SerializerMethodField()
-    verification_status = serializers.StringRelatedField() # serialize label
-    specialty = serializers.StringRelatedField() # serialize name
+    verification_status = serializers.StringRelatedField()  # serialize label
+    specialty = serializers.StringRelatedField()  # serialize name
 
     class Meta:
         model = DoctorProfile
@@ -59,26 +61,27 @@ class DoctorSerializer(serializers.ModelSerializer):
 class PatientCareTeamSerializer(serializers.ModelSerializer):
     member_details = serializers.SerializerMethodField()
     role_label = serializers.CharField(source="get_role_display", read_only=True)
-    
+
     def get_member_details(self, obj):
         if obj.member_profile and obj.member_profile.user:
             return SimpleUserSerializer(obj.member_profile.user).data
         return None
-    
+
     class Meta:
         model = PatientCareTeam
         fields = [
-            "id_team_member", 
-            "patient_profile", 
-            "member_profile", 
+            "id_team_member",
+            "patient_profile",
+            "member_profile",
             "member_details",
             "invitation_email",
-            "role", 
+            "role",
             "role_label",
             "relation_type",
-            "status", 
-            "approved_by"
+            "status",
+            "approved_by",
         ]
+
 
 class DoctorListWithPatientsSerializer(serializers.Serializer):
     doctor = DoctorSerializer()

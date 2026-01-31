@@ -2,12 +2,13 @@
 API pour admin/superadmin : valider les comptes docteurs (accepter / refuser avec message).
 """
 
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.utils import timezone
+
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.doctors.models import DoctorProfile, VerificationStatus
 from apps.doctors.serializers import DoctorSerializer
@@ -34,6 +35,7 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
     - POST /api/doctors/verification/<doctor_id>/accept/  → passer en VERIFIED
     - POST /api/doctors/verification/<doctor_id>/decline/  → passer en REJECTED + message
     """
+
     permission_classes = [IsStaffOrSuperuser]
 
     def list(self, request):
@@ -42,9 +44,9 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
             pending_status = VerificationStatus.objects.get(label="PENDING")
         except VerificationStatus.DoesNotExist:
             return Response({"results": []})
-        doctors = DoctorProfile.objects.filter(verification_status=pending_status).select_related(
-            "profile", "profile__user", "verification_status", "specialty"
-        )
+        doctors = DoctorProfile.objects.filter(
+            verification_status=pending_status
+        ).select_related("profile", "profile__user", "verification_status", "specialty")
         serializer = DoctorSerializer(doctors, many=True)
         return Response({"results": serializer.data})
 
@@ -76,7 +78,14 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
             doctor.verified_by_user = request.user
             doctor.verified_at = timezone.now()
             doctor.rejection_reason = None
-            doctor.save(update_fields=["verification_status", "verified_by_user", "verified_at", "rejection_reason"])
+            doctor.save(
+                update_fields=[
+                    "verification_status",
+                    "verified_by_user",
+                    "verified_at",
+                    "rejection_reason",
+                ]
+            )
         return Response(
             {"message": "Docteur validé.", "verification_status": "VERIFIED"},
             status=status.HTTP_200_OK,
@@ -107,7 +116,14 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
             doctor.verified_by_user = request.user
             doctor.verified_at = timezone.now()
             doctor.rejection_reason = rejection_reason or None
-            doctor.save(update_fields=["verification_status", "verified_by_user", "verified_at", "rejection_reason"])
+            doctor.save(
+                update_fields=[
+                    "verification_status",
+                    "verified_by_user",
+                    "verified_at",
+                    "rejection_reason",
+                ]
+            )
         return Response(
             {"message": "Demande refusée.", "verification_status": "REJECTED"},
             status=status.HTTP_200_OK,

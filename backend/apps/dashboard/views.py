@@ -1,23 +1,21 @@
 from datetime import timedelta
 
-from django.db.models import Sum
 from django.utils import timezone
-from rest_framework import permissions, status
+
+from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.activities.models import UserActivity
 from apps.alerts.models import AlertEvent, AlertSeverity
 from apps.glycemia.models import Glycemia
-from apps.meals.models import Meal, UserMeal
+from apps.meals.models import UserMeal
 from apps.medications.models import UserMedication
 
 from .models import UserWidget, UserWidgetLayout
 from .serializers import (
     DashboardSummarySerializer,
-    WidgetLayoutResponseSerializer,
     WidgetLayoutUpdateSerializer,
-    WidgetListSerializer,
 )
 from .services import DashboardCache, HealthScoreService, WidgetCatalog
 
@@ -55,7 +53,10 @@ class DashboardSummaryView(APIView):
             "nutrition": (
                 self._get_nutrition_data(user)
                 if include_all or "nutrition" in include
-                else {"calories": {"consumed": 0, "goal": 1800}, "carbs": {"grams": 0, "goal": 200}}
+                else {
+                    "calories": {"consumed": 0, "goal": 1800},
+                    "carbs": {"grams": 0, "goal": 200},
+                }
             ),
             "activity": (
                 self._get_activity_data(user)
@@ -105,9 +106,7 @@ class DashboardSummaryView(APIView):
 
     def _get_medication_data(self, user) -> dict:
         next_dose = (
-            UserMedication.objects.filter(
-                user=user, statut=True, taken_at__isnull=True
-            )
+            UserMedication.objects.filter(user=user, statut=True, taken_at__isnull=True)
             .select_related("medication")
             .first()
         )
@@ -145,9 +144,7 @@ class DashboardSummaryView(APIView):
 
     def _get_activity_data(self, user) -> dict:
         today = timezone.now().date()
-        activities = UserActivity.objects.filter(
-            user=user, start__date=today
-        )
+        activities = UserActivity.objects.filter(user=user, start__date=today)
 
         total_minutes = 0
         for activity in activities:

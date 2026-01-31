@@ -39,7 +39,9 @@ class Glycemia(models.Model):
     measured_at = models.DateTimeField()
     value = models.FloatField()
     unit = models.CharField(max_length=10, default="mg/dL")
-    trend = models.CharField(max_length=20, choices=TREND_CHOICES, null=True, blank=True)
+    trend = models.CharField(
+        max_length=20, choices=TREND_CHOICES, null=True, blank=True
+    )
     rate = models.FloatField(null=True, blank=True, help_text="mg/dL per minute")
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
 
@@ -104,11 +106,15 @@ class GlycemiaHisto(models.Model):
 
     value = models.FloatField()
     unit = models.CharField(max_length=10, default="mg/dL")
-    trend = models.CharField(max_length=20, choices=TREND_CHOICES, null=True, blank=True)
+    trend = models.CharField(
+        max_length=20, choices=TREND_CHOICES, null=True, blank=True
+    )
     rate = models.FloatField(null=True, blank=True)
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
 
-    context = models.CharField(max_length=30, choices=CONTEXT_CHOICES, null=True, blank=True)
+    context = models.CharField(
+        max_length=30, choices=CONTEXT_CHOICES, null=True, blank=True
+    )
     notes = models.TextField(blank=True, null=True)
 
     # Si tu veux réduire la surface RGPD plus tard, tu pourras supprimer ces champs
@@ -176,8 +182,8 @@ class GlycemiaDataIA(models.Model):
 
     # Temps
     for_time = models.DateTimeField(db_index=True)  # t (moment de référence)
-    input_start = models.DateTimeField()            # ex: t-2h
-    input_end = models.DateTimeField()              # ex: t
+    input_start = models.DateTimeField()  # ex: t-2h
+    input_end = models.DateTimeField()  # ex: t
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Versioning / origine
@@ -222,24 +228,36 @@ class GlycemiaDataIA(models.Model):
 
     # Risques (0..1) pour alerting prédictif
     risk_hypo_15 = models.FloatField(
-        blank=True, null=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_15 = models.FloatField(
-        blank=True, null=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
 
     risk_hypo_30 = models.FloatField(
-        blank=True, null=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_30 = models.FloatField(
-        blank=True, null=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
 
     risk_hypo_60 = models.FloatField(
-        blank=True, null=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_60 = models.FloatField(
-        blank=True, null=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)]
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
 
     # UI (optionnel)

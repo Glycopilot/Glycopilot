@@ -13,9 +13,7 @@ User = get_user_model()
 class TestGlycemiaAPI:
     @pytest.fixture
     def user(self):
-        return User.objects.create_user(
-            email="test@example.com", password="pass1234"
-        )
+        return User.objects.create_user(email="test@example.com", password="pass1234")
 
     @pytest.fixture
     def client(self, user):

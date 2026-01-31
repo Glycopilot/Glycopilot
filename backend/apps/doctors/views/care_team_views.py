@@ -1,19 +1,22 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 
-from apps.users.models import User, AuthAccount
-from apps.profiles.models import Profile, Role
-from apps.doctors.models import PatientCareTeam, InvitationStatus
-from apps.doctors.utils import send_care_team_invitation
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from apps.doctors.models import InvitationStatus, PatientCareTeam
 from apps.doctors.serializers import PatientCareTeamSerializer
+from apps.doctors.utils import send_care_team_invitation
+from apps.profiles.models import Profile, Role
+from apps.users.models import AuthAccount, User
 
 
 def _get_invitation_status(label):
     """Retourne le statut d'invitation (PENDING/ACTIVE), crée si absent (santé = pas de crash)."""
-    obj, _ = InvitationStatus.objects.get_or_create(label=label, defaults={"label": label})
+    obj, _ = InvitationStatus.objects.get_or_create(
+        label=label, defaults={"label": label}
+    )
     return obj
 
 
@@ -22,27 +25,32 @@ class CareTeamViewSet(viewsets.ViewSet):
     ViewSet for managing the Care Team (Patients <-> Doctors/Family).
     Standardizes disparate APIViews into actions.
     """
+
     permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['post'], url_path='add-family')
+    @action(detail=False, methods=["post"], url_path="add-family")
     def add_family_member(self, request):
         """
         Add a family member/caregiver manually.
         Endpoint: POST /api/doctors/care-team/add-family/
         """
         data = request.data
-        
+
         # Security Check: Ensure requester is a PATIENT
-        patient_role_profile = request.user.user.profiles.filter(role__name="PATIENT").first()
-        
+        patient_role_profile = request.user.user.profiles.filter(
+            role__name="PATIENT"
+        ).first()
+
         if not patient_role_profile:
-             return Response({"error": "Only patients can add care team members."}, status=403)
-             
-        if not hasattr(patient_role_profile, 'patient_profile'):
-             return Response({"error": "Patient profile incomplete."}, status=400)
-             
+            return Response(
+                {"error": "Only patients can add care team members."}, status=403
+            )
+
+        if not hasattr(patient_role_profile, "patient_profile"):
+            return Response({"error": "Patient profile incomplete."}, status=400)
+
         patient_profile = patient_role_profile.patient_profile
-        
+
         # 1. Create Identity (User)
         first_name = data.get("first_name")
         last_name = data.get("last_name")
@@ -53,14 +61,18 @@ class CareTeamViewSet(viewsets.ViewSet):
         allowed_family_roles = {"FAMILY", "CAREGIVER", "NURSE"}
         if role_name not in allowed_family_roles:
             return Response(
-                {"error": "Rôle invalide. Valeurs acceptées : FAMILY, CAREGIVER, NURSE."},
+                {
+                    "error": "Rôle invalide. Valeurs acceptées : FAMILY, CAREGIVER, NURSE."
+                },
                 status=400,
             )
 
         if not first_name or not last_name:
             return Response({"error": "Prénom et nom sont requis."}, status=400)
 
-        role_obj, _ = Role.objects.get_or_create(name=role_name, defaults={"name": role_name})
+        role_obj, _ = Role.objects.get_or_create(
+            name=role_name, defaults={"name": role_name}
+        )
         active_status = _get_invitation_status("ACTIVE")
 
         with transaction.atomic():
@@ -71,7 +83,7 @@ class CareTeamViewSet(viewsets.ViewSet):
                 address=address or "",
             )
             member_profile = Profile.objects.create(user=user_identity, role=role_obj)
-            
+
             team_member = PatientCareTeam.objects.create(
                 patient_profile=patient_profile,
                 member_profile=member_profile,
@@ -81,11 +93,14 @@ class CareTeamViewSet(viewsets.ViewSet):
             )
 
         return Response(
-            {"message": "Membre ajouté à l'équipe.", "id": str(team_member.id_team_member)},
+            {
+                "message": "Membre ajouté à l'équipe.",
+                "id": str(team_member.id_team_member),
+            },
             status=201,
         )
 
-    @action(detail=False, methods=['post'], url_path='invite-doctor')
+    @action(detail=False, methods=["post"], url_path="invite-doctor")
     def invite_doctor(self, request):
         """
         Le patient invite un médecin (référent ou spécialiste) par email.
@@ -97,22 +112,33 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         if not email:
             return Response({"error": "Email requis."}, status=400)
-        if role not in (PatientCareTeam.TeamRole.REFERENT_DOCTOR, PatientCareTeam.TeamRole.SPECIALIST):
+        if role not in (
+            PatientCareTeam.TeamRole.REFERENT_DOCTOR,
+            PatientCareTeam.TeamRole.SPECIALIST,
+        ):
             return Response(
-                {"error": "Rôle invalide. Valeurs acceptées : REFERENT_DOCTOR, SPECIALIST."},
+                {
+                    "error": "Rôle invalide. Valeurs acceptées : REFERENT_DOCTOR, SPECIALIST."
+                },
                 status=400,
             )
 
         # Le patient ne peut pas s'inviter lui-même
         if email == request.user.email:
             return Response(
-                {"error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas. Contactez votre docteur."},
+                {
+                    "error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas. Contactez votre docteur."
+                },
                 status=400,
             )
 
-        patient_role_profile = request.user.user.profiles.filter(role__name="PATIENT").first()
+        patient_role_profile = request.user.user.profiles.filter(
+            role__name="PATIENT"
+        ).first()
         if not patient_role_profile:
-            return Response({"error": "Seuls les patients peuvent inviter un médecin."}, status=403)
+            return Response(
+                {"error": "Seuls les patients peuvent inviter un médecin."}, status=403
+            )
         if not hasattr(patient_role_profile, "patient_profile"):
             return Response({"error": "Profil patient incomplet."}, status=400)
 
@@ -125,20 +151,26 @@ class CareTeamViewSet(viewsets.ViewSet):
             auth_account = AuthAccount.objects.get(email=email)
         except AuthAccount.DoesNotExist:
             return Response(
-                {"error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas. Contactez votre docteur."},
+                {
+                    "error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas. Contactez votre docteur."
+                },
                 status=400,
             )
 
         member_profile = auth_account.user.profiles.filter(role__name="DOCTOR").first()
         if not member_profile or not getattr(member_profile, "doctor_profile", None):
             return Response(
-                {"error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas. Contactez votre docteur."},
+                {
+                    "error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas. Contactez votre docteur."
+                },
                 status=400,
             )
         # Docteur non validé = compte indisponible / inexistant pour le patient
         if member_profile.doctor_profile.verification_status.label != "VERIFIED":
             return Response(
-                {"error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas ou n'est pas encore disponible. Contactez votre docteur."},
+                {
+                    "error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas ou n'est pas encore disponible. Contactez votre docteur."
+                },
                 status=400,
             )
 
@@ -147,7 +179,12 @@ class CareTeamViewSet(viewsets.ViewSet):
             patient_profile=patient_profile,
             member_profile=member_profile,
         ).exists():
-            return Response({"error": "Ce médecin fait déjà partie de votre équipe ou a déjà une invitation en attente."}, status=400)
+            return Response(
+                {
+                    "error": "Ce médecin fait déjà partie de votre équipe ou a déjà une invitation en attente."
+                },
+                status=400,
+            )
 
         PatientCareTeam.objects.create(
             patient_profile=patient_profile,
@@ -160,7 +197,7 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         return Response({"message": "Invitation envoyée au médecin."}, status=201)
 
-    @action(detail=False, methods=['post'], url_path='add-patient')
+    @action(detail=False, methods=["post"], url_path="add-patient")
     def add_patient(self, request):
         """
         Doctor adds an EXISTING patient by Email or Phone.
@@ -170,30 +207,43 @@ class CareTeamViewSet(viewsets.ViewSet):
         identity = getattr(request.user, "user", None)
         if not identity or not hasattr(identity, "profiles"):
             return Response(
-                {"error": "Only doctors can perform this action. Use a doctor account token (e.g. Login as Doctor, then use that token)."},
+                {
+                    "error": "Only doctors can perform this action. Use a doctor account token (e.g. Login as Doctor, then use that token)."
+                },
                 status=403,
             )
         doctor_profile = identity.profiles.filter(role__name="DOCTOR").first()
         if not doctor_profile:
             return Response(
-                {"error": "Only doctors can perform this action. This account has no doctor profile—log in with a verified doctor account."},
+                {
+                    "error": "Only doctors can perform this action. This account has no doctor profile—log in with a verified doctor account."
+                },
                 status=403,
             )
 
         # Check if doctor is VERIFIED
-        if not hasattr(doctor_profile, 'doctor_profile') or \
-           doctor_profile.doctor_profile.verification_status.label != "VERIFIED":
-             return Response({"error": "You must be a VERIFIED doctor to add patients."}, status=403)
+        if (
+            not hasattr(doctor_profile, "doctor_profile")
+            or doctor_profile.doctor_profile.verification_status.label != "VERIFIED"
+        ):
+            return Response(
+                {"error": "You must be a VERIFIED doctor to add patients."}, status=403
+            )
 
         email = (request.data.get("email") or "").strip().lower()
         phone = (request.data.get("phone_number") or "").strip()
 
         if not email and not phone:
-            return Response({"error": "Email ou numéro de téléphone requis."}, status=400)
+            return Response(
+                {"error": "Email ou numéro de téléphone requis."}, status=400
+            )
 
         # Le médecin ne peut pas s'ajouter lui-même comme patient
         if email == request.user.email:
-            return Response({"error": "Vous ne pouvez pas vous ajouter vous-même comme patient."}, status=400)
+            return Response(
+                {"error": "Vous ne pouvez pas vous ajouter vous-même comme patient."},
+                status=400,
+            )
 
         target_user = None
 
@@ -204,57 +254,69 @@ class CareTeamViewSet(viewsets.ViewSet):
                 target_user = account.user
             except AuthAccount.DoesNotExist:
                 pass
-        
+
         # Search by Phone (if not found by email)
         if not target_user and phone:
             target_user = User.objects.filter(phone_number=phone).first()
-            
+
         if not target_user:
             if email:
                 inviter_name = f"Dr. {request.user.user.last_name}"
-                send_care_team_invitation(email, inviter_name, "PATIENT", is_existing_user=False)
-                return Response({"message": "Patient not found, invitation email sent"}, status=200)
+                send_care_team_invitation(
+                    email, inviter_name, "PATIENT", is_existing_user=False
+                )
+                return Response(
+                    {"message": "Patient not found, invitation email sent"}, status=200
+                )
             return Response({"error": "Patient not found in database"}, status=404)
-            
+
         # Get Patient Profile
         target_patient_profile = None
         # Check profiles
         patient_role_profile = target_user.profiles.filter(role__name="PATIENT").first()
-        if patient_role_profile and hasattr(patient_role_profile, 'patient_profile'):
+        if patient_role_profile and hasattr(patient_role_profile, "patient_profile"):
             target_patient_profile = patient_role_profile.patient_profile
-            
+
         if not target_patient_profile:
-             return Response({"error": "User found but is not a registered patient"}, status=404)
-             
+            return Response(
+                {"error": "User found but is not a registered patient"}, status=404
+            )
+
         pending_status = _get_invitation_status("PENDING")
-        
+
         # Check existence
         if PatientCareTeam.objects.filter(
-            patient_profile=target_patient_profile,
-            member_profile=doctor_profile
+            patient_profile=target_patient_profile, member_profile=doctor_profile
         ).exists():
-             return Response({"error": "Relation already exists"}, status=400)
-             
+            return Response({"error": "Relation already exists"}, status=400)
+
         PatientCareTeam.objects.create(
             patient_profile=target_patient_profile,
             member_profile=doctor_profile,
-            role="REFERENT_DOCTOR", 
+            role="REFERENT_DOCTOR",
             status=pending_status,
-            approved_by=doctor_profile.doctor_profile
+            approved_by=doctor_profile.doctor_profile,
         )
-        
+
         # Email envoyé au PATIENT invité (jamais au médecin) — récupération email sans crash
         inviter_name = f"Dr. {request.user.user.last_name}"
-        patient_email = email or (AuthAccount.objects.filter(user=target_user).values_list("email", flat=True).first() or "")
+        patient_email = email or (
+            AuthAccount.objects.filter(user=target_user)
+            .values_list("email", flat=True)
+            .first()
+            or ""
+        )
         if patient_email:
             try:
-                send_care_team_invitation(patient_email, inviter_name, "PATIENT", is_existing_user=True)
+                send_care_team_invitation(
+                    patient_email, inviter_name, "PATIENT", is_existing_user=True
+                )
             except Exception:
                 pass  # L'invitation est créée même si l'email échoue
 
         return Response({"message": "Invitation envoyée au patient."}, status=201)
 
-    @action(detail=False, methods=['post'], url_path='accept-invitation')
+    @action(detail=False, methods=["post"], url_path="accept-invitation")
     def accept_invitation(self, request):
         """
         Accepter une invitation (médecin ou patient). Passe le statut à ACTIVE.
@@ -266,75 +328,101 @@ class CareTeamViewSet(viewsets.ViewSet):
             return Response({"error": "id_team_member requis."}, status=400)
 
         try:
-            entry = PatientCareTeam.objects.get(id_team_member=id_team_member, status__label="PENDING")
+            entry = PatientCareTeam.objects.get(
+                id_team_member=id_team_member, status__label="PENDING"
+            )
         except PatientCareTeam.DoesNotExist:
-            return Response({"error": "Invitation introuvable ou déjà traitée."}, status=404)
+            return Response(
+                {"error": "Invitation introuvable ou déjà traitée."}, status=404
+            )
 
-        current_user_id = getattr(request.user, "user_id", None) or (request.user.user.pk if getattr(request.user, "user", None) else None)
+        current_user_id = getattr(request.user, "user_id", None) or (
+            request.user.user.pk if getattr(request.user, "user", None) else None
+        )
         if not current_user_id:
             return Response({"error": "Utilisateur non identifié."}, status=403)
         # Vérifier que l'utilisateur connecté est le médecin invité ou le patient invité (sans requête AuthAccount)
-        is_doctor_invited = bool(entry.member_profile and entry.member_profile.user_id == current_user_id)
+        is_doctor_invited = bool(
+            entry.member_profile and entry.member_profile.user_id == current_user_id
+        )
         patient_profile_obj = getattr(entry, "patient_profile", None)
         patient_identity_id = None
         if patient_profile_obj and getattr(patient_profile_obj, "profile", None):
-            patient_identity_id = getattr(patient_profile_obj.profile, "user_id", None) or (patient_profile_obj.profile.user.pk if patient_profile_obj.profile.user else None)
-        is_patient_invited = patient_identity_id is not None and patient_identity_id == current_user_id
+            patient_identity_id = getattr(
+                patient_profile_obj.profile, "user_id", None
+            ) or (
+                patient_profile_obj.profile.user.pk
+                if patient_profile_obj.profile.user
+                else None
+            )
+        is_patient_invited = (
+            patient_identity_id is not None and patient_identity_id == current_user_id
+        )
 
         if not is_doctor_invited and not is_patient_invited:
-            return Response({"error": "Vous ne pouvez pas accepter cette invitation."}, status=403)
+            return Response(
+                {"error": "Vous ne pouvez pas accepter cette invitation."}, status=403
+            )
 
         active_status = _get_invitation_status("ACTIVE")
         with transaction.atomic():
             entry.status = active_status
             entry.save(update_fields=["status", "updated_at"])
 
-        return Response({"message": "Invitation acceptée.", "status": "ACTIVE"}, status=200)
+        return Response(
+            {"message": "Invitation acceptée.", "status": "ACTIVE"}, status=200
+        )
 
-    @action(detail=False, methods=['get'], url_path='my-team')
+    @action(detail=False, methods=["get"], url_path="my-team")
     def my_team(self, request):
         """
         Get the authenticated user's care team.
         Endpoint: GET /api/doctors/care-team/my-team/
         """
         user = request.user.user
-        
+
         # Check if Patient
         patient_role = user.profiles.filter(role__name="PATIENT").first()
-        if patient_role and hasattr(patient_role, 'patient_profile'):
+        if patient_role and hasattr(patient_role, "patient_profile"):
             return self._get_patient_team(patient_role.patient_profile)
-            
+
         # Check if Doctor
         doctor_role = user.profiles.filter(role__name="DOCTOR").first()
-        if doctor_role and hasattr(doctor_role, 'doctor_profile'):
-            return self._get_doctor_patients(doctor_role) # Use generic profile for link
-            
+        if doctor_role and hasattr(doctor_role, "doctor_profile"):
+            return self._get_doctor_patients(
+                doctor_role
+            )  # Use generic profile for link
+
         return Response({"error": "Profile not found"}, status=404)
 
     def _get_patient_team(self, patient_profile):
         team = PatientCareTeam.objects.filter(patient_profile=patient_profile)
-        
+
         # Categories
-        doctors = team.filter(role__in=["REFERENT_DOCTOR", "SPECIALIST"], status__label="ACTIVE")
-        family = team.filter(role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="ACTIVE")
+        doctors = team.filter(
+            role__in=["REFERENT_DOCTOR", "SPECIALIST"], status__label="ACTIVE"
+        )
+        family = team.filter(
+            role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="ACTIVE"
+        )
         pending = team.filter(status__label="PENDING")
-        
+
         data = {
             "doctors": PatientCareTeamSerializer(doctors, many=True).data,
             "family": PatientCareTeamSerializer(family, many=True).data,
-            "pending": PatientCareTeamSerializer(pending, many=True).data
+            "pending": PatientCareTeamSerializer(pending, many=True).data,
         }
         return Response(data)
 
     def _get_doctor_patients(self, doctor_profile):
         # Doctor is the 'member' in the relation
         relations = PatientCareTeam.objects.filter(member_profile=doctor_profile)
-        
+
         active = relations.filter(status__label="ACTIVE")
         pending = relations.filter(status__label="PENDING")
-        
+
         data = {
             "active_patients": PatientCareTeamSerializer(active, many=True).data,
-            "pending_invites": PatientCareTeamSerializer(pending, many=True).data
+            "pending_invites": PatientCareTeamSerializer(pending, many=True).data,
         }
         return Response(data)

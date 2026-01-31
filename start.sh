@@ -91,7 +91,13 @@ echo "ℹ️  Environment détecté: $CURRENT_ENV"
 # Construire l'image Docker du backend
 echo ""
 echo "🔨 Construction de l'image Docker backend..."
-$DOCKER_COMPOSE build backend
+# Workaround: use docker build directly to avoid docker-compose panic bug
+if docker build -t glycopilot-backend ./backend > /dev/null 2>&1; then
+    echo "✅ Image backend construite avec succès"
+else
+    echo "⚠️  Tentative avec docker compose..."
+    $DOCKER_COMPOSE build backend
+fi
 
 if [ "$CURRENT_ENV" == "production" ]; then
     if [ "$2" == "--reset" ]; then

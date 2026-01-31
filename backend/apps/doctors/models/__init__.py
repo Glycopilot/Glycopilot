@@ -1,7 +1,7 @@
-from .status import VerificationStatus, InvitationStatus
+from .care_team import PatientCareTeam
 from .doctor_profile import DoctorProfile
 from .specialty import Specialty
-from .care_team import PatientCareTeam
+from .status import InvitationStatus, VerificationStatus
 
 __all__ = [
     "VerificationStatus",
