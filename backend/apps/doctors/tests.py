@@ -103,9 +103,7 @@ class CareTeamIntegrationTests(TestCase):
         User.objects.create_user(
             email="alice@test.com", password="pass123", user_identity=patient_identity
         )
-        Profile.objects.create(
-            user=patient_identity, role=self.patient_role
-        )
+        Profile.objects.create(user=patient_identity, role=self.patient_role)
 
         # Docteur PENDING
         doctor_identity = UserIdentity.objects.create(

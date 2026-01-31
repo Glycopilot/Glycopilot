@@ -13,10 +13,7 @@ from apps.meals.models import UserMeal
 from apps.medications.models import UserMedication
 
 from .models import UserWidget, UserWidgetLayout
-from .serializers import (
-    DashboardSummarySerializer,
-    WidgetLayoutUpdateSerializer,
-)
+from .serializers import DashboardSummarySerializer, WidgetLayoutUpdateSerializer
 from .services import DashboardCache, HealthScoreService, WidgetCatalog
 
 
