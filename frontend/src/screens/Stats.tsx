@@ -10,16 +10,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import {
-  Calendar,
-  TrendingUp,
-  TrendingDown,
-  Activity,
-  Download,
-  Filter,
-  CheckCircle,
-  Circle,
-} from 'lucide-react-native';
+import { Calendar, Download, CheckCircle } from 'lucide-react-native';
 import Layout from '../components/common/Layout';
 import GlycemiaChart from '../components/glycemia/GlycemiaChart';
 import { colors } from '../themes/colors';
@@ -42,6 +33,7 @@ interface GlucoseMeasurement {
   context: string;
   source: 'manual' | 'cgm';
   date: string;
+  measuredAt: Date;
 }
 
 interface GlucoseStats {
@@ -63,569 +55,6 @@ interface GlucoseTrackingScreenProps {
   };
 }
 
-// export default function GlucoseTrackingScreen({
-//   navigation,
-// }: GlucoseTrackingScreenProps): React.JSX.Element {
-//   const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('Semaine');
-//   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
-
-//   // Déterminer le nombre de jours selon la période
-//   const days =
-//     selectedPeriod === 'Jour' ? 1 : selectedPeriod === 'Semaine' ? 7 : 30;
-
-//   // Hook pour charger les données depuis le backend
-//   const {
-//     measurements: backendData,
-//     loading,
-//     refreshing,
-//     refresh,
-//     loadHistory,
-//   } = useGlycemia(days);
-
-//   // Recharger quand la période change
-//   useEffect(() => {
-//     loadHistory(days);
-//   }, [selectedPeriod]);
-
-//   // Transformer les données backend en format UI
-//   const allMeasurements: GlucoseMeasurement[] = useMemo(() => {
-//     return backendData.map((entry, index) => {
-//       const date = new Date(entry.measured_at);
-//       const now = new Date();
-//       const isToday = date.toDateString() === now.toDateString();
-//       const yesterday = new Date(now);
-//       yesterday.setDate(yesterday.getDate() - 1);
-//       const isYesterday = date.toDateString() === yesterday.toDateString();
-
-//       // Contexte mapping
-//       const contextMap: Record<string, string> = {
-//         fasting: 'À jeun',
-//         preprandial: 'Avant repas',
-//         postprandial_1h: 'Après repas (1h)',
-//         postprandial_2h: 'Après repas (2h)',
-//         bedtime: 'Coucher',
-//         exercise: 'Exercice',
-//         stress: 'Stress',
-//         correction: 'Correction',
-//       };
-
-//       return {
-//         id:
-//           entry.reading_id ||
-//           `${entry.id}-${entry.measured_at}` ||
-//           `measurement-${index}`,
-//         value: entry.value,
-//         time: date.toLocaleTimeString('fr-FR', {
-//           hour: '2-digit',
-//           minute: '2-digit',
-//         }),
-//         context: contextMap[entry.context || ''] || 'Autre',
-//         source: (entry.source || 'manual') as 'manual' | 'cgm',
-//         date: isToday
-//           ? "Aujourd'hui"
-//           : isYesterday
-//             ? 'Hier'
-//             : date.toLocaleDateString('fr-FR'),
-//       };
-//     });
-//   }, [backendData]);
-
-//   // Filtrer par source
-//   const measurements = useMemo(() => {
-//     return allMeasurements.filter(m => {
-//       if (sourceFilter === 'all') return true;
-//       return m.source === sourceFilter;
-//     });
-//   }, [allMeasurements, sourceFilter]);
-
-//   // Calculer les statistiques réelles
-//   const stats: GlucoseStats = useMemo(() => {
-//     if (measurements.length === 0) {
-//       return {
-//         average: 0,
-//         min: 0,
-//         max: 0,
-//         timeInRange: 0,
-//         stability: 'Faible',
-//         variability: 0,
-//       };
-//     }
-
-//     const values = measurements.map(m => m.value);
-//     const average = Math.round(
-//       values.reduce((a, b) => a + b, 0) / values.length
-//     );
-//     const min = Math.min(...values);
-//     const max = Math.max(...values);
-
-//     // Calculer le temps dans la cible (70-180 mg/dL)
-//     const inRange = values.filter(
-//       v => v >= GLYCEMIA_TARGET.MIN && v <= GLYCEMIA_TARGET.MAX
-//     ).length;
-//     const timeInRange = Math.round((inRange / values.length) * 100);
-
-//     // Calculer la variabilité (écart-type)
-//     const variance =
-//       values.reduce((acc, val) => acc + Math.pow(val - average, 2), 0) /
-//       values.length;
-//     const variability = Math.round(Math.sqrt(variance));
-
-//     // Déterminer la stabilité
-//     let stability: 'Bon' | 'Moyen' | 'Faible' = 'Bon';
-//     if (variability > 40) stability = 'Faible';
-//     else if (variability > 25) stability = 'Moyen';
-
-//     return {
-//       average,
-//       min,
-//       max,
-//       timeInRange,
-//       stability,
-//       variability,
-//     };
-//   }, [measurements]);
-
-//   // Générer les données du graphique à partir des vraies mesures
-//   const chartData = useMemo(() => {
-//     if (measurements.length === 0) {
-//       return {
-//         labels: ['00:00', '06:00', '12:00', '18:00'],
-//         datasets: [{ data: [100, 100, 100, 100] }],
-//       };
-//     }
-
-//     // Grouper par intervalles de temps selon la période
-//     const sortedMeasurements = [...measurements].sort(
-//       (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
-//     );
-
-//     let labels: string[];
-//     let dataPoints: number[];
-
-//     if (selectedPeriod === 'Jour') {
-//       // Par tranches de 4h pour la journée
-//       labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
-//       dataPoints = new Array(6).fill(0);
-//       const counts = new Array(6).fill(0);
-
-//       measurements.forEach(m => {
-//         const hour = parseInt(m.time.split(':')[0]);
-//         const index = Math.floor(hour / 4);
-//         if (index < 6) {
-//           dataPoints[index] += m.value;
-//           counts[index]++;
-//         }
-//       });
-
-//       dataPoints = dataPoints.map((sum, i) =>
-//         counts[i] > 0 ? Math.round(sum / counts[i]) : 100
-//       );
-//     } else if (selectedPeriod === 'Semaine') {
-//       // Par jour de la semaine
-//       labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-//       dataPoints = new Array(7).fill(0);
-//       const counts = new Array(7).fill(0);
-
-//       measurements.forEach(m => {
-//         const date = new Date();
-//         const dayOfWeek = date.getDay();
-//         const index = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-//         dataPoints[index] += m.value;
-//         counts[index]++;
-//       });
-
-//       dataPoints = dataPoints.map((sum, i) =>
-//         counts[i] > 0 ? Math.round(sum / counts[i]) : 100
-//       );
-//     } else {
-//       // Par semaine du mois
-//       labels = ['S1', 'S2', 'S3', 'S4'];
-//       dataPoints = new Array(4).fill(0);
-//       const counts = new Array(4).fill(0);
-
-//       measurements.forEach(m => {
-//         const weekIndex = Math.min(
-//           3,
-//           Math.floor(measurements.indexOf(m) / (measurements.length / 4))
-//         );
-//         dataPoints[weekIndex] += m.value;
-//         counts[weekIndex]++;
-//       });
-
-//       dataPoints = dataPoints.map((sum, i) =>
-//         counts[i] > 0 ? Math.round(sum / counts[i]) : 100
-//       );
-//     }
-
-//     return {
-//       labels,
-//       datasets: [{ data: dataPoints }],
-//     };
-//   }, [measurements, selectedPeriod]);
-
-//   const getGlucoseColor = (value: number): string => {
-//     const { color } = getGlycemiaStatusColor(value);
-//     return color;
-//   };
-
-//   const getGlucoseStatus = (
-//     value: number
-//   ): { label: string; color: string } => {
-//     if (value < GLYCEMIA_TARGET.MIN)
-//       return { label: 'Bas', color: getGlycemiaStatusColor(value).color };
-//     if (value > GLYCEMIA_TARGET.MAX)
-//       return { label: 'Haut', color: getGlycemiaStatusColor(value).color };
-//     return { label: 'Normal', color: getGlycemiaStatusColor(value).color };
-//   };
-
-//   const filteredMeasurements = measurements.filter(m => {
-//     if (sourceFilter === 'all') return true;
-//     return m.source === sourceFilter;
-//   });
-
-//   const exportToCSV = async (): Promise<void> => {
-//     // Créer le contenu CSV
-//     const csvHeader = 'Date,Heure,Valeur (mg/dL),Contexte,Source\n';
-//     const csvRows = measurements
-//       .map(
-//         m =>
-//           `${m.date},${m.time},${m.value},${m.context},${m.source === 'manual' ? 'Manuel' : 'CGM'}`
-//       )
-//       .join('\n');
-//     const csvContent = csvHeader + csvRows;
-
-//     try {
-//       await Share.share({
-//         message: csvContent,
-//         title: 'Export Glycémie',
-//       });
-//     } catch (error) {
-//       console.error('Error sharing:', error);
-//     }
-//   };
-
-//   return (
-//     <Layout
-//       navigation={navigation}
-//       currentRoute="Home"
-//       userName="Utilisateur"
-//       onNotificationPress={() => console.log('Notifications')}
-//     >
-//       {loading ? (
-//         <View style={styles.loadingContainer}>
-//           <ActivityIndicator size="large" color="#007AFF" />
-//           <Text style={styles.loadingText}>Chargement des données...</Text>
-//         </View>
-//       ) : (
-//         <ScrollView
-//           style={styles.container}
-//           showsVerticalScrollIndicator={false}
-//           refreshControl={
-//             <RefreshControl
-//               refreshing={refreshing}
-//               onRefresh={refresh}
-//               tintColor="#007AFF"
-//             />
-//           }
-//         >
-//           {/* Header */}
-//           <View style={styles.header}>
-//             <View>
-//               <Text style={styles.title}>Suivi Glucose</Text>
-//               <Text style={styles.subtitle}>Historique et tendances</Text>
-//             </View>
-//             <TouchableOpacity style={styles.calendarButton}>
-//               <Calendar size={20} color="#007AFF" />
-//             </TouchableOpacity>
-//           </View>
-
-//           {/* Filtres de période */}
-//           <View style={styles.periodFilters}>
-//             {(['Jour', 'Semaine', 'Mois'] as PeriodFilter[]).map(period => (
-//               <TouchableOpacity
-//                 key={period}
-//                 onPress={() => setSelectedPeriod(period)}
-//                 style={[
-//                   styles.periodButton,
-//                   selectedPeriod === period && styles.periodButtonActive,
-//                 ]}
-//               >
-//                 <Text
-//                   style={[
-//                     styles.periodText,
-//                     selectedPeriod === period && styles.periodTextActive,
-//                   ]}
-//                 >
-//                   {period}
-//                 </Text>
-//               </TouchableOpacity>
-//             ))}
-//           </View>
-
-//           {/* Graphique */}
-//           <GlycemiaChart chartData={chartData} />
-
-//           {/* Cartes statistiques */}
-//           <View style={styles.statsGrid}>
-//             <View style={styles.statCard}>
-//               <Text style={styles.statLabel}>Moyenne</Text>
-//               <Text style={styles.statValue}>{stats.average}</Text>
-//               <Text style={styles.statUnit}>mg/dL</Text>
-//             </View>
-
-//             <View style={styles.statCard}>
-//               <Text style={styles.statLabel}>Minimum</Text>
-//               <Text style={[styles.statValue, { color: '#EF4444' }]}>
-//                 {stats.min}
-//               </Text>
-//               <Text style={styles.statUnit}>mg/dL</Text>
-//             </View>
-
-//             <View style={styles.statCard}>
-//               <Text style={styles.statLabel}>Maximum</Text>
-//               <Text style={[styles.statValue, { color: '#F59E0B' }]}>
-//                 {stats.max}
-//               </Text>
-//               <Text style={styles.statUnit}>mg/dL</Text>
-//             </View>
-//           </View>
-
-//           <View style={styles.statsGrid}>
-//             <View style={styles.statCard}>
-//               <Text style={styles.statLabel}>Temps cible</Text>
-//               <Text style={[styles.statValue, { color: '#10B981' }]}>
-//                 {stats.timeInRange}%
-//               </Text>
-//               <Text style={styles.statUnit}>
-//                 dans {GLYCEMIA_TARGET.MIN}-{GLYCEMIA_TARGET.MAX}
-//               </Text>
-//             </View>
-
-//             <View style={styles.statCard}>
-//               <Text style={styles.statLabel}>Stabilité</Text>
-//               <Text
-//                 style={[
-//                   styles.statValue,
-//                   {
-//                     color:
-//                       stats.stability === 'Bon'
-//                         ? '#10B981'
-//                         : stats.stability === 'Moyen'
-//                           ? '#F59E0B'
-//                           : '#EF4444',
-//                   },
-//                 ]}
-//               >
-//                 {stats.stability}
-//               </Text>
-//               <Text style={styles.statUnit}>écart-type</Text>
-//             </View>
-
-//             <View style={styles.statCard}>
-//               <Text style={styles.statLabel}>Variabilité</Text>
-//               <Text style={styles.statValue}>{stats.variability}</Text>
-//               <Text style={styles.statUnit}>mg/dL</Text>
-//             </View>
-//           </View>
-
-//           {/* Mesures récentes */}
-//           <View style={styles.measurementsSection}>
-//             <View style={styles.measurementsHeader}>
-//               <Text style={styles.sectionTitle}>Mesures récentes</Text>
-//               <View style={styles.headerActions}>
-//                 <TouchableOpacity
-//                   style={styles.exportButton}
-//                   onPress={exportToCSV}
-//                 >
-//                   <Download size={16} color="#007AFF" />
-//                   <Text style={styles.exportText}>Export CSV</Text>
-//                 </TouchableOpacity>
-//               </View>
-//             </View>
-
-//             {/* Filtres de source */}
-//             <View style={styles.sourceFilters}>
-//               <TouchableOpacity
-//                 onPress={() => setSourceFilter('all')}
-//                 style={[
-//                   styles.sourceFilter,
-//                   sourceFilter === 'all' && styles.sourceFilterActive,
-//                 ]}
-//               >
-//                 <Text
-//                   style={[
-//                     styles.sourceFilterText,
-//                     sourceFilter === 'all' && styles.sourceFilterTextActive,
-//                   ]}
-//                 >
-//                   Toutes
-//                 </Text>
-//               </TouchableOpacity>
-//               <TouchableOpacity
-//                 onPress={() => setSourceFilter('manual')}
-//                 style={[
-//                   styles.sourceFilter,
-//                   sourceFilter === 'manual' && styles.sourceFilterActive,
-//                 ]}
-//               >
-//                 <Text
-//                   style={[
-//                     styles.sourceFilterText,
-//                     sourceFilter === 'manual' && styles.sourceFilterTextActive,
-//                   ]}
-//                 >
-//                   Manuel
-//                 </Text>
-//               </TouchableOpacity>
-//               <TouchableOpacity
-//                 onPress={() => setSourceFilter('cgm')}
-//                 style={[
-//                   styles.sourceFilter,
-//                   sourceFilter === 'cgm' && styles.sourceFilterActive,
-//                 ]}
-//               >
-//                 <Text
-//                   style={[
-//                     styles.sourceFilterText,
-//                     sourceFilter === 'cgm' && styles.sourceFilterTextActive,
-//                   ]}
-//                 >
-//                   CGM
-//                 </Text>
-//               </TouchableOpacity>
-//             </View>
-
-//             {/* Liste des mesures */}
-//             <View style={styles.measurementsList}>
-//               {filteredMeasurements.map(measurement => {
-//                 const status = getGlucoseStatus(measurement.value);
-//                 return (
-//                   <View key={measurement.id} style={styles.measurementCard}>
-//                     <View style={styles.measurementLeft}>
-//                       <View
-//                         style={[
-//                           styles.measurementValue,
-//                           {
-//                             backgroundColor: `${getGlucoseColor(measurement.value)}20`,
-//                           },
-//                         ]}
-//                       >
-//                         <Text
-//                           style={[
-//                             styles.measurementNumber,
-//                             { color: getGlucoseColor(measurement.value) },
-//                           ]}
-//                         >
-//                           {measurement.value}
-//                         </Text>
-//                         <Text
-//                           style={[
-//                             styles.measurementUnit,
-//                             { color: getGlucoseColor(measurement.value) },
-//                           ]}
-//                         >
-//                           mg/dL
-//                         </Text>
-//                       </View>
-//                       <View style={styles.measurementInfo}>
-//                         <Text style={styles.measurementTime}>
-//                           {measurement.date}, {measurement.time}
-//                         </Text>
-//                         <View style={styles.measurementTags}>
-//                           <View
-//                             style={[
-//                               styles.contextBadge,
-//                               { backgroundColor: '#EBF5FF' },
-//                             ]}
-//                           >
-//                             <Text style={styles.contextText}>
-//                               🍽️ {measurement.context}
-//                             </Text>
-//                           </View>
-//                           <View
-//                             style={[
-//                               styles.sourceBadge,
-//                               {
-//                                 backgroundColor:
-//                                   measurement.source === 'manual'
-//                                     ? '#F3E8FF'
-//                                     : '#E0F2FE',
-//                               },
-//                             ]}
-//                           >
-//                             <Text
-//                               style={[
-//                                 styles.sourceText,
-//                                 {
-//                                   color:
-//                                     measurement.source === 'manual'
-//                                       ? '#7C3AED'
-//                                       : '#0284C7',
-//                                 },
-//                               ]}
-//                             >
-//                               {measurement.source === 'manual'
-//                                 ? '✏️ Manuel'
-//                                 : '📊 CGM'}
-//                             </Text>
-//                           </View>
-//                         </View>
-//                       </View>
-//                     </View>
-//                     <View
-//                       style={[
-//                         styles.statusBadge,
-//                         { backgroundColor: `${status.color}20` },
-//                       ]}
-//                     >
-//                       <CheckCircle size={16} color={status.color} />
-//                     </View>
-//                   </View>
-//                 );
-//               })}
-//             </View>
-
-//             <TouchableOpacity style={styles.viewAllButton}>
-//               <Text style={styles.viewAllText}>Tout voir</Text>
-//             </TouchableOpacity>
-//           </View>
-
-//           {/* Comprendre vos statistiques */}
-//           <View style={styles.infoSection}>
-//             <Text style={styles.infoTitle}>💡 Comprendre vos statistiques</Text>
-//             <View style={styles.infoCard}>
-//               <View style={styles.infoItem}>
-//                 <View style={styles.infoDot} />
-//                 <Text style={styles.infoText}>
-//                   <Text style={styles.infoBold}>Temps dans la cible :</Text>{' '}
-//                   L'objectif est de rester au moins 70% du temps entre{' '}
-//                   {GLYCEMIA_TARGET.MIN}-{GLYCEMIA_TARGET.MAX} mg/dL (Time In
-//                   Range)
-//                 </Text>
-//               </View>
-//               <View style={styles.infoItem}>
-//                 <View style={styles.infoDot} />
-//                 <Text style={styles.infoText}>
-//                   <Text style={styles.infoBold}>Variabilité :</Text> Un
-//                   écart-type ≤ 36 mg/dL indique une glycémie stable
-//                 </Text>
-//               </View>
-//               <View style={styles.infoItem}>
-//                 <View style={styles.infoDot} />
-//                 <Text style={styles.infoText}>
-//                   <Text style={styles.infoBold}>Stabilité :</Text> Compare la
-//                   constance de vos niveaux sur la période sélectionnée
-//                 </Text>
-//               </View>
-//             </View>
-//           </View>
-
-//           <View style={styles.bottomPadding} />
-//         </ScrollView>
-//       )}
-//     </Layout>
-//   );
-// }
 export default function GlucoseTrackingScreen({
   navigation,
 }: GlucoseTrackingScreenProps): React.JSX.Element {
@@ -650,15 +79,37 @@ export default function GlucoseTrackingScreen({
     loadHistory(days);
   }, [selectedPeriod]);
 
+  // Filtrer côté client pour respecter strictement Jour/Semaine/Mois
+  const periodFilteredEntries = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    return backendData.filter(entry => {
+      const measuredAt = new Date(entry.measured_at);
+
+      if (selectedPeriod === 'Jour') {
+        return measuredAt >= startOfToday && measuredAt <= now;
+      }
+
+      const diffDays =
+        (now.getTime() - measuredAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (diffDays < 0) return false;
+
+      return selectedPeriod === 'Semaine' ? diffDays < 7 : diffDays < 30;
+    });
+  }, [backendData, selectedPeriod]);
+
   // Transformer les données backend en format UI
   const allMeasurements: GlucoseMeasurement[] = useMemo(() => {
-    return backendData.map((entry, index) => {
-      const date = new Date(entry.measured_at);
+    return periodFilteredEntries.map((entry, index) => {
+      const measuredAt = new Date(entry.measured_at);
       const now = new Date();
-      const isToday = date.toDateString() === now.toDateString();
+      const isToday = measuredAt.toDateString() === now.toDateString();
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
-      const isYesterday = date.toDateString() === yesterday.toDateString();
+      const isYesterday =
+        measuredAt.toDateString() === yesterday.toDateString();
 
       // Contexte mapping
       const contextMap: Record<string, string> = {
@@ -678,7 +129,7 @@ export default function GlucoseTrackingScreen({
           `${entry.id}-${entry.measured_at}` ||
           `measurement-${index}`,
         value: entry.value,
-        time: date.toLocaleTimeString('fr-FR', {
+        time: measuredAt.toLocaleTimeString('fr-FR', {
           hour: '2-digit',
           minute: '2-digit',
         }),
@@ -688,10 +139,11 @@ export default function GlucoseTrackingScreen({
           ? "Aujourd'hui"
           : isYesterday
             ? 'Hier'
-            : date.toLocaleDateString('fr-FR'),
+            : measuredAt.toLocaleDateString('fr-FR'),
+        measuredAt,
       };
     });
-  }, [backendData]);
+  }, [periodFilteredEntries]);
 
   // Filtrer par source
   const measurements = useMemo(() => {
@@ -701,21 +153,15 @@ export default function GlucoseTrackingScreen({
     });
   }, [allMeasurements, sourceFilter]);
 
-  // NOUVEAU: Filtrer pour afficher seulement les 5 dernières
+  // Toujours limiter à 5 mesures pour l'affichage
   const filteredMeasurements = useMemo(() => {
-    const filtered = measurements.filter(m => {
-      if (sourceFilter === 'all') return true;
-      return m.source === sourceFilter;
-    });
-    return filtered.slice(0, 5); // Afficher seulement les 5 premières
-  }, [measurements, sourceFilter]);
+    return measurements.slice(0, 5);
+  }, [measurements]);
 
-  // NOUVEAU: Fonction pour rediriger vers Glycemia
   const handleViewAll = () => {
     navigation.navigate('Glycemia');
   };
 
-  // ... reste du code (stats, chartData, etc.) inchangé ...
   // Calculer les statistiques réelles
   const stats: GlucoseStats = useMemo(() => {
     if (measurements.length === 0) {
@@ -736,19 +182,16 @@ export default function GlucoseTrackingScreen({
     const min = Math.min(...values);
     const max = Math.max(...values);
 
-    // Calculer le temps dans la cible (70-180 mg/dL)
     const inRange = values.filter(
       v => v >= GLYCEMIA_TARGET.MIN && v <= GLYCEMIA_TARGET.MAX
     ).length;
     const timeInRange = Math.round((inRange / values.length) * 100);
 
-    // Calculer la variabilité (écart-type)
     const variance =
       values.reduce((acc, val) => acc + Math.pow(val - average, 2), 0) /
       values.length;
     const variability = Math.round(Math.sqrt(variance));
 
-    // Déterminer la stabilité
     let stability: 'Bon' | 'Moyen' | 'Faible' = 'Bon';
     if (variability > 40) stability = 'Faible';
     else if (variability > 25) stability = 'Moyen';
@@ -763,83 +206,137 @@ export default function GlucoseTrackingScreen({
     };
   }, [measurements]);
 
-  // Générer les données du graphique à partir des vraies mesures
+  // LOGIQUE AMÉLIORÉE DU GRAPHIQUE
   const chartData = useMemo(() => {
     if (measurements.length === 0) {
       return {
-        labels: ['00:00', '06:00', '12:00', '18:00'],
-        datasets: [{ data: [100, 100, 100, 100] }],
+        labels: ['Pas de données'],
+        datasets: [{ data: [0] }],
       };
     }
 
-    // Grouper par intervalles de temps selon la période
     const sortedMeasurements = [...measurements].sort(
-      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+      (a, b) => a.measuredAt.getTime() - b.measuredAt.getTime()
     );
 
-    let labels: string[];
-    let dataPoints: number[];
-
+    // MODE JOUR : Afficher toutes les mesures individuelles (scrollable)
     if (selectedPeriod === 'Jour') {
-      // Par tranches de 4h pour la journée
-      labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
-      dataPoints = new Array(6).fill(0);
-      const counts = new Array(6).fill(0);
+      return {
+        labels: sortedMeasurements.map(m => m.time),
+        datasets: [{ data: sortedMeasurements.map(m => m.value) }],
+      };
+    }
 
-      measurements.forEach(m => {
-        const hour = parseInt(m.time.split(':')[0]);
-        const index = Math.floor(hour / 4);
-        if (index < 6) {
-          dataPoints[index] += m.value;
-          counts[index]++;
+    // MODE SEMAINE : Moyenne par jour (7 points max)
+    if (selectedPeriod === 'Semaine') {
+      const dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      const dayCounts = new Array(7).fill(0);
+      const daySums = new Array(7).fill(0);
+
+      sortedMeasurements.forEach(m => {
+        const dayOfWeek = m.measuredAt.getDay();
+        const index = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Lundi = 0
+        daySums[index] += m.value;
+        dayCounts[index]++;
+      });
+
+      // Filtrer uniquement les jours avec des données
+      const validDays: { label: string; value: number }[] = [];
+      dayLabels.forEach((label, i) => {
+        if (dayCounts[i] > 0) {
+          validDays.push({
+            label,
+            value: Math.round(daySums[i] / dayCounts[i]),
+          });
         }
       });
 
-      dataPoints = dataPoints.map((sum, i) =>
-        counts[i] > 0 ? Math.round(sum / counts[i]) : 100
-      );
-    } else if (selectedPeriod === 'Semaine') {
-      // Par jour de la semaine
-      labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-      dataPoints = new Array(7).fill(0);
-      const counts = new Array(7).fill(0);
+      if (validDays.length === 0) {
+        return {
+          labels: ['Pas de données'],
+          datasets: [{ data: [0] }],
+        };
+      }
 
-      measurements.forEach(m => {
-        const date = new Date();
-        const dayOfWeek = date.getDay();
-        const index = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        dataPoints[index] += m.value;
-        counts[index]++;
+      return {
+        labels: validDays.map(d => d.label),
+        datasets: [{ data: validDays.map(d => d.value) }],
+      };
+    }
+
+    // MODE MOIS : Moyenne par jour (jusqu'à 31 points)
+    if (selectedPeriod === 'Mois') {
+      // Créer un map des dates avec leurs moyennes
+      const dateMap = new Map<string, { sum: number; count: number }>();
+
+      sortedMeasurements.forEach(m => {
+        const dateKey = m.measuredAt.toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+        });
+
+        if (!dateMap.has(dateKey)) {
+          dateMap.set(dateKey, { sum: 0, count: 0 });
+        }
+
+        const data = dateMap.get(dateKey)!;
+        data.sum += m.value;
+        data.count++;
       });
 
-      dataPoints = dataPoints.map((sum, i) =>
-        counts[i] > 0 ? Math.round(sum / counts[i]) : 100
-      );
-    } else {
-      // Par semaine du mois
-      labels = ['S1', 'S2', 'S3', 'S4'];
-      dataPoints = new Array(4).fill(0);
-      const counts = new Array(4).fill(0);
+      // Convertir en arrays triés
+      const sortedDates = Array.from(dateMap.entries())
+        .sort((a, b) => {
+          const [dayA, monthA] = a[0].split('/').map(Number);
+          const [dayB, monthB] = b[0].split('/').map(Number);
+          return monthA !== monthB ? monthA - monthB : dayA - dayB;
+        })
+        .map(([date, data]) => ({
+          label: date,
+          value: Math.round(data.sum / data.count),
+        }));
 
-      measurements.forEach(m => {
-        const weekIndex = Math.min(
-          3,
-          Math.floor(measurements.indexOf(m) / (measurements.length / 4))
-        );
-        dataPoints[weekIndex] += m.value;
-        counts[weekIndex]++;
-      });
+      if (sortedDates.length === 0) {
+        return {
+          labels: ['Pas de données'],
+          datasets: [{ data: [0] }],
+        };
+      }
 
-      dataPoints = dataPoints.map((sum, i) =>
-        counts[i] > 0 ? Math.round(sum / counts[i]) : 100
-      );
+      return {
+        labels: sortedDates.map(d => d.label),
+        datasets: [{ data: sortedDates.map(d => d.value) }],
+      };
     }
 
     return {
-      labels,
-      datasets: [{ data: dataPoints }],
+      labels: ['Erreur'],
+      datasets: [{ data: [0] }],
     };
   }, [measurements, selectedPeriod]);
+
+  // Calculer la largeur du graphique
+  const chartWidth = useMemo(() => {
+    const labelCount = chartData.labels?.length || 1;
+    const baseWidth = width - 72;
+
+    // Jour : scrollable si plus de 4 mesures
+    if (selectedPeriod === 'Jour') {
+      return Math.max(baseWidth, labelCount * 80);
+    }
+
+    // Semaine : toujours fixe (max 7 points)
+    if (selectedPeriod === 'Semaine') {
+      return baseWidth;
+    }
+
+    // Mois : scrollable si plus de 10 jours
+    if (selectedPeriod === 'Mois') {
+      return Math.max(baseWidth, labelCount * 60);
+    }
+
+    return baseWidth;
+  }, [chartData.labels, selectedPeriod]);
 
   const getGlucoseColor = (value: number): string => {
     const { color } = getGlycemiaStatusColor(value);
@@ -857,25 +354,50 @@ export default function GlucoseTrackingScreen({
   };
 
   const exportToCSV = async (): Promise<void> => {
-    // Créer le contenu CSV
-    const csvHeader = 'Date,Heure,Valeur (mg/dL),Contexte,Source\n';
-    const csvRows = measurements
-      .map(
-        m =>
-          `${m.date},${m.time},${m.value},${m.context},${m.source === 'manual' ? 'Manuel' : 'CGM'}`
-      )
-      .join('\n');
-    const csvContent = csvHeader + csvRows;
-
     try {
+      // Créer le contenu CSV avec statistiques
+      const csvHeader = 'Date,Heure,Valeur (mg/dL),Contexte,Source\n';
+      const csvRows = measurements
+        .map(
+          m =>
+            `${m.date},${m.time},${m.value},${m.context},${m.source === 'manual' ? 'Manuel' : 'CGM'}`
+        )
+        .join('\n');
+
+      const statsInfo = `
+=== RAPPORT DE GLYCÉMIE - ${selectedPeriod.toUpperCase()} ===
+
+Période analysée: ${selectedPeriod}
+Nombre de mesures: ${measurements.length}
+Date du rapport: ${new Date().toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })}
+
+--- STATISTIQUES ---
+Moyenne: ${stats.average} mg/dL
+Minimum: ${stats.min} mg/dL
+Maximum: ${stats.max} mg/dL
+Temps dans la cible: ${stats.timeInRange}% (objectif: ${GLYCEMIA_TARGET.MIN}-${GLYCEMIA_TARGET.MAX} mg/dL)
+Stabilité: ${stats.stability}
+Variabilité: ${stats.variability} mg/dL
+
+--- DÉTAIL DES MESURES ---
+`;
+
+      const csvContent = statsInfo + csvHeader + csvRows;
+
       await Share.share({
         message: csvContent,
-        title: 'Export Glycémie',
+        title: `Rapport Glycémie - ${selectedPeriod}`,
       });
     } catch (error) {
-      console.error('Error sharing:', error);
+      console.error('Error exporting:', error);
     }
   };
+
   return (
     <Layout
       navigation={navigation}
@@ -934,8 +456,22 @@ export default function GlucoseTrackingScreen({
             ))}
           </View>
 
+          {/* Info sur le mode d'affichage */}
+          <View style={styles.chartInfoBanner}>
+            <Text style={styles.chartInfoText}>
+              {selectedPeriod === 'Jour' && ' Toutes vos mesures de la journée'}
+              {selectedPeriod === 'Semaine' &&
+                ' Moyenne par jour de la semaine'}
+              {selectedPeriod === 'Mois' && ' Moyenne par jour du mois'}
+            </Text>
+          </View>
+
           {/* Graphique */}
-          <GlycemiaChart chartData={chartData} />
+          <GlycemiaChart
+            chartData={chartData}
+            chartWidth={chartWidth}
+            measurementCount={measurements.length}
+          />
 
           {/* Cartes statistiques */}
           <View style={styles.statsGrid}>
@@ -1010,7 +546,7 @@ export default function GlucoseTrackingScreen({
                   onPress={exportToCSV}
                 >
                   <Download size={16} color="#007AFF" />
-                  <Text style={styles.exportText}>Export CSV</Text>
+                  <Text style={styles.exportText}>Exporter</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1067,7 +603,7 @@ export default function GlucoseTrackingScreen({
               </TouchableOpacity>
             </View>
 
-            {/* Liste des mesures - MODIFIÉ pour afficher seulement 5 */}
+            {/* Liste des mesures */}
             <View style={styles.measurementsList}>
               {filteredMeasurements.length === 0 ? (
                 <View style={styles.emptyState}>
@@ -1163,14 +699,14 @@ export default function GlucoseTrackingScreen({
               )}
             </View>
 
-            {/* MODIFIÉ: Bouton "Tout voir" redirige vers Glycemia */}
+            {/* Bouton "Voir toutes les mesures" - Affiché si plus de 5 mesures */}
             {measurements.length > 5 && (
               <TouchableOpacity
                 style={styles.viewAllButton}
                 onPress={handleViewAll}
               >
                 <Text style={styles.viewAllText}>
-                  Tout voir ({measurements.length} mesures)
+                  Voir toutes les mesures ({measurements.length})
                 </Text>
               </TouchableOpacity>
             )}
@@ -1289,6 +825,20 @@ const styles = StyleSheet.create({
   },
   periodTextActive: {
     color: '#fff',
+  },
+  chartInfoBanner: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#EBF5FF',
+    borderRadius: 12,
+  },
+  chartInfoText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#007AFF',
+    textAlign: 'center',
   },
   statsGrid: {
     flexDirection: 'row',
