@@ -25,6 +25,8 @@ class MedicationNextDoseSerializer(serializers.Serializer):
 
 class MedicationSummarySerializer(serializers.Serializer):
     nextDose = MedicationNextDoseSerializer(allow_null=True)
+    taken_count = serializers.IntegerField()
+    total_count = serializers.IntegerField()
 
 
 class NutritionCaloriesSerializer(serializers.Serializer):

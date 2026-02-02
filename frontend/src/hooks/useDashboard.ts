@@ -56,6 +56,7 @@ interface UseDashboardReturn {
   medication?: DashboardMedicationData;
   nutrition?: DashboardNutritionData;
   activity?: DashboardActivityData;
+  healthScore?: number;
 }
 
 /**
@@ -365,12 +366,23 @@ export const useDashboard = (
     getWidgetLayout,
     isWidgetVisible,
 
-    // Données dérivées avec fallback vers mock
+    // Données dérivées avec fallback
     glucose: summary?.glucose,
     alerts: summary?.alerts || [],
-    medication: summary?.medication || { taken_count: 0, total_count: 0 },
-    nutrition: summary?.nutrition,
-    activity: summary?.activity || { today_count: 0 },
+    medication: summary?.medication || {
+      taken_count: 0,
+      total_count: 0,
+      nextDose: null,
+    },
+    nutrition: summary?.nutrition || {
+      calories: { consumed: 0, goal: 1800 },
+      carbs: { grams: 0, goal: 200 },
+    },
+    activity: summary?.activity || {
+      steps: { value: 0, goal: 8000 },
+      activeMinutes: 0,
+    },
+    healthScore: summary?.healthScore,
   };
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   Pressable,
   TextInput,
   Platform,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {
   Droplet,
@@ -20,8 +23,12 @@ import {
   Clock,
 } from 'lucide-react-native';
 import Layout from '../components/common/Layout';
-import GlycemieCard from '../components/dashboard/GlycemieCard';
 import { colors } from '../themes/colors';
+import { useGlycemia } from '../hooks/useGlycemia';
+import {
+  GLYCEMIA_TARGET,
+  getGlycemiaStatusColor,
+} from '../constants/glycemia.constants';
 
 // Types
 type MeasurementContext =
@@ -30,7 +37,21 @@ type MeasurementContext =
   | 'Après repas'
   | 'Coucher'
   | 'Autre';
+
 type TrendType = 'stable' | 'up' | 'down';
+type SourceFilter = 'all' | 'manual' | 'cgm';
+
+// Mapping frontend → backend
+const contextMapping: Record<
+  MeasurementContext,
+  'fasting' | 'preprandial' | 'postprandial_2h' | 'bedtime' | 'correction'
+> = {
+  'À jeun': 'fasting',
+  'Avant repas': 'preprandial',
+  'Après repas': 'postprandial_2h',
+  Coucher: 'bedtime',
+  Autre: 'correction',
+};
 
 interface GlycemiaMeasurement {
   id: string;
@@ -39,6 +60,7 @@ interface GlycemiaMeasurement {
   time: string;
   date: string;
   trend: TrendType;
+  source: 'manual' | 'cgm';
   note?: string;
 }
 
@@ -66,116 +88,141 @@ interface MeasurementCardProps {
 export default function GlycemiaScreen({
   navigation,
 }: GlycemiaScreenProps): React.JSX.Element {
-  const [measurements, setMeasurements] = useState<GlycemiaMeasurement[]>([
-    {
-      id: '1',
-      value: 95,
-      context: 'À jeun',
-      time: '08:00',
-      date: '29/01/2026',
-      trend: 'stable',
-    },
-    {
-      id: '2',
-      value: 145,
-      context: 'Après repas',
-      time: '13:30',
-      date: '29/01/2026',
-      trend: 'up',
-    },
-    {
-      id: '3',
-      value: 110,
-      context: 'Avant repas',
-      time: '19:00',
-      date: '28/01/2026',
-      trend: 'down',
-    },
-  ]);
+  const {
+    measurements: backendData,
+    loading,
+    refreshing,
+    refresh,
+    addManualReading,
+  } = useGlycemia(7);
 
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [value, setValue] = useState<string>('');
   const [context, setContext] = useState<MeasurementContext>('À jeun');
   const [note, setNote] = useState<string>('');
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+  const [visibleCount, setVisibleCount] = useState<number>(10);
 
-  const contextOptions: ContextOption[] = [
-    { label: 'À jeun', icon: '🌅', color: '#3B82F6' },
-    { label: 'Avant repas', icon: '🍽️', color: '#F59E0B' },
-    { label: 'Après repas', icon: '✅', color: '#10B981' },
-    { label: 'Coucher', icon: '🌙', color: '#8B5CF6' },
-    { label: 'Autre', icon: '📝', color: '#6B7280' },
-  ];
+  // Transformation + filtres + pagination
+  const allMeasurements = useMemo(() => {
+    return backendData.map((entry, index) => {
+      const dateObj = new Date(entry.measured_at);
+      const contextLabel =
+        (Object.entries(contextMapping).find(
+          ([, backendValue]) => backendValue === entry.context
+        )?.[0] as MeasurementContext) || 'Autre';
 
-  // Calculs
-  const todayMeasurements = measurements.filter(m => m.date === '29/01/2026');
+      return {
+        id:
+          entry.reading_id ||
+          `${entry.id}-${entry.measured_at}` ||
+          `m-${index}`,
+        value: entry.value,
+        context: contextLabel,
+        time: dateObj.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        date: dateObj.toLocaleDateString('fr-FR'),
+        trend: 'stable' as TrendType,
+        source: (entry.source || 'manual') as 'manual' | 'cgm',
+        note: entry.notes,
+      };
+    });
+  }, [backendData]);
+
+  const filteredMeasurements = useMemo(() => {
+    if (sourceFilter === 'all') return allMeasurements;
+    return allMeasurements.filter(m => m.source === sourceFilter);
+  }, [allMeasurements, sourceFilter]);
+
+  const displayedMeasurements = filteredMeasurements.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredMeasurements.length;
+  const remaining = filteredMeasurements.length - visibleCount;
+
+  const loadMore = () => {
+    setVisibleCount(prev => Math.min(prev + 10, filteredMeasurements.length));
+  };
+
+  // Statistiques du jour (sur les données FILTRÉES)
+  const todayStr = new Date().toLocaleDateString('fr-FR');
+  const todayMeasurements = useMemo(
+    () => filteredMeasurements.filter(m => m.date === todayStr),
+    [filteredMeasurements, todayStr]
+  );
+
   const averageToday =
     todayMeasurements.length > 0
       ? Math.round(
-          todayMeasurements.reduce((acc, m) => acc + m.value, 0) /
+          todayMeasurements.reduce((sum, m) => sum + m.value, 0) /
             todayMeasurements.length
         )
       : 0;
 
-  const lastMeasurement = measurements[0];
-  const targetMin = 70;
-  const targetMax = 140;
+  const lastMeasurement = filteredMeasurements[0];
 
-  const getGlycemiaStatus = (
-    value: number
-  ): { text: string; color: string; bgColor: string } => {
-    if (value < targetMin) {
-      return { text: 'Hypo', color: '#DC2626', bgColor: '#FEE2E2' };
-    } else if (value > targetMax) {
-      return { text: 'Hyper', color: '#F59E0B', bgColor: '#FEF3C7' };
-    } else {
-      return { text: 'Normal', color: '#10B981', bgColor: '#D1FAE5' };
+  const targetMin = GLYCEMIA_TARGET.MIN;
+  const targetMax = GLYCEMIA_TARGET.MAX;
+
+  const getGlycemiaStatus = (val: number) => {
+    const { color, bgColor } = getGlycemiaStatusColor(val);
+    if (val < targetMin) return { text: 'Hypo', color, bgColor };
+    if (val > targetMax) return { text: 'Hyper', color, bgColor };
+    return { text: 'Normal', color, bgColor };
+  };
+
+  const incrementValue = () => {
+    const num = parseInt(value || '0', 10);
+    setValue((num + 5).toString());
+  };
+
+  const decrementValue = () => {
+    const num = parseInt(value || '0', 10);
+    setValue(Math.max(0, num - 5).toString());
+  };
+
+  const addMeasurement = async () => {
+    const numValue = parseInt(value.trim(), 10);
+    if (!value.trim() || isNaN(numValue)) return;
+
+    if (numValue < 20 || numValue > 600) {
+      Alert.alert(
+        'Valeur invalide',
+        'La valeur doit être entre 20 et 600 mg/dL'
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const backendContext = contextMapping[context];
+      const success = await addManualReading({
+        value: numValue,
+        context: backendContext,
+        notes: note.trim() || undefined,
+      });
+
+      if (success) {
+        setModalVisible(false);
+        setValue('');
+        setContext('À jeun');
+        setNote('');
+      } else {
+        Alert.alert('Erreur', "Impossible d'enregistrer la mesure.");
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert(
+        'Erreur',
+        "Une erreur est survenue lors de l'enregistrement."
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const incrementValue = (): void => {
-    const currentValue = parseInt(value || '0', 10);
-    setValue((currentValue + 5).toString());
-  };
-
-  const decrementValue = (): void => {
-    const currentValue = parseInt(value || '0', 10);
-    setValue(Math.max(0, currentValue - 5).toString());
-  };
-
-  const addMeasurement = (): void => {
-    if (!value.trim()) return;
-
-    const numValue = parseInt(value, 10);
-    const previousValue = measurements[0]?.value || numValue;
-
-    let trend: TrendType = 'stable';
-    if (numValue > previousValue + 10) trend = 'up';
-    if (numValue < previousValue - 10) trend = 'down';
-
-    const newMeasurement: GlycemiaMeasurement = {
-      id: `${Date.now()}`,
-      value: numValue,
-      context,
-      time: new Date().toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      date: new Date().toLocaleDateString('fr-FR'),
-      trend,
-      note: note.trim() || undefined,
-    };
-
-    setMeasurements(prev => [newMeasurement, ...prev]);
-    setModalVisible(false);
-    setValue('');
-    setContext('À jeun');
-    setNote('');
-  };
-
-  const MeasurementCard = ({
-    item,
-    onPress,
-  }: MeasurementCardProps): React.JSX.Element => {
+  const MeasurementCard = ({ item, onPress }: MeasurementCardProps) => {
     const status = getGlycemiaStatus(item.value);
     const TrendIcon =
       item.trend === 'up'
@@ -205,6 +252,7 @@ export default function GlycemiaScreen({
                 mg/dL
               </Text>
             </View>
+
             <View style={styles.measurementInfo}>
               <View style={styles.contextRow}>
                 <Text style={styles.contextText}>{item.context}</Text>
@@ -215,10 +263,17 @@ export default function GlycemiaScreen({
                   />
                 )}
               </View>
+
               <View style={styles.timeRow}>
                 <Clock size={14} color={colors.textSecondary} />
                 <Text style={styles.timeText}>{item.time}</Text>
+                <View style={styles.sourceBadge}>
+                  <Text style={styles.sourceText}>
+                    {item.source === 'cgm' ? 'CGM' : 'Manuel'}
+                  </Text>
+                </View>
               </View>
+
               {item.note && (
                 <Text style={styles.noteText} numberOfLines={1}>
                   💬 {item.note}
@@ -226,6 +281,7 @@ export default function GlycemiaScreen({
               )}
             </View>
           </View>
+
           <View style={styles.measurementRight}>
             <View
               style={[styles.statusBadge, { backgroundColor: status.bgColor }]}
@@ -240,6 +296,14 @@ export default function GlycemiaScreen({
     );
   };
 
+  const contextOptions: ContextOption[] = [
+    { label: 'À jeun', icon: '🌅', color: '#3B82F6' },
+    { label: 'Avant repas', icon: '🍽️', color: '#F59E0B' },
+    { label: 'Après repas', icon: '✅', color: '#10B981' },
+    { label: 'Coucher', icon: '🌙', color: '#8B5CF6' },
+    { label: 'Autre', icon: '📝', color: '#6B7280' },
+  ];
+
   return (
     <Layout
       navigation={navigation}
@@ -248,98 +312,160 @@ export default function GlycemiaScreen({
       onNotificationPress={() => console.log('Notifications')}
     >
       <View style={{ flex: 1 }}>
-        <ScrollView
-          style={styles.container}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.title}>Glycémie</Text>
-              <Text style={styles.subtitle}>
-                Suivi de votre taux de glucose
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Chargement...</Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.container}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={refresh}
+                tintColor="#007AFF"
+              />
+            }
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.title}>Glycémie</Text>
+                <Text style={styles.subtitle}>
+                  Suivi de votre taux de glucose
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.calendarButton}>
+                <Calendar size={20} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Stats du jour */}
+            <View style={styles.statsCard}>
+              <Text style={styles.statsTitle}>Aujourd'hui ({todayStr})</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Droplet size={20} color="#007AFF" strokeWidth={2} />
+                  <Text style={styles.statValue}>
+                    {todayMeasurements.length}
+                  </Text>
+                  <Text style={styles.statLabel}>Mesures</Text>
+                </View>
+                <View style={styles.statBox}>
+                  <TrendingUp size={20} color="#10B981" strokeWidth={2} />
+                  <Text style={styles.statValue}>{averageToday || '—'}</Text>
+                  <Text style={styles.statLabel}>Moyenne</Text>
+                </View>
+                <View style={styles.statBox}>
+                  <Clock size={20} color="#F59E0B" strokeWidth={2} />
+                  <Text style={styles.statValue}>
+                    {lastMeasurement?.time || '—'}
+                  </Text>
+                  <Text style={styles.statLabel}>Dernière</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Historique */}
+            <View style={styles.historyHeader}>
+              <Text style={styles.sectionTitle}>Historique des mesures</Text>
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Plus size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Filtres */}
+            <View style={styles.filterContainer}>
+              {(['all', 'manual', 'cgm'] as SourceFilter[]).map(filter => (
+                <TouchableOpacity
+                  key={filter}
+                  style={[
+                    styles.filterButton,
+                    sourceFilter === filter && styles.filterButtonActive,
+                  ]}
+                  onPress={() => {
+                    setSourceFilter(filter);
+                    setVisibleCount(10); // reset pagination quand filtre change
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.filterButtonText,
+                      sourceFilter === filter && styles.filterButtonTextActive,
+                    ]}
+                  >
+                    {filter === 'all'
+                      ? 'Toutes'
+                      : filter === 'manual'
+                        ? 'Manuel'
+                        : 'CGM'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.measurementsList}>
+              {displayedMeasurements.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Droplet size={48} color="#CBD5E1" strokeWidth={1.5} />
+                  <Text style={styles.emptyText}>
+                    Aucune mesure enregistrée
+                  </Text>
+                  <Text style={styles.emptySubtext}>
+                    Appuyez sur + pour ajouter votre première mesure
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  {displayedMeasurements.map(item => (
+                    <MeasurementCard
+                      key={item.id}
+                      item={item}
+                      onPress={() => console.log('Open detail:', item.id)}
+                    />
+                  ))}
+
+                  {hasMore && (
+                    <TouchableOpacity
+                      style={styles.loadMoreButton}
+                      onPress={loadMore}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={styles.loadMoreText}>
+                        Voir {Math.min(10, remaining)} de plus ({remaining}{' '}
+                        restantes)
+                      </Text>
+                      <View style={styles.loadMoreIcon}>
+                        <Plus size={20} color="#007AFF" strokeWidth={2.5} />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </View>
+
+            {/* Conseil */}
+            <View style={styles.tipCard}>
+              <View style={styles.tipHeader}>
+                <Droplet size={20} color="#3B82F6" />
+                <Text style={styles.tipTitle}>Conseil</Text>
+              </View>
+              <Text style={styles.tipText}>
+                Mesurez votre glycémie avant les repas et 2h après pour un
+                meilleur suivi.
               </Text>
             </View>
-            <TouchableOpacity style={styles.calendarButton}>
-              <Calendar size={20} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
 
-          {/* Carte de glycémie */}
-          <GlycemieCard
-            value={lastMeasurement?.value || 0}
-            status={
-              lastMeasurement
-                ? (getGlycemiaStatus(
-                    lastMeasurement.value
-                  ).text.toLowerCase() as any)
-                : 'normal'
-            }
-            timestamp={lastMeasurement ? new Date().toISOString() : undefined}
-            onPress={() => console.log('Voir détails')}
-          />
+            <View style={styles.bottomPadding} />
+          </ScrollView>
+        )}
 
-          {/* Statistiques du jour */}
-          <View style={styles.statsCard}>
-            <Text style={styles.statsTitle}>Aujourd'hui</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Droplet size={20} color="#007AFF" strokeWidth={2} />
-                <Text style={styles.statValue}>{todayMeasurements.length}</Text>
-                <Text style={styles.statLabel}>Mesures</Text>
-              </View>
-              <View style={styles.statBox}>
-                <TrendingUp size={20} color="#10B981" strokeWidth={2} />
-                <Text style={styles.statValue}>{averageToday || '--'}</Text>
-                <Text style={styles.statLabel}>Moyenne</Text>
-              </View>
-              <View style={styles.statBox}>
-                <Clock size={20} color="#F59E0B" strokeWidth={2} />
-                <Text style={styles.statValue}>
-                  {lastMeasurement?.time || '--'}
-                </Text>
-                <Text style={styles.statLabel}>Dernière</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Historique */}
-          <View style={styles.historyHeader}>
-            <Text style={styles.sectionTitle}>Historique des mesures</Text>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setModalVisible(true)}
-            >
-              <Plus size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.measurementsList}>
-            {measurements.map(measurement => (
-              <MeasurementCard
-                key={measurement.id}
-                item={measurement}
-                onPress={() => console.log('Open', measurement.id)}
-              />
-            ))}
-          </View>
-
-          {/* Conseils */}
-          <View style={styles.tipCard}>
-            <View style={styles.tipHeader}>
-              <Droplet size={20} color="#3B82F6" />
-              <Text style={styles.tipTitle}>Conseil</Text>
-            </View>
-            <Text style={styles.tipText}>
-              Mesurez votre glycémie avant les repas et 2h après pour un
-              meilleur suivi.
-            </Text>
-          </View>
-
-          <View style={styles.bottomPadding} />
-        </ScrollView>
-
-        {/* Modal d'ajout */}
+        {/* MODAL AJOUT MESURE */}
         <Modal
           visible={modalVisible}
           animationType="slide"
@@ -350,6 +476,7 @@ export default function GlycemiaScreen({
             style={styles.modalOverlay}
             onPress={() => setModalVisible(false)}
           />
+
           <View
             style={[
               styles.modalContainer,
@@ -371,6 +498,7 @@ export default function GlycemiaScreen({
                   >
                     <Minus size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
+
                   <TextInput
                     style={styles.valueInput}
                     value={value}
@@ -378,7 +506,9 @@ export default function GlycemiaScreen({
                     placeholder="120"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="numeric"
+                    maxLength={4}
                   />
+
                   <TouchableOpacity
                     style={styles.valueButtonPlus}
                     onPress={incrementValue}
@@ -386,15 +516,16 @@ export default function GlycemiaScreen({
                     <Plus size={24} color="#fff" />
                   </TouchableOpacity>
                 </View>
-                {value && (
+
+                {value && !isNaN(parseInt(value, 10)) && (
                   <View style={styles.valuePreview}>
                     <Text
                       style={[
                         styles.valuePreviewText,
-                        { color: getGlycemiaStatus(parseInt(value)).color },
+                        { color: getGlycemiaStatus(parseInt(value, 10)).color },
                       ]}
                     >
-                      {getGlycemiaStatus(parseInt(value)).text}
+                      {getGlycemiaStatus(parseInt(value, 10)).text}
                     </Text>
                   </View>
                 )}
@@ -430,14 +561,14 @@ export default function GlycemiaScreen({
                 </View>
               </View>
 
-              {/* Note optionnelle */}
+              {/* Note */}
               <View style={styles.formSection}>
                 <Text style={styles.formLabel}>Note (optionnel)</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={note}
                   onChangeText={setNote}
-                  placeholder="Ex: Avant sport, stress..."
+                  placeholder="Ex: Avant sport, stress, malaise..."
                   placeholderTextColor="#9CA3AF"
                   multiline
                   numberOfLines={3}
@@ -450,7 +581,7 @@ export default function GlycemiaScreen({
                 <View style={{ flex: 1 }}>
                   <Text style={styles.infoTitle}>Rappel</Text>
                   <Text style={styles.infoText}>
-                    Objectif glycémique : {targetMin}-{targetMax} mg/dL
+                    Objectif glycémique : {targetMin}–{targetMax} mg/dL
                   </Text>
                 </View>
               </View>
@@ -460,18 +591,25 @@ export default function GlycemiaScreen({
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={() => setModalVisible(false)}
+                  disabled={submitting}
                 >
                   <Text style={styles.cancelButtonText}>Annuler</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[
                     styles.submitButton,
-                    !value && styles.submitButtonDisabled,
+                    (!value || submitting || isNaN(parseInt(value, 10))) &&
+                      styles.submitButtonDisabled,
                   ]}
                   onPress={addMeasurement}
-                  disabled={!value}
+                  disabled={!value || submitting || isNaN(parseInt(value, 10))}
                 >
-                  <Text style={styles.submitButtonText}>Enregistrer</Text>
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>Enregistrer</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -485,6 +623,17 @@ export default function GlycemiaScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: colors.textSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -575,7 +724,6 @@ const styles = StyleSheet.create({
     height: 48,
     backgroundColor: colors.primaryLight,
     borderRadius: 16,
-    marginTop: 8,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#007AFF',
@@ -584,15 +732,58 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 8,
+    marginBottom: 16,
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff',
+  },
+  filterButtonActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#EFF6FF',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  filterButtonTextActive: {
+    color: '#007AFF',
+  },
   measurementsList: {
     paddingHorizontal: 20,
     gap: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 8,
+    textAlign: 'center',
   },
   measurementCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -615,6 +806,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+    minWidth: 90,
   },
   valueNumber: {
     fontSize: 28,
@@ -648,6 +840,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
+  sourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+  },
+  sourceText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
   noteText: {
     fontSize: 13,
     color: colors.textSecondary,
@@ -667,7 +874,7 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     marginHorizontal: 20,
-    marginTop: 8,
+    marginTop: 24,
     backgroundColor: '#EFF6FF',
     borderRadius: 16,
     padding: 16,
@@ -692,8 +899,7 @@ const styles = StyleSheet.create({
   bottomPadding: {
     height: 100,
   },
-
-  // Modal styles
+  // ──────────────── MODAL STYLES ────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -708,7 +914,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 34,
     maxHeight: '90%',
   },
   sheetHandle: {
@@ -726,7 +931,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   formSection: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   formLabel: {
     fontSize: 14,
@@ -778,7 +983,7 @@ const styles = StyleSheet.create({
   contextGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
   contextButton: {
     width: '48%',
@@ -820,7 +1025,7 @@ const styles = StyleSheet.create({
     borderColor: '#BFDBFE',
     borderRadius: 12,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   infoTitle: {
     fontSize: 14,
@@ -834,6 +1039,7 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 20,
   },
   cancelButton: {
     flex: 1,
@@ -867,5 +1073,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  // Load more
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    marginTop: 12,
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+  },
+  loadMoreText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  loadMoreIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });

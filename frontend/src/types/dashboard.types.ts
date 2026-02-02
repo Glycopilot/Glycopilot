@@ -14,58 +14,38 @@ export interface DashboardGlucoseData {
 }
 
 export interface DashboardAlert {
-  id: number | string;
-  type: 'high' | 'low' | 'warning' | 'info';
-  message: string;
-  severity: 'critical' | 'warning' | 'info';
-  created_at: string;
-  acknowledged?: boolean;
+  alertId: string;
+  type: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
 }
 
 export interface DashboardMedicationData {
   taken_count: number;
   total_count: number;
-  upcoming?: Array<{
-    id: number | string;
+  nextDose: {
     name: string;
-    dosage: string;
-    scheduled_at: string;
-    taken?: boolean;
-  }>;
-  adherence?: {
-    percentage: number;
-    taken: number;
-    missed: number;
-  };
+    scheduledAt: string;
+    status: string;
+  } | null;
 }
 
 export interface DashboardNutritionData {
-  today?: {
-    calories: number;
-    carbs: number;
-    proteins: number;
-    fats: number;
+  calories: {
+    consumed: number;
+    goal: number;
   };
-  goals?: {
-    calories: number;
-    carbs: number;
-    proteins: number;
-    fats: number;
+  carbs: {
+    grams: number;
+    goal: number;
   };
 }
 
 export interface DashboardActivityData {
-  today_count: number;
-  today?: {
-    steps: number;
-    distance: number;
-    calories_burned: number;
-    active_minutes: number;
+  steps: {
+    value: number;
+    goal: number;
   };
-  goals?: {
-    steps: number;
-    active_minutes: number;
-  };
+  activeMinutes: number;
 }
 
 export interface DashboardSummary {
@@ -74,6 +54,7 @@ export interface DashboardSummary {
   medication?: DashboardMedicationData;
   nutrition?: DashboardNutritionData;
   activity?: DashboardActivityData;
+  healthScore?: number;
   last_updated?: string;
 }
 

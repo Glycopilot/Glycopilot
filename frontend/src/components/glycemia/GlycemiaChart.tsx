@@ -88,13 +88,13 @@ export default function GlycemiaChart({
               { backgroundColor: '#D1FAE5', height: 100 },
             ]}
           />
-          <Text style={styles.zoneLabel}>70-140</Text>
+          <Text style={styles.zoneLabel}>70-180</Text>
         </View>
         <View style={styles.zoneIndicator}>
           <View
             style={[styles.zoneBar, { backgroundColor: '#FEF3C7', height: 60 }]}
           />
-          <Text style={styles.zoneLabel}>{'>140'}</Text>
+          <Text style={styles.zoneLabel}>{'>180'}</Text>
         </View>
       </View>
     </View>

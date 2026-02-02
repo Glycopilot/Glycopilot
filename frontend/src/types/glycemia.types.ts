@@ -1,8 +1,12 @@
 // Types pour les données de glycémie
 export interface GlycemiaEntry {
   id: number | string;
+  reading_id?: string; // UUID du backend
   value: number;
+  unit?: string; // mg/dL ou mmol/L
   measured_at: string;
+  trend?: 'rising' | 'falling' | 'flat'; // Tendance
+  source?: 'manual' | 'cgm'; // Source de la mesure
   notes?: string;
   tags?: string[];
   context?: 'fasting' | 'before_meal' | 'after_meal' | 'bedtime' | 'other';

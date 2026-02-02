@@ -6,8 +6,9 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
-import { Gauge } from 'lucide-react-native';
+import { Gauge, MoveUpRight, MoveDownRight, Minus } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
+import { GLYCEMIA_TARGET } from '../../constants/glycemia.constants';
 
 type GlycemieStatus =
   | 'normal'
@@ -22,6 +23,8 @@ interface GlycemieCardProps {
   value: number;
   status?: GlycemieStatus;
   timestamp?: string;
+  unit?: string;
+  trend?: 'rising' | 'falling' | 'flat';
   onPress?: () => void;
 }
 
@@ -33,62 +36,25 @@ interface StatusConfig {
 
 export default function GlycemieCard({
   value,
-  status = 'normal',
+  status,
   timestamp,
+  unit = 'mg/dL',
+  trend,
   onPress,
 }: GlycemieCardProps) {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const previousValue = useRef(value);
 
-  const formatTime = (isoString?: string): string => {
-    if (!isoString) return '';
-    try {
-      const date = new Date(isoString);
-      return date.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '';
-    }
+  // Calculer le status automatiquement à partir de la valeur si non fourni
+  const calculatedStatus = (): GlycemieStatus => {
+    if (status) return status;
+    if (value < GLYCEMIA_TARGET.MIN) return 'low'; // < 70
+    if (value > GLYCEMIA_TARGET.MAX) return 'high'; // > 180
+    return 'normal'; // 70-180
   };
 
-  useEffect(() => {
-    if (
-      previousValue.current !== value &&
-      previousValue.current !== undefined
-    ) {
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 0.3,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 0.95,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.spring(scaleAnim, {
-            toValue: 1,
-            friction: 4,
-            tension: 80,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
-    }
-    previousValue.current = value;
-  }, [value, fadeAnim, scaleAnim]);
+  const actualStatus = calculatedStatus();
 
   const getStatusConfig = (statusValue: GlycemieStatus): StatusConfig => {
     switch (statusValue.toLowerCase()) {
@@ -128,10 +94,81 @@ export default function GlycemieCard({
     }
   };
 
-  const statusConfig = getStatusConfig(status);
-  const targetMin = 70;
-  const targetMax = 140;
-  const progressPercentage = Math.min((value / 180) * 100, 100);
+  const statusConfig = getStatusConfig(actualStatus);
+
+  const formatTime = (isoString?: string): string => {
+    if (!isoString) return '';
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  const getTrendIcon = () => {
+    if (!trend) return null;
+
+    const iconProps = {
+      size: 32,
+      color: statusConfig.color,
+      strokeWidth: 2.5,
+    };
+
+    switch (trend) {
+      case 'rising':
+        return <MoveUpRight {...iconProps} />;
+      case 'falling':
+        return <MoveDownRight {...iconProps} />;
+      case 'flat':
+        return <Minus {...iconProps} />;
+      default:
+        return null;
+    }
+  };
+
+  useEffect(() => {
+    if (
+      previousValue.current !== value &&
+      previousValue.current !== undefined
+    ) {
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 0.3,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0.95,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 4,
+            tension: 80,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    }
+    previousValue.current = value;
+  }, [value, fadeAnim, scaleAnim]);
+
+  const targetMin = GLYCEMIA_TARGET.MIN;
+  const targetMax = GLYCEMIA_TARGET.MAX;
+  const progressPercentage = Math.min((value / GLYCEMIA_TARGET.MAX) * 100, 100);
 
   return (
     <TouchableOpacity
@@ -181,8 +218,9 @@ export default function GlycemieCard({
             {value}
           </Text>
           <Text style={[styles.unit, { color: statusConfig.color }]}>
-            mg/dl
+            {unit}
           </Text>
+          {trend && <View style={styles.trendIcon}>{getTrendIcon()}</View>}
         </View>
       </Animated.View>
 
@@ -274,6 +312,10 @@ const styles = StyleSheet.create({
   unit: {
     fontSize: 20,
     fontWeight: '600',
+  },
+  trendIcon: {
+    marginLeft: 8,
+    marginBottom: 8,
   },
   footer: {
     flexDirection: 'row',

@@ -82,10 +82,10 @@ const dashboardService = {
    */
   async getWidgetLayouts(): Promise<DashboardLayout[]> {
     try {
-      const response = await apiClient.get<{ layouts: DashboardLayout[] }>(
+      const response = await apiClient.get<{ layout: DashboardLayout[] }>(
         '/v1/dashboard/widgets/layout'
       );
-      return response.data.layouts;
+      return response.data.layout || [];
     } catch (error) {
       const axiosError = error as AxiosError<ApiErrorResponse>;
       console.warn(
@@ -106,11 +106,11 @@ const dashboardService = {
     layouts: DashboardLayout[]
   ): Promise<DashboardLayout[]> {
     try {
-      const response = await apiClient.post<{ layouts: DashboardLayout[] }>(
-        '/v1/dashboard/widgets/layouts',
-        { layouts }
+      const response = await apiClient.patch<{ layout: DashboardLayout[]; updatedAt: string }>(
+        '/v1/dashboard/widgets/layout',
+        { layout: layouts }
       );
-      return response.data.layouts;
+      return response.data.layout;
     } catch (error) {
       const axiosError = error as AxiosError<ApiErrorResponse>;
       console.warn(
@@ -168,6 +168,7 @@ const dashboardService = {
       return (summary.medication || {
         taken_count: 0,
         total_count: 0,
+        nextDose: null,
       }) as DashboardMedicationData;
     } catch (error) {
       console.warn(
@@ -177,6 +178,7 @@ const dashboardService = {
       return {
         taken_count: 0,
         total_count: 0,
+        nextDose: null,
       } as DashboardMedicationData;
     }
   },
@@ -187,13 +189,19 @@ const dashboardService = {
   async getNutritionData(): Promise<DashboardNutritionData> {
     try {
       const summary = await this.getSummary(['nutrition']);
-      return summary.nutrition || {};
+      return (summary.nutrition || {
+        calories: { consumed: 0, goal: 1800 },
+        carbs: { grams: 0, goal: 200 },
+      }) as DashboardNutritionData;
     } catch (error) {
       console.warn(
         'dashboardService.getNutritionData error:',
         (error as Error).message
       );
-      return {};
+      return {
+        calories: { consumed: 0, goal: 1800 },
+        carbs: { grams: 0, goal: 200 },
+      } as DashboardNutritionData;
     }
   },
 
@@ -204,7 +212,8 @@ const dashboardService = {
     try {
       const summary = await this.getSummary(['activity']);
       return (summary.activity || {
-        today_count: 0,
+        steps: { value: 0, goal: 8000 },
+        activeMinutes: 0,
       }) as DashboardActivityData;
     } catch (error) {
       console.warn(
@@ -212,7 +221,8 @@ const dashboardService = {
         (error as Error).message
       );
       return {
-        today_count: 0,
+        steps: { value: 0, goal: 8000 },
+        activeMinutes: 0,
       } as DashboardActivityData;
     }
   },

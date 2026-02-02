@@ -1,7 +1,6 @@
 import apiClient from './apiClient';
 import type {
   GlycemiaEntry,
-  GlycemiaHistory,
   GlycemiaHistoryParams,
   GlycemiaPeriod,
   GlycemiaChartData,
@@ -14,17 +13,43 @@ import { generateMockGlycemiaData } from '../data/mockData';
  */
 const glycemiaService = {
   /**
+   * Récupère la valeur actuelle de glycémie
+   * Backend: GET /api/glycemia/current/
+   */
+  async getCurrent(): Promise<GlycemiaEntry | null> {
+    try {
+      const response = await apiClient.get<GlycemiaEntry>('/glycemia/current/');
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      console.warn('glycemiaService.getCurrent error:', axiosError.message);
+      return null;
+    }
+  },
+
+  /**
    * Récupère l'historique de glycémie
+   * Backend: GET /api/glycemia/range/?days=X
    */
   async getHistory(
     params: GlycemiaHistoryParams = {}
   ): Promise<GlycemiaEntry[]> {
     try {
-      const response = await apiClient.get<GlycemiaHistory>(
-        '/v1/glucose/history/',
-        { params }
-      );
-      // L'API retourne { entries: [...], stats: {...}, next_cursor: ... }
+      // Calculer le nombre de jours selon la période
+      let days = 7; // par défaut
+      if (params.period === 'day') days = 1;
+      else if (params.period === 'week') days = 7;
+      else if (params.period === 'month') days = 30;
+
+      const response = await apiClient.get<{
+        entries: GlycemiaEntry[];
+        stats: any;
+        range_days: number;
+      }>('/glycemia/range/', {
+        params: { days },
+      });
+
+      // L'API retourne { entries: [...], stats: {...}, range_days: X }
       return response.data.entries || [];
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -100,6 +125,41 @@ const glycemiaService = {
       return generateMockGlycemiaData(30);
     }
     return result;
+  },
+
+  /**
+   * Crée une nouvelle mesure de glycémie manuelle
+   * Backend: POST /api/glycemia/manual-readings/
+   */
+  async createManualReading(data: {
+    measured_at: string;
+    value: number;
+    unit?: string;
+    context?:
+      | 'fasting'
+      | 'preprandial'
+      | 'postprandial_1h'
+      | 'postprandial_2h'
+      | 'bedtime'
+      | 'exercise'
+      | 'stress'
+      | 'correction';
+    notes?: string;
+  }): Promise<GlycemiaEntry | null> {
+    try {
+      const response = await apiClient.post<GlycemiaEntry>(
+        '/glycemia/manual-readings/',
+        data
+      );
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      console.error(
+        'glycemiaService.createManualReading error:',
+        axiosError.message
+      );
+      return null;
+    }
   },
 
   /**

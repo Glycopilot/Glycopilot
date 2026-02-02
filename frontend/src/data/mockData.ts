@@ -53,34 +53,42 @@ export const mockDashboardSummary: DashboardSummary = {
   medication: {
     taken_count: 2,
     total_count: 3,
+    nextDose: {
+      name: 'Metformine 500mg',
+      scheduledAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      status: 'pending',
+    },
   },
   activity: {
-    today_count: 3,
+    steps: {
+      value: 5420,
+      goal: 8000,
+    },
+    activeMinutes: 32,
   },
   nutrition: {
-    today: {
-      calories: 1450,
-      carbs: 180,
-      proteins: 85,
-      fats: 50,
+    calories: {
+      consumed: 1450,
+      goal: 1800,
+    },
+    carbs: {
+      grams: 180,
+      goal: 200,
     },
   },
   alerts: [
     {
-      id: 1,
-      type: 'high',
-      message: 'Glycémie légèrement élevée (135 mg/dL)',
-      severity: 'warning',
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // Il y a 2h
+      alertId: '1',
+      type: 'hyper',
+      severity: 'high',
     },
     {
-      id: 2,
-      type: 'info',
-      message: "N'oubliez pas votre médicament de 14h",
-      severity: 'info',
-      created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // Il y a 30min
+      alertId: '2',
+      type: 'medication',
+      severity: 'medium',
     },
   ],
+  healthScore: 75,
 };
 
 /**
