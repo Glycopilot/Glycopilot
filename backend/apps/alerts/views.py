@@ -1,53 +1,52 @@
-from rest_framework import generics, permissions, status
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from django.utils import timezone
+from .models import AlertRule, UserAlertRule, AlertEvent
+from .serializers import AlertRuleSerializer, UserAlertRuleSerializer, AlertEventSerializer
 
-from .models import AlertEvent, UserAlertRule
-from .serializers import AckSerializer, AlertEventSerializer, UserAlertRuleSerializer
-from .services.trigger import ack_event
-
-
-class UserAlertRuleListCreateView(generics.ListCreateAPIView):
+class AlertRuleViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ReadOnly ViewSet for reference rules.
+    """
+    queryset = AlertRule.objects.filter(is_active=True)
+    serializer_class = AlertRuleSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+class UserAlertSettingsViewSet(viewsets.ModelViewSet):
+    """
+    Manage user preferences for alerts.
+    """
     serializer_class = UserAlertRuleSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return UserAlertRule.objects.select_related("rule").filter(
-            user=self.request.user
-        )
+        return UserAlertRule.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
-class UserAlertRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UserAlertRuleSerializer
-
-    def get_queryset(self):
-        return UserAlertRule.objects.select_related("rule").filter(
-            user=self.request.user
-        )
-
-
-class InAppAlertEventListView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+class AlertHistoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only history of triggered alerts.
+    """
     serializer_class = AlertEventSerializer
-
-    def get_queryset(self):
-        return (
-            AlertEvent.objects.select_related("rule")
-            .filter(user=self.request.user)
-            .order_by("-triggered_at")
-        )
-
-
-class AckAlertEventView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request):
-        s = AckSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
+    def get_queryset(self):
+        return AlertEvent.objects.filter(user=self.request.user).order_by("-triggered_at")
 
-        event = ack_event(user=request.user, event_id=s.validated_data["event_id"])
-        return Response(AlertEventSerializer(event).data, status=status.HTTP_200_OK)
+    @action(detail=False, methods=['post'], url_path='ack')
+    def ack(self, request):
+        event_id = request.data.get("event_id")
+        if not event_id:
+            return Response({"error": "event_id required"}, status=400)
+            
+        try:
+            event = AlertEvent.objects.get(id=event_id, user=request.user)
+            event.acked_at = timezone.now()
+            event.status = "ACKED"
+            event.save()
+            return Response({"status": "acked"})
+        except AlertEvent.DoesNotExist:
+             return Response({"error": "Event not found"}, status=404)

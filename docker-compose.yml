@@ -11,9 +11,19 @@ services:
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
 
+  # Redis for WebSocket channel layer
+  redis:
+    image: redis:7-alpine
+    container_name: glycopilot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
   # Backend Django
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
@@ -26,6 +36,7 @@ services:
       - ./backend:/app
     depends_on:
       - database
+      - redis
     restart: unless-stopped
 
   # Frontend React Native
@@ -40,7 +51,10 @@ services:
     command: sh -c "npm install && npx expo start --lan"
     depends_on:
       - backend
+    stdin_open: true
+    tty: true
     restart: unless-stopped
 
 volumes:
   mysql_data:
+  redis_data:

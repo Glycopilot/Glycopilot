@@ -19,3 +19,8 @@ python-dotenv
 pytest==7.4.2
 pytest-django
 pytest-cov
+
+# WebSocket / Channels
+channels==4.0.0
+channels-redis==4.1.0
+daphne==4.0.0
