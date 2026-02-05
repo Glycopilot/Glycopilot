@@ -1,3 +1,11 @@
-"""URL configuration placeholder."""
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import MedicationViewSet, UserMedicationViewSet
 
-urlpatterns = []
+router = DefaultRouter()
+router.register(r'reference', MedicationViewSet, basename='medications-reference')
+router.register(r'log', UserMedicationViewSet, basename='medications-log')
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
