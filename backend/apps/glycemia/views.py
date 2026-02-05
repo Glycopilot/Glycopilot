@@ -114,6 +114,7 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         """Ajoute une mesure dans Glycemia (historique 30 jours)."""
         Glycemia.objects.create(
             user=histo_entry.user,
+            device=histo_entry.device,
             measured_at=histo_entry.measured_at,
             value=histo_entry.value,
             unit=histo_entry.unit,
