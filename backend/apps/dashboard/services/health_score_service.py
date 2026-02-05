@@ -57,7 +57,7 @@ class HealthScoreService:
     @classmethod
     def _calculate_adherence_score(cls, user) -> float:
         """
-        Score basé sur l'observance médicamenteuse (prises effectuées/prévues).
+        Score basé sur l'observance médicamenteuse.
         """
         from apps.medications.models import UserMedication
 
@@ -80,7 +80,7 @@ class HealthScoreService:
     @classmethod
     def _calculate_nutrition_score(cls, user) -> float:
         """
-        Score basé sur la régularité des repas (3 repas/jour).
+        Score basé sur la régularité des repas.
         """
         from apps.meals.models import UserMeal
 
@@ -102,7 +102,7 @@ class HealthScoreService:
     @classmethod
     def _calculate_activity_score(cls, user) -> float:
         """
-        Score basé sur l'activité physique (minutes actives/jour).
+        Score basé sur l'activité physique.
         """
         from apps.activities.models import UserActivity
 

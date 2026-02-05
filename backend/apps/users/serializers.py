@@ -2,26 +2,31 @@ from rest_framework import serializers
 from .models import User
 from apps.profiles.models import Profile, PatientProfile
 
+from apps.doctors.serializers import PatientCareTeamSerializer, DoctorSerializer
+
 class PatientProfileSerializer(serializers.ModelSerializer):
+    care_team = PatientCareTeamSerializer(source='care_team_members', many=True, read_only=True)
+
     class Meta:
         model = PatientProfile
-        fields = ["diabetes_type", "diagnosis_date"]
+        fields = ["diabetes_type", "diagnosis_date", "care_team"]
 
 class ProfileSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source='role.name', read_only=True)
     patient_details = PatientProfileSerializer(source='patient_profile', required=False, allow_null=True)
+    doctor_details = DoctorSerializer(source='doctor_profile', required=False, allow_null=True)
     
     class Meta:
         model = Profile
-        fields = ["id_profile", "role_name", "label", "is_active", "patient_details", "created_at"]
+        fields = ["id_profile", "role_name", "label", "is_active", "patient_details", "doctor_details", "created_at"]
 
     def update(self, instance, validated_data):
         patient_data = validated_data.pop('patient_profile', None)
         
-        # Update Profile fields
+        # Mise à jour des champs du profil
         instance = super().update(instance, validated_data)
 
-        # Update Nested PatientProfile
+        # Mise à jour du profil patient imbriqué
         if patient_data and hasattr(instance, 'patient_profile'):
             patient_profile = instance.patient_profile
             for attr, value in patient_data.items():
@@ -33,6 +38,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='auth_account.email', read_only=True)
     profiles = ProfileSerializer(many=True, required=False)
+    patient_details = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -45,36 +51,31 @@ class UserSerializer(serializers.ModelSerializer):
             "address",
             "profiles",
             "created_at",
+            "patient_details",
         ]
         read_only_fields = [
             "id_user",
             "email",
             "created_at",
+            "patient_details",
         ]
+
+    def get_patient_details(self, obj):
+        # Récupérer le profil patient s'il existe
+        profile = obj.profiles.filter(role__name="PATIENT").first()
+        if profile and hasattr(profile, 'patient_profile'):
+            return PatientProfileSerializer(profile.patient_profile).data
+        return None
 
     def update(self, instance, validated_data):
         profiles_data = validated_data.pop('profiles', [])
         
-        # Update User fields
+        # Mise à jour des champs utilisateur
         instance = super().update(instance, validated_data)
         
-        # Update Profiles if provided (Expecting full object or partial matching by ID potentially? 
-        # Actually for 'me' endpoint we usually just want to update the PATIENT profile.
-        # But `profiles` is a list. This is tricky with DRF default update.
-        # Let's handle it manually if present.
-        
+        # Gestion de la mise à jour des profils si nécessaire
         if profiles_data:
-            # We iterate over the input profiles
-            # Since we don't have IDs in input usually, we might rely on order OR roles.
-            # A safer bet for this specific "Complete Profile" requirement is to look for the PATIENT role data.
-            
-            # However, standard DRF nested update on lists is complex. 
-            # Simplification: We assume the user sends the full structure or we filter by role_name if possible.
-            # But ProfileSerializer doesn't have role_name writable.
-            
-            # Alternate strategy used in frontend often: 
-            # User sends `patient_details` object to a specific endpoint or we assume single profile update.
-            # Given the request is "complete my profile", let's attempt to update the relevant profile.
+             # Implémentation future si besoin de mise à jour groupée
             pass
 
         return instance
