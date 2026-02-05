@@ -7,7 +7,7 @@ npm run check-branch-name
 PYTHON_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
 
 if [ -z "$PYTHON_FILES" ]; then
-    echo "✅ Aucun fichier Python à vérifier"
+    echo "Aucun fichier Python a verifier"
     exit 0
 fi
 
@@ -22,13 +22,13 @@ else
     PYTHON_CMD="python3"
 fi
 
-echo "🔍 Vérification et correction automatique du code Python..."
+echo "Verification et correction automatique du code Python..."
 
 # Retourner au dossier racine pour les chemins git
 cd ..
 
 # Formater automatiquement avec isort
-echo "📦 Organisation des imports (isort)..."
+echo "Organisation des imports (isort)..."
 for file in $PYTHON_FILES; do
     if [ -f "$file" ]; then
         $PYTHON_CMD -m isort "$file" 2>/dev/null || true
@@ -36,7 +36,7 @@ for file in $PYTHON_FILES; do
 done
 
 # Formater automatiquement avec black
-echo "🎨 Formatage du code (black)..."
+echo "Formatage du code (black)..."
 for file in $PYTHON_FILES; do
     if [ -f "$file" ]; then
         $PYTHON_CMD -m black "$file" 2>/dev/null || true
@@ -51,7 +51,7 @@ for file in $PYTHON_FILES; do
 done
 
 # Vérifier flake8 uniquement sur les fichiers modifiés
-echo "🔧 Vérification de la qualité du code (flake8)..."
+echo "Verification de la qualite du code (flake8)..."
 FLAKE8_ERRORS=""
 for file in $PYTHON_FILES; do
     if [ -f "$file" ]; then
@@ -63,18 +63,18 @@ done
 
 if [ -n "$FLAKE8_ERRORS" ]; then
     echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "⚠️  Erreurs flake8 détectées (imports inutilisés, variables, etc.)"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "======================================================================"
+    echo "Erreurs flake8 detectees (imports inutilises, variables, etc.)"
+    echo "======================================================================"
     echo ""
-    echo "💡 Pour corriger automatiquement certaines erreurs :"
+    echo "Pour corriger automatiquement certaines erreurs :"
     echo "   ./scripts/fix_backend.sh"
     echo ""
-    echo "💡 Pour bypasser cette vérification (non recommandé) :"
+    echo "Pour bypasser cette verification (non recommande) :"
     echo "   git commit --no-verify"
     echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "======================================================================"
     exit 1
 fi
 
-echo "✅ Code Python vérifié et formaté avec succès !"
+echo "Code Python verifie et formate avec succes !"
