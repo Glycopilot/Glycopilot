@@ -54,13 +54,65 @@ if %errorlevel% neq 0 (
     echo ✅ Outils JavaScript déjà installés
 )
 
-REM Appliquer les migrations Django
+REM Détecter la commande Docker Compose
+docker compose version >nul 2>&1
+if %errorlevel% == 0 (
+    set DOCKER_COMPOSE=docker compose
+) else (
+    docker-compose version >nul 2>&1
+    if %errorlevel% == 0 (
+        set DOCKER_COMPOSE=docker-compose
+    ) else (
+        echo ❌ Docker Compose n'est pas installé
+        pause
+        exit /b 1
+    )
+)
+
+REM Démarrer la DB et Redis
 echo.
-echo  Appliquer les migrations Django...
-cd backend
-%PYTHON_CMD% manage.py makemigrations
-%PYTHON_CMD% manage.py migrate
-cd ..
+echo 📦 Démarrage des conteneurs de base de données...
+%DOCKER_COMPOSE% up -d database redis
+
+echo ⏳ Attente de la disponibilité de la DB (10s)...
+timeout /t 10 /nobreak >nul
+
+REM Construire l'image backend
+echo 🔨 Construction de l'image Docker backend...
+%DOCKER_COMPOSE% build backend
+
+REM Vérifier s'il y a des migrations en attente
+echo 🔍 Vérification des migrations...
+for /f %%i in ('%DOCKER_COMPOSE% run --rm backend python manage.py showmigrations --plan 2^>nul ^| find /c "[ ]"') do set PENDING_MIGRATIONS=%%i
+
+REM Vérifier si --reset est passé en argument
+set FORCE_RESET=0
+if "%1"=="--reset" set FORCE_RESET=1
+if "%2"=="--reset" set FORCE_RESET=1
+
+if %FORCE_RESET%==1 (
+    echo 🔄 [DEV] Reset forcé de la base de données...
+    %DOCKER_COMPOSE% run --rm backend python reset_db.py
+    if %errorlevel% neq 0 (
+        echo ❌ Erreur lors du Reset DB
+        pause
+        exit /b 1
+    )
+    echo ✅ Base de données réinitialisée et peuplée !
+) else if %PENDING_MIGRATIONS% gtr 0 (
+    echo 🔄 [DEV] Nouvelles migrations détectées, reset de la base de données...
+    %DOCKER_COMPOSE% run --rm backend python reset_db.py
+    if %errorlevel% neq 0 (
+        echo ❌ Erreur lors du Reset DB
+        pause
+        exit /b 1
+    )
+    echo ✅ Base de données réinitialisée et peuplée !
+) else (
+    echo ✅ Aucune nouvelle migration détectée, conservation des données...
+    %DOCKER_COMPOSE% run --rm backend python manage.py migrate --noinput
+    echo ✅ Migrations appliquées !
+)
 
 REM Vérifier et configurer les Git hooks (une seule fois)
 if not exist ".git\hooks\pre-push" (
@@ -83,31 +135,8 @@ echo.
 echo 🚀 Démarrage du backend avec Docker...
 echo.
 
-REM Détecter la commande Docker Compose disponible
-docker --version >nul 2>&1
-if %errorlevel% == 0 (
-    docker compose version >nul 2>&1
-    if %errorlevel% == 0 (
-        REM Nouveau format: docker compose (en background)
-        docker compose up -d --build
-    ) else (
-        docker-compose version >nul 2>&1
-        if %errorlevel% == 0 (
-            REM Ancien format: docker-compose (en background)
-            docker-compose up -d --build
-        ) else (
-            echo ❌ Docker Compose n'est pas installé
-            echo 💡 Installez Docker Compose pour continuer
-            pause
-            exit /b 1
-        )
-    )
-) else (
-    echo ❌ Docker n'est pas installé
-    echo 💡 Installez Docker pour continuer
-    pause
-    exit /b 1
-)
+REM Lancer tous les services
+%DOCKER_COMPOSE% up -d
 
 REM Attendre que le backend soit prêt
 echo.
