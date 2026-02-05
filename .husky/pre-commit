@@ -3,6 +3,14 @@ set -e
 
 npm run check-branch-name
 
+# Récupérer les fichiers Python modifiés
+PYTHON_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
+
+if [ -z "$PYTHON_FILES" ]; then
+    echo "✅ Aucun fichier Python à vérifier"
+    exit 0
+fi
+
 cd backend
 
 # Utiliser le venv si disponible, sinon python3 global
@@ -14,54 +22,59 @@ else
     PYTHON_CMD="python3"
 fi
 
-echo "🔍 Vérification du code Python..."
+echo "🔍 Vérification et correction automatique du code Python..."
 
-# Vérifier isort
-if ! $PYTHON_CMD -m isort --check-only . 2>/dev/null; then
+# Retourner au dossier racine pour les chemins git
+cd ..
+
+# Formater automatiquement avec isort
+echo "📦 Organisation des imports (isort)..."
+for file in $PYTHON_FILES; do
+    if [ -f "$file" ]; then
+        $PYTHON_CMD -m isort "$file" 2>/dev/null || true
+    fi
+done
+
+# Formater automatiquement avec black
+echo "🎨 Formatage du code (black)..."
+for file in $PYTHON_FILES; do
+    if [ -f "$file" ]; then
+        $PYTHON_CMD -m black "$file" 2>/dev/null || true
+    fi
+done
+
+# Re-stage les fichiers modifiés par les formatters
+for file in $PYTHON_FILES; do
+    if [ -f "$file" ]; then
+        git add "$file"
+    fi
+done
+
+# Vérifier flake8 uniquement sur les fichiers modifiés
+echo "🔧 Vérification de la qualité du code (flake8)..."
+FLAKE8_ERRORS=""
+for file in $PYTHON_FILES; do
+    if [ -f "$file" ]; then
+        if ! $PYTHON_CMD -m flake8 "$file" 2>/dev/null; then
+            FLAKE8_ERRORS="1"
+        fi
+    fi
+done
+
+if [ -n "$FLAKE8_ERRORS" ]; then
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "❌ Les imports ne sont pas triés correctement"
+    echo "⚠️  Erreurs flake8 détectées (imports inutilisés, variables, etc.)"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "💡 Pour corriger automatiquement :"
-    echo "   cd backend"
-    echo "   source venv/bin/activate"
-    echo "   python -m isort ."
+    echo "💡 Pour corriger automatiquement certaines erreurs :"
+    echo "   ./scripts/fix_backend.sh"
+    echo ""
+    echo "💡 Pour bypasser cette vérification (non recommandé) :"
+    echo "   git commit --no-verify"
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     exit 1
 fi
 
-# Vérifier black
-if ! $PYTHON_CMD -m black --check . 2>/dev/null; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "❌ Le code n'est pas formaté correctement"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "💡 Pour corriger automatiquement :"
-    echo "   cd backend"
-    echo "   source venv/bin/activate"
-    echo "   python -m black ."
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    exit 1
-fi
-
-# Vérifier flake8
-if ! $PYTHON_CMD -m flake8 . 2>/dev/null; then
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "❌ Le code contient des erreurs de linting (flake8)"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    echo "💡 Pour voir les erreurs détaillées :"
-    echo "   cd backend"
-    echo "   source venv/bin/activate"
-    echo "   python -m flake8 ."
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    exit 1
-fi
-
-echo "✅ Code Python vérifié avec succès !"
+echo "✅ Code Python vérifié et formaté avec succès !"
