@@ -8,6 +8,20 @@
     "item": [
         {
             "name": "Patient",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [
+                            "var t = pm.collectionVariables.get(\"patient_token\");",
+                            "if (t) { pm.collectionVariables.set(\"token\", t); }",
+                            "var rt = pm.collectionVariables.get(\"patient_refresh_token\");",
+                            "if (rt) { pm.collectionVariables.set(\"refresh_token\", rt); }"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
             "item": [
                 {
                     "name": "Auth",
@@ -38,7 +52,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Dupont\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"PATIENT\"\n}",
+                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Dupont\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"PATIENT\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -53,8 +67,14 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
-                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
+                                            "if (jsonData.access) {",
+                                            "    pm.collectionVariables.set(\"patient_token\", jsonData.access);",
+                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
+                                            "}",
+                                            "if (jsonData.refresh) {",
+                                            "    pm.collectionVariables.set(\"patient_refresh_token\", jsonData.refresh);",
+                                            "    pm.collectionVariables.set(\"refresh_token\", jsonData.refresh);",
+                                            "}"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -87,7 +107,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
+                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\",\n    \"password\": \"StrongPass123!\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -102,8 +122,14 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
-                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
+                                            "if (jsonData.access) {",
+                                            "    pm.collectionVariables.set(\"patient_token\", jsonData.access);",
+                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
+                                            "}",
+                                            "if (jsonData.refresh) {",
+                                            "    pm.collectionVariables.set(\"patient_refresh_token\", jsonData.refresh);",
+                                            "    pm.collectionVariables.set(\"refresh_token\", jsonData.refresh);",
+                                            "}"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -135,7 +161,7 @@
                                 "description": "Demande de réinitialisation du mot de passe (sans token).",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"patient@example.com\"\n}",
+                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -267,9 +293,23 @@
                                         ""
                                     ]
                                 },
-                                "description": ""
+                                "description": "Returns the authenticated user's profile. For patients, includes `patient_details` with `care_team`. For doctors, includes `doctor_details`."
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (jsonData.identity && jsonData.identity.id_user) {",
+                                            "    pm.collectionVariables.set(\"patient_id\", jsonData.identity.id_user);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Complete Profile",
@@ -346,10 +386,10 @@
                                         ""
                                     ]
                                 },
-                                "description": "",
+                                "description": "**IMPORTANT**: Requires a PATIENT token. Do not use with a Doctor token.",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"role\": \"REFERENT_DOCTOR\"\n}",
+                                    "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\",\n    \"role\": \"REFERENT_DOCTOR\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -357,7 +397,21 @@
                                     }
                                 }
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (jsonData.id_team_member) {",
+                                            "    pm.collectionVariables.set(\"id_team_member\", jsonData.id_team_member);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Add Family Member (Famille / Aidant / Nurse)",
@@ -430,7 +484,7 @@
                                         ""
                                     ]
                                 },
-                                "description": ""
+                                "description": "Returns the list of care team members for the current patient."
                             },
                             "response": []
                         },
@@ -474,7 +528,20 @@
                                     }
                                 }
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "prerequest",
+                                    "script": {
+                                        "exec": [
+                                            "if (!pm.collectionVariables.get(\"id_team_member\")) {",
+                                            "    throw new Error(\"id_team_member manquant. Lance d'abord une invitation.\");",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         }
                     ]
                 },
@@ -511,7 +578,20 @@
                                 },
                                 "description": ""
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "prerequest",
+                                    "script": {
+                                        "exec": [
+                                            "if (!pm.collectionVariables.get(\"id_team_member\")) {",
+                                            "    throw new Error(\"id_team_member manquant. Lance d'abord une invitation.\");",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Create Log",
@@ -544,7 +624,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"activity\": 1,\n    \"duration_minutes\": 30,\n    \"intensity\": \"moderate\",\n    \"start\": \"2024-01-01T10:00:00Z\"\n}",
+                                    "raw": "{\n    \"activity\": \"{{activity_id}}\",\n    \"duration_minutes\": 30,\n    \"intensity\": \"moderate\",\n    \"start\": \"2024-01-01T10:00:00Z\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -584,6 +664,328 @@
                                 },
                                 "description": ""
                             },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (Array.isArray(jsonData) && jsonData.length > 0 && jsonData[0].activity_id) {",
+                                            "    pm.collectionVariables.set(\"activity_id\", jsonData[0].activity_id);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "Glucose",
+                    "item": [
+                        {
+                            "name": "Get My Glycemia History",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/glycemia/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "glycemia",
+                                        ""
+                                    ]
+                                },
+                                "description": "Returns the complete glycemia history (GlycemiaHisto) for the authenticated patient, including photos, location, and rate."
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Meals",
+                    "item": [
+                        {
+                            "name": "Get Available Meals (Reference)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/meals/reference/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "meals",
+                                        "reference",
+                                        ""
+                                    ]
+                                },
+                                "description": "List all available reference meals."
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (Array.isArray(jsonData) && jsonData.length > 0 && jsonData[0].meal_id) {",
+                                            "    pm.collectionVariables.set(\"meal_id\", jsonData[0].meal_id);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Get History (Reference)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/meals/log/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "meals",
+                                        "log",
+                                        ""
+                                    ]
+                                },
+                                "description": "Get user meal history."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Get User Meals",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/meals/log/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "meals",
+                                        "log",
+                                        ""
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Log Meal",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"meal_id\": \"{{meal_id}}\",\n    \"taken_at\": \"2024-01-01T12:00:00Z\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/meals/log/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "meals",
+                                        "log",
+                                        ""
+                                    ]
+                                }
+                            },
+                            "response": []
+                        }
+                    ]
+                },
+                {
+                    "name": "Medications",
+                    "item": [
+                        {
+                            "name": "Get Reference",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/medications/reference/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "medications",
+                                        "reference",
+                                        ""
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Get User Medications",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/medications/log/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "medications",
+                                        "log",
+                                        ""
+                                    ]
+                                }
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Get Available Medications (Reference)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/medications/reference/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "medications",
+                                        "reference",
+                                        ""
+                                    ]
+                                },
+                                "description": "List all available medications that can be logged."
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (Array.isArray(jsonData) && jsonData.length > 0 && jsonData[0].medication_id) {",
+                                            "    pm.collectionVariables.set(\"medication_id\", jsonData[0].medication_id);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Log Medication",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"medication_id\": \"{{medication_id}}\",\n    \"start_date\": \"2024-01-01\",\n    \"taken_at\": \"2024-01-01T08:00:00Z\",\n    \"statut\": true\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/medications/log/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "medications",
+                                        "log",
+                                        ""
+                                    ]
+                                }
+                            },
                             "response": []
                         }
                     ]
@@ -592,6 +994,20 @@
         },
         {
             "name": "Docteur",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [
+                            "var t = pm.collectionVariables.get(\"doctor_token\");",
+                            "if (t) { pm.collectionVariables.set(\"token\", t); }",
+                            "var rt = pm.collectionVariables.get(\"doctor_refresh_token\");",
+                            "if (rt) { pm.collectionVariables.set(\"refresh_token\", rt); }"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
             "item": [
                 {
                     "name": "Auth",
@@ -619,10 +1035,10 @@
                                         ""
                                     ]
                                 },
-                                "description": "",
+                                "description": "Registers a new doctor. The account is created with PENDING status and requires manual validation by an ADMIN.",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"first_name\": \"Dr.\",\n    \"last_name\": \"House\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"DOCTOR\"\n}",
+                            "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\",\n    \"first_name\": \"Dr.\",\n    \"last_name\": \"House\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"DOCTOR\",\n    \"license_number\": \"10001234567\",\n    \"specialty\": \"Cardiologue\",\n    \"medical_center_address\": \"123 Rue de l'Hôpital\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -637,8 +1053,14 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
-                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
+                                            "if (jsonData.access) {",
+                                            "    pm.collectionVariables.set(\"doctor_token\", jsonData.access);",
+                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
+                                            "}",
+                                            "if (jsonData.refresh) {",
+                                            "    pm.collectionVariables.set(\"doctor_refresh_token\", jsonData.refresh);",
+                                            "    pm.collectionVariables.set(\"refresh_token\", jsonData.refresh);",
+                                            "}"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -668,10 +1090,10 @@
                                         ""
                                     ]
                                 },
-                                "description": "",
+                                "description": "Login for doctors. Requires the account to be VERIFIED by an admin.",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
+                            "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\",\n    \"password\": \"StrongPass123!\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -686,8 +1108,14 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
-                                            "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
+                                            "if (jsonData.access) {",
+                                            "    pm.collectionVariables.set(\"doctor_token\", jsonData.access);",
+                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
+                                            "}",
+                                            "if (jsonData.refresh) {",
+                                            "    pm.collectionVariables.set(\"doctor_refresh_token\", jsonData.refresh);",
+                                            "    pm.collectionVariables.set(\"refresh_token\", jsonData.refresh);",
+                                            "}"
                                         ],
                                         "type": "text/javascript"
                                     }
@@ -719,7 +1147,7 @@
                                 "description": "Demande de réinitialisation du mot de passe (sans token).",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"doctor@example.com\"\n}",
+                            "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -933,7 +1361,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"patient@example.com\",\n    \"phone_number\": \"\"\n}",
+                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\",\n    \"phone_number\": \"\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -941,7 +1369,21 @@
                                     }
                                 }
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (jsonData.id_team_member) {",
+                                            "    pm.collectionVariables.set(\"id_team_member\", jsonData.id_team_member);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Accept Invitation",
@@ -1017,6 +1459,151 @@
                                 "description": ""
                             },
                             "response": []
+                        },
+                        {
+                            "name": "Get Patient Dashboard (Doctor)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/patient-dashboard/?patient_user_id={{patient_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "patient-dashboard",
+                                        ""
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "patient_user_id",
+                                            "value": "{{patient_id}}",
+                                            "description": "ID of the patient user"
+                                        }
+                                    ]
+                                },
+                                "description": "Récupère le résumé complet du tableau de bord (Glucose, Alertes, Meds, Nutrition, Activité) pour le médecin. Conforme au module Dashboard Summary."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Get Patient Meals",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/patient-meals/?patient_user_id={{patient_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "patient-meals",
+                                        ""
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "patient_user_id",
+                                            "value": "{{patient_id}}",
+                                            "description": "ID of the patient user"
+                                        }
+                                    ]
+                                },
+                                "description": "Fetch patient meal history."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Get Patient Medications",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/patient-medications/?patient_user_id={{patient_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "patient-medications",
+                                        ""
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "patient_user_id",
+                                            "value": "{{patient_id}}",
+                                            "description": "ID of the patient user"
+                                        }
+                                    ]
+                                },
+                                "description": "Fetch patient medication history."
+                            },
+                            "response": []
+                        },
+                        {
+                            "name": "Get Patient Glycemia",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/patient-glycemia/?patient_user_id={{patient_id}}",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "patient-glycemia",
+                                        ""
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "patient_user_id",
+                                            "value": "{{patient_id}}",
+                                            "description": "ID of the patient user"
+                                        }
+                                    ]
+                                },
+                                "description": "Fetch patient complete glycemia history (GlycemiaHisto)."
+                            },
+                            "response": []
                         }
                     ]
                 }
@@ -1024,6 +1611,20 @@
         },
         {
             "name": "Admin (Validation Docteurs)",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [
+                            "var t = pm.collectionVariables.get(\"admin_token\");",
+                            "if (t) { pm.collectionVariables.set(\"token\", t); }",
+                            "var rt = pm.collectionVariables.get(\"admin_refresh_token\");",
+                            "if (rt) { pm.collectionVariables.set(\"refresh_token\", rt); }"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
             "item": [
                 {
                     "name": "Login (Superadmin)",
@@ -1066,8 +1667,14 @@
                             "script": {
                                 "exec": [
                                     "var jsonData = pm.response.json();",
-                                    "if (jsonData.access) { pm.collectionVariables.set(\"token\", jsonData.access); }",
-                                    "if (jsonData.refresh) { pm.collectionVariables.set(\"refresh_token\", jsonData.refresh); }"
+                                    "if (jsonData.access) {",
+                                    "    pm.collectionVariables.set(\"admin_token\", jsonData.access);",
+                                    "    pm.collectionVariables.set(\"token\", jsonData.access);",
+                                    "}",
+                                    "if (jsonData.refresh) {",
+                                    "    pm.collectionVariables.set(\"admin_refresh_token\", jsonData.refresh);",
+                                    "    pm.collectionVariables.set(\"refresh_token\", jsonData.refresh);",
+                                    "}"
                                 ],
                                 "type": "text/javascript"
                             }
@@ -1193,11 +1800,25 @@
                             "script": {
                                 "exec": [
                                     "var jsonData = pm.response.json();",
-                                    "if (jsonData.results && jsonData.results.length > 0) {",
-                                    "    pm.collectionVariables.set(\"doctor_id\", jsonData.results[0].doctor_id);",
-                                    "    console.log(\"doctor_id défini: \" + jsonData.results[0].doctor_id);",
+                                    "var targetEmail = (pm.collectionVariables.get(\"doctor_email\") || \"\").toLowerCase();",
+                                    "var results = (jsonData && jsonData.results) ? jsonData.results : [];",
+                                    "if (results.length > 0) {",
+                                    "    var match = targetEmail",
+                                    "        ? results.find(function (r) { return (r.user_details && r.user_details.email || \"\").toLowerCase() === targetEmail; })",
+                                    "        : results[0];",
+                                    "    if (!match && results.length > 0) {",
+                                    "        match = results[0];",
+                                    "    }",
+                                    "    if (match && match.doctor_id) {",
+                                    "        pm.collectionVariables.set(\"doctor_id\", match.doctor_id);",
+                                    "        pm.environment.set(\"doctor_id\", match.doctor_id);",
+                                    "    } else {",
+                                    "        pm.collectionVariables.unset(\"doctor_id\");",
+                                    "        pm.environment.unset(\"doctor_id\");",
+                                    "    }",
                                     "} else {",
                                     "    pm.collectionVariables.unset(\"doctor_id\");",
+                                    "    pm.environment.unset(\"doctor_id\");",
                                     "}"
                                 ],
                                 "type": "text/javascript"
@@ -1235,9 +1856,33 @@
                                 ""
                             ]
                         },
-                        "description": "Valider un compte docteur (passer en VERIFIED). Exécuter d'abord « Liste Docteurs en attente » pour remplir automatiquement doctor_id, ou définir la variable doctor_id (UUID, ex. 1d34972b-e155-4ff8-952a-3c36251bfa13)."
+                        "description": "Valider un compte docteur (passer en VERIFIED). Envoie un email de bienvenue au médecin. Exécuter d'abord « Liste Docteurs en attente » pour remplir automatiquement doctor_id.",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
                     },
-                    "response": []
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "var doctorId = pm.collectionVariables.get(\"doctor_id\") || pm.environment.get(\"doctor_id\");",
+                                    "if (!doctorId) {",
+                                    "    throw new Error(\"doctor_id manquant. Lance d'abord 'Liste Docteurs en attente (PENDING)' et vérifie doctor_email.\");",
+                                    "}",
+                                    "pm.collectionVariables.set(\"doctor_id\", doctorId);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
                 },
                 {
                     "name": "Refuser Docteur (REJECTED + message)",
@@ -1269,7 +1914,7 @@
                                 ""
                             ]
                         },
-                        "description": "Refuser un compte docteur (REJECTED) avec un message optionnel pour le docteur.",
+                        "description": "Refuser un compte docteur (REJECTED) avec un message optionnel. Envoie un email de refus au médecin avec le motif.",
                         "body": {
                             "mode": "raw",
                             "raw": "{\n    \"rejection_reason\": \"Documents non conformes. Merci de renvoyer une copie lisible de votre carte professionnelle.\"\n}",
@@ -1280,7 +1925,22 @@
                             }
                         }
                     },
-                    "response": []
+                    "response": [],
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "var doctorId = pm.collectionVariables.get(\"doctor_id\") || pm.environment.get(\"doctor_id\");",
+                                    "if (!doctorId) {",
+                                    "    throw new Error(\"doctor_id manquant. Lance d'abord 'Liste Docteurs en attente (PENDING)' et vérifie doctor_email.\");",
+                                    "}",
+                                    "pm.collectionVariables.set(\"doctor_id\", doctorId);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ]
                 }
             ]
         }
@@ -1297,7 +1957,37 @@
             "type": "string"
         },
         {
+            "key": "patient_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "doctor_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "admin_token",
+            "value": "",
+            "type": "string"
+        },
+        {
             "key": "refresh_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "patient_refresh_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "doctor_refresh_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "admin_refresh_token",
             "value": "",
             "type": "string"
         },
@@ -1307,8 +1997,33 @@
             "type": "string"
         },
         {
+            "key": "patient_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "activity_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "meal_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "medication_id",
+            "value": "",
+            "type": "string"
+        },
+        {
             "key": "doctor_id",
             "value": "",
+            "type": "string"
+        },
+        {
+            "key": "doctor_email",
+            "value": "lysmambouanan3@gmail.com",
             "type": "string"
         }
     ]

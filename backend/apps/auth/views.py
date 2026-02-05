@@ -3,24 +3,20 @@ Contrôleur pour l'authentification
 """
 
 from rest_framework import status
-from rest_framework.decorators import (
-    api_view,
-    authentication_classes,
-    permission_classes,
-)
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.auth.serializers import (
-    AuthAccountSerializer,
     AuthResponseSerializer,
-    CreateAdminAccountSerializer,
     LoginSerializer,
     RegisterSerializer,
+    AuthAccountSerializer,
+    CreateAdminAccountSerializer,
 )
+from apps.users.models import User, AuthAccount
 from apps.profiles.models import Profile, Role
-from apps.users.models import AuthAccount, User
 from utils.permissions import allowed_roles
 
 
@@ -37,8 +33,8 @@ def register(request):
         "email": "user@example.com",
         "first_name": "John",
         "last_name": "Doe",
-        "password": "<your_password>",
-        "password_confirm": "<your_password>"
+        "password": "securepassword123",
+        "password_confirm": "securepassword123"
     }
 
     Response 201:
@@ -59,6 +55,14 @@ def register(request):
     if serializer.is_valid():
         user = serializer.save()
 
+        # Si c'est un médecin, on ne renvoie PAS les tokens, car il doit être validé.
+        is_doctor = user.user.profiles.filter(role__name="DOCTOR").exists()
+        if is_doctor:
+             return Response(
+                {"message": "Votre compte médecin a été créé avec succès. Il est en attente de validation par un administrateur. Vous recevrez un email une fois validé."},
+                status=status.HTTP_201_CREATED
+            )
+
         # Générer les tokens JWT
         tokens = AuthResponseSerializer.get_tokens_for_user(user)
 
@@ -77,7 +81,7 @@ def login(request):
     Body:
     {
         "email": "user@example.com",
-        "password": "<your_password>"
+        "password": "securepassword123"
     }
 
     Response 200:
@@ -200,8 +204,8 @@ def create_admin_account(request):
         "email": "admin@example.com",
         "first_name": "Admin",
         "last_name": "User",
-        "password": "<your_password>",
-        "password_confirm": "<your_password>",
+        "password": "securepassword123",
+        "password_confirm": "securepassword123",
         "account_type": "ADMIN"  ou "SUPERADMIN"
     }
     """
@@ -221,11 +225,9 @@ def create_admin_account(request):
     password = data["password"]
     account_type = data["account_type"]
 
-    role_obj, _ = Role.objects.get_or_create(
-        name=account_type, defaults={"name": account_type}
-    )
+    role_obj, _ = Role.objects.get_or_create(name=account_type, defaults={"name": account_type})
     user_identity = User.objects.create(first_name=first_name, last_name=last_name)
-    AuthAccount.objects.create_user(
+    account = AuthAccount.objects.create_user(
         email=email,
         password=password,
         user_identity=user_identity,
