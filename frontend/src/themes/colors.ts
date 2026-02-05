@@ -1,7 +1,7 @@
 export const colors = {
   // Primaires
   primary: '#1D4EFF',
-  primaryLight: '#2774F2',
+  primaryLight: '#0080ff',
   primaryDark: '#0f4dddff',
 
   // Secondaires
@@ -26,4 +26,6 @@ export const colors = {
 
   // Autres
   transparent: 'transparent',
-};
+} as const;
+
+export type ColorKeys = keyof typeof colors;

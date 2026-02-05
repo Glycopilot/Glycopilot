@@ -1,23 +1,19 @@
 import Toast from 'react-native-toast-message';
 import * as Haptics from 'expo-haptics';
+import type { ToastType } from '../types/toast.types';
 
 const DEFAULT_DURATION = 3000;
 
 /**
  * Afficher un toast personnalisé avec vibration optionnelle
- * @param {string} type - 'success', 'error', 'info'
- * @param {string} title - Titre du toast
- * @param {string} message - Message du toast
- * @param {number} duration - Durée d'affichage en ms
- * @param {boolean} haptic - Activer la vibration (défaut: true)
  */
 export const showToast = async (
-  type,
-  title,
+  type: ToastType,
+  title: string,
   message = '',
   duration = DEFAULT_DURATION,
   haptic = true
-) => {
+): Promise<void> => {
   // Ajouter vibration selon le type
   if (haptic) {
     try {
@@ -39,27 +35,35 @@ export const showToast = async (
     type,
     text1: title,
     text2: message,
-    duration,
+    visibilityTime: duration,
   });
 };
 
 /**
  * Toast de succès avec vibration
  */
-export const toastSuccess = (title, message = '', haptic = true) => {
+export const toastSuccess = (
+  title: string,
+  message = '',
+  haptic = true
+): void => {
   showToast('success', title, message, 2000, haptic);
 };
 
 /**
  * Toast d'erreur avec vibration
  */
-export const toastError = (title, message = '', haptic = true) => {
+export const toastError = (
+  title: string,
+  message = '',
+  haptic = true
+): void => {
   showToast('error', title, message, 3000, haptic);
 };
 
 /**
  * Toast d'information avec vibration légère
  */
-export const toastInfo = (title, message = '', haptic = true) => {
+export const toastInfo = (title: string, message = '', haptic = true): void => {
   showToast('info', title, message, 2500, haptic);
 };
