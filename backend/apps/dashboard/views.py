@@ -104,6 +104,7 @@ class DashboardSummaryView(APIView):
         return result
 
     def _get_medication_data(self, user) -> dict:
+        # Récupérer la prochaine dose
         next_dose = (
             UserMedication.objects.filter(
                 user=user, statut=True, taken_at__isnull=True
@@ -112,16 +113,35 @@ class DashboardSummaryView(APIView):
             .first()
         )
 
-        if not next_dose:
-            return {"nextDose": None}
+        # Calculer les médicaments pris aujourd'hui
+        today = timezone.now().date()
+        taken_today = UserMedication.objects.filter(
+            user=user,
+            statut=True,
+            taken_at__date=today
+        ).count()
 
-        return {
-            "nextDose": {
+        # Calculer le total de médicaments actifs pour aujourd'hui
+        total_today = UserMedication.objects.filter(
+            user=user,
+            statut=True,
+            start_date__lte=today
+        ).count()
+
+        result = {
+            "taken_count": taken_today,
+            "total_count": total_today,
+            "nextDose": None
+        }
+
+        if next_dose:
+            result["nextDose"] = {
                 "name": next_dose.medication.name,
                 "scheduledAt": timezone.now(),
                 "status": "pending",
             }
-        }
+
+        return result
 
     def _get_nutrition_data(self, user) -> dict:
         since = timezone.now() - timedelta(hours=24)
