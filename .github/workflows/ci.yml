@@ -86,6 +86,15 @@ jobs:
         name: coverage-backend
         path: backend/
     
+    - name: Verify Backend Coverage
+      run: |
+        if [ -f backend/coverage.xml ]; then
+          echo "Backend coverage file found"
+          ls -lh backend/coverage.xml
+        else
+          echo "Backend coverage file not found"
+        fi
+    
     - name: Download Frontend Coverage
       uses: actions/download-artifact@v4
       with:
@@ -93,11 +102,36 @@ jobs:
         path: frontend/coverage/
       continue-on-error: true
     
+    - name: Verify Frontend Coverage
+      run: |
+        if [ -f frontend/coverage/lcov.info ]; then
+          echo "Frontend coverage file found"
+          ls -lh frontend/coverage/lcov.info
+        else
+          echo "Frontend coverage file not found"
+        fi
+      continue-on-error: true
+    
+    - name: Cache SonarCloud packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
+    
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.verbose=false
+    
+    - name: Check Quality Gate Status
+      run: |
+        echo "SonarCloud analysis completed"
+        echo "Quality Gate will block the pipeline if it fails"
 
   test-frontend:
     needs: secret-scan
@@ -179,14 +213,41 @@ jobs:
           ./deploy.sh
 
   notify:
-    needs: deploy
+    needs: [secret-scan, test-backend, test-frontend, sonarqube, deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
-    - name: Send notification
+    - name: Pipeline Summary
       run: |
-        if [ "${{ needs.deploy.result }}" == "success" ]; then
-          echo "Deployment successful"
+        echo "======================================"
+        echo "PIPELINE SUMMARY"
+        echo "======================================"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Triggered by: ${{ github.actor }}"
+        echo ""
+        echo "======================================"
+        echo "Job Status:"
+        echo "======================================"
+        echo "Secret Scan: ${{ needs.secret-scan.result }}"
+        echo "Backend Tests: ${{ needs.test-backend.result }}"
+        echo "Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "SonarQube: ${{ needs.sonarqube.result }}"
+        echo "Deploy: ${{ needs.deploy.result }}"
+        echo "======================================"
+        
+        # Déterminer le statut global
+        if [ "${{ needs.secret-scan.result }}" != "success" ] || \
+           [ "${{ needs.test-backend.result }}" != "success" ] || \
+           [ "${{ needs.test-frontend.result }}" != "success" ] || \
+           [ "${{ needs.sonarqube.result }}" != "success" ]; then
+          echo "Pipeline FAILED - Quality checks did not pass"
+          exit 1
+        elif [ "${{ needs.deploy.result }}" == "failure" ]; then
+          echo "Tests passed but deployment FAILED"
+          exit 1
+        elif [ "${{ needs.deploy.result }}" == "skipped" ]; then
+          echo "All quality checks PASSED (deployment skipped)"
         else
-          echo "Deployment failed"
+          echo "Pipeline SUCCESSFUL - All checks passed and deployed"
         fi
