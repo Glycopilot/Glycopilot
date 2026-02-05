@@ -125,10 +125,9 @@ class CareTeamIntegrationTests(TestCase):
         User.objects.create_user(email="pat_two@test.com", password="pass123", user_identity=patient_identity)
         Profile.objects.create(user=patient_identity, role=self.patient_role)
 
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self._token_for('unv_doc@test.com', 'pass123')}")
-        response = self.client.post("/api/doctors/care-team/add-patient/", {"email": "pat_two@test.com"})
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("VERIFIED", response.data.get("error", ""))
+        response = self.client.post("/api/auth/login/", {"email": "unv_doc@test.com", "password": "pass123"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("non_field_errors", response.data)
 
     def test_verified_doctor_can_add_patient(self):
         """Après validation par l'admin, le docteur peut ajouter un patient."""
