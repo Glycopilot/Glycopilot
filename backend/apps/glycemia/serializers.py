@@ -10,6 +10,7 @@ class GlycemiaSerializer(serializers.ModelSerializer):
         model = Glycemia
         fields = [
             "user_email",
+            "device",
             "measured_at",
             "value",
             "unit",
@@ -26,6 +27,7 @@ class GlycemiaHistoSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "reading_id",
+            "device",
             "measured_at",
             "recorded_at",
             "value",
@@ -69,12 +71,41 @@ class GlycemiaDataIASerializer(serializers.ModelSerializer):
         model = GlycemiaDataIA
         fields = [
             "id",
+            "device",
+            "for_time",
+            "input_start",
+            "input_end",
             "created_at",
-            "prediction_start",
-            "prediction_end",
-            "prob_hypo",
-            "prob_hyper",
-            "recommendation",
+            # Métadonnées du modèle
             "model_version",
+            "source",
+            "status",
+            "runtime_ms",
+            "confidence",
+            # Audit données d'entrée
+            "input_readings_count",
+            "missing_ratio",
+            "features_hash",
+            # Horizon 15 min
+            "y_hat_15",
+            "p10_15",
+            "p90_15",
+            "risk_hypo_15",
+            "risk_hyper_15",
+            # Horizon 30 min
+            "y_hat_30",
+            "p10_30",
+            "p90_30",
+            "risk_hypo_30",
+            "risk_hyper_30",
+            # Horizon 60 min
+            "y_hat_60",
+            "p10_60",
+            "p90_60",
+            "risk_hypo_60",
+            "risk_hyper_60",
+            # Sortie
+            "recommendation",
+            "meta_json",
         ]
         read_only_fields = ["id", "created_at"]
