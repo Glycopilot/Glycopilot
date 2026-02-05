@@ -133,6 +133,32 @@ def reset_database():
         InvitationStatus.objects.get_or_create(label=s)
     print("✓ InvitationStatus created")
 
+    # Alert Rules
+    from apps.alerts.models import AlertRule, AlertSeverity
+    AlertRule.objects.get_or_create(
+        code="HYPO",
+        defaults={
+            "name": "Hypoglycémie",
+            "description": "Glycémie en dessous du seuil bas",
+            "min_glycemia": 70,
+            "max_glycemia": None,
+            "severity": AlertSeverity.CRITICAL,
+            "is_active": True,
+        },
+    )
+    AlertRule.objects.get_or_create(
+        code="HYPER",
+        defaults={
+            "name": "Hyperglycémie",
+            "description": "Glycémie au dessus du seuil haut",
+            "min_glycemia": None,
+            "max_glycemia": 180,
+            "severity": AlertSeverity.HIGH,
+            "is_active": True,
+        },
+    )
+    print("✓ AlertRules created (HYPO/HYPER)")
+
     # Seed Users (Dev only)
     if current_env != "production":
         print("... Seeding Test Users ...")
@@ -147,7 +173,15 @@ def reset_database():
             AuthAccount.objects.create_user(email="patient@example.com", password="StrongPass123!", user_identity=u)
             role = Role.objects.get(name="PATIENT")
             Profile.objects.create(user=u, role=role)
-            print("  -> Created patient@example.com / StrongPass123!")
+            # Activer les alertes HYPO/HYPER pour ce patient
+            from apps.alerts.models import UserAlertRule
+            for rule in AlertRule.objects.filter(code__in=["HYPO", "HYPER"]):
+                UserAlertRule.objects.get_or_create(
+                    user=AuthAccount.objects.get(email="patient@example.com"),
+                    rule=rule,
+                    defaults={"enabled": True, "cooldown_seconds": 600},
+                )
+            print("  -> Created patient@example.com / StrongPass123! (alerts enabled)")
 
 
         if not AuthAccount.objects.filter(email="doctor@example.com").exists():
