@@ -19,7 +19,7 @@ from .serializers import (
 class GlycemiaViewSet(viewsets.ModelViewSet):
     """
     ViewSet principal pour gérer la glycémie :
-    - Glycemia = historique limité à 30 jours (cache étendu)
+    - Glycemia = historique limité à 90 jours (cache étendu)
     - GlycemiaHisto = historique complet (jamais supprimé)
     """
 
@@ -37,11 +37,11 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         """
         GET /api/v1/glucose/current/
         Retourne la dernière valeur de glycémie :
-        - Cherchée d'abord dans Glycemia (30 jours)
+        - Cherchée d'abord dans Glycemia (90 jours)
         - Sinon fallback dans GlycemiaHisto
         """
 
-        # Dernière valeur dans Glycemia (30 jours)
+        # Dernière valeur dans Glycemia (90 jours)
         current = (
             Glycemia.objects.filter(user=request.user).order_by("-measured_at").first()
         )
@@ -62,14 +62,14 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
     def range(self, request):
         """
         GET /api/v1/glucose/range/?days=X
-        Retourne l'historique des X derniers jours (1 ≤ X ≤ 30).
-        Utilise uniquement la table Glycemia (cache 30 jours).
+        Retourne l'historique des X derniers jours (1 ≤ X ≤ 90).
+        Utilise uniquement la table Glycemia (cache 90 jours).
         """
 
         days = int(request.query_params.get("days", 7))
 
-        if days < 1 or days > 30:
-            return Response({"error": "Days must be between 1 and 30"}, status=400)
+        if days < 1 or days > 90:
+            return Response({"error": "Days must be between 1 and 90"}, status=400)
 
         limit = now() - timedelta(days=days)
 
@@ -93,8 +93,8 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         POST /api/v1/glucose/manual-readings/
         Ajoute une mesure manuelle :
         - crée une entrée dans GlycemiaHisto (historique complet)
-        - crée une entrée dans Glycemia (historique 30 jours)
-        - nettoie les valeurs Glycemia > 30 jours
+        - crée une entrée dans Glycemia (historique 90 jours)
+        - nettoie les valeurs Glycemia > 90 jours
         """
 
         serializer = GlycemiaHistoCreateSerializer(data=request.data)
@@ -111,10 +111,9 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
 
     def _add_to_month_history(self, histo_entry):
-        """Ajoute une mesure dans Glycemia (historique 30 jours)."""
+        """Ajoute une mesure dans Glycemia (historique 90 jours)."""
         Glycemia.objects.create(
             user=histo_entry.user,
-            device=histo_entry.device,
             measured_at=histo_entry.measured_at,
             value=histo_entry.value,
             unit=histo_entry.unit,
@@ -124,8 +123,8 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         )
 
     def _clean_old_entries(self, user):
-        """Supprime les entrées Glycemia plus vieilles que 30 jours."""
-        limit = now() - timedelta(days=30)
+        """Supprime les entrées Glycemia plus vieilles que 90 jours."""
+        limit = now() - timedelta(days=90)
         Glycemia.objects.filter(user=user, measured_at__lt=limit).delete()
 
     def _calculate_stats(self, entries):

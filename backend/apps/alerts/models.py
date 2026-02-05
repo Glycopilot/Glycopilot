@@ -14,6 +14,7 @@ class AlertSeverity(models.IntegerChoices):
 class AlertEventStatus(models.TextChoices):
     TRIGGERED = "TRIGGERED", "TRIGGERED"
     SENT = "SENT", "SENT"
+    TREATING = "TREATING", "TREATING"
     ACKED = "ACKED", "ACKED"
     RESOLVED = "RESOLVED", "RESOLVED"
     FAILED = "FAILED", "FAILED"
