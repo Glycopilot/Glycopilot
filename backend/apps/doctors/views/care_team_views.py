@@ -3,37 +3,45 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from django.core.exceptions import ValidationError
+import logging
+
+logger = logging.getLogger(__name__)
 
 from apps.users.models import User, AuthAccount
 from apps.profiles.models import Profile, Role
 from apps.doctors.models import PatientCareTeam, InvitationStatus
 from apps.doctors.utils import send_care_team_invitation
 from apps.doctors.serializers import PatientCareTeamSerializer
+from apps.doctors.services import DoctorPatientDataService
 
+def _get_identity(user_obj):
+    """Return the User identity for AuthAccount or User."""
+    return getattr(user_obj, "user", None) or user_obj
 
 def _get_invitation_status(label):
-    """Retourne le statut d'invitation (PENDING/ACTIVE), crée si absent (santé = pas de crash)."""
+    """Récupère ou crée le statut d'invitation (PENDING/ACTIVE) pour garantir l'intégrité."""
     obj, _ = InvitationStatus.objects.get_or_create(label=label, defaults={"label": label})
     return obj
 
 
 class CareTeamViewSet(viewsets.ViewSet):
     """
-    ViewSet for managing the Care Team (Patients <-> Doctors/Family).
-    Standardizes disparate APIViews into actions.
+    Gère l'équipe de soin (Patients <-> Médecins/Famille).
+    Standardise les vues API en actions.
     """
     permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['post'], url_path='add-family')
     def add_family_member(self, request):
         """
-        Add a family member/caregiver manually.
-        Endpoint: POST /api/doctors/care-team/add-family/
+        Ajoute un membre de la famille ou un aidant manuellement.
         """
         data = request.data
         
         # Security Check: Ensure requester is a PATIENT
-        patient_role_profile = request.user.user.profiles.filter(role__name="PATIENT").first()
+        identity = _get_identity(request.user)
+        patient_role_profile = identity.profiles.filter(role__name__iexact="PATIENT").first() if identity else None
         
         if not patient_role_profile:
              return Response({"error": "Only patients can add care team members."}, status=403)
@@ -43,7 +51,7 @@ class CareTeamViewSet(viewsets.ViewSet):
              
         patient_profile = patient_role_profile.patient_profile
         
-        # 1. Create Identity (User)
+
         first_name = data.get("first_name")
         last_name = data.get("last_name")
         phone_number = data.get("phone_number")
@@ -89,8 +97,7 @@ class CareTeamViewSet(viewsets.ViewSet):
     def invite_doctor(self, request):
         """
         Le patient invite un médecin (référent ou spécialiste) par email.
-        L'email est envoyé au DOCTEUR invité, pas au patient.
-        Endpoint: POST /api/doctors/care-team/invite-doctor/
+        L'email est envoyé au DOCTEUR invité.
         """
         email = (request.data.get("email") or "").strip().lower()
         role = (request.data.get("role") or "").strip()
@@ -110,7 +117,8 @@ class CareTeamViewSet(viewsets.ViewSet):
                 status=400,
             )
 
-        patient_role_profile = request.user.user.profiles.filter(role__name="PATIENT").first()
+        identity = _get_identity(request.user)
+        patient_role_profile = identity.profiles.filter(role__name__iexact="PATIENT").first() if identity else None
         if not patient_role_profile:
             return Response({"error": "Seuls les patients peuvent inviter un médecin."}, status=403)
         if not hasattr(patient_role_profile, "patient_profile"):
@@ -129,7 +137,7 @@ class CareTeamViewSet(viewsets.ViewSet):
                 status=400,
             )
 
-        member_profile = auth_account.user.profiles.filter(role__name="DOCTOR").first()
+        member_profile = auth_account.user.profiles.filter(role__name__iexact="DOCTOR").first()
         if not member_profile or not getattr(member_profile, "doctor_profile", None):
             return Response(
                 {"error": "Désolé, le rôle référent que vous cherchez à inviter n'existe pas. Contactez votre docteur."},
@@ -149,7 +157,7 @@ class CareTeamViewSet(viewsets.ViewSet):
         ).exists():
             return Response({"error": "Ce médecin fait déjà partie de votre équipe ou a déjà une invitation en attente."}, status=400)
 
-        PatientCareTeam.objects.create(
+        invitation = PatientCareTeam.objects.create(
             patient_profile=patient_profile,
             member_profile=member_profile,
             role=role,
@@ -158,22 +166,24 @@ class CareTeamViewSet(viewsets.ViewSet):
         # Email envoyé au DOCTEUR (destinataire = email du médecin)
         send_care_team_invitation(email, inviter_name, role, is_existing_user=True)
 
-        return Response({"message": "Invitation envoyée au médecin."}, status=201)
+        return Response(
+            {"message": "Invitation envoyée au médecin.", "id_team_member": str(invitation.id_team_member)},
+            status=201,
+        )
 
     @action(detail=False, methods=['post'], url_path='add-patient')
     def add_patient(self, request):
         """
-        Doctor adds an EXISTING patient by Email or Phone.
-        Endpoint: POST /api/doctors/care-team/add-patient/
+        Le médecin ajoute un patient existant par email ou téléphone.
         """
-        # request.user = AuthAccount; identity = User (profile owner)
-        identity = getattr(request.user, "user", None)
+        # request.user est AuthAccount; identity est User (propriétaire du profil)
+        identity = _get_identity(request.user)
         if not identity or not hasattr(identity, "profiles"):
             return Response(
                 {"error": "Only doctors can perform this action. Use a doctor account token (e.g. Login as Doctor, then use that token)."},
                 status=403,
             )
-        doctor_profile = identity.profiles.filter(role__name="DOCTOR").first()
+        doctor_profile = identity.profiles.filter(role__name__iexact="DOCTOR").first()
         if not doctor_profile:
             return Response(
                 {"error": "Only doctors can perform this action. This account has no doctor profile—log in with a verified doctor account."},
@@ -235,7 +245,7 @@ class CareTeamViewSet(viewsets.ViewSet):
         ).exists():
              return Response({"error": "Relation already exists"}, status=400)
              
-        PatientCareTeam.objects.create(
+        invitation = PatientCareTeam.objects.create(
             patient_profile=target_patient_profile,
             member_profile=doctor_profile,
             role="REFERENT_DOCTOR", 
@@ -243,25 +253,27 @@ class CareTeamViewSet(viewsets.ViewSet):
             approved_by=doctor_profile.doctor_profile
         )
         
-        # Email envoyé au PATIENT invité (jamais au médecin) — récupération email sans crash
+        # Email envoyé au PATIENT invité (jamais au médecin) — récupération sécurisée
         inviter_name = f"Dr. {request.user.user.last_name}"
         patient_email = email or (AuthAccount.objects.filter(user=target_user).values_list("email", flat=True).first() or "")
         if patient_email:
             try:
                 send_care_team_invitation(patient_email, inviter_name, "PATIENT", is_existing_user=True)
-            except Exception:
-                pass  # L'invitation est créée même si l'email échoue
+            except Exception as e:
+                logger.error(f"Erreur lors de l'envoi de l'invitation patient: {e}") 
+                # L'invitation est créée même si l'email échoue
 
-        return Response({"message": "Invitation envoyée au patient."}, status=201)
+        return Response(
+            {"message": "Invitation envoyée au patient.", "id_team_member": str(invitation.id_team_member)},
+            status=201,
+        )
 
     @action(detail=False, methods=['post'], url_path='accept-invitation')
     def accept_invitation(self, request):
         """
         Accepter une invitation (médecin ou patient). Passe le statut à ACTIVE.
-        Endpoint: POST /api/doctors/care-team/accept-invitation/
-        Body: {"id_team_member": "uuid"}
         """
-        id_team_member = request.data.get("id_team_member")
+        id_team_member = request.data.get("id_team_member") or request.query_params.get("id_team_member")
         if not id_team_member:
             return Response({"error": "id_team_member requis."}, status=400)
 
@@ -294,20 +306,19 @@ class CareTeamViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'], url_path='my-team')
     def my_team(self, request):
         """
-        Get the authenticated user's care team.
-        Endpoint: GET /api/doctors/care-team/my-team/
+        Récupère l'équipe de soin de l'utilisateur connecté.
         """
-        user = request.user.user
+        user = _get_identity(request.user)
         
         # Check if Patient
-        patient_role = user.profiles.filter(role__name="PATIENT").first()
+        patient_role = user.profiles.filter(role__name__iexact="PATIENT").first() if user else None
         if patient_role and hasattr(patient_role, 'patient_profile'):
             return self._get_patient_team(patient_role.patient_profile)
             
         # Check if Doctor
-        doctor_role = user.profiles.filter(role__name="DOCTOR").first()
+        doctor_role = user.profiles.filter(role__name__iexact="DOCTOR").first() if user else None
         if doctor_role and hasattr(doctor_role, 'doctor_profile'):
-            return self._get_doctor_patients(doctor_role) # Use generic profile for link
+            return self._get_doctor_patients(doctor_role)
             
         return Response({"error": "Profile not found"}, status=404)
 
@@ -338,3 +349,83 @@ class CareTeamViewSet(viewsets.ViewSet):
             "pending_invites": PatientCareTeamSerializer(pending, many=True).data
         }
         return Response(data)
+
+    @action(detail=False, methods=['get'], url_path='patient-dashboard')
+    def get_patient_dashboard(self, request):
+        """
+        Résumé du tableau de bord d'un patient.
+        Accessible uniquement aux médecins avec une relation ACTIVE.
+        """
+        patient_user_id = request.query_params.get("patient_user_id")
+        user, error_response = self._verify_doctor_access(request, patient_user_id)
+        if error_response: return error_response
+        
+        data = DoctorPatientDataService.get_patient_dashboard(user)
+        return Response(data)
+
+    def _verify_doctor_access(self, request, patient_user_id):
+        if not patient_user_id:
+             return None, Response({"error": "patient_user_id is required"}, status=400)
+
+        doctor_user = _get_identity(request.user)
+        doctor_role = doctor_user.profiles.filter(role__name__iexact="DOCTOR").first() if doctor_user else None
+        
+        if not doctor_role:
+             return None, Response({"error": "Access denied. Doctors only."}, status=403)
+
+        if not hasattr(doctor_role, 'doctor_profile'):
+             return None, Response({"error": "Access denied. Doctors only."}, status=403)
+             
+        try:
+            can_access = PatientCareTeam.objects.filter(
+                member_profile=doctor_role,
+                patient_profile__profile__user__id_user=patient_user_id,
+                status__label="ACTIVE",
+                role__in=["REFERENT_DOCTOR", "SPECIALIST"]
+            ).exists()
+        except ValidationError:
+            # Handles invalid UUID format in patient_user_id
+            return None, Response({"error": "Invalid patient_user_id format (UUID required)."}, status=400)
+        
+        if not can_access:
+            return None, Response(
+                {"error": "Access denied. You are not an active doctor for this patient."},
+                status=403
+            )
+            
+        try:
+            patient_user = AuthAccount.objects.get(user__pk=patient_user_id)
+            return patient_user, None
+        except (AuthAccount.DoesNotExist, ValidationError):
+             return None, Response({"error": "Patient user or account_auth not found"}, status=404)
+
+    @action(detail=False, methods=['get'], url_path='patient-meals')
+    def get_patient_meals(self, request):
+        patient_id = request.query_params.get("patient_user_id")
+        user, error_response = self._verify_doctor_access(request, patient_id)
+        if error_response: return error_response
+        
+        from apps.doctors.services import DoctorPatientDataService
+        data = DoctorPatientDataService.get_meals_history(user)
+        return Response(data)
+
+    @action(detail=False, methods=['get'], url_path='patient-medications')
+    def get_patient_medications(self, request):
+        patient_id = request.query_params.get("patient_user_id")
+        user, error_response = self._verify_doctor_access(request, patient_id)
+        if error_response: return error_response
+        
+        from apps.doctors.services import DoctorPatientDataService
+        data = DoctorPatientDataService.get_medications_history(user)
+        return Response(data)
+
+    @action(detail=False, methods=['get'], url_path='patient-glycemia')
+    def get_patient_glycemia(self, request):
+        patient_id = request.query_params.get("patient_user_id")
+        user, error_response = self._verify_doctor_access(request, patient_id)
+        if error_response: return error_response
+        
+        from apps.doctors.services import DoctorPatientDataService
+        data = DoctorPatientDataService.get_glycemia_history(user)
+        return Response(data)
+
