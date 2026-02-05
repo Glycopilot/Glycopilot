@@ -55,6 +55,14 @@ def register(request):
     if serializer.is_valid():
         user = serializer.save()
 
+        # Si c'est un médecin, on ne renvoie PAS les tokens, car il doit être validé.
+        is_doctor = user.user.profiles.filter(role__name="DOCTOR").exists()
+        if is_doctor:
+             return Response(
+                {"message": "Votre compte médecin a été créé avec succès. Il est en attente de validation par un administrateur. Vous recevrez un email une fois validé."},
+                status=status.HTTP_201_CREATED
+            )
+
         # Générer les tokens JWT
         tokens = AuthResponseSerializer.get_tokens_for_user(user)
 
