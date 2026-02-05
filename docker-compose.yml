@@ -1,6 +1,7 @@
 version: "3.9"
+
 services:
-  # Base de données MySQL
+  # --- Base de données MySQL ---
   database:
     image: mysql:8.0
     container_name: glycopilot-db
@@ -12,16 +13,27 @@ services:
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "mysql -h localhost -u root -p$MYSQL_ROOT_PASSWORD -e 'SELECT 1' || exit 1"
-        ]
-      interval: 5s
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$MYSQL_USER", "--password=$MYSQL_PASSWORD"]
+      interval: 10s
       timeout: 5s
-      retries: 12
+      retries: 5
 
-  # Backend Django
+  # --- Redis for WebSocket channel layer ---
+  redis:
+    image: redis:7-alpine
+    container_name: glycopilot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Backend Django ---
   backend:
     build:
       context: ./backend
@@ -35,20 +47,14 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-       database:
-         condition: service_healthy
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
-    command: >
-      sh -C "
-      echo 'waiting for mysql to be ready....';
-      echo 'MYSQL is up, running migration ....';
-      python manager.py migrate;
-      python manger.py runserver 0.0.0.0:80000
-      "
-    
-  
+    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
 
-  # Frontend React Native
+  # --- Frontend React Native ---
   frontend:
     image: node:20-alpine
     container_name: glycopilot-front
@@ -59,10 +65,12 @@ services:
     working_dir: /app
     command: sh -c "npm install && npx expo start --lan"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     stdin_open: true
     tty: true
     restart: unless-stopped
 
 volumes:
   mysql_data:
+  redis_data:
