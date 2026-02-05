@@ -1,3 +1,4 @@
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
@@ -16,8 +17,13 @@ import InputField from '../components/common/InputField';
 import Decorations from '../components/common/Decorations';
 import { colors } from '../themes/colors';
 import { toastError, toastSuccess } from '../services/toastService';
+import type { NavigationProps } from '../types/components.types';
 
-export default function SignInScreen({ navigation }) {
+interface SignInScreenProps {
+  navigation: NavigationProps;
+}
+
+export default function SignInScreen({ navigation }: SignInScreenProps) {
   const [firstName, setfirstName] = useState('');
   const [lastName, setlastName] = useState('');
 
@@ -93,7 +99,8 @@ export default function SignInScreen({ navigation }) {
           navigation.navigate('Login');
         }
       } catch (error) {
-        toastError('Erreur inscription', error.message);
+        const err = error as Error;
+        toastError('Erreur inscription', err.message);
       }
     }
   };

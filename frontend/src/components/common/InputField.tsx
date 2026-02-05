@@ -1,18 +1,31 @@
-import React from 'react';
-import { StyleSheet, View, TextInput, Text } from 'react-native';
+import React, { ReactNode } from 'react';
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  Text,
+  TextInputProps,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
 import { colors } from '../../themes/colors';
+
+interface InputFieldProps extends Omit<TextInputProps, 'style'> {
+  label?: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  icon?: ReactNode;
+  rightElement?: ReactNode;
+  secureTextEntry?: boolean;
+  placeholder?: string;
+  keyboardType?: TextInputProps['keyboardType'];
+  autoCorrect?: boolean;
+  containerStyle?: ViewStyle;
+  inputStyle?: TextStyle;
+}
 
 /**
  * Composant d'input réutilisable
- * @param {string} label - Label de l'input
- * @param {string} value - Valeur de l'input
- * @param {function} onChangeText - Callback de changement de texte
- * @param {React.ReactNode} icon - Icône à gauche (optional)
- * @param {React.ReactNode} rightElement - Élément à droite (optional)
- * @param {boolean} secureTextEntry - Pour les champs password
- * @param {string} placeholder - Placeholder du champ
- * @param {string} keyboardType - Type de clavier
- * @param {boolean} autoCorrect - Autocomplétion
  */
 export default function InputField({
   label,
@@ -24,14 +37,17 @@ export default function InputField({
   placeholder = '',
   keyboardType = 'default',
   autoCorrect = true,
-}) {
+  containerStyle,
+  inputStyle,
+  ...rest
+}: InputFieldProps) {
   return (
-    <View style={styles.inputWrapper}>
+    <View style={[styles.inputWrapper, containerStyle]}>
       {label && <CustomTextLabel text={label} />}
       <View style={styles.inputContainer}>
         {icon && <View style={styles.iconWrapper}>{icon}</View>}
         <TextInput
-          style={styles.input}
+          style={[styles.input, inputStyle]}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
@@ -39,6 +55,7 @@ export default function InputField({
           keyboardType={keyboardType}
           autoCorrect={autoCorrect}
           placeholderTextColor="#ccc"
+          {...rest}
         />
         {rightElement && (
           <View style={styles.rightElement}>{rightElement}</View>
@@ -51,7 +68,7 @@ export default function InputField({
 /**
  * Composant pour le label
  */
-function CustomTextLabel({ text }) {
+function CustomTextLabel({ text }: { text: string }) {
   return <Text style={styles.label}>{text}</Text>;
 }
 
