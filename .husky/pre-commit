@@ -13,13 +13,19 @@ fi
 
 cd backend
 
-# Utiliser le venv si disponible, sinon python3 global
+# Vérifier que le venv existe
+if [ ! -f "venv/bin/python" ] && [ ! -f "venv/Scripts/python.exe" ]; then
+    echo "ERREUR: venv non trouve dans backend/"
+    echo "Creez un venv avec: cd backend && python -m venv venv"
+    echo "Puis installez les deps: source venv/bin/activate && pip install -r requirements.txt"
+    exit 1
+fi
+
+# Utiliser le venv
 if [ -f "venv/bin/python" ]; then
     PYTHON_CMD="venv/bin/python"
-elif [ -f "venv/Scripts/python.exe" ]; then
-    PYTHON_CMD="venv/Scripts/python.exe"
 else
-    PYTHON_CMD="python3"
+    PYTHON_CMD="venv/Scripts/python.exe"
 fi
 
 echo "Verification et correction automatique du code Python..."
