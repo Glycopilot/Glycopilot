@@ -101,7 +101,6 @@ jobs:
       with:
         name: coverage-frontend
         path: frontend/coverage/
-      continue-on-error: true
     
     - name: Verify Frontend Coverage
       run: |
@@ -111,7 +110,6 @@ jobs:
         else
           echo "Frontend coverage file not found"
         fi
-      continue-on-error: true
     
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
@@ -121,7 +119,7 @@ jobs:
         restore-keys: ${{ runner.os }}-sonar-
     
     - name: SonarCloud Scan
-      uses: SonarSource/sonarqube-scan-action@v5
+      uses: SonarSource/sonarqube-scan-action@v6
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
