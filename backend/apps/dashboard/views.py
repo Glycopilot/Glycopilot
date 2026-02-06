@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.db.models import Sum
 from django.utils import timezone
+
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -55,7 +56,10 @@ class DashboardSummaryView(APIView):
             "nutrition": (
                 self._get_nutrition_data(user)
                 if include_all or "nutrition" in include
-                else {"calories": {"consumed": 0, "goal": 1800}, "carbs": {"grams": 0, "goal": 200}}
+                else {
+                    "calories": {"consumed": 0, "goal": 1800},
+                    "carbs": {"grams": 0, "goal": 200},
+                }
             ),
             "activity": (
                 self._get_activity_data(user)
@@ -106,9 +110,7 @@ class DashboardSummaryView(APIView):
     def _get_medication_data(self, user) -> dict:
         # Récupérer la prochaine dose
         next_dose = (
-            UserMedication.objects.filter(
-                user=user, statut=True, taken_at__isnull=True
-            )
+            UserMedication.objects.filter(user=user, statut=True, taken_at__isnull=True)
             .select_related("medication")
             .first()
         )
@@ -116,22 +118,18 @@ class DashboardSummaryView(APIView):
         # Calculer les médicaments pris aujourd'hui
         today = timezone.now().date()
         taken_today = UserMedication.objects.filter(
-            user=user,
-            statut=True,
-            taken_at__date=today
+            user=user, statut=True, taken_at__date=today
         ).count()
 
         # Calculer le total de médicaments actifs pour aujourd'hui
         total_today = UserMedication.objects.filter(
-            user=user,
-            statut=True,
-            start_date__lte=today
+            user=user, statut=True, start_date__lte=today
         ).count()
 
         result = {
             "taken_count": taken_today,
             "total_count": total_today,
-            "nextDose": None
+            "nextDose": None,
         }
 
         if next_dose:
@@ -165,9 +163,7 @@ class DashboardSummaryView(APIView):
 
     def _get_activity_data(self, user) -> dict:
         today = timezone.now().date()
-        activities = UserActivity.objects.filter(
-            user=user, start__date=today
-        )
+        activities = UserActivity.objects.filter(user=user, start__date=today)
 
         total_minutes = 0
         for activity in activities:

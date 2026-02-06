@@ -34,7 +34,7 @@ export default function GlycemiaChart({
   const labelWidth = resolvedWidth / Math.max(labelCount, 1);
 
   // Calculer les valeurs de l'axe Y dynamiquement
-  const { yAxisValues, yMin, yMax } = React.useMemo(() => {
+  const { yAxisValues } = React.useMemo(() => {
     if (!hasValidData) {
       return {
         yAxisValues: ['200', '150', '100', '50'],

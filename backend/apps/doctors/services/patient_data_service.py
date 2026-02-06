@@ -1,12 +1,13 @@
-from django.utils import timezone
 from datetime import timedelta
-from apps.glycemia.models import Glycemia
-from apps.alerts.models import AlertEvent, AlertSeverity
-from apps.medications.models import UserMedication
-from apps.meals.models import UserMeal
+
+from django.utils import timezone
+
 from apps.activities.models import UserActivity
+from apps.alerts.models import AlertEvent, AlertSeverity
 from apps.dashboard.services import HealthScoreService
-from apps.glycemia.models import GlycemiaHisto
+from apps.glycemia.models import Glycemia, GlycemiaHisto
+from apps.meals.models import UserMeal
+from apps.medications.models import UserMedication
 
 
 class DoctorPatientDataService:
@@ -73,9 +74,7 @@ class DoctorPatientDataService:
     @staticmethod
     def _get_medication_data(user) -> dict:
         next_dose = (
-            UserMedication.objects.filter(
-                user=user, statut=True, taken_at__isnull=True
-            )
+            UserMedication.objects.filter(user=user, statut=True, taken_at__isnull=True)
             .select_related("medication")
             .order_by("start_date")
             .first()
@@ -105,20 +104,18 @@ class DoctorPatientDataService:
         for user_meal in meals:
             if user_meal.meal.calories:
                 total_calories += user_meal.meal.calories
-            if user_meal.meal.glucose: 
+            if user_meal.meal.glucose:
                 total_carbs += int(user_meal.meal.glucose)
 
         return {
-            "calories": {"consumed": total_calories, "goal": 1800}, 
+            "calories": {"consumed": total_calories, "goal": 1800},
             "carbs": {"grams": total_carbs, "goal": 200},
         }
 
     @staticmethod
     def _get_activity_data(user) -> dict:
         today = timezone.now().date()
-        activities = UserActivity.objects.filter(
-            user=user, start__date=today
-        )
+        activities = UserActivity.objects.filter(user=user, start__date=today)
 
         total_minutes = 0
         for activity in activities:
@@ -126,14 +123,15 @@ class DoctorPatientDataService:
             total_minutes += duration
 
         return {
-            "steps": {"value": 0, "goal": 8000}, 
+            "steps": {"value": 0, "goal": 8000},
             "activeMinutes": int(total_minutes),
         }
 
     @staticmethod
     def get_glycemia_history(user, limit=50) -> list:
-     
-        history = GlycemiaHisto.objects.filter(user=user).order_by("-measured_at")[:limit]
+        history = GlycemiaHisto.objects.filter(user=user).order_by("-measured_at")[
+            :limit
+        ]
         return [
             {
                 "value": h.value,
@@ -145,37 +143,44 @@ class DoctorPatientDataService:
                 "source": h.source,
                 "notes": h.notes,
                 "photo": h.photo_url,
-                "location": {
-                    "lat": h.location_lat,
-                    "lng": h.location_lng
-                } if h.location_lat and h.location_lng else None
+                "location": {"lat": h.location_lat, "lng": h.location_lng}
+                if h.location_lat and h.location_lng
+                else None,
             }
             for h in history
         ]
 
     @staticmethod
     def get_meals_history(user, limit=50) -> list:
-        meals = UserMeal.objects.filter(user=user).select_related("meal").order_by("-taken_at")[:limit]
+        meals = (
+            UserMeal.objects.filter(user=user)
+            .select_related("meal")
+            .order_by("-taken_at")[:limit]
+        )
         return [
             {
                 "name": m.meal.name,
                 "calories": m.meal.calories,
                 "carbs": m.meal.glucose,
                 "takenAt": m.taken_at,
-                "photo": m.meal.link_photo
+                "photo": m.meal.link_photo,
             }
             for m in meals
         ]
 
     @staticmethod
     def get_medications_history(user, limit=50) -> list:
-        meds = UserMedication.objects.filter(user=user).select_related("medication").order_by("-taken_at")[:limit]
+        meds = (
+            UserMedication.objects.filter(user=user)
+            .select_related("medication")
+            .order_by("-taken_at")[:limit]
+        )
         return [
             {
                 "name": m.medication.name,
                 "dosage": m.medication.dosage,
                 "takenAt": m.taken_at,
-                "status": m.statut
+                "status": m.statut,
             }
             for m in meds
         ]

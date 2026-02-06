@@ -14,13 +14,9 @@ import {
   User,
   Bell,
   Shield,
-  Heart,
-  Activity,
-  Calendar,
   Phone,
   Mail,
   MapPin,
-  UserPlus,
   ChevronRight,
   Edit2,
   Stethoscope,
@@ -65,7 +61,6 @@ export default function ProfileScreen({
   navigation,
 }: ProfileScreenProps): React.JSX.Element {
   const [modalVisible, setModalVisible] = useState(false);
-  const [doctorModalVisible, setDoctorModalVisible] = useState(false);
   const [contactName, setContactName] = useState('');
   const [contactRelation, setContactRelation] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -81,7 +76,7 @@ export default function ProfileScreen({
   };
 
   // Médecin traitant
-  const [doctor, setDoctor] = useState<DoctorInfo>({
+  const [doctor] = useState<DoctorInfo>({
     name: 'Dr. Sophie Dubois',
     specialty: 'Endocrinologue',
     phone: '+33 1 42 34 56 78',

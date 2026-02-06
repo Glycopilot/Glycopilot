@@ -247,27 +247,33 @@ class GlycemiaDataIA(models.Model):
 
     # ── Scores de risque par horizon (0..1) ──
     risk_hypo_15 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_15 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hypo_30 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_30 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hypo_60 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_60 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
 
@@ -290,7 +296,4 @@ class GlycemiaDataIA(models.Model):
         ]
 
     def __str__(self):
-        return (
-            f"AI run {self.user.email} "
-            f"@ {self.for_time} ({self.model_version})"
-        )
+        return f"AI run {self.user.email} " f"@ {self.for_time} ({self.model_version})"

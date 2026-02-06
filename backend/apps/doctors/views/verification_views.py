@@ -2,13 +2,15 @@
 API pour admin/superadmin : valider les comptes docteurs (accepter / refuser avec message).
 """
 
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+import uuid
+
 from django.db import transaction
 from django.utils import timezone
-import uuid
+
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from apps.doctors.models import DoctorProfile, VerificationStatus
 from apps.doctors.serializers import DoctorSerializer
@@ -36,6 +38,7 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
     - POST /api/doctors/verification/<doctor_id>/accept/  → passer en VERIFIED
     - POST /api/doctors/verification/<doctor_id>/decline/  → passer en REJECTED + message
     """
+
     permission_classes = [IsStaffOrSuperuser]
 
     def list(self, request):
@@ -44,9 +47,9 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
             pending_status = VerificationStatus.objects.get(label="PENDING")
         except VerificationStatus.DoesNotExist:
             return Response({"results": []})
-        doctors = DoctorProfile.objects.filter(verification_status=pending_status).select_related(
-            "profile", "profile__user", "verification_status", "specialty"
-        )
+        doctors = DoctorProfile.objects.filter(
+            verification_status=pending_status
+        ).select_related("profile", "profile__user", "verification_status", "specialty")
         serializer = DoctorSerializer(doctors, many=True)
         return Response({"results": serializer.data})
 
@@ -58,7 +61,10 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
         try:
             uuid.UUID(str(pk))
         except (ValueError, TypeError):
-            return Response({"error": "doctor_id invalide (UUID requis)."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "doctor_id invalide (UUID requis)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             doctor = DoctorProfile.objects.get(doctor_id=pk)
         except DoctorProfile.DoesNotExist:
@@ -82,14 +88,21 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
             doctor.verified_by_user = request.user
             doctor.verified_at = timezone.now()
             doctor.rejection_reason = None
-            doctor.save(update_fields=["verification_status", "verified_by_user", "verified_at", "rejection_reason"])
+            doctor.save(
+                update_fields=[
+                    "verification_status",
+                    "verified_by_user",
+                    "verified_at",
+                    "rejection_reason",
+                ]
+            )
 
         # Notification Email
         try:
             email = doctor.profile.user.auth_account.email
             send_doctor_verification_result_email(email, is_accepted=True)
         except Exception:
-            pass # L'email ne doit pas bloquer la transaction
+            pass  # L'email ne doit pas bloquer la transaction
 
         return Response(
             {"message": "Docteur validé.", "verification_status": "VERIFIED"},
@@ -105,7 +118,10 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
         try:
             uuid.UUID(str(pk))
         except (ValueError, TypeError):
-            return Response({"error": "doctor_id invalide (UUID requis)."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "doctor_id invalide (UUID requis)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             doctor = DoctorProfile.objects.get(doctor_id=pk)
         except DoctorProfile.DoesNotExist:
@@ -125,12 +141,21 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
             doctor.verified_by_user = request.user
             doctor.verified_at = timezone.now()
             doctor.rejection_reason = rejection_reason or None
-            doctor.save(update_fields=["verification_status", "verified_by_user", "verified_at", "rejection_reason"])
+            doctor.save(
+                update_fields=[
+                    "verification_status",
+                    "verified_by_user",
+                    "verified_at",
+                    "rejection_reason",
+                ]
+            )
 
         # Notification Email
         try:
             email = doctor.profile.user.auth_account.email
-            send_doctor_verification_result_email(email, is_accepted=False, rejection_reason=rejection_reason)
+            send_doctor_verification_result_email(
+                email, is_accepted=False, rejection_reason=rejection_reason
+            )
         except Exception:
             pass
 

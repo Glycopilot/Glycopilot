@@ -1,6 +1,8 @@
 from rest_framework import serializers
+
 from apps.users.models import User
-from .models import DoctorProfile, VerificationStatus, PatientCareTeam
+
+from .models import DoctorProfile, PatientCareTeam, VerificationStatus
 
 
 class SimpleUserSerializer(serializers.ModelSerializer):
@@ -19,7 +21,7 @@ class SimpleUserSerializer(serializers.ModelSerializer):
     def get_email(self, obj):
         try:
             return obj.auth_account.email
-        except:
+        except Exception:
             return None
 
 
@@ -27,8 +29,8 @@ class DoctorSerializer(serializers.ModelSerializer):
     profile_id = serializers.SerializerMethodField()
     user_details = serializers.SerializerMethodField()
     valide = serializers.SerializerMethodField()
-    verification_status = serializers.StringRelatedField() # serialize label
-    specialty = serializers.StringRelatedField() # serialize name
+    verification_status = serializers.StringRelatedField()  # serialize label
+    specialty = serializers.StringRelatedField()  # serialize name
 
     class Meta:
         model = DoctorProfile
@@ -60,25 +62,27 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
     member_details = serializers.SerializerMethodField()
     patient_details = serializers.SerializerMethodField()
     role_label = serializers.CharField(source="get_role_display", read_only=True)
-    
+
     def get_member_details(self, obj):
         if not obj.member_profile or not obj.member_profile.user:
             return None
-            
+
         data = SimpleUserSerializer(obj.member_profile.user).data
-        
+
         # Si c'est un docteur, on ajoute ses infos professionnelles
-        if hasattr(obj.member_profile, 'doctor_profile'):
+        if hasattr(obj.member_profile, "doctor_profile"):
             doc = obj.member_profile.doctor_profile
-            data.update({
-                "specialty": doc.specialty.name if doc.specialty else None,
-                "verification_status": doc.verification_status.label,
-                "medical_center_name": doc.medical_center_name,
-                "medical_center_address": doc.medical_center_address,
-                "license_number": doc.license_number,
-                "verified_at": doc.verified_at
-            })
-            
+            data.update(
+                {
+                    "specialty": doc.specialty.name if doc.specialty else None,
+                    "verification_status": doc.verification_status.label,
+                    "medical_center_name": doc.medical_center_name,
+                    "medical_center_address": doc.medical_center_address,
+                    "license_number": doc.license_number,
+                    "verified_at": doc.verified_at,
+                }
+            )
+
         return data
 
     def get_patient_details(self, obj):
@@ -87,22 +91,23 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
         if not obj.patient_profile.profile.user:
             return None
         return SimpleUserSerializer(obj.patient_profile.profile.user).data
-    
+
     class Meta:
         model = PatientCareTeam
         fields = [
-            "id_team_member", 
-            "patient_profile", 
-            "member_profile", 
+            "id_team_member",
+            "patient_profile",
+            "member_profile",
             "member_details",
             "patient_details",
             "invitation_email",
-            "role", 
+            "role",
             "role_label",
             "relation_type",
-            "status", 
-            "approved_by"
+            "status",
+            "approved_by",
         ]
+
 
 class DoctorListWithPatientsSerializer(serializers.Serializer):
     doctor = DoctorSerializer()
