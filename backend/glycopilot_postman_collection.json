@@ -453,7 +453,22 @@
                                     }
                                 }
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "exec": [
+                                            "var jsonData = pm.response.json();",
+                                            "if (jsonData.identity && jsonData.identity.id_user) {",
+                                            "    pm.collectionVariables.set(\"patient_id\", jsonData.identity.id_user);",
+                                            "    pm.environment.set(\"patient_id\", jsonData.identity.id_user);",
+                                            "}"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Get My Team",
@@ -1498,7 +1513,22 @@
                                 },
                                 "description": "Récupère le résumé complet du tableau de bord (Glucose, Alertes, Meds, Nutrition, Activité) pour le médecin. Conforme au module Dashboard Summary."
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "prerequest",
+                                    "script": {
+                                        "exec": [
+                                            "var patientId = pm.collectionVariables.get(\"patient_id\") || pm.environment.get(\"patient_id\");",
+                                            "if (!patientId) {",
+                                            "    throw new Error(\"patient_id manquant. Lance d'abord 'Get My Profile' (patient) pour le remplir.\");",
+                                            "}",
+                                            "pm.collectionVariables.set(\"patient_id\", patientId);"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Get Patient Meals",
@@ -1533,7 +1563,22 @@
                                 },
                                 "description": "Fetch patient meal history."
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "prerequest",
+                                    "script": {
+                                        "exec": [
+                                            "var patientId = pm.collectionVariables.get(\"patient_id\") || pm.environment.get(\"patient_id\");",
+                                            "if (!patientId) {",
+                                            "    throw new Error(\"patient_id manquant. Lance d'abord 'Get My Profile' (patient) pour le remplir.\");",
+                                            "}",
+                                            "pm.collectionVariables.set(\"patient_id\", patientId);"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Get Patient Medications",
@@ -1568,7 +1613,22 @@
                                 },
                                 "description": "Fetch patient medication history."
                             },
-                            "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "prerequest",
+                                    "script": {
+                                        "exec": [
+                                            "var patientId = pm.collectionVariables.get(\"patient_id\") || pm.environment.get(\"patient_id\");",
+                                            "if (!patientId) {",
+                                            "    throw new Error(\"patient_id manquant. Lance d'abord 'Get My Profile' (patient) pour le remplir.\");",
+                                            "}",
+                                            "pm.collectionVariables.set(\"patient_id\", patientId);"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         },
                         {
                             "name": "Get Patient Glycemia",
@@ -1720,7 +1780,22 @@
                             }
                         }
                     },
-                    "response": []
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "prerequest",
+                                    "script": {
+                                        "exec": [
+                                            "var patientId = pm.collectionVariables.get(\"patient_id\") || pm.environment.get(\"patient_id\");",
+                                            "if (!patientId) {",
+                                            "    throw new Error(\"patient_id manquant. Lance d'abord 'Get My Profile' (patient) pour le remplir.\");",
+                                            "}",
+                                            "pm.collectionVariables.set(\"patient_id\", patientId);"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                 },
                 {
                     "name": "Créer compte Superadmin (superadmin requis)",
