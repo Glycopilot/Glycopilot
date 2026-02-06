@@ -207,11 +207,14 @@ export default function GlucoseTrackingScreen({
   }, [measurements]);
 
   // LOGIQUE AMÉLIORÉE DU GRAPHIQUE
-  const chartData = useMemo(() => {
+  const { chartData, chartMeasurements } = useMemo(() => {
     if (measurements.length === 0) {
       return {
-        labels: ['Pas de données'],
-        datasets: [{ data: [0] }],
+        chartData: {
+          labels: ['Pas de données'],
+          datasets: [{ data: [0] }],
+        },
+        chartMeasurements: [],
       };
     }
 
@@ -221,9 +224,20 @@ export default function GlucoseTrackingScreen({
 
     // MODE JOUR : Afficher toutes les mesures individuelles (scrollable)
     if (selectedPeriod === 'Jour') {
+      const measurementsData = sortedMeasurements.map(m => ({
+        value: m.value,
+        label: m.time,
+        context: m.context,
+        time: m.time,
+        date: m.date,
+      }));
+
       return {
-        labels: sortedMeasurements.map(m => m.time),
-        datasets: [{ data: sortedMeasurements.map(m => m.value) }],
+        chartData: {
+          labels: sortedMeasurements.map(m => m.time),
+          datasets: [{ data: sortedMeasurements.map(m => m.value) }],
+        },
+        chartMeasurements: measurementsData,
       };
     }
 
@@ -232,42 +246,69 @@ export default function GlucoseTrackingScreen({
       const dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
       const dayCounts = new Array(7).fill(0);
       const daySums = new Array(7).fill(0);
+      const dayMeasurements: Array<GlucoseMeasurement[]> = Array.from(
+        { length: 7 },
+        () => []
+      );
 
       sortedMeasurements.forEach(m => {
         const dayOfWeek = m.measuredAt.getDay();
         const index = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Lundi = 0
         daySums[index] += m.value;
         dayCounts[index]++;
+        dayMeasurements[index].push(m);
       });
 
       // Filtrer uniquement les jours avec des données
-      const validDays: { label: string; value: number }[] = [];
+      const validDays: Array<{
+        label: string;
+        value: number;
+        measurements: GlucoseMeasurement[];
+      }> = [];
       dayLabels.forEach((label, i) => {
         if (dayCounts[i] > 0) {
           validDays.push({
             label,
             value: Math.round(daySums[i] / dayCounts[i]),
+            measurements: dayMeasurements[i],
           });
         }
       });
 
       if (validDays.length === 0) {
         return {
-          labels: ['Pas de données'],
-          datasets: [{ data: [0] }],
+          chartData: {
+            labels: ['Pas de données'],
+            datasets: [{ data: [0] }],
+          },
+          chartMeasurements: [],
         };
       }
 
+      const measurementsData = validDays.map(d => ({
+        value: d.value,
+        label: d.label,
+        context: `${d.measurements.length} mesure${d.measurements.length > 1 ? 's' : ''}`,
+        time: d.measurements.length > 0 ? d.measurements[0].time : '',
+        date: d.measurements.length > 0 ? d.measurements[0].date : '',
+      }));
+
       return {
-        labels: validDays.map(d => d.label),
-        datasets: [{ data: validDays.map(d => d.value) }],
+        chartData: {
+          labels: validDays.map(d => d.label),
+          datasets: [{ data: validDays.map(d => d.value) }],
+        },
+        chartMeasurements: measurementsData,
       };
     }
 
     // MODE MOIS : Moyenne par jour (jusqu'à 31 points)
     if (selectedPeriod === 'Mois') {
       // Créer un map des dates avec leurs moyennes
-      const dateMap = new Map<string, { sum: number; count: number }>();
+      const dateMap = new Map<
+        string,
+        { sum: number; count: number; measurements: GlucoseMeasurement[] }
+      >();
 
       sortedMeasurements.forEach(m => {
         const dateKey = m.measuredAt.toLocaleDateString('fr-FR', {
@@ -276,12 +317,13 @@ export default function GlucoseTrackingScreen({
         });
 
         if (!dateMap.has(dateKey)) {
-          dateMap.set(dateKey, { sum: 0, count: 0 });
+          dateMap.set(dateKey, { sum: 0, count: 0, measurements: [] });
         }
 
         const data = dateMap.get(dateKey)!;
         data.sum += m.value;
         data.count++;
+        data.measurements.push(m);
       });
 
       // Convertir en arrays triés
@@ -294,24 +336,42 @@ export default function GlucoseTrackingScreen({
         .map(([date, data]) => ({
           label: date,
           value: Math.round(data.sum / data.count),
+          measurements: data.measurements,
         }));
 
       if (sortedDates.length === 0) {
         return {
-          labels: ['Pas de données'],
-          datasets: [{ data: [0] }],
+          chartData: {
+            labels: ['Pas de données'],
+            datasets: [{ data: [0] }],
+          },
+          chartMeasurements: [],
         };
       }
 
+      const measurementsData = sortedDates.map(d => ({
+        value: d.value,
+        label: d.label,
+        context: `${d.measurements.length} mesure${d.measurements.length > 1 ? 's' : ''}`,
+        time: d.measurements.length > 0 ? d.measurements[0].time : '',
+        date: d.label,
+      }));
+
       return {
-        labels: sortedDates.map(d => d.label),
-        datasets: [{ data: sortedDates.map(d => d.value) }],
+        chartData: {
+          labels: sortedDates.map(d => d.label),
+          datasets: [{ data: sortedDates.map(d => d.value) }],
+        },
+        chartMeasurements: measurementsData,
       };
     }
 
     return {
-      labels: ['Erreur'],
-      datasets: [{ data: [0] }],
+      chartData: {
+        labels: ['Erreur'],
+        datasets: [{ data: [0] }],
+      },
+      chartMeasurements: [],
     };
   }, [measurements, selectedPeriod]);
 
@@ -471,6 +531,7 @@ Variabilité: ${stats.variability} mg/dL
             chartData={chartData}
             chartWidth={chartWidth}
             measurementCount={measurements.length}
+            measurements={chartMeasurements}
           />
 
           {/* Cartes statistiques */}

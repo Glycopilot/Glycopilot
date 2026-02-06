@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../../themes/colors';
+import GlycemiaChartTooltip, { TooltipData } from './GlycemiaChartTooltip';
 
 const { width } = Dimensions.get('window');
+
+export interface ChartMeasurement {
+  value: number;
+  label: string;
+  context?: string;
+  time?: string;
+  date?: string;
+}
 
 interface GlycemiaChartProps {
   chartData: {
@@ -14,15 +23,46 @@ interface GlycemiaChartProps {
   };
   chartWidth?: number;
   measurementCount?: number;
+  measurements?: ChartMeasurement[];
 }
 
 export default function GlycemiaChart({
   chartData,
   chartWidth,
   measurementCount = 0,
+  measurements = [],
 }: GlycemiaChartProps): React.JSX.Element {
+  const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+
   const resolvedWidth = chartWidth || width - 72;
   const isScrollable = resolvedWidth > width - 72;
+
+  const handleDataPointClick = (data: {
+    index: number;
+    value: number;
+    dataset: { data: number[] };
+    x: number;
+    y: number;
+    getColor: (opacity: number) => string;
+  }) => {
+    const measurement = measurements[data.index];
+    if (measurement) {
+      setTooltipData({
+        value: measurement.value,
+        label: measurement.label,
+        context: measurement.context,
+        time: measurement.time,
+        date: measurement.date,
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  const handleCloseTooltip = () => {
+    setShowTooltip(false);
+    setTooltipData(null);
+  };
 
   // Vérifier si on a des données valides
   const hasValidData =
@@ -34,7 +74,7 @@ export default function GlycemiaChart({
   const labelWidth = resolvedWidth / Math.max(labelCount, 1);
 
   // Calculer les valeurs de l'axe Y dynamiquement
-  const { yAxisValues, yMin, yMax } = React.useMemo(() => {
+  const { yAxisValues } = React.useMemo(() => {
     if (!hasValidData) {
       return {
         yAxisValues: ['200', '150', '100', '50'],
@@ -170,6 +210,8 @@ export default function GlycemiaChart({
                   segments={3}
                   yAxisSuffix=""
                   fromZero={false}
+                  // @ts-ignore - onDataPointClick existe dans la librairie mais pas dans les types TS
+                  onDataPointClick={handleDataPointClick}
                 />
 
                 {/* Labels personnalisés sous le graphique */}
@@ -237,6 +279,13 @@ export default function GlycemiaChart({
           )}
         </>
       )}
+
+      {/* Tooltip */}
+      <GlycemiaChartTooltip
+        visible={showTooltip}
+        data={tooltipData}
+        onClose={handleCloseTooltip}
+      />
     </View>
   );
 }

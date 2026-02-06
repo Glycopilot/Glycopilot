@@ -47,7 +47,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // WebSocket pour les mises à jour temps réel (only connect when token is available)
   const { lastReading, alert } = useGlycemiaWebSocket(
     wsEnabled ? accessToken : null,
-    'ws://localhost:8006'
+    process.env.EXPO_PUBLIC_WS_URL || 'ws://localhost:8006'
   );
 
   // Mettre à jour la glycémie avec les données WebSocket
