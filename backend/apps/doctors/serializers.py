@@ -58,6 +58,7 @@ class DoctorSerializer(serializers.ModelSerializer):
 
 class PatientCareTeamSerializer(serializers.ModelSerializer):
     member_details = serializers.SerializerMethodField()
+    patient_details = serializers.SerializerMethodField()
     role_label = serializers.CharField(source="get_role_display", read_only=True)
     
     def get_member_details(self, obj):
@@ -79,6 +80,13 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             })
             
         return data
+
+    def get_patient_details(self, obj):
+        if not obj.patient_profile or not getattr(obj.patient_profile, "profile", None):
+            return None
+        if not obj.patient_profile.profile.user:
+            return None
+        return SimpleUserSerializer(obj.patient_profile.profile.user).data
     
     class Meta:
         model = PatientCareTeam
@@ -87,6 +95,7 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             "patient_profile", 
             "member_profile", 
             "member_details",
+            "patient_details",
             "invitation_email",
             "role", 
             "role_label",

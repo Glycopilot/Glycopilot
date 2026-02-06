@@ -328,12 +328,9 @@ class CareTeamViewSet(viewsets.ViewSet):
         # Categories
         doctors = team.filter(role__in=["REFERENT_DOCTOR", "SPECIALIST"], status__label="ACTIVE")
         family = team.filter(role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="ACTIVE")
-        pending = team.filter(status__label="PENDING")
-        
         data = {
             "doctors": PatientCareTeamSerializer(doctors, many=True).data,
-            "family": PatientCareTeamSerializer(family, many=True).data,
-            "pending": PatientCareTeamSerializer(pending, many=True).data
+            "family": PatientCareTeamSerializer(family, many=True).data
         }
         return Response(data)
 
@@ -364,6 +361,8 @@ class CareTeamViewSet(viewsets.ViewSet):
         return Response(data)
 
     def _verify_doctor_access(self, request, patient_user_id):
+        if not patient_user_id:
+             patient_user_id = request.query_params.get("patient_id") or request.data.get("patient_user_id") or request.data.get("patient_id")
         if not patient_user_id:
              return None, Response({"error": "patient_user_id is required"}, status=400)
 
