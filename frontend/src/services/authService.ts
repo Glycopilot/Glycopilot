@@ -10,6 +10,7 @@ import type {
   User,
   ApiError,
 } from '../types/auth.types';
+import { unregisterPushToken } from './pushService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8006/api';
 const API_TIMEOUT = parseInt(
@@ -218,6 +219,9 @@ const authService = {
    */
   async logout(): Promise<{ message: string }> {
     try {
+      // Supprimer le token push du backend
+      await unregisterPushToken();
+
       const refreshToken = await AsyncStorage.getItem('refresh_token');
 
       if (refreshToken) {
