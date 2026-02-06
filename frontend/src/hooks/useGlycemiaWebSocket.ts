@@ -23,7 +23,7 @@ export function useGlycemiaWebSocket(
   wsUrl: string = 'ws://localhost:8006'
 ): UseGlycemiaWebSocketReturn {
   const ws = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [lastReading, setLastReading] = useState<GlycemiaEntry | null>(null);
   const [alert, setAlert] = useState<GlycemiaAlert | null>(null);
