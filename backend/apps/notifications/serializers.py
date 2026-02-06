@@ -17,6 +17,9 @@ class PushTokenSerializer(serializers.ModelSerializer):
         model = PushToken
         fields = ["id", "token", "device_type", "is_active", "created_at"]
         read_only_fields = ["id", "is_active", "created_at"]
+        extra_kwargs = {
+            "token": {"validators": []},
+        }
 
     def validate_token(self, value):
         """Validate Expo push token format."""
