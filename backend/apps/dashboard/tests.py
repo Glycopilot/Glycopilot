@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
@@ -114,6 +115,14 @@ class DashboardSummaryAPITest(APITestCase):
         response = self.client.get(url, {"include[]": ["nutrition"]})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @patch("apps.dashboard.views.DashboardCache.get_summary")
+    def test_get_summary_uses_cache(self, mock_get):
+        mock_get.return_value = {"glucose": None}
+        url = reverse("dashboard-summary")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"glucose": None})
+
 
 class DashboardWidgetsAPITest(APITestCase):
     def setUp(self):
@@ -136,6 +145,14 @@ class DashboardWidgetsAPITest(APITestCase):
         url = reverse("dashboard-widgets")
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch("apps.dashboard.views.DashboardCache.get_widgets")
+    def test_get_widgets_uses_cache(self, mock_get):
+        mock_get.return_value = [{"widgetId": "glucose_live"}]
+        url = reverse("dashboard-widgets")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"widgets": [{"widgetId": "glucose_live"}]})
 
 
 class DashboardWidgetLayoutAPITest(APITestCase):

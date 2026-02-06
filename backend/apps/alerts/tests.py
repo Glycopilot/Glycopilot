@@ -141,3 +141,15 @@ def test_ack_event_updates_status():
     acked = ack_event(user=user, event_id=event.id)
     assert acked.acked_at is not None
     assert acked.status == "ACKED"
+
+
+@pytest.mark.django_db
+def test_trigger_no_match_creates_no_event():
+    user = mk_user(email="nomatch@test.com")
+    rule = mk_rule(min_g=70, max_g=180)
+    UserAlertRule.objects.create(
+        user=user, rule=rule, enabled=True, cooldown_seconds=600
+    )
+    events = trigger_for_value(user=user, glycemia_value=120)
+    assert events == []
+    assert AlertEvent.objects.count() == 0

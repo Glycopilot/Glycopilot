@@ -11,7 +11,7 @@ from django.utils import timezone
 
 import requests
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory, force_authenticate
 
 from apps.activities.models import Activity, UserActivity
 from apps.alerts.models import AlertEvent, AlertRule, AlertSeverity, UserAlertRule
@@ -401,6 +401,83 @@ class CareTeamIntegrationTests(TestCase):
         response = self.client.post("/api/doctors/verification/invalid/accept/")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_verification_decline_and_already_verified(self):
+        _, doc_profile = self._make_doctor(
+            email="decline_doc@test.com", password="pass123", verified=False
+        )
+        doc_prof = doc_profile.doctor_profile
+        admin_identity = UserIdentity.objects.create(
+            first_name="Admin2", last_name="User"
+        )
+        admin_account = User.objects.create_user(
+            email="admin_decline@test.com",
+            password="admin123",
+            user_identity=admin_identity,
+        )
+        admin_account.is_staff = True
+        admin_account.is_superuser = True
+        admin_account.save()
+        Profile.objects.create(
+            user=admin_identity, role=Role.objects.get(name="SUPERADMIN")
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('admin_decline@test.com', 'admin123')}"
+        )
+        response = self.client.post(
+            f"/api/doctors/verification/{doc_prof.doctor_id}/decline/",
+            {"rejection_reason": "missing docs"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Accept after decline should succeed
+        response = self.client.post(
+            f"/api/doctors/verification/{doc_prof.doctor_id}/accept/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Accept again should return already validated
+        response = self.client.post(
+            f"/api/doctors/verification/{doc_prof.doctor_id}/accept/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_doctor_access_invalid_patient_id(self):
+        _, doc_profile = self._make_doctor(
+            email="access_doc@test.com", password="pass123", verified=True
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('access_doc@test.com', 'pass123')}"
+        )
+        response = self.client.get(
+            "/api/doctors/care-team/patient-dashboard/?patient_user_id=bad-id"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_doctor_associations_view(self):
+        patient_identity, p_profile = self._make_patient(
+            email="assoc_patient@test.com", password="pass123"
+        )
+        _, doc_profile = self._make_doctor(
+            email="assoc_doc@test.com", password="pass123", verified=True
+        )
+        active_status = InvitationStatus.objects.get(label="ACTIVE")
+        PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=active_status,
+        )
+        from apps.doctors.views.associations_views import DoctorAssociationsView
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/doctors/associations/")
+        doctor_account = User.objects.get(email="assoc_doc@test.com")
+        force_authenticate(request, user=doctor_account)
+        response = DoctorAssociationsView.as_view()(request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("patients_par_medecin", response.data)
+        self.assertIn("medecins_avec_patients", response.data)
+
     def _token_for(self, email, password):
         """Retourne le token d'accès pour email/password."""
         r = self.client.post("/api/auth/login/", {"email": email, "password": password})
@@ -545,3 +622,78 @@ class DoctorPatientDataServiceTests(TestCase):
         )
         meds = DoctorPatientDataService.get_medications_history(self.user)
         self.assertEqual(len(meds), 1)
+
+    def test_get_patient_dashboard_without_data(self):
+        data = DoctorPatientDataService.get_patient_dashboard(self.user)
+        self.assertIsNone(data["glucose"])
+        self.assertEqual(data["alerts"], [])
+        self.assertEqual(data["medication"], {"nextDose": None})
+        self.assertEqual(
+            data["nutrition"],
+            {
+                "calories": {"consumed": 0, "goal": 1800},
+                "carbs": {"grams": 0, "goal": 200},
+            },
+        )
+        self.assertEqual(
+            data["activity"], {"steps": {"value": 0, "goal": 8000}, "activeMinutes": 0}
+        )
+
+
+class DoctorUtilsEmailTests(TestCase):
+    @override_settings(DEBUG=True, DEFAULT_FROM_EMAIL="noreply@test.com")
+    @patch("apps.doctors.utils.send_mail")
+    def test_send_care_team_invitation_existing_user(self, mock_send):
+        from apps.doctors.utils import send_care_team_invitation
+
+        mock_send.return_value = 1
+        ok = send_care_team_invitation(
+            "test@example.com", "Dr Test", "REFERENT_DOCTOR", is_existing_user=True
+        )
+        self.assertTrue(ok)
+        mock_send.assert_called_once()
+
+    @override_settings(DEFAULT_FROM_EMAIL="noreply@test.com")
+    @patch("apps.doctors.utils.send_mail")
+    def test_send_care_team_invitation_new_user(self, mock_send):
+        from apps.doctors.utils import send_care_team_invitation
+
+        mock_send.return_value = 1
+        ok = send_care_team_invitation(
+            "test@example.com", "Dr Test", "PATIENT", is_existing_user=False
+        )
+        self.assertTrue(ok)
+
+    @patch("apps.doctors.utils.send_mail", side_effect=Exception("fail"))
+    def test_send_care_team_invitation_failure(self, _mock_send):
+        from apps.doctors.utils import send_care_team_invitation
+
+        ok = send_care_team_invitation(
+            "test@example.com", "Dr Test", "PATIENT", is_existing_user=False
+        )
+        self.assertFalse(ok)
+
+    @patch("apps.doctors.utils.send_mail")
+    def test_send_doctor_verification_result_email_accept(self, mock_send):
+        from apps.doctors.utils import send_doctor_verification_result_email
+
+        mock_send.return_value = 1
+        ok = send_doctor_verification_result_email("doc@test.com", True)
+        self.assertTrue(ok)
+
+    @patch("apps.doctors.utils.send_mail")
+    def test_send_doctor_verification_result_email_reject(self, mock_send):
+        from apps.doctors.utils import send_doctor_verification_result_email
+
+        mock_send.return_value = 1
+        ok = send_doctor_verification_result_email(
+            "doc@test.com", False, rejection_reason="bad"
+        )
+        self.assertTrue(ok)
+
+    @patch("apps.doctors.utils.send_mail", side_effect=Exception("fail"))
+    def test_send_doctor_verification_result_email_failure(self, _mock_send):
+        from apps.doctors.utils import send_doctor_verification_result_email
+
+        ok = send_doctor_verification_result_email("doc@test.com", True)
+        self.assertFalse(ok)

@@ -1,3 +1,6 @@
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from django.urls import reverse
 
 import pytest
@@ -152,6 +155,11 @@ class TestAuthEndpoints:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "refresh" in response.data
 
+    def test_refresh_token_invalid(self, client):
+        url = reverse("refresh_token")
+        response = client.post(url, {"refresh": "bad.token"})
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
     def test_create_admin_requires_superuser(self):
         identity = User.objects.create(first_name="Normal", last_name="User")
         account = AuthAccount.objects.create_user(
@@ -174,3 +182,28 @@ class TestAuthEndpoints:
             format="json",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    @patch("apps.auth.email_smtp.send_mail")
+    def test_send_reset_password_email_success(self, mock_send):
+        from apps.auth.email_smtp import send_reset_password_email
+
+        mock_send.return_value = 1
+        send_reset_password_email("user@test.com", "http://link")
+        mock_send.assert_called_once()
+
+    @patch("apps.auth.email_smtp.send_mail", side_effect=Exception("fail"))
+    def test_send_reset_password_email_failure(self, _mock_send):
+        from apps.auth.email_smtp import send_reset_password_email
+
+        send_reset_password_email("user@test.com", "http://link")
+
+    @patch("apps.auth.signals.send_reset_password_email")
+    def test_password_reset_signal_sends_email(self, mock_send):
+        from apps.auth.signals import password_reset_token_created
+
+        user = AuthAccount.objects.create_user(email="signal@test.com", password="x")
+        token = SimpleNamespace(user=user, key="token123")
+        password_reset_token_created(
+            sender=None, instance=None, reset_password_token=token
+        )
+        mock_send.assert_called_once()
