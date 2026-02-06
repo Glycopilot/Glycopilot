@@ -17,6 +17,7 @@ import { Activity, Pill } from 'lucide-react-native';
 import { GLYCEMIA_TARGET } from '../constants/glycemia.constants';
 import { useGlycemiaWebSocket } from '../hooks/useGlycemiaWebSocket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerForPushNotifications } from '../services/pushService';
 
 interface HomeScreenProps {
   navigation: any;
@@ -34,12 +35,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [realtimeGlucose, setRealtimeGlucose] = useState(glucose);
   const [wsEnabled, setWsEnabled] = useState(false);
 
-  // Récupérer le token JWT
+  // Récupérer le token JWT et enregistrer les notifications push
   useEffect(() => {
     AsyncStorage.getItem('access_token').then(token => {
       if (token) {
         setAccessToken(token);
         setWsEnabled(true); // Enable WebSocket only after token is loaded
+        // Enregistrer pour les notifications push
+        registerForPushNotifications();
       }
     });
   }, []);
