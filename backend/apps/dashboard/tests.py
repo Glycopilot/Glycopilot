@@ -1,9 +1,16 @@
+from datetime import timedelta
+
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from apps.activities.models import Activity, UserActivity
+from apps.glycemia.models import Glycemia
+from apps.meals.models import Meal, UserMeal
+from apps.medications.models import Medication, UserMedication
 from apps.users.models import AuthAccount
 
 from .models import UserWidget, UserWidgetLayout, WidgetSize
@@ -257,3 +264,57 @@ class DashboardWidgetLayoutAPITest(APITestCase):
         data = {"layout": layout}
         response = self.client.patch(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class HealthScoreServiceTests(TestCase):
+    def setUp(self):
+        self.user = AuthAccount.objects.create_user(
+            email="health@test.com", password="testpass123"
+        )
+
+    def test_calculate_defaults_without_data(self):
+        score = HealthScoreService.calculate(self.user)
+        self.assertEqual(score, 56)
+
+    def test_calculate_with_glycemia_data(self):
+        Glycemia.objects.create(
+            user=self.user,
+            measured_at=timezone.now() - timedelta(hours=1),
+            value=100,
+            unit="mg/dL",
+        )
+        score = HealthScoreService.calculate(self.user)
+        self.assertGreaterEqual(score, 56)
+
+    def test_calculate_with_medications(self):
+        med = Medication.objects.create(name="Med", dosage="10mg")
+        UserMedication.objects.create(
+            user=self.user,
+            medication=med,
+            start_date=timezone.now().date(),
+            taken_at=timezone.now() - timedelta(days=1),
+            statut=True,
+        )
+        score = HealthScoreService.calculate(self.user)
+        self.assertGreater(score, 0)
+
+    def test_calculate_with_meals(self):
+        meal = Meal.objects.create(name="Meal", calories=500, glucose=50)
+        UserMeal.objects.create(
+            user=self.user,
+            meal=meal,
+            taken_at=timezone.now() - timedelta(days=1),
+        )
+        score = HealthScoreService.calculate(self.user)
+        self.assertGreater(score, 0)
+
+    def test_calculate_with_activities(self):
+        activity = Activity.objects.create(name="Walk")
+        UserActivity.objects.create(
+            user=self.user,
+            activity=activity,
+            start=timezone.now() - timedelta(hours=1),
+            end=timezone.now(),
+        )
+        score = HealthScoreService.calculate(self.user)
+        self.assertGreater(score, 0)
