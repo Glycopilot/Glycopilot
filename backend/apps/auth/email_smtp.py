@@ -42,4 +42,3 @@ Cordialement."""
             logger.debug("Password reset email sent.")
     except Exception:
         logger.exception("Password reset email delivery failed.")
-

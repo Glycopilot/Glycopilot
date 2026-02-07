@@ -1,8 +1,11 @@
 import uuid
-from django.db import models
+
 from django.conf import settings
+from django.db import models
 from django.utils.translation import gettext_lazy as _
+
 from apps.profiles.models import Profile
+
 
 class DoctorProfile(models.Model):
     doctor_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -13,14 +16,14 @@ class DoctorProfile(models.Model):
         limit_choices_to={"role__name": "DOCTOR"},
     )
     license_number = models.CharField(max_length=50, unique=True)
-    
+
     verification_status = models.ForeignKey(
         "doctors.VerificationStatus",
         on_delete=models.PROTECT,
         related_name="doctors",
-        default=1 
+        default=1,
     )
-    
+
     verified_by_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -30,18 +33,15 @@ class DoctorProfile(models.Model):
         db_column="verified_by_user_id",
     )
     rejection_reason = models.TextField(blank=True, null=True)
-    
+
     medical_center_name = models.CharField(
-        max_length=255, 
-        blank=True, 
-        null=True, 
-        verbose_name="Nom du Cabinet / Hôpital"
+        max_length=255, blank=True, null=True, verbose_name="Nom du Cabinet / Hôpital"
     )
     medical_center_address = models.CharField(
-        max_length=255, 
-        blank=True, 
-        null=True, 
-        verbose_name="Adresse du Cabinet / Hôpital"
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Adresse du Cabinet / Hôpital",
     )
 
     specialty = models.ForeignKey(
@@ -50,7 +50,7 @@ class DoctorProfile(models.Model):
         null=True,
         blank=True,
         related_name="doctors",
-        verbose_name=_("Specialty")
+        verbose_name=_("Specialty"),
     )
 
     verified_at = models.DateTimeField(null=True, blank=True)

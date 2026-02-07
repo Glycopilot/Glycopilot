@@ -34,14 +34,16 @@ Deux possibilités (voir README ou AUTH_API pour les détails) :
 """
 
 from django.conf import settings
+
+import jwt
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.settings import api_settings
-import jwt
 
 
 class _PayloadWrapper:
     """Wrapper minimal pour utiliser un payload décodé comme token validé (accès par [claim])."""
+
     def __init__(self, payload):
         self.payload = payload
 
@@ -59,7 +61,6 @@ class JWTAuthenticationDualKey(JWTAuthentication):
     """
 
     def get_validated_token(self, raw_token):
-   
         for AuthToken in api_settings.AUTH_TOKEN_CLASSES:
             try:
                 return AuthToken(raw_token)
@@ -68,7 +69,7 @@ class JWTAuthenticationDualKey(JWTAuthentication):
             except Exception:
                 pass
 
-        #Si SECRET_KEY_ADMIN est défini, tenter validation avec cette clé (admin, superadmin)
+        # Si SECRET_KEY_ADMIN est défini, tenter validation avec cette clé (admin, superadmin)
         admin_key = getattr(settings, "SECRET_KEY_ADMIN", None)
         if admin_key:
             try:
@@ -81,7 +82,7 @@ class JWTAuthenticationDualKey(JWTAuthentication):
             except Exception:
                 pass
 
-        #Aucune clé n'a validé le jeton
+        # Aucune clé n'a validé le jeton
         raise InvalidToken(
             {"detail": "Le jeton est invalide ou expiré.", "code": "token_not_valid"}
         )

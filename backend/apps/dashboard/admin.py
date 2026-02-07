@@ -5,7 +5,13 @@ from .models import UserWidget, UserWidgetLayout
 
 @admin.register(UserWidget)
 class UserWidgetAdmin(admin.ModelAdmin):
-    list_display = ["user", "widget_id", "visible", "refresh_interval", "last_refreshed_at"]
+    list_display = [
+        "user",
+        "widget_id",
+        "visible",
+        "refresh_interval",
+        "last_refreshed_at",
+    ]
     list_filter = ["visible", "widget_id"]
     search_fields = ["user__email", "widget_id"]
     ordering = ["user", "widget_id"]

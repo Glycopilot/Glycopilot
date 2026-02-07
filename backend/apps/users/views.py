@@ -1,12 +1,14 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from apps.profiles.models import Profile
 
 from .models import User
 from .serializers import UserSerializer
-from apps.profiles.models import Profile
+
 
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
@@ -17,7 +19,9 @@ class UserViewSet(viewsets.ModelViewSet):
         if getattr(user, "is_superuser", False):
             return True
         if hasattr(user, "user"):
-            return user.user.profiles.filter(role__name__in=["ADMIN", "SUPERADMIN"]).exists()
+            return user.user.profiles.filter(
+                role__name__in=["ADMIN", "SUPERADMIN"]
+            ).exists()
         return False
 
     def get_queryset(self):
@@ -34,7 +38,7 @@ class UserViewSet(viewsets.ModelViewSet):
         # request.user is an AuthAccount instance
         # We need the related User Identity instance
         user_identity = request.user.user
-        
+
         if request.method == "PATCH":
             data = request.data.copy()
             medical_id = data.pop("medical_id", None)
@@ -42,8 +46,12 @@ class UserViewSet(viewsets.ModelViewSet):
 
             # Mise à jour patient_details (diabète, date diagnostic)
             if patient_details:
-                patient_role_profile = user_identity.profiles.filter(role__name="PATIENT").first()
-                if patient_role_profile and hasattr(patient_role_profile, "patient_profile"):
+                patient_role_profile = user_identity.profiles.filter(
+                    role__name="PATIENT"
+                ).first()
+                if patient_role_profile and hasattr(
+                    patient_role_profile, "patient_profile"
+                ):
                     p_profile = patient_role_profile.patient_profile
                     if "diabetes_type" in patient_details:
                         p_profile.diabetes_type = patient_details["diabetes_type"]
@@ -53,11 +61,18 @@ class UserViewSet(viewsets.ModelViewSet):
 
             # Lien patient → docteur (PatientCareTeam, base de données)
             if medical_id:
-                from apps.doctors.models import DoctorProfile, PatientCareTeam, InvitationStatus
-                from rest_framework.exceptions import ValidationError, NotFound
+                from rest_framework.exceptions import NotFound, ValidationError
+
+                from apps.doctors.models import (
+                    DoctorProfile,
+                    InvitationStatus,
+                    PatientCareTeam,
+                )
 
                 try:
-                    patient_profile_obj = user_identity.profiles.get(role__name="PATIENT")
+                    patient_profile_obj = user_identity.profiles.get(
+                        role__name="PATIENT"
+                    )
                 except Profile.DoesNotExist:
                     raise ValidationError("L'utilisateur n'a pas de profil patient.")
 
@@ -66,7 +81,9 @@ class UserViewSet(viewsets.ModelViewSet):
                 except DoctorProfile.DoesNotExist:
                     raise NotFound("Aucun médecin trouvé avec l'identifiant fourni.")
 
-                pending_status, _ = InvitationStatus.objects.get_or_create(label="PENDING")
+                pending_status, _ = InvitationStatus.objects.get_or_create(
+                    label="PENDING"
+                )
                 if not PatientCareTeam.objects.filter(
                     patient_profile=patient_profile_obj.patient_profile,
                     member_profile=doctor.profile,
@@ -100,7 +117,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if self._is_admin(user):
             serializer.save()
         # Verify ownership: serializer.instance (User) should match user.user (User)
-        elif hasattr(user, 'user') and serializer.instance.pk == user.user.pk:
+        elif hasattr(user, "user") and serializer.instance.pk == user.user.pk:
             serializer.save()
         else:
             raise PermissionDenied("Accès refusé.")

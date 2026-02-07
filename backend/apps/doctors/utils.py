@@ -47,3 +47,44 @@ def send_care_team_invitation(to_email, inviter_name, role, is_existing_user=Fal
     except Exception:
         logger.exception("Care team invitation email failed.")
         return False
+
+
+def send_doctor_verification_result_email(to_email, is_accepted, rejection_reason=None):
+    """
+    Envoie un email au docteur pour l'informer du résultat de la vérification.
+    """
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+
+    if is_accepted:
+        subject = "Glycopilot - Votre compte médecin a été validé"
+        link = f"{frontend_url}/login"
+        message_body = (
+            "Bonjour Dr,\n\n"
+            "Votre compte médecin sur Glycopilot a été validé par notre équipe.\n"
+            f"Vous pouvez désormais vous connecter et inviter vos patients : {link}\n\n"
+            "Bienvenue dans l'équipe Glycopilot !"
+        )
+    else:
+        subject = "Glycopilot - Mise à jour sur votre inscription"
+        message_body = (
+            "Bonjour,\n\n"
+            "Nous avons examiné votre demande d'inscription en tant que médecin sur Glycopilot.\n"
+            "Malheureusement, nous ne pouvons pas valider votre compte pour le moment.\n\n"
+            f"Motif : {rejection_reason or 'Non spécifié.'}\n\n"
+            "Si vous pensez qu'il s'agit d'une erreur, merci de contacter le support."
+        )
+
+    try:
+        send_mail(
+            subject=subject,
+            message=message_body,
+            from_email=settings.DEFAULT_FROM_EMAIL or "noreply@glycopilot.com",
+            recipient_list=[to_email],
+            fail_silently=False,
+        )
+        if settings.DEBUG:
+            logger.debug(f"Doctor verification email sent (accepted={is_accepted}).")
+        return True
+    except Exception:
+        logger.exception("Doctor verification email failed.")
+        return False
