@@ -41,3 +41,18 @@ def test_dual_key_rejects_invalid_token():
     auth = JWTAuthenticationDualKey()
     with pytest.raises(InvalidToken):
         auth.get_validated_token("bad.token.value")
+
+
+@pytest.mark.django_db
+@override_settings(SECRET_KEY="secret_key_main", SECRET_KEY_ADMIN=None)
+def test_dual_key_invalidtoken_branch(monkeypatch):
+    class BrokenToken:
+        def __init__(self, _raw):
+            raise InvalidToken("invalid")
+
+    monkeypatch.setattr(
+        api_settings, "AUTH_TOKEN_CLASSES", [BrokenToken], raising=False
+    )
+    auth = JWTAuthenticationDualKey()
+    with pytest.raises(InvalidToken):
+        auth.get_validated_token("bad.token.value")

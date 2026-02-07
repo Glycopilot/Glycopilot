@@ -2,10 +2,13 @@
 Tests : création compte patient, invitations, admin valide le docteur,
 docteur non validé = indisponible pour le patient, docteur validé peut ajouter un patient.
 """
+import uuid
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -66,7 +69,7 @@ class CareTeamIntegrationTests(TestCase):
         doc_profile.verification_status = (
             self.verified_status if verified else self.pending_status
         )
-        doc_profile.license_number = "LIC-TEST"
+        doc_profile.license_number = f"LIC-{uuid.uuid4().hex[:8]}"
         doc_profile.save()
         return identity, profile
 
@@ -478,6 +481,506 @@ class CareTeamIntegrationTests(TestCase):
         self.assertIn("patients_par_medecin", response.data)
         self.assertIn("medecins_avec_patients", response.data)
 
+    def test_doctor_associations_view_no_status(self):
+        InvitationStatus.objects.all().delete()
+        from apps.doctors.views.associations_views import DoctorAssociationsView
+
+        request = APIRequestFactory().get("/api/doctors/associations/")
+        self._make_doctor(
+            email="assoc_doc2@test.com", password="pass123", verified=True
+        )
+        force_authenticate(request, user=User.objects.get(email="assoc_doc2@test.com"))
+        response = DoctorAssociationsView.as_view()(request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_add_family_member_errors(self):
+        # Non-patient role
+        self._make_doctor(
+            email="family_doc@test.com", password="pass123", verified=True
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('family_doc@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/add-family/",
+            {"first_name": "Marie", "last_name": "Test", "role": "FAMILY"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Patient profile missing
+        patient_identity, patient_profile = self._make_patient(
+            email="family_missing@test.com", password="pass123"
+        )
+        patient_profile.patient_profile.delete()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('family_missing@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/add-family/",
+            {"first_name": "Marie", "last_name": "Test", "role": "FAMILY"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Missing last name with valid patient profile
+        self._make_patient(email="family_valid@test.com", password="pass123")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('family_valid@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/add-family/",
+            {"first_name": "Marie", "role": "FAMILY"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invite_doctor_error_cases(self):
+        self._make_patient(email="inv_err@test.com", password="pass123")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('inv_err@test.com', 'pass123')}"
+        )
+        response = self.client.post("/api/doctors/care-team/invite-doctor/", {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Patient profile missing
+        identity, profile = self._make_patient(
+            email="inv_missing@test.com", password="pass123"
+        )
+        profile.patient_profile.delete()
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('inv_missing@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "doc_missing@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Non patient role
+        self._make_doctor(email="inv_doc@test.com", password="pass123", verified=True)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('inv_doc@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "doc_missing@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Member profile missing doctor
+        patient_identity, _ = self._make_patient(
+            email="inv_patient@test.com", password="pass123"
+        )
+        non_doc_identity = UserIdentity.objects.create(
+            first_name="No", last_name="Doctor", phone_number="0777777777"
+        )
+        User.objects.create_user(
+            email="non_doc@test.com", password="pass123", user_identity=non_doc_identity
+        )
+        Profile.objects.create(user=non_doc_identity, role=self.patient_role)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('inv_patient@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "non_doc@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # AuthAccount not found
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('inv_err@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "missing_doc@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Duplicate invite
+        self._make_doctor(email="dup_doc@test.com", password="pass123", verified=True)
+        response = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "dup_doc@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "dup_doc@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_add_patient_edge_cases(self):
+        # Authenticated user without profiles
+        class DummyUser:
+            is_authenticated = True
+
+        factory = APIRequestFactory()
+        request = factory.post("/api/doctors/care-team/add-patient/", {"email": "x"})
+        force_authenticate(request, user=DummyUser())
+        from apps.doctors.views.care_team_views import CareTeamViewSet
+
+        response = CareTeamViewSet.as_view({"post": "add_patient"})(request)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Non-doctor profile
+        self._make_patient(email="non_doctor@test.com", password="pass123")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('non_doctor@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/add-patient/", {"email": "x@test.com"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Phone only not found
+        self._make_doctor(email="phone_doc@test.com", password="pass123", verified=True)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('phone_doc@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/add-patient/", {"phone_number": "0000000000"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        # Relation exists
+        _, doc_profile = self._make_doctor(
+            email="rel_doc@test.com", password="pass123", verified=True
+        )
+        patient_identity, p_profile = self._make_patient(
+            email="rel_patient@test.com", password="pass123"
+        )
+        pending_status = InvitationStatus.objects.get(label="PENDING")
+        PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=pending_status,
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('rel_doc@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/add-patient/", {"email": "rel_patient@test.com"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Unverified doctor
+        _, unv_profile = self._make_doctor(
+            email="unv_doc2@test.com", password="pass123", verified=False
+        )
+        request = factory.post(
+            "/api/doctors/care-team/add-patient/", {"email": "x@test.com"}
+        )
+        force_authenticate(request, user=User.objects.get(email="unv_doc2@test.com"))
+        response = CareTeamViewSet.as_view({"post": "add_patient"})(request)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Self add
+        self._make_doctor(email="self_doc@test.com", password="pass123", verified=True)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('self_doc@test.com', 'pass123')}"
+        )
+        response = self.client.post(
+            "/api/doctors/care-team/add-patient/", {"email": "self_doc@test.com"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # User exists but not patient
+        other_identity = UserIdentity.objects.create(
+            first_name="Other", last_name="NoPatient", phone_number="0711111111"
+        )
+        User.objects.create_user(
+            email="nopatient@test.com", password="pass123", user_identity=other_identity
+        )
+        Profile.objects.create(user=other_identity, role=self.doctor_role)
+        response = self.client.post(
+            "/api/doctors/care-team/add-patient/", {"email": "nopatient@test.com"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_add_patient_email_send_failure(self):
+        _, doc_profile = self._make_doctor(
+            email="mail_doc@test.com", password="pass123", verified=True
+        )
+        patient_identity, _ = self._make_patient(
+            email="mail_patient@test.com", password="pass123"
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('mail_doc@test.com', 'pass123')}"
+        )
+        with patch("apps.doctors.views.care_team_views.send_care_team_invitation") as m:
+            m.side_effect = Exception("boom")
+            response = self.client.post(
+                "/api/doctors/care-team/add-patient/",
+                {"email": "mail_patient@test.com"},
+            )
+            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_accept_invitation_edge_cases(self):
+        factory = APIRequestFactory()
+        from apps.doctors.views.care_team_views import CareTeamViewSet
+
+        request = factory.post("/api/doctors/care-team/accept-invitation/", {})
+
+        class DummyUser:
+            is_authenticated = True
+
+        force_authenticate(request, user=DummyUser())
+        response = CareTeamViewSet.as_view({"post": "accept_invitation"})(request)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Entry exists but user not invited
+        patient_identity, p_profile = self._make_patient(
+            email="acc_other@test.com", password="pass123"
+        )
+        _, doc_profile = self._make_doctor(
+            email="acc_doc@test.com", password="pass123", verified=True
+        )
+        pending_status = InvitationStatus.objects.get(label="PENDING")
+        entry = PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=pending_status,
+        )
+        other_identity = UserIdentity.objects.create(
+            first_name="Other", last_name="User", phone_number="0788888888"
+        )
+        User.objects.create_user(
+            email="other_acc@test.com", password="pass123", user_identity=other_identity
+        )
+        Profile.objects.create(user=other_identity, role=self.patient_role)
+        request = factory.post(
+            "/api/doctors/care-team/accept-invitation/",
+            {"id_team_member": str(entry.id_team_member)},
+        )
+        force_authenticate(request, user=User.objects.get(email="other_acc@test.com"))
+        response = CareTeamViewSet.as_view({"post": "accept_invitation"})(request)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Entry exists but current_user_id is missing
+        request = factory.post(
+            "/api/doctors/care-team/accept-invitation/",
+            {"id_team_member": str(entry.id_team_member)},
+        )
+        dummy_user = SimpleNamespace(is_authenticated=True, user_id=None, user=None)
+        force_authenticate(request, user=dummy_user)
+        response = CareTeamViewSet.as_view({"post": "accept_invitation"})(request)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Entry not found
+        request = factory.post(
+            "/api/doctors/care-team/accept-invitation/",
+            {"id_team_member": "b73f9a42-6e91-47f5-9d6c-6e6c0c8c8a08"},
+        )
+        force_authenticate(request, user=User.objects.get(email="acc_doc@test.com"))
+        response = CareTeamViewSet.as_view({"post": "accept_invitation"})(request)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_my_team_profile_not_found(self):
+        identity = UserIdentity.objects.create(first_name="No", last_name="Profile")
+        account = User.objects.create_user(
+            email="noprof@test.com", password="pass123", user_identity=identity
+        )
+        factory = APIRequestFactory()
+        from apps.doctors.views.care_team_views import CareTeamViewSet
+
+        request = factory.get("/api/doctors/care-team/my-team/")
+        force_authenticate(request, user=account)
+        response = CareTeamViewSet.as_view({"get": "my_team"})(request)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_my_team_patient_and_doctor(self):
+        patient_identity, p_profile = self._make_patient(
+            email="team_patient@test.com", password="pass123"
+        )
+        _, doc_profile = self._make_doctor(
+            email="team_doc@test.com", password="pass123", verified=True
+        )
+        active_status = InvitationStatus.objects.get(label="ACTIVE")
+        pending_status = InvitationStatus.objects.get(label="PENDING")
+        PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=active_status,
+        )
+        PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=pending_status,
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('team_patient@test.com', 'pass123')}"
+        )
+        response = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("doctors", response.data)
+        self.assertIn("family", response.data)
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('team_doc@test.com', 'pass123')}"
+        )
+        response = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("active_patients", response.data)
+        self.assertIn("pending_invites", response.data)
+
+    def test_doctor_access_missing_and_not_found(self):
+        patient_identity, p_profile = self._make_patient(
+            email="missing_patient@test.com", password="pass123"
+        )
+        _, doc_profile = self._make_doctor(
+            email="missing_doc@test.com", password="pass123", verified=True
+        )
+        active_status = InvitationStatus.objects.get(label="ACTIVE")
+        PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=active_status,
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('missing_doc@test.com', 'pass123')}"
+        )
+        response = self.client.get("/api/doctors/care-team/patient-dashboard/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # patient has no AuthAccount
+        identity = UserIdentity.objects.create(
+            first_name="NoAuth", last_name="Patient", phone_number="0799999999"
+        )
+        profile = Profile.objects.create(user=identity, role=self.patient_role)
+        PatientCareTeam.objects.create(
+            patient_profile=profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=active_status,
+        )
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-dashboard/?patient_user_id={identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_doctor_patient_views(self):
+        patient_identity, p_profile = self._make_patient(
+            email="pd_patient@test.com", password="pass123"
+        )
+        patient_account = User.objects.get(email="pd_patient@test.com")
+        _, doc_profile = self._make_doctor(
+            email="pd_doc@test.com", password="pass123", verified=True
+        )
+        active_status = InvitationStatus.objects.get(label="ACTIVE")
+        PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=active_status,
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('pd_doc@test.com', 'pass123')}"
+        )
+        # fallback patient_id query
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-dashboard/?patient_id={patient_identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # no patient_user_id
+        response = self.client.get("/api/doctors/care-team/patient-dashboard/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-meals/?patient_user_id={patient_identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-medications/?patient_user_id={patient_identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-glycemia/?patient_user_id={patient_identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get("/api/doctors/care-team/patient-meals/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.get("/api/doctors/care-team/patient-medications/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.get("/api/doctors/care-team/patient-glycemia/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_doctor_access_denied_no_relation(self):
+        patient_identity, _ = self._make_patient(
+            email="deny_patient@test.com", password="pass123"
+        )
+        self._make_doctor(email="deny_doc@test.com", password="pass123", verified=True)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('deny_doc@test.com', 'pass123')}"
+        )
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-dashboard/?patient_user_id={patient_identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_doctor_access_doctor_role_missing(self):
+        patient_identity, _ = self._make_patient(
+            email="deny_patient2@test.com", password="pass123"
+        )
+        # Use a patient account (no doctor role)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('deny_patient2@test.com', 'pass123')}"
+        )
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-dashboard/?patient_user_id={patient_identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_doctor_access_no_doctor_profile(self):
+        identity = UserIdentity.objects.create(
+            first_name="Doc", last_name="NoProfile", phone_number="0712345678"
+        )
+        User.objects.create_user(
+            email="nodocprofile@test.com", password="pass123", user_identity=identity
+        )
+        profile = Profile.objects.create(user=identity, role=self.doctor_role)
+        profile.doctor_profile.delete()
+        patient_identity, _ = self._make_patient(
+            email="deny_patient3@test.com", password="pass123"
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('nodocprofile@test.com', 'pass123')}"
+        )
+        response = self.client.get(
+            f"/api/doctors/care-team/patient-dashboard/?patient_user_id={patient_identity.id_user}"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_doctor_access_patient_id_from_body(self):
+        patient_identity, p_profile = self._make_patient(
+            email="body_patient@test.com", password="pass123"
+        )
+        _, doc_profile = self._make_doctor(
+            email="body_doc@test.com", password="pass123", verified=True
+        )
+        active_status = InvitationStatus.objects.get(label="ACTIVE")
+        PatientCareTeam.objects.create(
+            patient_profile=p_profile.patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=active_status,
+        )
+        from apps.doctors.views.care_team_views import CareTeamViewSet
+
+        request = SimpleNamespace(
+            query_params={},
+            data={"patient_user_id": str(patient_identity.id_user)},
+            user=User.objects.get(email="body_doc@test.com"),
+        )
+        view = CareTeamViewSet()
+        user, error = view._verify_doctor_access(request, None)
+        self.assertIsNotNone(user)
+        self.assertIsNone(error)
+
     def _token_for(self, email, password):
         """Retourne le token d'accès pour email/password."""
         r = self.client.post("/api/auth/login/", {"email": email, "password": password})
@@ -697,3 +1200,141 @@ class DoctorUtilsEmailTests(TestCase):
 
         ok = send_doctor_verification_result_email("doc@test.com", True)
         self.assertFalse(ok)
+
+
+class DoctorVerificationViewsTests(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.super_role, _ = Role.objects.get_or_create(name="SUPERADMIN")
+        self.doctor_role, _ = Role.objects.get_or_create(name="DOCTOR")
+        self.pending_status, _ = VerificationStatus.objects.get_or_create(
+            label="PENDING"
+        )
+
+    def _make_admin(self, email="admin_view@test.com"):
+        identity = UserIdentity.objects.create(first_name="Admin", last_name="User")
+        account = User.objects.create_user(
+            email=email, password="admin123", user_identity=identity
+        )
+        account.is_staff = True
+        account.is_superuser = True
+        account.save()
+        Profile.objects.create(user=identity, role=self.super_role)
+        return account
+
+    def _make_doctor(self, email="ver_doc@test.com", verified=False):
+        identity = UserIdentity.objects.create(first_name="Doc", last_name="User")
+        User.objects.create_user(
+            email=email, password="pass123", user_identity=identity
+        )
+        profile = Profile.objects.create(user=identity, role=self.doctor_role)
+        doc_profile = profile.doctor_profile
+        doc_profile.verification_status = (
+            VerificationStatus.objects.get_or_create(label="VERIFIED")[0]
+            if verified
+            else self.pending_status
+        )
+        doc_profile.license_number = "LIC-TEST"
+        doc_profile.save()
+        return profile
+
+    def test_list_no_pending_status(self):
+        VerificationStatus.objects.all().delete()
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        request = self.factory.get("/api/doctors/verification/")
+        force_authenticate(request, user=self._make_admin("admin_list@test.com"))
+        response = DoctorVerificationViewSet.as_view({"get": "list"})(request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"results": []})
+
+    def test_list_with_pending(self):
+        doc_profile = self._make_doctor(email="pending_doc@test.com", verified=False)
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        request = self.factory.get("/api/doctors/verification/")
+        force_authenticate(request, user=self._make_admin("admin_list2@test.com"))
+        response = DoctorVerificationViewSet.as_view({"get": "list"})(request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(len(response.data["results"]) >= 1)
+        self.assertIsNotNone(doc_profile)
+
+    def test_permission_denied_for_non_staff(self):
+        from apps.doctors.views.verification_views import IsStaffOrSuperuser
+
+        request = self.factory.get("/api/doctors/verification/")
+        request.user = AnonymousUser()
+        perm = IsStaffOrSuperuser()
+        self.assertFalse(perm.has_permission(request, None))
+
+    def test_accept_doctor_not_found(self):
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        request = self.factory.post("/api/doctors/verification/accept/")
+        force_authenticate(request, user=self._make_admin("admin_nf2@test.com"))
+        response = DoctorVerificationViewSet.as_view({"post": "accept"})(
+            request, pk="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_accept_email_exception(self):
+        doc_profile = self._make_doctor(email="email_doc@test.com", verified=False)
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        with patch(
+            "apps.doctors.views.verification_views.send_doctor_verification_result_email"
+        ) as mock_send:
+            mock_send.side_effect = Exception("fail")
+            request = self.factory.post("/api/doctors/verification/accept/")
+            force_authenticate(request, user=self._make_admin("admin_ok2@test.com"))
+            response = DoctorVerificationViewSet.as_view({"post": "accept"})(
+                request, pk=str(doc_profile.doctor_profile.doctor_id)
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_accept_creates_verified_status(self):
+        VerificationStatus.objects.filter(label="VERIFIED").delete()
+        doc_profile = self._make_doctor(email="ver_doc@test.com", verified=False)
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        request = self.factory.post("/api/doctors/verification/accept/")
+        force_authenticate(request, user=self._make_admin("admin_ok@test.com"))
+        response = DoctorVerificationViewSet.as_view({"post": "accept"})(
+            request, pk=str(doc_profile.doctor_profile.doctor_id)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_decline_doctor_not_found(self):
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        request = self.factory.post("/api/doctors/verification/decline/")
+        force_authenticate(request, user=self._make_admin("admin_nf3@test.com"))
+        response = DoctorVerificationViewSet.as_view({"post": "decline"})(
+            request, pk="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_decline_invalid_uuid(self):
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        request = self.factory.post("/api/doctors/verification/decline/")
+        force_authenticate(request, user=self._make_admin("admin_bad@test.com"))
+        response = DoctorVerificationViewSet.as_view({"post": "decline"})(
+            request, pk="invalid"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_decline_email_exception(self):
+        doc_profile = self._make_doctor(email="decline_doc@test.com", verified=False)
+        from apps.doctors.views.verification_views import DoctorVerificationViewSet
+
+        with patch(
+            "apps.doctors.views.verification_views.send_doctor_verification_result_email"
+        ) as mock_send:
+            mock_send.side_effect = Exception("fail")
+            request = self.factory.post("/api/doctors/verification/decline/")
+            force_authenticate(request, user=self._make_admin("admin_dec@test.com"))
+            response = DoctorVerificationViewSet.as_view({"post": "decline"})(
+                request, pk=str(doc_profile.doctor_profile.doctor_id)
+            )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
