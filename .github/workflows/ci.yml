@@ -101,6 +101,7 @@ jobs:
       with:
         name: coverage-frontend
         path: frontend/coverage/
+      continue-on-error: true #a retirer plus tard si on configure les tests frontend
     
     - name: Verify Frontend Coverage
       run: |
@@ -110,6 +111,7 @@ jobs:
         else
           echo "Frontend coverage file not found"
         fi
+      continue-on-error: true #a retirer plus tard si on configure les tests frontend
     
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
@@ -157,6 +159,8 @@ jobs:
         name: coverage-frontend
         path: frontend/coverage/
         retention-days: 1
+        if-no-files-found: warn
+      continue-on-error: true #a retirer plus tard si on configure les tests frontend
 
   deploy:
     needs: [test-backend, test-frontend, sonarqube]
