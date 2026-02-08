@@ -118,24 +118,45 @@ if [ "$CURRENT_ENV" == "production" ]; then
         echo "   (Les migrations seront appliquées au démarrage du container)"
     fi
 else
-    echo "🔄 [DEV] Reset & Initialisation de la Base de Données..."
-
-    # Démarrer la DB
-    echo "📦 Démarrage du conteneur de base de données..."
-    $DOCKER_COMPOSE up -d database
+    # Démarrer la DB et Redis
+    echo "📦 Démarrage des conteneurs de base de données..."
+    $DOCKER_COMPOSE up -d database redis
 
     # Attendre que la DB soit prête
     echo "⏳ Attente de la disponibilité de la DB (10s)..."
     sleep 10
 
-    # Reset via Docker (utilise l'image construite)
-    echo "🔄 Reset de la base de données via Docker..."
-    $DOCKER_COMPOSE run --rm backend python reset_db.py
-    if [ $? -ne 0 ]; then
-        echo "❌ Erreur lors du Reset DB"
-        exit 1
+    # Vérifier s'il y a des migrations en attente
+    echo "🔍 Vérification des migrations..."
+    PENDING_MIGRATIONS=$($DOCKER_COMPOSE run --rm backend python manage.py showmigrations --plan 2>/dev/null | grep "\[ \]" | wc -l)
+
+    # Vérifier si les tables existent (première installation)
+    TABLES_EXIST=$($DOCKER_COMPOSE run --rm backend python manage.py showmigrations 2>/dev/null | head -1)
+
+    if [ "$1" == "--reset" ] || [ "$2" == "--reset" ]; then
+        # Reset forcé demandé
+        echo "🔄 [DEV] Reset forcé de la base de données..."
+        $DOCKER_COMPOSE run --rm backend python reset_db.py
+        if [ $? -ne 0 ]; then
+            echo "❌ Erreur lors du Reset DB"
+            exit 1
+        fi
+        echo "✅ Base de données réinitialisée et peuplée !"
+    elif [ -z "$TABLES_EXIST" ] || [ "$PENDING_MIGRATIONS" -gt 0 ]; then
+        # Première installation ou migrations en attente -> reset complet
+        echo "🔄 [DEV] Nouvelles migrations détectées, reset de la base de données..."
+        $DOCKER_COMPOSE run --rm backend python reset_db.py
+        if [ $? -ne 0 ]; then
+            echo "❌ Erreur lors du Reset DB"
+            exit 1
+        fi
+        echo "✅ Base de données réinitialisée et peuplée !"
+    else
+        # Pas de nouvelles migrations -> juste appliquer les migrations existantes
+        echo "✅ Aucune nouvelle migration détectée, conservation des données..."
+        $DOCKER_COMPOSE run --rm backend python manage.py migrate --noinput
+        echo "✅ Migrations appliquées !"
     fi
-    echo "✅ Base de données réinitialisée et peuplée !"
 fi
 
 # Vérifier et configurer les Git hooks (une seule fois)

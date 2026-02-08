@@ -2,7 +2,8 @@
 Django signals for broadcasting glycemia updates via WebSocket.
 
 When a GlycemiaHisto record is created, this signal broadcasts the data
-to the user's WebSocket channel for real-time updates.
+to the user's WebSocket channel for real-time updates AND triggers
+alert rules to create AlertEvent entries in the database.
 """
 
 import logging
@@ -29,10 +30,28 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
     Sends:
     - glycemia_update: For every new reading
     - glycemia_alert: When value is below HYPO_THRESHOLD or above HYPER_THRESHOLD
+
+    Also triggers alert rules to create AlertEvent entries in the database.
     """
     if not created:
         return
 
+    # ── 1. Trigger alert rules (DB) ──────────────────────────────
+    try:
+        from apps.alerts.services.trigger import trigger_for_value
+        events = trigger_for_value(
+            user=instance.user,
+            glycemia_value=int(instance.value),
+        )
+        if events:
+            logger.info(
+                f"Created {len(events)} alert event(s) for user "
+                f"{instance.user.id_auth}: value={instance.value}"
+            )
+    except Exception as e:
+        logger.error(f"Failed to trigger alert rules: {e}")
+
+    # ── 2. WebSocket broadcast ───────────────────────────────────
     channel_layer = get_channel_layer()
     if channel_layer is None:
         logger.warning("Channel layer not configured, skipping WebSocket broadcast")
