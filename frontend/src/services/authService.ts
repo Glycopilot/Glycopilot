@@ -225,24 +225,21 @@ const authService = {
           refresh: refreshToken,
         });
       }
-
-      // Nettoyer le stockage
-      await AsyncStorage.removeItem('access_token');
-      await AsyncStorage.removeItem('refresh_token');
-      await AsyncStorage.removeItem('user');
-
-      return { message: 'Déconnexion réussie' };
     } catch (error) {
-      // Nettoyer le stockage même en cas d'erreur
+      // Logger l'erreur mais continuer quand même
+      console.warn('Erreur lors de la déconnexion backend:', error);
+    }
+
+    // Toujours nettoyer le stockage local (déconnexion côté client)
+    try {
       await AsyncStorage.removeItem('access_token');
       await AsyncStorage.removeItem('refresh_token');
       await AsyncStorage.removeItem('user');
-
-      const axiosError = error as AxiosError<ApiError>;
-      const message =
-        axiosError.response?.data?.message || 'Erreur de déconnexion';
-      throw new Error(message);
+    } catch (storageError) {
+      console.error('Erreur lors du nettoyage du stockage:', storageError);
     }
+
+    return { message: 'Déconnexion réussie' };
   },
 
   /**

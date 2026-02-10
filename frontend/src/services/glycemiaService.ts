@@ -6,7 +6,6 @@ import type {
   GlycemiaChartData,
 } from '../types/glycemia.types';
 import { AxiosError } from 'axios';
-import { generateMockGlycemiaData } from '../data/mockData';
 
 /**
  * Service pour gérer les données de glycémie
@@ -54,8 +53,6 @@ const glycemiaService = {
     } catch (error) {
       const axiosError = error as AxiosError;
       console.warn('glycemiaService.getHistory error:', axiosError.message);
-
-      // Retourner un tableau vide si l'endpoint n'existe pas
       return [];
     }
   },
@@ -69,18 +66,11 @@ const glycemiaService = {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const result = await this.getHistory({
+    return await this.getHistory({
       period: 'day',
       startDate: today.toISOString(),
       endDate: tomorrow.toISOString(),
     });
-
-    // Si pas de données, retourner des données de démo pour 1 jour
-    if (result.length === 0) {
-      console.info('📊 Utilisation des données de glycémie de démo (1 jour)');
-      return generateMockGlycemiaData(1);
-    }
-    return result;
   },
 
   /**
@@ -91,18 +81,11 @@ const glycemiaService = {
     const start = new Date();
     start.setDate(start.getDate() - 7);
 
-    const result = await this.getHistory({
+    return await this.getHistory({
       period: 'week',
       startDate: start.toISOString(),
       endDate: end.toISOString(),
     });
-
-    // Si pas de données, retourner des données de démo pour 7 jours
-    if (result.length === 0) {
-      console.info('📊 Utilisation des données de glycémie de démo (7 jours)');
-      return generateMockGlycemiaData(7);
-    }
-    return result;
   },
 
   /**
@@ -113,18 +96,11 @@ const glycemiaService = {
     const start = new Date();
     start.setDate(start.getDate() - 30);
 
-    const result = await this.getHistory({
+    return await this.getHistory({
       period: 'month',
       startDate: start.toISOString(),
       endDate: end.toISOString(),
     });
-
-    // Si pas de données, retourner des données de démo pour 30 jours
-    if (result.length === 0) {
-      console.info('📊 Utilisation des données de glycémie de démo (30 jours)');
-      return generateMockGlycemiaData(30);
-    }
-    return result;
   },
 
   /**
