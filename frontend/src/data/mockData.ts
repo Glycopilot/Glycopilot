@@ -21,6 +21,27 @@ export const generateMockGlycemiaData = (days: number): GlycemiaEntry[] => {
   const baseValue = 110;
   const variation = 40;
 
+  // Contextes réalistes selon l'heure de la journée
+  const contexts: Array<
+    | 'fasting'
+    | 'preprandial'
+    | 'postprandial_1h'
+    | 'postprandial_2h'
+    | 'bedtime'
+    | 'exercise'
+    | 'stress'
+    | 'correction'
+  > = [
+    'fasting',
+    'preprandial',
+    'postprandial_2h',
+    'bedtime',
+    'exercise',
+    'preprandial',
+    'postprandial_1h',
+    'fasting',
+  ];
+
   for (let i = days * 4; i >= 0; i--) {
     const date = new Date(now);
     date.setHours(date.getHours() - i * 6); // Mesure toutes les 6h
@@ -29,10 +50,18 @@ export const generateMockGlycemiaData = (days: number): GlycemiaEntry[] => {
     const randomValue = baseValue + (Math.random() - 0.5) * variation;
     const value = Math.round(Math.max(70, Math.min(180, randomValue)));
 
+    // Sélectionner un contexte selon l'index
+    const context = contexts[i % contexts.length];
+
+    // Source variée (80% manuel, 20% CGM)
+    const source = Math.random() > 0.8 ? 'cgm' : 'manual';
+
     data.push({
       id: `mock-${i}`,
       value,
       measured_at: date.toISOString(),
+      context,
+      source: source as 'manual' | 'cgm',
       notes: i % 5 === 0 ? 'Mesure de démo' : undefined,
     });
   }
