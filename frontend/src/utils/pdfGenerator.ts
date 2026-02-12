@@ -47,6 +47,9 @@ const getStabilityColor = (stability: string): string => {
   return '#EF4444';
 };
 
+// Cette fonction génère un template HTML complet pour le PDF médical
+// La complexité apparente est due au contenu HTML/CSS inline requis par expo-print
+// NOSONAR: cognitive-complexity - Template HTML statique
 export const generateMedicalReportHTML = (data: PdfReportData): string => {
   const {
     period,

@@ -495,10 +495,8 @@ export default function GlucoseTrackingScreen({
       } else {
         await Sharing.shareAsync(uri);
       }
-
-      console.log('PDF généré avec succès:', uri);
     } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
+      // Erreur lors de la génération du PDF
       Alert.alert(
         'Erreur',
         'Impossible de générer le rapport PDF. Veuillez réessayer.',
