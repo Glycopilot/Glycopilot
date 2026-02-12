@@ -47,6 +47,7 @@ export const generateMockGlycemiaData = (days: number): GlycemiaEntry[] => {
     date.setHours(date.getHours() - i * 6); // Mesure toutes les 6h
 
     // Génère une valeur avec variation réaliste
+    // NOSONAR: Using Math.random() for test data generation is safe
     const randomValue = baseValue + (Math.random() - 0.5) * variation;
     const value = Math.round(Math.max(70, Math.min(180, randomValue)));
 
@@ -54,6 +55,7 @@ export const generateMockGlycemiaData = (days: number): GlycemiaEntry[] => {
     const context = contexts[i % contexts.length];
 
     // Source variée (80% manuel, 20% CGM)
+    // NOSONAR: Using Math.random() for test data generation is safe
     const source = Math.random() > 0.8 ? 'cgm' : 'manual';
 
     data.push({
