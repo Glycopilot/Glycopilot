@@ -162,7 +162,7 @@ jobs:
         name: coverage-frontend
         path: frontend/coverage/
         retention-days: 1
-        if-no-files-found: warn
+        if-no-files-found: ignore
       continue-on-error: true #a retirer plus tard si on configure les tests frontend
 
   deploy:
