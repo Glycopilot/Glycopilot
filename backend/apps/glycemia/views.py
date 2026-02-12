@@ -63,7 +63,7 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         """
         GET /api/v1/glucose/range/?days=X
         Retourne l'historique des X derniers jours (1 ≤ X ≤ 30).
-        Utilise GlycemiaHisto pour avoir accès au context et notes.
+        Utilise Glycemia (cache 30 jours avec context et notes).
         """
 
         days = int(request.query_params.get("days", 7))
@@ -73,11 +73,11 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
 
         limit = now() - timedelta(days=days)
 
-        entries = GlycemiaHisto.objects.filter(
+        entries = Glycemia.objects.filter(
             user=request.user, measured_at__gte=limit
         ).order_by("-measured_at")
 
-        serializer = GlycemiaHistoSerializer(entries, many=True)
+        serializer = GlycemiaSerializer(entries, many=True)
 
         return Response(
             {
@@ -121,6 +121,8 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
             trend=histo_entry.trend,
             rate=histo_entry.rate,
             source=histo_entry.source,
+            context=histo_entry.context,
+            notes=histo_entry.notes,
         )
 
     def _clean_old_entries(self, user):

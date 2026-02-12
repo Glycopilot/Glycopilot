@@ -508,7 +508,7 @@ export default function GlucoseTrackingScreen({
   return (
     <Layout
       navigation={navigation}
-      currentRoute="Home"
+      currentRoute="Stats"
       userName="Utilisateur"
       onNotificationPress={() => console.log('Notifications')}
     >

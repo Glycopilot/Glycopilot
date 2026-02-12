@@ -323,7 +323,7 @@ export default function GlycemiaScreen({
   return (
     <Layout
       navigation={navigation}
-      currentRoute="Home"
+      currentRoute="Glycemia"
       userName="Utilisateur"
       onNotificationPress={() => console.log('Notifications')}
     >

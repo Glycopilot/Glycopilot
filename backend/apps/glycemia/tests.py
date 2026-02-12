@@ -252,7 +252,7 @@ class TestGlycemiaAPI:
 
     def test_range_returns_correct_amount(self, client, user):
         for d in range(5):
-            GlycemiaHisto.objects.create(
+            Glycemia.objects.create(
                 user=user,
                 measured_at=now() - timedelta(days=d),
                 value=100 + d,
@@ -263,7 +263,7 @@ class TestGlycemiaAPI:
 
     def test_range_returns_stats(self, client, user):
         for v in [80, 100, 120]:
-            GlycemiaHisto.objects.create(
+            Glycemia.objects.create(
                 user=user,
                 measured_at=now() - timedelta(hours=v),
                 value=v,
@@ -287,7 +287,7 @@ class TestGlycemiaAPI:
 
     def test_range_default_days(self, client, user):
         for d in range(10):
-            GlycemiaHisto.objects.create(
+            Glycemia.objects.create(
                 user=user,
                 measured_at=now() - timedelta(days=d),
                 value=100,

@@ -151,15 +151,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
         <View style={styles.actionsRow}>
           <ActionButton
-            type="glycemie"
-            label="Glycémie"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Glycemia');
-              }
-            }}
-          />
-          <ActionButton
             type="repas"
             label="Repas"
             onPress={() => {
