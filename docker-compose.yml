@@ -55,6 +55,24 @@ services:
     tty: true
     restart: unless-stopped
 
+  # Frontend Web (React)
+  frontend_web:
+    image: node:20-alpine
+    container_name: glycopilot-front-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend_web:/app
+    working_dir: /app
+    environment:
+      - REACT_APP_API_URL=http://backend:8000/api
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
 volumes:
   mysql_data:
   redis_data:
