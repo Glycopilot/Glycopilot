@@ -189,7 +189,8 @@ sleep 15
 echo ""
 echo "✅ Glycopilot démarré !"
 echo "Backend: http://localhost:8006"
-echo "Frontend: http://localhost:8081"
+echo "Frontend mobile (Expo): http://localhost:8081"
+echo "Frontend web:           http://localhost:3000"
 echo ""
 echo "📱 QR Code Frontend :"
 # Attendre que le QR code soit généré

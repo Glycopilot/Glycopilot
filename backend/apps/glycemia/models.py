@@ -18,6 +18,17 @@ class Glycemia(models.Model):
         ("manual", "Manual"),
     ]
 
+    CONTEXT_CHOICES = [
+        ("fasting", "Fasting"),
+        ("preprandial", "Preprandial"),
+        ("postprandial_1h", "Postprandial 1h"),
+        ("postprandial_2h", "Postprandial 2h"),
+        ("bedtime", "Bedtime"),
+        ("exercise", "Exercise"),
+        ("stress", "Stress"),
+        ("correction", "Correction"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -40,6 +51,11 @@ class Glycemia(models.Model):
     )
     rate = models.FloatField(null=True, blank=True, help_text="mg/dL per minute")
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
+
+    context = models.CharField(
+        max_length=30, choices=CONTEXT_CHOICES, blank=True, default=""
+    )
+    notes = models.TextField(blank=True, default="")
 
     class Meta:
         db_table = "glycemia"
@@ -106,9 +122,9 @@ class GlycemiaHisto(models.Model):
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
 
     context = models.CharField(
-        max_length=30, choices=CONTEXT_CHOICES, null=True, blank=True
+        max_length=30, choices=CONTEXT_CHOICES, blank=True, default=""
     )
-    notes = models.TextField(blank=True, null=True)
+    notes = models.TextField(blank=True, default="")
     photo_url = models.URLField(blank=True, null=True)
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
@@ -247,27 +263,33 @@ class GlycemiaDataIA(models.Model):
 
     # ── Scores de risque par horizon (0..1) ──
     risk_hypo_15 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_15 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hypo_30 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_30 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hypo_60 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
     risk_hyper_60 = models.FloatField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
     )
 
@@ -290,7 +312,4 @@ class GlycemiaDataIA(models.Model):
         ]
 
     def __str__(self):
-        return (
-            f"AI run {self.user.email} "
-            f"@ {self.for_time} ({self.model_version})"
-        )
+        return f"AI run {self.user.email} @ {self.for_time} ({self.model_version})"

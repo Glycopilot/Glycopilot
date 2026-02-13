@@ -34,8 +34,11 @@ import {
 type MeasurementContext =
   | 'À jeun'
   | 'Avant repas'
-  | 'Après repas'
+  | 'Après repas (1h)'
+  | 'Après repas (2h)'
   | 'Coucher'
+  | 'Exercice'
+  | 'Stress'
   | 'Autre';
 
 type TrendType = 'stable' | 'up' | 'down';
@@ -44,12 +47,22 @@ type SourceFilter = 'all' | 'manual' | 'cgm';
 // Mapping frontend → backend
 const contextMapping: Record<
   MeasurementContext,
-  'fasting' | 'preprandial' | 'postprandial_2h' | 'bedtime' | 'correction'
+  | 'fasting'
+  | 'preprandial'
+  | 'postprandial_1h'
+  | 'postprandial_2h'
+  | 'bedtime'
+  | 'exercise'
+  | 'stress'
+  | 'correction'
 > = {
   'À jeun': 'fasting',
   'Avant repas': 'preprandial',
-  'Après repas': 'postprandial_2h',
+  'Après repas (1h)': 'postprandial_1h',
+  'Après repas (2h)': 'postprandial_2h',
   Coucher: 'bedtime',
+  Exercice: 'exercise',
+  Stress: 'stress',
   Autre: 'correction',
 };
 
@@ -276,7 +289,7 @@ export default function GlycemiaScreen({
 
               {item.note && (
                 <Text style={styles.noteText} numberOfLines={1}>
-                  💬 {item.note}
+                  {item.note}
                 </Text>
               )}
             </View>
@@ -297,17 +310,20 @@ export default function GlycemiaScreen({
   };
 
   const contextOptions: ContextOption[] = [
-    { label: 'À jeun', icon: '🌅', color: '#3B82F6' },
-    { label: 'Avant repas', icon: '🍽️', color: '#F59E0B' },
-    { label: 'Après repas', icon: '✅', color: '#10B981' },
-    { label: 'Coucher', icon: '🌙', color: '#8B5CF6' },
-    { label: 'Autre', icon: '📝', color: '#6B7280' },
+    { label: 'À jeun', icon: 'AJ', color: '#3B82F6' },
+    { label: 'Avant repas', icon: 'AR', color: '#F59E0B' },
+    { label: 'Après repas (1h)', icon: '1h', color: '#F97316' },
+    { label: 'Après repas (2h)', icon: '2h', color: '#10B981' },
+    { label: 'Coucher', icon: 'C', color: '#8B5CF6' },
+    { label: 'Exercice', icon: 'EX', color: '#22C55E' },
+    { label: 'Stress', icon: 'ST', color: '#EF4444' },
+    { label: 'Autre', icon: 'AU', color: '#6B7280' },
   ];
 
   return (
     <Layout
       navigation={navigation}
-      currentRoute="Home"
+      currentRoute="Glycemia"
       userName="Utilisateur"
       onNotificationPress={() => console.log('Notifications')}
     >
@@ -547,7 +563,23 @@ export default function GlycemiaScreen({
                         },
                       ]}
                     >
-                      <Text style={styles.contextIcon}>{option.icon}</Text>
+                      <View
+                        style={[
+                          styles.contextIcon,
+                          context === option.label && {
+                            backgroundColor: option.color,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.contextIconText,
+                            context === option.label && { color: '#fff' },
+                          ]}
+                        >
+                          {option.icon}
+                        </Text>
+                      </View>
                       <Text
                         style={[
                           styles.contextLabel,
@@ -993,10 +1025,20 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     backgroundColor: '#fff',
+    gap: 8,
   },
   contextIcon: {
-    fontSize: 24,
-    marginBottom: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  contextIconText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
   },
   contextLabel: {
     fontSize: 13,
