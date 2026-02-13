@@ -282,7 +282,7 @@ class TestGlycemiaAPI:
         assert r.data["stats"] == {}
 
     def test_range_invalid_days(self, client):
-        # View accepts 1 <= days <= 90
+        # View accepts 1 <= days <= 90; use 91 to get 400
         assert client.get("/api/glycemia/range/?days=91").status_code == 400
         assert client.get("/api/glycemia/range/?days=0").status_code == 400
 
@@ -300,7 +300,7 @@ class TestGlycemiaAPI:
     # ── cleanup ──────────────────────────────────────────────────
 
     def test_cleanup_removes_old_entries(self, client, user):
-        # Cleanup removes entries older than 90 days
+        # Cleanup removes entries older than 90 days; use 95 so it is deleted
         Glycemia.objects.create(
             user=user,
             measured_at=now() - timedelta(days=95),
