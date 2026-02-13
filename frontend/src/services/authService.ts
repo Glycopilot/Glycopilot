@@ -11,7 +11,7 @@ import type {
   ApiError,
 } from '../types/auth.types';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8006/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const API_TIMEOUT = parseInt(
   process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',
   10

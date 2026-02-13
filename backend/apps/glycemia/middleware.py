@@ -2,19 +2,20 @@
 JWT authentication middleware for WebSocket connections.
 
 Extracts JWT token from query string and authenticates the user.
-Usage: ws://host/ws/glycemia/?token=<jwt_access_token>
+Usage: wss://host/ws/glycemia/?token=<jwt_access_token>
 """
 
 from urllib.parse import parse_qs
 
-from channels.db import database_sync_to_async
-from channels.middleware import BaseMiddleware
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+
+import jwt
+from channels.db import database_sync_to_async
+from channels.middleware import BaseMiddleware
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import AccessToken
-import jwt
 
 User = get_user_model()
 
