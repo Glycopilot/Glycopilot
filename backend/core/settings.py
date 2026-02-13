@@ -77,6 +77,7 @@ MIDDLEWARE = [
 # --- URL ROOT ---
 ROOT_URLCONF = "core.urls"
 APPEND_SLASH = False
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- DATABASES ---
 if "test" in sys.argv or "pytest" in sys.argv[0]:
