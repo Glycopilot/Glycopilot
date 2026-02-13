@@ -24,6 +24,88 @@ class CareTeamIntegrationTests(TestCase):
         InvitationStatus.objects.get_or_create(label="PENDING")
         self.verified_status, _ = VerificationStatus.objects.get_or_create(label="VERIFIED")
         self.pending_status, _ = VerificationStatus.objects.get_or_create(label="PENDING")
+        VerificationStatus.objects.get_or_create(label="REJECTED")
+
+    def _token_for(self, email, password):
+        """Retourne le token d'accès pour email/password."""
+        r = self.client.post("/api/auth/login/", {"email": email, "password": password})
+        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
+        return r.data["access"]
+
+    def test_care_team_add_family(self):
+        """POST /api/doctors/care-team/add-family/ : patient ajoute un membre famille."""
+        patient_identity = UserIdentity.objects.create(first_name="Paul", last_name="Patient", phone_number="0600000001")
+        User.objects.create_user(email="paul_addfam@test.com", password="pass123", user_identity=patient_identity)
+        Profile.objects.create(user=patient_identity, role=self.patient_role)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self._token_for('paul_addfam@test.com', 'pass123')}")
+        response = self.client.post(
+            "/api/doctors/care-team/add-family/",
+            {"first_name": "Marie", "last_name": "Famille", "role": "FAMILY", "relation_type": "Épouse"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("message", response.data)
+        self.assertIn("id", response.data)
+
+    def test_care_team_my_team(self):
+        """GET /api/doctors/care-team/my-team/."""
+        doctor_identity = UserIdentity.objects.create(first_name="Doc", last_name="MyTeam", phone_number="0600000002")
+        User.objects.create_user(email="doc_myteam@test.com", password="pass123", user_identity=doctor_identity)
+        doc_profile = Profile.objects.create(user=doctor_identity, role=self.doctor_role)
+        doc_profile.doctor_profile.verification_status = self.verified_status
+        doc_profile.doctor_profile.license_number = "LIC-MT"
+        doc_profile.doctor_profile.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self._token_for('doc_myteam@test.com', 'pass123')}")
+        response = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("active_patients", response.data)
+        self.assertIn("pending_invites", response.data)
+
+    def test_care_team_accept_invitation(self):
+        """POST /api/doctors/care-team/accept-invitation/ (route existe)."""
+        patient_identity = UserIdentity.objects.create(first_name="Inv", last_name="Pat", phone_number="0600000003")
+        User.objects.create_user(email="inv_pat@test.com", password="pass123", user_identity=patient_identity)
+        Profile.objects.create(user=patient_identity, role=self.patient_role)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self._token_for('inv_pat@test.com', 'pass123')}")
+        response = self.client.post("/api/doctors/care-team/accept-invitation/", {}, format="json")
+        self.assertIn(response.status_code, (status.HTTP_200_OK, status.HTTP_201_CREATED, status.HTTP_400_BAD_REQUEST))
+
+    def test_medecins_patients_list(self):
+        """GET /api/doctors/medecins-patients/."""
+        doctor_identity = UserIdentity.objects.create(first_name="List", last_name="Doc", phone_number="0600000004")
+        User.objects.create_user(email="list_doc@test.com", password="pass123", user_identity=doctor_identity)
+        doc_profile = Profile.objects.create(user=doctor_identity, role=self.doctor_role)
+        doc_profile.doctor_profile.verification_status = self.verified_status
+        doc_profile.doctor_profile.license_number = "LIC-LIST"
+        doc_profile.doctor_profile.save()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self._token_for('list_doc@test.com', 'pass123')}")
+        response = self.client.get("/api/doctors/medecins-patients/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("patients_par_medecin", response.data)
+        self.assertIn("medecins_avec_patients", response.data)
+
+    def test_verification_decline(self):
+        """POST /api/doctors/verification/<id>/decline/ : admin refuse un docteur."""
+        doctor_identity = UserIdentity.objects.create(first_name="Decline", last_name="Doc", phone_number="0677777000")
+        User.objects.create_user(email="decline_doc@test.com", password="pass123", user_identity=doctor_identity)
+        doc_profile = Profile.objects.create(user=doctor_identity, role=self.doctor_role)
+        doc_prof = doc_profile.doctor_profile
+        doc_prof.verification_status = self.pending_status
+        doc_prof.license_number = "LIC-DECLINE"
+        doc_prof.save()
+        admin_identity = UserIdentity.objects.create(first_name="Admin", last_name="Two")
+        admin_account = User.objects.create_user(email="admin2@test.com", password="admin123", user_identity=admin_identity)
+        admin_account.is_staff = True
+        admin_account.is_superuser = True
+        admin_account.save()
+        Profile.objects.create(user=admin_identity, role=Role.objects.get(name="SUPERADMIN"))
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self._token_for('admin2@test.com', 'admin123')}")
+        response = self.client.post(
+            f"/api/doctors/verification/{doc_prof.doctor_id}/decline/",
+            {"rejection_reason": "Documents incomplets"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        doc_prof.refresh_from_db()
+        self.assertEqual(doc_prof.verification_status.label, "REJECTED")
 
     def test_patient_register_creates_account(self):
         """Création d'un compte patient via l'API register."""
@@ -216,9 +298,3 @@ class CareTeamIntegrationTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("active_patients", response.data)
         self.assertIn("pending_invites", response.data)
-
-    def _token_for(self, email, password):
-        """Retourne le token d'accès pour email/password."""
-        r = self.client.post("/api/auth/login/", {"email": email, "password": password})
-        self.assertEqual(r.status_code, status.HTTP_200_OK, r.data)
-        return r.data["access"]

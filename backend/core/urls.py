@@ -1,7 +1,14 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 
+
+def root_view(request):
+    return JsonResponse({"message": "Server is running"})
+
+
 urlpatterns = [
+    path("", root_view),
     path("admin/", admin.site.urls),
     path(
         "api/password_reset/",
@@ -12,6 +19,7 @@ urlpatterns = [
     path("api/activities/", include("apps.activities.urls")),
     path("api/alerts/", include("apps.alerts.urls")),
     path("api/glycemia/", include("apps.glycemia.urls")),
+    path("api/devices/", include("apps.devices.urls")),
     path("api/doctors/", include("apps.doctors.urls")),
     path("api/meals/", include("apps.meals.urls")),
     path("api/medications/", include("apps.medications.urls")),
