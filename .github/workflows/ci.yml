@@ -273,7 +273,7 @@ jobs:
             console.log('Failed to parse duplicated files:', e);
           }
           
-          const qgText = qualityGate === 'OK' ? '✅ PASSED' : qualityGate === 'WARN' ? '⚠️ WARNING' : qualityGate === 'UNKNOWN' ? '❓ UNKNOWN' : '❌ FAILED';
+          const qgText = qualityGate === 'OK' ? 'PASSED' : qualityGate === 'WARN' ? 'WARNING' : qualityGate === 'UNKNOWN' ? 'UNKNOWN' : 'FAILED';
           
           const coverageDisplay = coverage !== 'N/A' ? `${coverage}%` : coverage;
           const duplicationsDisplay = duplications !== 'N/A' ? `${duplications}%` : duplications;
@@ -283,7 +283,7 @@ jobs:
           // Construction de la section des fichiers non couverts
           let uncoveredSection = '';
           if (uncoveredFiles.length > 0) {
-            uncoveredSection = '\n### 📉 Fichiers avec couverture insuffisante (<80%)\n\n';
+            uncoveredSection = '\n### Fichiers avec couverture insuffisante (<80%)\n\n';
             uncoveredSection += '| Fichier | Couverture | Lignes non couvertes |\n';
             uncoveredSection += '|---------|------------|----------------------|\n';
             uncoveredFiles.forEach(file => {
@@ -295,7 +295,7 @@ jobs:
           // Construction de la section des fichiers dupliqués
           let duplicatedSection = '';
           if (duplicatedFiles.length > 0) {
-            duplicatedSection = '\n### 📋 Fichiers avec code dupliqué (>3%)\n\n';
+            duplicatedSection = '\n### Fichiers avec code dupliqué (>3%)\n\n';
             duplicatedSection += '| Fichier | Duplication | Lignes dupliquées |\n';
             duplicatedSection += '|---------|-------------|-------------------|\n';
             duplicatedFiles.forEach(file => {
@@ -308,7 +308,7 @@ jobs:
           
           **Quality Gate:** ${qgText}
           
-          ### 📊 Métriques globales
+          ### Métriques globales
           
           | Métrique | Valeur | Détails |
           |----------|--------|----------|
@@ -319,7 +319,7 @@ jobs:
           | Duplications | **${duplicationsDisplay}** | Code dupliqué |
           | Lignes de code | **${lines}** | Nombre de lignes (sans commentaires) |
           
-          ### 🎯 Couverture par composant
+          ### Couverture par composant
           
           | Composant | Couverture |
           |-----------|------------|
@@ -328,7 +328,7 @@ jobs:
           ${uncoveredSection}
           ${duplicatedSection}
           
-          ### 🔗 Liens utiles
+          ### Liens utiles
           
           - [Dashboard complet](https://sonarcloud.io/summary/overall?id=glycopilot_glycopilot)
           - [Liste des bugs](https://sonarcloud.io/project/issues?resolved=false&types=BUG&id=glycopilot_glycopilot)
