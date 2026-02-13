@@ -166,15 +166,6 @@ export default function ActivityScreen({
     estimatedCalories > 0 ? Math.round(estimatedCalories / 25) : 0;
 
   const handleSubmit = (): void => {
-    const finalActivity =
-      activityType === 'Autre' ? customActivity : activityType;
-    console.log({
-      activityType: finalActivity,
-      duration,
-      intensity,
-      estimatedCalories,
-      estimatedImpact: -estimatedImpact,
-    });
     setShowAddActivity(false);
     setActivityType('');
     setDuration('');

@@ -27,12 +27,13 @@ export default function Header({
     try {
       setDropdownVisible(false);
       await authService.logout();
+    } catch (err) {
+      console.warn('Logout error', err);
+    } finally {
+      // Toujours rediriger vers la page de connexion
       if (navigation && navigation.reset) {
         navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
       }
-    } catch (err) {
-      Alert.alert('Erreur', 'Impossible de se déconnecter');
-      console.warn('Logout error', err);
     }
   };
 
@@ -137,7 +138,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: '#FFFFFF',
-    zIndex: 10,
   },
   logoContainer: {
     flexDirection: 'row',

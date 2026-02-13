@@ -91,20 +91,20 @@ export default function GlycemiaChartTooltip({
               <View style={styles.details}>
                 {data.time && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>🕐 Heure</Text>
+                    <Text style={styles.detailLabel}>Heure</Text>
                     <Text style={styles.detailValue}>{data.time}</Text>
                   </View>
                 )}
 
                 {data.context && (
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>🍽️ Contexte</Text>
+                    <Text style={styles.detailLabel}>Contexte</Text>
                     <Text style={styles.detailValue}>{data.context}</Text>
                   </View>
                 )}
 
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>📊 Plage cible</Text>
+                  <Text style={styles.detailLabel}>Plage cible</Text>
                   <Text style={styles.detailValue}>70 - 180 mg/dL</Text>
                 </View>
               </View>

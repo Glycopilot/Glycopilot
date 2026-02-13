@@ -15,18 +15,15 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(
-        email="test@example.com", password="pass1234"
-    )
+    return User.objects.create_user(email="test@example.com", password="pass1234")  # NOSONAR
 
 
 @pytest.fixture
 def other_user(db):
-    return User.objects.create_user(
-        email="other@example.com", password="pass1234"
-    )
+    return User.objects.create_user(email="other@example.com", password="pass1234")  # NOSONAR
 
 
 @pytest.fixture
@@ -55,19 +52,23 @@ def device(user):
 # 1. MODÈLES
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestGlycemiaModels:
-
     def test_glycemia_str(self, user):
         g = Glycemia.objects.create(
-            user=user, measured_at=now(), value=120,
+            user=user,
+            measured_at=now(),
+            value=120,
         )
         assert "test@example.com" in str(g)
         assert "120" in str(g)
 
     def test_glycemia_histo_str(self, user):
         h = GlycemiaHisto.objects.create(
-            user=user, measured_at=now(), value=95,
+            user=user,
+            measured_at=now(),
+            value=95,
         )
         assert "test@example.com" in str(h)
         assert "95" in str(h)
@@ -79,24 +80,34 @@ class TestGlycemiaModels:
 
     def test_glycemia_ordering(self, user):
         old = Glycemia.objects.create(
-            user=user, measured_at=now() - timedelta(hours=2), value=100,
+            user=user,
+            measured_at=now() - timedelta(hours=2),
+            value=100,
         )
         recent = Glycemia.objects.create(
-            user=user, measured_at=now(), value=200,
+            user=user,
+            measured_at=now(),
+            value=200,
         )
         qs = Glycemia.objects.filter(user=user)
         assert qs.first().pk == recent.pk
 
     def test_glycemia_with_device(self, user, device):
         g = Glycemia.objects.create(
-            user=user, device=device, measured_at=now(), value=130,
+            user=user,
+            device=device,
+            measured_at=now(),
+            value=130,
         )
         assert g.device == device
         assert device.glycemia_cache.count() == 1
 
     def test_glycemia_device_set_null_on_delete(self, user, device):
         g = Glycemia.objects.create(
-            user=user, device=device, measured_at=now(), value=130,
+            user=user,
+            device=device,
+            measured_at=now(),
+            value=130,
         )
         device.delete()
         g.refresh_from_db()
@@ -131,6 +142,7 @@ class TestGlycemiaModels:
             model_version="v1.0",
         )
         from django.db import IntegrityError
+
         with pytest.raises(IntegrityError):
             GlycemiaDataIA.objects.create(
                 user=user,
@@ -145,9 +157,9 @@ class TestGlycemiaModels:
 # 2. API – CRUD & ACTIONS
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestGlycemiaAPI:
-
     # ── manual-readings ──────────────────────────────────────────
 
     def test_manual_readings_inserts_into_both_tables(self, client, user):
@@ -213,7 +225,9 @@ class TestGlycemiaAPI:
 
     def test_current_returns_latest_value(self, client, user):
         Glycemia.objects.create(
-            user=user, measured_at=now() - timedelta(hours=1), value=120,
+            user=user,
+            measured_at=now() - timedelta(hours=1),
+            value=120,
         )
         Glycemia.objects.create(user=user, measured_at=now(), value=180)
         r = client.get("/api/glycemia/current/")
@@ -222,7 +236,9 @@ class TestGlycemiaAPI:
 
     def test_current_fallback_to_histo(self, client, user):
         GlycemiaHisto.objects.create(
-            user=user, measured_at=now() - timedelta(days=60), value=99,
+            user=user,
+            measured_at=now() - timedelta(days=60),
+            value=99,
         )
         r = client.get("/api/glycemia/current/")
         assert r.status_code == 200
@@ -237,7 +253,9 @@ class TestGlycemiaAPI:
     def test_range_returns_correct_amount(self, client, user):
         for d in range(5):
             Glycemia.objects.create(
-                user=user, measured_at=now() - timedelta(days=d), value=100 + d,
+                user=user,
+                measured_at=now() - timedelta(days=d),
+                value=100 + d,
             )
         r = client.get("/api/glycemia/range/?days=3")
         assert r.status_code == 200
@@ -246,7 +264,9 @@ class TestGlycemiaAPI:
     def test_range_returns_stats(self, client, user):
         for v in [80, 100, 120]:
             Glycemia.objects.create(
-                user=user, measured_at=now() - timedelta(hours=v), value=v,
+                user=user,
+                measured_at=now() - timedelta(hours=v),
+                value=v,
             )
         r = client.get("/api/glycemia/range/?days=7")
         assert r.status_code == 200
@@ -268,7 +288,9 @@ class TestGlycemiaAPI:
     def test_range_default_days(self, client, user):
         for d in range(10):
             Glycemia.objects.create(
-                user=user, measured_at=now() - timedelta(days=d), value=100,
+                user=user,
+                measured_at=now() - timedelta(days=d),
+                value=100,
             )
         r = client.get("/api/glycemia/range/")
         assert r.status_code == 200
@@ -278,7 +300,9 @@ class TestGlycemiaAPI:
 
     def test_cleanup_removes_old_entries(self, client, user):
         Glycemia.objects.create(
-            user=user, measured_at=now() - timedelta(days=40), value=110,
+            user=user,
+            measured_at=now() - timedelta(days=40),
+            value=110,
         )
         payload = {
             "value": 150,
@@ -292,7 +316,9 @@ class TestGlycemiaAPI:
 
     def test_cleanup_keeps_recent_entries(self, client, user):
         Glycemia.objects.create(
-            user=user, measured_at=now() - timedelta(days=10), value=100,
+            user=user,
+            measured_at=now() - timedelta(days=10),
+            value=100,
         )
         payload = {
             "value": 150,
@@ -321,10 +347,14 @@ class TestGlycemiaAPI:
 
     def test_user_cannot_see_other_user_data(self, client, other_user):
         Glycemia.objects.create(
-            user=other_user, measured_at=now(), value=200,
+            user=other_user,
+            measured_at=now(),
+            value=200,
         )
         GlycemiaHisto.objects.create(
-            user=other_user, measured_at=now(), value=200,
+            user=other_user,
+            measured_at=now(),
+            value=200,
         )
         assert client.get("/api/glycemia/current/").status_code == 404
         r = client.get("/api/glycemia/")
@@ -337,21 +367,25 @@ class TestGlycemiaAPI:
         assert unauth_client.get("/api/glycemia/").status_code == 401
         assert unauth_client.get("/api/glycemia/current/").status_code == 401
         assert unauth_client.get("/api/glycemia/range/").status_code == 401
-        assert unauth_client.post("/api/glycemia/manual-readings/", {}).status_code == 401
+        assert (
+            unauth_client.post("/api/glycemia/manual-readings/", {}).status_code == 401
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════
 # 3. SIGNALS – WebSocket broadcasts
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestGlycemiaSignals:
-
     @patch("apps.glycemia.signals.get_channel_layer")
     def test_broadcast_on_create(self, mock_layer, user):
         mock_send = mock_layer.return_value.group_send
         GlycemiaHisto.objects.create(
-            user=user, measured_at=now(), value=120,
+            user=user,
+            measured_at=now(),
+            value=120,
         )
         mock_send.assert_called_once()
         call_args = mock_send.call_args[0]
@@ -361,7 +395,9 @@ class TestGlycemiaSignals:
     @patch("apps.glycemia.signals.get_channel_layer")
     def test_no_broadcast_on_update(self, mock_layer, user):
         h = GlycemiaHisto.objects.create(
-            user=user, measured_at=now(), value=120,
+            user=user,
+            measured_at=now(),
+            value=120,
         )
         mock_layer.return_value.group_send.reset_mock()
         h.value = 130
@@ -372,7 +408,9 @@ class TestGlycemiaSignals:
     def test_hypo_alert_sent(self, mock_layer, user):
         mock_send = mock_layer.return_value.group_send
         GlycemiaHisto.objects.create(
-            user=user, measured_at=now(), value=HYPO_THRESHOLD - 1,
+            user=user,
+            measured_at=now(),
+            value=HYPO_THRESHOLD - 1,
         )
         assert mock_send.call_count == 2
         alert_call = mock_send.call_args_list[1][0][1]
@@ -383,7 +421,9 @@ class TestGlycemiaSignals:
     def test_hyper_alert_sent(self, mock_layer, user):
         mock_send = mock_layer.return_value.group_send
         GlycemiaHisto.objects.create(
-            user=user, measured_at=now(), value=HYPER_THRESHOLD + 1,
+            user=user,
+            measured_at=now(),
+            value=HYPER_THRESHOLD + 1,
         )
         assert mock_send.call_count == 2
         alert_call = mock_send.call_args_list[1][0][1]
@@ -394,7 +434,9 @@ class TestGlycemiaSignals:
     def test_no_alert_for_normal_value(self, mock_layer, user):
         mock_send = mock_layer.return_value.group_send
         GlycemiaHisto.objects.create(
-            user=user, measured_at=now(), value=100,
+            user=user,
+            measured_at=now(),
+            value=100,
         )
         assert mock_send.call_count == 1  # only glycemia_update, no alert
 
@@ -402,7 +444,9 @@ class TestGlycemiaSignals:
     def test_no_crash_when_channel_layer_none(self, mock_layer, user):
         mock_layer.return_value = None
         GlycemiaHisto.objects.create(
-            user=user, measured_at=now(), value=50,
+            user=user,
+            measured_at=now(),
+            value=50,
         )
         # Should not raise
 
@@ -411,11 +455,12 @@ class TestGlycemiaSignals:
 # 4. SERIALIZERS
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestGlycemiaSerializers:
-
     def test_histo_create_serializer_valid(self):
         from apps.glycemia.serializers import GlycemiaHistoCreateSerializer
+
         data = {
             "value": 120,
             "unit": "mg/dL",
@@ -427,6 +472,7 @@ class TestGlycemiaSerializers:
 
     def test_histo_create_serializer_rejects_invalid_value(self):
         from apps.glycemia.serializers import GlycemiaHistoCreateSerializer
+
         for bad_value in [19, 601]:
             data = {
                 "value": bad_value,
@@ -439,12 +485,14 @@ class TestGlycemiaSerializers:
 
     def test_glycemia_serializer_includes_email(self, user):
         from apps.glycemia.serializers import GlycemiaSerializer
+
         g = Glycemia.objects.create(user=user, measured_at=now(), value=100)
         data = GlycemiaSerializer(g).data
         assert data["user_email"] == "test@example.com"
 
     def test_data_ia_serializer_read_only_fields(self):
         from apps.glycemia.serializers import GlycemiaDataIASerializer
+
         s = GlycemiaDataIASerializer()
         assert "id" in s.Meta.read_only_fields
         assert "created_at" in s.Meta.read_only_fields
