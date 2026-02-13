@@ -54,7 +54,8 @@ docker compose up --build
 ## Accès
 
 - **Backend API** : http://localhost:8006
-- **Frontend** : http://localhost:8081 (Expo QR code)
+- **Frontend mobile (Expo)** : http://localhost:8081 (QR code)
+- **Frontend web** : http://localhost:3000
 - **Base de données** : localhost:3306
 
 ## Images Docker
