@@ -116,7 +116,7 @@ jobs:
         else
           echo "Frontend coverage file not found"
         fi
-      continue-on-error: true #a retirer plus tard si on configure les tests frontend
+      continue-on-error: true #a retirer plus tard si on configure les tests du frontend
     
     - name: Set up Node.js
       uses: actions/setup-node@v4
