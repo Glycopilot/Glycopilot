@@ -53,9 +53,9 @@ class Glycemia(models.Model):
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
 
     context = models.CharField(
-        max_length=30, choices=CONTEXT_CHOICES, null=True, blank=True
+        max_length=30, choices=CONTEXT_CHOICES, blank=True, default=""
     )
-    notes = models.TextField(blank=True, null=True)
+    notes = models.TextField(blank=True, default="")
 
     class Meta:
         db_table = "glycemia"
@@ -122,9 +122,9 @@ class GlycemiaHisto(models.Model):
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default="manual")
 
     context = models.CharField(
-        max_length=30, choices=CONTEXT_CHOICES, null=True, blank=True
+        max_length=30, choices=CONTEXT_CHOICES, blank=True, default=""
     )
-    notes = models.TextField(blank=True, null=True)
+    notes = models.TextField(blank=True, default="")
     photo_url = models.URLField(blank=True, null=True)
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
@@ -312,4 +312,4 @@ class GlycemiaDataIA(models.Model):
         ]
 
     def __str__(self):
-        return f"AI run {self.user.email} " f"@ {self.for_time} ({self.model_version})"
+        return f"AI run {self.user.email} @ {self.for_time} ({self.model_version})"

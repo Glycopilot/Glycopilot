@@ -61,7 +61,7 @@ export const generateMockGlycemiaData = (days: number): GlycemiaEntry[] => {
       value,
       measured_at: date.toISOString(),
       context,
-      source: source as 'manual' | 'cgm',
+      source,
       notes: i % 5 === 0 ? 'Mesure de démo' : undefined,
     });
   }

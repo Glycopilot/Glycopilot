@@ -75,13 +75,13 @@ export default function GlucoseTrackingScreen({
 
   // Déterminer le nombre de jours selon la période
   // En mode date personnalisée, on charge toujours 30 jours pour avoir l'historique
-  const days = customDateMode
-    ? 30
-    : selectedPeriod === 'Jour'
-      ? 1
-      : selectedPeriod === 'Semaine'
-        ? 7
-        : 30;
+  const getDaysForPeriod = (): number => {
+    if (customDateMode) return 30;
+    if (selectedPeriod === 'Jour') return 1;
+    if (selectedPeriod === 'Semaine') return 7;
+    return 30;
+  };
+  const days = getDaysForPeriod();
 
   // Hook pour charger les données depuis le backend
   const {
@@ -495,8 +495,7 @@ export default function GlucoseTrackingScreen({
       } else {
         await Sharing.shareAsync(uri);
       }
-    } catch (error) {
-      // Erreur lors de la génération du PDF
+    } catch {
       Alert.alert(
         'Erreur',
         'Impossible de générer le rapport PDF. Veuillez réessayer.',
@@ -640,12 +639,11 @@ export default function GlucoseTrackingScreen({
                 style={[
                   styles.statValue,
                   {
-                    color:
-                      stats.stability === 'Bon'
-                        ? '#10B981'
-                        : stats.stability === 'Moyen'
-                          ? '#F59E0B'
-                          : '#EF4444',
+                    color: (() => {
+                      if (stats.stability === 'Bon') return '#10B981';
+                      if (stats.stability === 'Moyen') return '#F59E0B';
+                      return '#EF4444';
+                    })(),
                   },
                 ]}
               >

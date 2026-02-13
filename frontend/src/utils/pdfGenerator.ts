@@ -127,6 +127,8 @@ export const generateMedicalReportHTML = (data: PdfReportData): string => {
     )
     .join('');
 
+  const patientInitial = patientName ? patientName.charAt(0).toUpperCase() : 'P';
+
   return `
     <!DOCTYPE html>
     <html>
@@ -378,12 +380,12 @@ export const generateMedicalReportHTML = (data: PdfReportData): string => {
         <div style="background-color: #F9FAFB; border: 2px solid #E5E7EB; border-radius: 12px; padding: 20px;">
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
             <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #007AFF 0%, #0051D5 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: 700;">
-              ${patientName ? patientName.charAt(0).toUpperCase() : 'P'}
+              ${patientInitial}
             </div>
             <div>
               <div style="font-size: 14px; font-weight: 600; color: #6B7280; margin-bottom: 4px;">Patient</div>
-              ${patientName ? `<div style="font-size: 18px; font-weight: 700; color: #1F2937; margin-bottom: 2px;">${patientName}</div>` : ''}
-              ${patientEmail ? `<div style="font-size: 14px; color: #6B7280;">${patientEmail}</div>` : ''}
+              ${patientName && `<div style="font-size: 18px; font-weight: 700; color: #1F2937; margin-bottom: 2px;">${patientName}</div>`}
+              ${patientEmail && `<div style="font-size: 14px; color: #6B7280;">${patientEmail}</div>`}
             </div>
           </div>
         </div>

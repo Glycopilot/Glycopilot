@@ -4,13 +4,13 @@ import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
 interface CalendarPickerProps {
-  visible: boolean;
-  selectedDate: Date;
-  onDateSelect: (date: Date) => void;
-  onClose: () => void;
-  onReset?: () => void;
-  maxDate?: Date;
-  showResetButton?: boolean;
+  readonly visible: boolean;
+  readonly selectedDate: Date;
+  readonly onDateSelect: (date: Date) => void;
+  readonly onClose: () => void;
+  readonly onReset?: () => void;
+  readonly maxDate?: Date;
+  readonly showResetButton?: boolean;
 }
 
 export default function CalendarPicker({
@@ -228,8 +228,8 @@ export default function CalendarPicker({
 
               {/* Week Days */}
               <View style={styles.calendarWeekDays}>
-                {weekDays.map((day, index) => (
-                  <View key={index} style={styles.calendarWeekDay}>
+                {weekDays.map((day) => (
+                  <View key={day} style={styles.calendarWeekDay}>
                     <Text style={styles.calendarWeekDayText}>{day}</Text>
                   </View>
                 ))}
