@@ -105,7 +105,6 @@ export default function NutritionScreen({
   const objectifGlucides = 200;
 
   const handleSubmit = (): void => {
-    console.log({ mealType, glucides, calories, description });
     setShowAddMeal(false);
     setGlucides('');
     setCalories('');

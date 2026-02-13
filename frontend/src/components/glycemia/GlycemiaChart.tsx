@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../../themes/colors';
+import GlycemiaChartTooltip, { TooltipData } from './GlycemiaChartTooltip';
 
 const { width } = Dimensions.get('window');
+
+export interface ChartMeasurement {
+  value: number;
+  label: string;
+  context?: string;
+  time?: string;
+  date?: string;
+}
 
 interface GlycemiaChartProps {
   chartData: {
@@ -14,15 +23,46 @@ interface GlycemiaChartProps {
   };
   chartWidth?: number;
   measurementCount?: number;
+  measurements?: ChartMeasurement[];
 }
 
 export default function GlycemiaChart({
   chartData,
   chartWidth,
   measurementCount = 0,
+  measurements = [],
 }: GlycemiaChartProps): React.JSX.Element {
+  const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+
   const resolvedWidth = chartWidth || width - 72;
   const isScrollable = resolvedWidth > width - 72;
+
+  const handleDataPointClick = (data: {
+    index: number;
+    value: number;
+    dataset: { data: number[] };
+    x: number;
+    y: number;
+    getColor: (opacity: number) => string;
+  }) => {
+    const measurement = measurements[data.index];
+    if (measurement) {
+      setTooltipData({
+        value: measurement.value,
+        label: measurement.label,
+        context: measurement.context,
+        time: measurement.time,
+        date: measurement.date,
+      });
+      setShowTooltip(true);
+    }
+  };
+
+  const handleCloseTooltip = () => {
+    setShowTooltip(false);
+    setTooltipData(null);
+  };
 
   // Vérifier si on a des données valides
   const hasValidData =
@@ -79,6 +119,49 @@ export default function GlycemiaChart({
     };
   }, [chartData, hasValidData]);
 
+  // Calculer les hauteurs des zones en fonction de l'échelle Y
+  const zoneHeights = React.useMemo(() => {
+    const LOW_THRESHOLD = 70;
+    const HIGH_THRESHOLD = 180;
+    const MAX_HEIGHT = 120; // Hauteur maximale pour les barres
+    const totalRange = yMax - yMin;
+
+    if (totalRange === 0) {
+      return { low: 40, normal: 80, high: 40 };
+    }
+
+    // Calculer la hauteur de chaque zone proportionnellement
+    let lowHeight = 0;
+    let normalHeight = 0;
+    let highHeight = 0;
+
+    // Zone basse (< 70)
+    if (yMin < LOW_THRESHOLD) {
+      const lowRange = Math.min(LOW_THRESHOLD, yMax) - yMin;
+      lowHeight = (lowRange / totalRange) * MAX_HEIGHT;
+    }
+
+    // Zone normale (70-180)
+    if (yMax > LOW_THRESHOLD && yMin < HIGH_THRESHOLD) {
+      const normalStart = Math.max(yMin, LOW_THRESHOLD);
+      const normalEnd = Math.min(yMax, HIGH_THRESHOLD);
+      const normalRange = normalEnd - normalStart;
+      normalHeight = (normalRange / totalRange) * MAX_HEIGHT;
+    }
+
+    // Zone haute (> 180)
+    if (yMax > HIGH_THRESHOLD) {
+      const highRange = yMax - Math.max(yMin, HIGH_THRESHOLD);
+      highHeight = (highRange / totalRange) * MAX_HEIGHT;
+    }
+
+    return {
+      low: Math.max(lowHeight, 20), // Minimum 20px pour la visibilité
+      normal: Math.max(normalHeight, 20),
+      high: Math.max(highHeight, 20),
+    };
+  }, [yMin, yMax]);
+
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
@@ -101,7 +184,6 @@ export default function GlycemiaChart({
 
       {!hasValidData ? (
         <View style={styles.emptyChartState}>
-          <Text style={styles.emptyChartIcon}>📊</Text>
           <Text style={styles.emptyChartTitle}>Pas encore de données</Text>
           <Text style={styles.emptyChartText}>
             Ajoutez au moins une mesure pour voir votre courbe de glycémie
@@ -170,6 +252,8 @@ export default function GlycemiaChart({
                   segments={3}
                   yAxisSuffix=""
                   fromZero={false}
+                  // @ts-ignore - onDataPointClick existe dans la librairie mais pas dans les types TS
+                  onDataPointClick={handleDataPointClick}
                 />
 
                 {/* Labels personnalisés sous le graphique */}
@@ -200,7 +284,7 @@ export default function GlycemiaChart({
               <View
                 style={[
                   styles.zoneBar,
-                  { backgroundColor: '#FEE2E2', height: 60 },
+                  { backgroundColor: '#FEE2E2', height: zoneHeights.low },
                 ]}
               />
               <Text style={styles.zoneLabel}>{'< 70'}</Text>
@@ -209,7 +293,7 @@ export default function GlycemiaChart({
               <View
                 style={[
                   styles.zoneBar,
-                  { backgroundColor: '#D1FAE5', height: 100 },
+                  { backgroundColor: '#D1FAE5', height: zoneHeights.normal },
                 ]}
               />
               <Text style={styles.zoneLabel}>70-180</Text>
@@ -218,7 +302,7 @@ export default function GlycemiaChart({
               <View
                 style={[
                   styles.zoneBar,
-                  { backgroundColor: '#FEF3C7', height: 60 },
+                  { backgroundColor: '#FEF3C7', height: zoneHeights.high },
                 ]}
               />
               <Text style={styles.zoneLabel}>{'>180'}</Text>
@@ -237,6 +321,13 @@ export default function GlycemiaChart({
           )}
         </>
       )}
+
+      {/* Tooltip */}
+      <GlycemiaChartTooltip
+        visible={showTooltip}
+        data={tooltipData}
+        onClose={handleCloseTooltip}
+      />
     </View>
   );
 }
@@ -248,6 +339,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 20,
     padding: 20,
+    paddingLeft: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -286,12 +378,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   yAxisContainer: {
-    width: 40,
+    width: 35,
     height: 220,
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     paddingVertical: 10,
-    marginRight: 4,
+    marginRight: 0,
   },
   yAxisLabel: {
     fontSize: 11,
@@ -358,10 +450,6 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emptyChartIcon: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   emptyChartTitle: {
     fontSize: 18,

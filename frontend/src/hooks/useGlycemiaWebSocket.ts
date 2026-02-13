@@ -16,14 +16,14 @@ interface UseGlycemiaWebSocketReturn {
 
 /**
  * Hook pour gérer la connexion WebSocket temps réel de la glycémie
- * Backend: ws://localhost:8006/ws/glycemia/?token=<JWT_ACCESS_TOKEN>
+ * Backend: {EXPO_PUBLIC_WS_URL}/ws/glycemia/?token=<JWT_ACCESS_TOKEN>
  */
 export function useGlycemiaWebSocket(
   accessToken: string | null,
-  wsUrl: string = 'ws://localhost:8006'
+  wsUrl: string
 ): UseGlycemiaWebSocketReturn {
   const ws = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [lastReading, setLastReading] = useState<GlycemiaEntry | null>(null);
   const [alert, setAlert] = useState<GlycemiaAlert | null>(null);
@@ -49,7 +49,6 @@ export function useGlycemiaWebSocket(
    */
   const connect = useCallback(() => {
     if (!accessToken) {
-      console.warn('useGlycemiaWebSocket: No access token provided');
       return;
     }
 
@@ -64,7 +63,6 @@ export function useGlycemiaWebSocket(
       ws.current = new WebSocket(wsFullUrl);
 
       ws.current.onopen = () => {
-        console.log('✅ WebSocket glycemia connected');
         setIsConnected(true);
 
         // Nettoyer le timeout de reconnexion
@@ -80,18 +78,13 @@ export function useGlycemiaWebSocket(
 
           switch (data.type) {
             case 'connection_established':
-              console.log('WebSocket connection confirmed:', data.user_id);
               break;
 
             case 'glycemia_update':
-              // Nouvelle mesure reçue
-              console.log('📊 New glycemia reading:', data.data);
               setLastReading(data.data);
               break;
 
             case 'glycemia_alert':
-              // Alerte hypo ou hyper
-              console.warn('⚠️ Glycemia alert:', data.alert_type);
               setAlert({
                 type: data.alert_type,
                 data: data.data,
@@ -103,46 +96,35 @@ export function useGlycemiaWebSocket(
               break;
 
             default:
-              console.log('Unknown WebSocket message type:', data.type);
+              break;
           }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+        } catch {
+          // Ignore malformed messages
         }
       };
 
       ws.current.onclose = event => {
-        console.log(`WebSocket disconnected: code ${event.code}`);
         setIsConnected(false);
 
         // Don't reconnect on authentication failure (code 4001)
         // or normal closure (code 1000)
-        if (event.code === 4001) {
-          console.error(
-            '❌ WebSocket authentication failed. Check your access token.'
-          );
-          return;
-        }
-
-        if (event.code === 1000) {
-          console.log('WebSocket closed normally');
+        if (event.code === 4001 || event.code === 1000) {
           return;
         }
 
         // Reconnexion automatique après 3 secondes pour autres erreurs
         if (accessToken) {
           reconnectTimeout.current = setTimeout(() => {
-            console.log('🔄 Attempting WebSocket reconnection...');
             connect();
           }, 3000);
         }
       };
 
-      ws.current.onerror = error => {
-        console.error('WebSocket error:', error);
+      ws.current.onerror = () => {
         setIsConnected(false);
       };
-    } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+    } catch {
+      // Connection failed silently
     }
   }, [accessToken, wsUrl]);
 

@@ -5,7 +5,7 @@ import axios, {
 } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8006/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const API_TIMEOUT = parseInt(
   process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',
   10
@@ -33,8 +33,8 @@ apiClient.interceptors.request.use(
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-    } catch (error) {
-      console.error('Erreur lors de la récupération du token:', error);
+    } catch {
+      // Token retrieval failed
     }
     return config;
   },
@@ -108,10 +108,6 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         await AsyncStorage.removeItem('access_token');
         await AsyncStorage.removeItem('refresh_token');
-        console.error(
-          'Erreur lors du rafraîchissement du token:',
-          refreshError
-        );
         processQueue(refreshError, null);
         isRefreshing = false;
         return Promise.reject(refreshError);

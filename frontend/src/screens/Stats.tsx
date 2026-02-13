@@ -6,19 +6,25 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  Share,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Platform,
 } from 'react-native';
 import { Calendar, Download, CheckCircle } from 'lucide-react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import Layout from '../components/common/Layout';
 import GlycemiaChart from '../components/glycemia/GlycemiaChart';
+import CalendarPicker from '../components/common/CalendarPicker';
 import { colors } from '../themes/colors';
 import {
   GLYCEMIA_TARGET,
   getGlycemiaStatusColor,
 } from '../constants/glycemia.constants';
 import { useGlycemia } from '../hooks/useGlycemia';
+import useUser from '../hooks/useUser';
+import { generateMedicalReportHTML } from '../utils/pdfGenerator';
 
 const { width } = Dimensions.get('window');
 
@@ -58,12 +64,24 @@ interface GlucoseTrackingScreenProps {
 export default function GlucoseTrackingScreen({
   navigation,
 }: GlucoseTrackingScreenProps): React.JSX.Element {
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('Semaine');
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodFilter>('Jour');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+  const [calendarModalVisible, setCalendarModalVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [customDateMode, setCustomDateMode] = useState(false);
+
+  // Hook utilisateur pour récupérer nom et email
+  const { user } = useUser();
 
   // Déterminer le nombre de jours selon la période
-  const days =
-    selectedPeriod === 'Jour' ? 1 : selectedPeriod === 'Semaine' ? 7 : 30;
+  // En mode date personnalisée, on charge toujours 30 jours pour avoir l'historique
+  const getDaysForPeriod = (): number => {
+    if (customDateMode) return 30;
+    if (selectedPeriod === 'Jour') return 1;
+    if (selectedPeriod === 'Semaine') return 7;
+    return 30;
+  };
+  const days = getDaysForPeriod();
 
   // Hook pour charger les données depuis le backend
   const {
@@ -74,22 +92,31 @@ export default function GlucoseTrackingScreen({
     loadHistory,
   } = useGlycemia(days);
 
-  // Recharger quand la période change
+  // Recharger quand la période change ou quand on entre/sort du mode date personnalisée
   useEffect(() => {
     loadHistory(days);
-  }, [selectedPeriod]);
+  }, [selectedPeriod, customDateMode]);
 
   // Filtrer côté client pour respecter strictement Jour/Semaine/Mois
   const periodFilteredEntries = useMemo(() => {
     const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
+    const referenceDate = customDateMode ? selectedDate : now;
+    const startOfDay = new Date(referenceDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(referenceDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
     return backendData.filter(entry => {
       const measuredAt = new Date(entry.measured_at);
 
       if (selectedPeriod === 'Jour') {
-        return measuredAt >= startOfToday && measuredAt <= now;
+        if (customDateMode) {
+          // Mode date personnalisée : afficher uniquement les mesures de cette journée
+          return measuredAt >= startOfDay && measuredAt <= endOfDay;
+        } else {
+          // Mode aujourd'hui
+          return measuredAt >= startOfDay && measuredAt <= now;
+        }
       }
 
       const diffDays =
@@ -98,7 +125,7 @@ export default function GlucoseTrackingScreen({
 
       return selectedPeriod === 'Semaine' ? diffDays < 7 : diffDays < 30;
     });
-  }, [backendData, selectedPeriod]);
+  }, [backendData, selectedPeriod, customDateMode, selectedDate]);
 
   // Transformer les données backend en format UI
   const allMeasurements: GlucoseMeasurement[] = useMemo(() => {
@@ -162,6 +189,22 @@ export default function GlucoseTrackingScreen({
     navigation.navigate('Glycemia');
   };
 
+  const handleCalendarPress = () => {
+    setCalendarModalVisible(true);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    setCustomDateMode(true);
+    setSelectedPeriod('Jour');
+    setCalendarModalVisible(false);
+  };
+
+  const resetToToday = () => {
+    setCustomDateMode(false);
+    setSelectedDate(new Date());
+  };
+
   // Calculer les statistiques réelles
   const stats: GlucoseStats = useMemo(() => {
     if (measurements.length === 0) {
@@ -207,11 +250,14 @@ export default function GlucoseTrackingScreen({
   }, [measurements]);
 
   // LOGIQUE AMÉLIORÉE DU GRAPHIQUE
-  const chartData = useMemo(() => {
+  const { chartData, chartMeasurements } = useMemo(() => {
     if (measurements.length === 0) {
       return {
-        labels: ['Pas de données'],
-        datasets: [{ data: [0] }],
+        chartData: {
+          labels: ['Pas de données'],
+          datasets: [{ data: [0] }],
+        },
+        chartMeasurements: [],
       };
     }
 
@@ -221,9 +267,20 @@ export default function GlucoseTrackingScreen({
 
     // MODE JOUR : Afficher toutes les mesures individuelles (scrollable)
     if (selectedPeriod === 'Jour') {
+      const measurementsData = sortedMeasurements.map(m => ({
+        value: m.value,
+        label: m.time,
+        context: m.context,
+        time: m.time,
+        date: m.date,
+      }));
+
       return {
-        labels: sortedMeasurements.map(m => m.time),
-        datasets: [{ data: sortedMeasurements.map(m => m.value) }],
+        chartData: {
+          labels: sortedMeasurements.map(m => m.time),
+          datasets: [{ data: sortedMeasurements.map(m => m.value) }],
+        },
+        chartMeasurements: measurementsData,
       };
     }
 
@@ -232,42 +289,69 @@ export default function GlucoseTrackingScreen({
       const dayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
       const dayCounts = new Array(7).fill(0);
       const daySums = new Array(7).fill(0);
+      const dayMeasurements: Array<GlucoseMeasurement[]> = Array.from(
+        { length: 7 },
+        () => []
+      );
 
       sortedMeasurements.forEach(m => {
         const dayOfWeek = m.measuredAt.getDay();
         const index = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Lundi = 0
         daySums[index] += m.value;
         dayCounts[index]++;
+        dayMeasurements[index].push(m);
       });
 
       // Filtrer uniquement les jours avec des données
-      const validDays: { label: string; value: number }[] = [];
+      const validDays: Array<{
+        label: string;
+        value: number;
+        measurements: GlucoseMeasurement[];
+      }> = [];
       dayLabels.forEach((label, i) => {
         if (dayCounts[i] > 0) {
           validDays.push({
             label,
             value: Math.round(daySums[i] / dayCounts[i]),
+            measurements: dayMeasurements[i],
           });
         }
       });
 
       if (validDays.length === 0) {
         return {
-          labels: ['Pas de données'],
-          datasets: [{ data: [0] }],
+          chartData: {
+            labels: ['Pas de données'],
+            datasets: [{ data: [0] }],
+          },
+          chartMeasurements: [],
         };
       }
 
+      const measurementsData = validDays.map(d => ({
+        value: d.value,
+        label: d.label,
+        context: `${d.measurements.length} mesure${d.measurements.length > 1 ? 's' : ''}`,
+        time: d.measurements.length > 0 ? d.measurements[0].time : '',
+        date: d.measurements.length > 0 ? d.measurements[0].date : '',
+      }));
+
       return {
-        labels: validDays.map(d => d.label),
-        datasets: [{ data: validDays.map(d => d.value) }],
+        chartData: {
+          labels: validDays.map(d => d.label),
+          datasets: [{ data: validDays.map(d => d.value) }],
+        },
+        chartMeasurements: measurementsData,
       };
     }
 
     // MODE MOIS : Moyenne par jour (jusqu'à 31 points)
     if (selectedPeriod === 'Mois') {
       // Créer un map des dates avec leurs moyennes
-      const dateMap = new Map<string, { sum: number; count: number }>();
+      const dateMap = new Map<
+        string,
+        { sum: number; count: number; measurements: GlucoseMeasurement[] }
+      >();
 
       sortedMeasurements.forEach(m => {
         const dateKey = m.measuredAt.toLocaleDateString('fr-FR', {
@@ -276,12 +360,13 @@ export default function GlucoseTrackingScreen({
         });
 
         if (!dateMap.has(dateKey)) {
-          dateMap.set(dateKey, { sum: 0, count: 0 });
+          dateMap.set(dateKey, { sum: 0, count: 0, measurements: [] });
         }
 
         const data = dateMap.get(dateKey)!;
         data.sum += m.value;
         data.count++;
+        data.measurements.push(m);
       });
 
       // Convertir en arrays triés
@@ -294,24 +379,42 @@ export default function GlucoseTrackingScreen({
         .map(([date, data]) => ({
           label: date,
           value: Math.round(data.sum / data.count),
+          measurements: data.measurements,
         }));
 
       if (sortedDates.length === 0) {
         return {
-          labels: ['Pas de données'],
-          datasets: [{ data: [0] }],
+          chartData: {
+            labels: ['Pas de données'],
+            datasets: [{ data: [0] }],
+          },
+          chartMeasurements: [],
         };
       }
 
+      const measurementsData = sortedDates.map(d => ({
+        value: d.value,
+        label: d.label,
+        context: `${d.measurements.length} mesure${d.measurements.length > 1 ? 's' : ''}`,
+        time: d.measurements.length > 0 ? d.measurements[0].time : '',
+        date: d.label,
+      }));
+
       return {
-        labels: sortedDates.map(d => d.label),
-        datasets: [{ data: sortedDates.map(d => d.value) }],
+        chartData: {
+          labels: sortedDates.map(d => d.label),
+          datasets: [{ data: sortedDates.map(d => d.value) }],
+        },
+        chartMeasurements: measurementsData,
       };
     }
 
     return {
-      labels: ['Erreur'],
-      datasets: [{ data: [0] }],
+      chartData: {
+        labels: ['Erreur'],
+        datasets: [{ data: [0] }],
+      },
+      chartMeasurements: [],
     };
   }, [measurements, selectedPeriod]);
 
@@ -353,55 +456,58 @@ export default function GlucoseTrackingScreen({
     return { label: 'Normal', color: getGlycemiaStatusColor(value).color };
   };
 
-  const exportToCSV = async (): Promise<void> => {
+  const exportToPDF = async (): Promise<void> => {
     try {
-      // Créer le contenu CSV avec statistiques
-      const csvHeader = 'Date,Heure,Valeur (mg/dL),Contexte,Source\n';
-      const csvRows = measurements
-        .map(
-          m =>
-            `${m.date},${m.time},${m.value},${m.context},${m.source === 'manual' ? 'Manuel' : 'CGM'}`
-        )
-        .join('\n');
+      if (measurements.length === 0) {
+        Alert.alert(
+          'Aucune donnée',
+          'Vous devez avoir au moins une mesure pour générer un rapport PDF.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
 
-      const statsInfo = `
-=== RAPPORT DE GLYCÉMIE - ${selectedPeriod.toUpperCase()} ===
-
-Période analysée: ${selectedPeriod}
-Nombre de mesures: ${measurements.length}
-Date du rapport: ${new Date().toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })}
-
---- STATISTIQUES ---
-Moyenne: ${stats.average} mg/dL
-Minimum: ${stats.min} mg/dL
-Maximum: ${stats.max} mg/dL
-Temps dans la cible: ${stats.timeInRange}% (objectif: ${GLYCEMIA_TARGET.MIN}-${GLYCEMIA_TARGET.MAX} mg/dL)
-Stabilité: ${stats.stability}
-Variabilité: ${stats.variability} mg/dL
-
---- DÉTAIL DES MESURES ---
-`;
-
-      const csvContent = statsInfo + csvHeader + csvRows;
-
-      await Share.share({
-        message: csvContent,
-        title: `Rapport Glycémie - ${selectedPeriod}`,
+      // Générer le HTML du rapport médical
+      const htmlContent = generateMedicalReportHTML({
+        period: selectedPeriod,
+        measurements,
+        stats,
+        selectedDate,
+        customDateMode,
+        patientName: user
+          ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+          : undefined,
+        patientEmail: user?.email,
       });
-    } catch (error) {
-      console.error('Error exporting:', error);
+
+      // Créer le PDF
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+
+      // Partager le PDF
+      if (Platform.OS === 'ios') {
+        await Sharing.shareAsync(uri, {
+          UTI: '.pdf',
+          mimeType: 'application/pdf',
+        });
+      } else {
+        await Sharing.shareAsync(uri);
+      }
+    } catch {
+      Alert.alert(
+        'Erreur',
+        'Impossible de générer le rapport PDF. Veuillez réessayer.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
   return (
     <Layout
       navigation={navigation}
-      currentRoute="Home"
+      currentRoute="Stats"
       userName="Utilisateur"
       onNotificationPress={() => console.log('Notifications')}
     >
@@ -426,10 +532,27 @@ Variabilité: ${stats.variability} mg/dL
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Suivi Glucose</Text>
-              <Text style={styles.subtitle}>Historique et tendances</Text>
+              <Text style={styles.subtitle}>
+                {customDateMode
+                  ? selectedDate.toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                  : 'Historique et tendances'}
+              </Text>
             </View>
-            <TouchableOpacity style={styles.calendarButton}>
-              <Calendar size={20} color="#007AFF" />
+            <TouchableOpacity
+              style={[
+                styles.calendarButton,
+                customDateMode && styles.calendarButtonActive,
+              ]}
+              onPress={handleCalendarPress}
+            >
+              <Calendar
+                size={20}
+                color={customDateMode ? '#FFFFFF' : '#007AFF'}
+              />
             </TouchableOpacity>
           </View>
 
@@ -471,6 +594,7 @@ Variabilité: ${stats.variability} mg/dL
             chartData={chartData}
             chartWidth={chartWidth}
             measurementCount={measurements.length}
+            measurements={chartMeasurements}
           />
 
           {/* Cartes statistiques */}
@@ -515,12 +639,11 @@ Variabilité: ${stats.variability} mg/dL
                 style={[
                   styles.statValue,
                   {
-                    color:
-                      stats.stability === 'Bon'
-                        ? '#10B981'
-                        : stats.stability === 'Moyen'
-                          ? '#F59E0B'
-                          : '#EF4444',
+                    color: (() => {
+                      if (stats.stability === 'Bon') return '#10B981';
+                      if (stats.stability === 'Moyen') return '#F59E0B';
+                      return '#EF4444';
+                    })(),
                   },
                 ]}
               >
@@ -543,10 +666,10 @@ Variabilité: ${stats.variability} mg/dL
               <View style={styles.headerActions}>
                 <TouchableOpacity
                   style={styles.exportButton}
-                  onPress={exportToCSV}
+                  onPress={exportToPDF}
                 >
                   <Download size={16} color="#007AFF" />
-                  <Text style={styles.exportText}>Exporter</Text>
+                  <Text style={styles.exportText}>PDF Médical</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -652,7 +775,7 @@ Variabilité: ${stats.variability} mg/dL
                               ]}
                             >
                               <Text style={styles.contextText}>
-                                🍽️ {measurement.context}
+                                {measurement.context}
                               </Text>
                             </View>
                             <View
@@ -678,8 +801,8 @@ Variabilité: ${stats.variability} mg/dL
                                 ]}
                               >
                                 {measurement.source === 'manual'
-                                  ? '✏️ Manuel'
-                                  : '📊 CGM'}
+                                  ? ' Manuel'
+                                  : ' CGM'}
                               </Text>
                             </View>
                           </View>
@@ -714,7 +837,7 @@ Variabilité: ${stats.variability} mg/dL
 
           {/* Comprendre vos statistiques */}
           <View style={styles.infoSection}>
-            <Text style={styles.infoTitle}>💡 Comprendre vos statistiques</Text>
+            <Text style={styles.infoTitle}>Comprendre vos statistiques</Text>
             <View style={styles.infoCard}>
               <View style={styles.infoItem}>
                 <View style={styles.infoDot} />
@@ -745,6 +868,17 @@ Variabilité: ${stats.variability} mg/dL
           <View style={styles.bottomPadding} />
         </ScrollView>
       )}
+
+      {/* Modal Calendrier */}
+      <CalendarPicker
+        visible={calendarModalVisible}
+        selectedDate={selectedDate}
+        onDateSelect={handleDateSelect}
+        onClose={() => setCalendarModalVisible(false)}
+        onReset={resetToToday}
+        maxDate={new Date()}
+        showResetButton={customDateMode}
+      />
     </Layout>
   );
 }
@@ -859,20 +993,20 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 8,
     textAlign: 'center',
   },
   statValue: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 4,
   },
   statUnit: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textSecondary,
     textAlign: 'center',
   },
@@ -1063,5 +1197,9 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 100,
+  },
+  // Styles pour le bouton calendrier actif
+  calendarButtonActive: {
+    backgroundColor: '#007AFF',
   },
 });
