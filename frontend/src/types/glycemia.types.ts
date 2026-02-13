@@ -9,7 +9,15 @@ export interface GlycemiaEntry {
   source?: 'manual' | 'cgm'; // Source de la mesure
   notes?: string;
   tags?: string[];
-  context?: 'fasting' | 'before_meal' | 'after_meal' | 'bedtime' | 'other';
+  context?:
+    | 'fasting'
+    | 'preprandial'
+    | 'postprandial_1h'
+    | 'postprandial_2h'
+    | 'bedtime'
+    | 'exercise'
+    | 'stress'
+    | 'correction';
 }
 
 export interface GlycemiaStats {

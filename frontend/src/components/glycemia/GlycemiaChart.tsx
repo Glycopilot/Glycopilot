@@ -74,7 +74,7 @@ export default function GlycemiaChart({
   const labelWidth = resolvedWidth / Math.max(labelCount, 1);
 
   // Calculer les valeurs de l'axe Y dynamiquement
-  const { yAxisValues } = React.useMemo(() => {
+  const { yAxisValues, yMin, yMax } = React.useMemo(() => {
     if (!hasValidData) {
       return {
         yAxisValues: ['200', '150', '100', '50'],
@@ -119,6 +119,49 @@ export default function GlycemiaChart({
     };
   }, [chartData, hasValidData]);
 
+  // Calculer les hauteurs des zones en fonction de l'échelle Y
+  const zoneHeights = React.useMemo(() => {
+    const LOW_THRESHOLD = 70;
+    const HIGH_THRESHOLD = 180;
+    const MAX_HEIGHT = 120; // Hauteur maximale pour les barres
+    const totalRange = yMax - yMin;
+
+    if (totalRange === 0) {
+      return { low: 40, normal: 80, high: 40 };
+    }
+
+    // Calculer la hauteur de chaque zone proportionnellement
+    let lowHeight = 0;
+    let normalHeight = 0;
+    let highHeight = 0;
+
+    // Zone basse (< 70)
+    if (yMin < LOW_THRESHOLD) {
+      const lowRange = Math.min(LOW_THRESHOLD, yMax) - yMin;
+      lowHeight = (lowRange / totalRange) * MAX_HEIGHT;
+    }
+
+    // Zone normale (70-180)
+    if (yMax > LOW_THRESHOLD && yMin < HIGH_THRESHOLD) {
+      const normalStart = Math.max(yMin, LOW_THRESHOLD);
+      const normalEnd = Math.min(yMax, HIGH_THRESHOLD);
+      const normalRange = normalEnd - normalStart;
+      normalHeight = (normalRange / totalRange) * MAX_HEIGHT;
+    }
+
+    // Zone haute (> 180)
+    if (yMax > HIGH_THRESHOLD) {
+      const highRange = yMax - Math.max(yMin, HIGH_THRESHOLD);
+      highHeight = (highRange / totalRange) * MAX_HEIGHT;
+    }
+
+    return {
+      low: Math.max(lowHeight, 20), // Minimum 20px pour la visibilité
+      normal: Math.max(normalHeight, 20),
+      high: Math.max(highHeight, 20),
+    };
+  }, [yMin, yMax]);
+
   return (
     <View style={styles.chartCard}>
       <View style={styles.chartHeader}>
@@ -141,7 +184,6 @@ export default function GlycemiaChart({
 
       {!hasValidData ? (
         <View style={styles.emptyChartState}>
-          <Text style={styles.emptyChartIcon}>📊</Text>
           <Text style={styles.emptyChartTitle}>Pas encore de données</Text>
           <Text style={styles.emptyChartText}>
             Ajoutez au moins une mesure pour voir votre courbe de glycémie
@@ -242,7 +284,7 @@ export default function GlycemiaChart({
               <View
                 style={[
                   styles.zoneBar,
-                  { backgroundColor: '#FEE2E2', height: 60 },
+                  { backgroundColor: '#FEE2E2', height: zoneHeights.low },
                 ]}
               />
               <Text style={styles.zoneLabel}>{'< 70'}</Text>
@@ -251,7 +293,7 @@ export default function GlycemiaChart({
               <View
                 style={[
                   styles.zoneBar,
-                  { backgroundColor: '#D1FAE5', height: 100 },
+                  { backgroundColor: '#D1FAE5', height: zoneHeights.normal },
                 ]}
               />
               <Text style={styles.zoneLabel}>70-180</Text>
@@ -260,7 +302,7 @@ export default function GlycemiaChart({
               <View
                 style={[
                   styles.zoneBar,
-                  { backgroundColor: '#FEF3C7', height: 60 },
+                  { backgroundColor: '#FEF3C7', height: zoneHeights.high },
                 ]}
               />
               <Text style={styles.zoneLabel}>{'>180'}</Text>
@@ -297,6 +339,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 20,
     padding: 20,
+    paddingLeft: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -335,12 +378,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   yAxisContainer: {
-    width: 40,
+    width: 35,
     height: 220,
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     paddingVertical: 10,
-    marginRight: 4,
+    marginRight: 0,
   },
   yAxisLabel: {
     fontSize: 11,
@@ -407,10 +450,6 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emptyChartIcon: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   emptyChartTitle: {
     fontSize: 18,

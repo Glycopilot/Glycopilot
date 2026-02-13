@@ -17,6 +17,8 @@ class GlycemiaSerializer(serializers.ModelSerializer):
             "trend",
             "rate",
             "source",
+            "context",
+            "notes",
         ]
         read_only_fields = ["user_email"]
 
