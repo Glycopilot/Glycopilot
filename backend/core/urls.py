@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from django.views.decorators.http import require_GET
 
 
+@require_GET
 def root_view(request):
     return JsonResponse({"message": "Server is running"})
 
