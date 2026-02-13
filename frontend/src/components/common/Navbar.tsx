@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { Home, ChartColumn, User } from 'lucide-react-native';
+import { Home, ChartColumn, User, Droplet } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
 interface Tab {
@@ -27,6 +27,10 @@ export default function Navbar({
     {
       name: 'Home',
       icon: Home,
+    },
+    {
+      name: 'Glycemia',
+      icon: Droplet,
     },
     {
       name: 'Stats',
@@ -86,9 +90,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    paddingBottom: 8,
-    paddingTop: 8,
-    paddingHorizontal: 8,
+    paddingBottom: 10,
+    paddingTop: 10,
+    paddingHorizontal: 16,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     shadowColor: '#000',
@@ -101,10 +105,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
   },
   iconContainer: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   iconContainerActive: {},
 });

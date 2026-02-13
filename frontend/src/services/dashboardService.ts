@@ -11,20 +11,12 @@ import type {
   DashboardNutritionData,
   DashboardActivityData,
 } from '../types/dashboard.types';
-import { AxiosError } from 'axios';
 import {
   mockDashboardSummary,
   mockWidgets,
   mockLayouts,
 } from '../data/mockData';
 
-interface ApiErrorResponse {
-  error?: {
-    message?: string;
-    details?: Record<string, unknown>;
-  };
-  detail?: string;
-}
 
 // Service Dashboard
 const dashboardService = {
@@ -43,17 +35,9 @@ const dashboardService = {
       }
 
       const response = await apiClient.get<DashboardSummary>(url);
-      console.log('✅ Dashboard summary from API:', response.data);
       return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<ApiErrorResponse>;
-      console.warn('⚠️ dashboardService.getSummary error:', axiosError.message);
-
+    } catch {
       // Retourner des données de démo si l'endpoint n'existe pas (404) ou autre erreur
-      console.info(
-        '📊 Utilisation des données de démonstration pour le résumé'
-      );
-      console.log('📦 Mock data:', mockDashboardSummary);
       return mockDashboardSummary;
     }
   },
@@ -67,12 +51,8 @@ const dashboardService = {
         '/v1/dashboard/widgets'
       );
       return response.data.widgets;
-    } catch (error) {
-      const axiosError = error as AxiosError<ApiErrorResponse>;
-      console.warn('dashboardService.getWidgets error:', axiosError.message);
-
+    } catch {
       // Retourner des widgets de démo si l'endpoint n'existe pas
-      console.info('📊 Utilisation des widgets de démonstration');
       return mockWidgets;
     }
   },
@@ -86,15 +66,8 @@ const dashboardService = {
         '/v1/dashboard/widgets/layout'
       );
       return response.data.layout || [];
-    } catch (error) {
-      const axiosError = error as AxiosError<ApiErrorResponse>;
-      console.warn(
-        'dashboardService.getWidgetLayouts error:',
-        axiosError.message
-      );
-
+    } catch {
       // Retourner des layouts de démo si l'endpoint n'existe pas
-      console.info('📊 Utilisation des layouts de démonstration');
       return mockLayouts;
     }
   },
@@ -111,12 +84,7 @@ const dashboardService = {
         { layout: layouts }
       );
       return response.data.layout;
-    } catch (error) {
-      const axiosError = error as AxiosError<ApiErrorResponse>;
-      console.warn(
-        'dashboardService.updateWidgetLayout error:',
-        axiosError.message
-      );
+    } catch {
       return layouts; // Retourner les layouts d'origine en cas d'erreur
     }
   },
@@ -131,11 +99,7 @@ const dashboardService = {
         value: 0,
         recordedAt: new Date().toISOString(),
       }) as DashboardGlucoseData;
-    } catch (error) {
-      console.warn(
-        'dashboardService.getGlucoseData error:',
-        (error as Error).message
-      );
+    } catch {
       return {
         value: 0,
         recordedAt: new Date().toISOString(),
@@ -150,11 +114,7 @@ const dashboardService = {
     try {
       const summary = await this.getSummary(['alerts']);
       return summary.alerts || [];
-    } catch (error) {
-      console.warn(
-        'dashboardService.getAlerts error:',
-        (error as Error).message
-      );
+    } catch {
       return [];
     }
   },
@@ -170,11 +130,7 @@ const dashboardService = {
         total_count: 0,
         nextDose: null,
       }) as DashboardMedicationData;
-    } catch (error) {
-      console.warn(
-        'dashboardService.getMedicationData error:',
-        (error as Error).message
-      );
+    } catch {
       return {
         taken_count: 0,
         total_count: 0,
@@ -193,11 +149,7 @@ const dashboardService = {
         calories: { consumed: 0, goal: 1800 },
         carbs: { grams: 0, goal: 200 },
       }) as DashboardNutritionData;
-    } catch (error) {
-      console.warn(
-        'dashboardService.getNutritionData error:',
-        (error as Error).message
-      );
+    } catch {
       return {
         calories: { consumed: 0, goal: 1800 },
         carbs: { grams: 0, goal: 200 },
@@ -215,11 +167,7 @@ const dashboardService = {
         steps: { value: 0, goal: 8000 },
         activeMinutes: 0,
       }) as DashboardActivityData;
-    } catch (error) {
-      console.warn(
-        'dashboardService.getActivityData error:',
-        (error as Error).message
-      );
+    } catch {
       return {
         steps: { value: 0, goal: 8000 },
         activeMinutes: 0,
@@ -241,12 +189,7 @@ const dashboardService = {
       const url = `/v1/glucose/history${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
       const response = await apiClient.get(url);
       return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<ApiErrorResponse>;
-      console.warn(
-        'dashboardService.getGlucoseHistory error:',
-        axiosError.message
-      );
+    } catch {
       return [];
     }
   },
