@@ -17,6 +17,44 @@ logger = logging.getLogger(__name__)
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
 
+def _build_messages(
+    tokens: list[str],
+    title: str,
+    body: str,
+    data: dict[str, Any] | None,
+    sound: str,
+    priority: str,
+) -> list[dict]:
+    messages = []
+    for token in tokens:
+        message = {
+            "to": token,
+            "title": title,
+            "body": body,
+            "sound": sound,
+            "priority": priority,
+        }
+        if data:
+            message["data"] = data
+        messages.append(message)
+    return messages
+
+
+def _process_ticket_errors(tokens: list[str], tickets: list[dict]) -> list[dict]:
+    errors = []
+    for i, ticket in enumerate(tickets):
+        if ticket.get("status") != "error":
+            continue
+        errors.append({
+            "token": tokens[i] if i < len(tokens) else "unknown",
+            "error": ticket.get("message", "Unknown error"),
+        })
+        if ticket.get("details", {}).get("error") == "DeviceNotRegistered":
+            PushToken.objects.filter(token=tokens[i]).update(is_active=False)
+            logger.info(f"Deactivated invalid token: {tokens[i][:20]}...")
+    return errors
+
+
 def send_push_notification(
     tokens: list[str],
     title: str,
@@ -43,19 +81,7 @@ def send_push_notification(
         logger.warning("No push tokens provided")
         return {"success": False, "error": "No tokens provided"}
 
-    # Build messages for each token
-    messages = []
-    for token in tokens:
-        message = {
-            "to": token,
-            "title": title,
-            "body": body,
-            "sound": sound,
-            "priority": priority,
-        }
-        if data:
-            message["data"] = data
-        messages.append(message)
+    messages = _build_messages(tokens, title, body, data, sound, priority)
 
     try:
         response = requests.post(
@@ -70,19 +96,7 @@ def send_push_notification(
         response.raise_for_status()
         result = response.json()
 
-        # Check for errors in response
-        errors = []
-        if "data" in result:
-            for i, ticket in enumerate(result["data"]):
-                if ticket.get("status") == "error":
-                    errors.append({
-                        "token": tokens[i] if i < len(tokens) else "unknown",
-                        "error": ticket.get("message", "Unknown error"),
-                    })
-                    # Mark invalid tokens as inactive
-                    if ticket.get("details", {}).get("error") == "DeviceNotRegistered":
-                        PushToken.objects.filter(token=tokens[i]).update(is_active=False)
-                        logger.info(f"Deactivated invalid token: {tokens[i][:20]}...")
+        errors = _process_ticket_errors(tokens, result.get("data", []))
 
         if errors:
             logger.warning(f"Push notification errors: {errors}")
