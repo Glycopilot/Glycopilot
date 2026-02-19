@@ -1,0 +1,72 @@
+# Terraform gitignore
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+.terraform/
+terraform.tfvars
+
+# Local environment variables
+.env
+*.env
+
+# SSH keys and sensitive files
+*.pem
+*.key
+id_rsa*
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Log files
+*.log
+
+# IDE/Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python virtual environment
+venv/
+.env/
+
+# Database dumps
+dump*.sql
+backup*.sql
+
+# AWS CLI cache
+.cache/
+
+# Kubernetes cache
+.kube/
+
+# Ansible
+ansible.cfg
+inventory.ini
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Build artifacts
+dist/
+build/
+
+# Dependency directories
+node_modules/
+bower_components/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
