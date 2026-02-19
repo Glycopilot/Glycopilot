@@ -191,7 +191,6 @@ export default function ActivityScreen({
       navigation={navigation}
       currentRoute="Home"
       userName="Utilisateur"
-      onNotificationPress={() => console.log('Notifications')}
     >
       <View style={{ flex: 1 }}>
         <ScrollView
