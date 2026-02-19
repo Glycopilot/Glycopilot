@@ -3,8 +3,12 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
+import logging
+
 from apps.alerts.models import AlertEvent, AlertEventStatus, AlertRule, UserAlertRule
 from apps.alerts.services.push import PushSendError, send_push
+
+logger = logging.getLogger(__name__)
 
 
 def compute_thresholds(
@@ -24,12 +28,16 @@ def compute_thresholds(
 
 
 def matches(min_v: int | None, max_v: int | None, value: int) -> bool:
-    # bornes inclusives
+    """
+    A rule matches when the value falls within [min_v, max_v] (inclusive).
+    - HYPO  (min=None, max=69):  matches when value <= 69
+    - HYPER (min=181, max=None): matches when value >= 181
+    """
     if min_v is not None and value < min_v:
-        return True
+        return False
     if max_v is not None and value > max_v:
-        return True
-    return False
+        return False
+    return min_v is not None or max_v is not None
 
 
 def can_send_push(user, rule: AlertRule, cooldown_seconds: int) -> bool:
@@ -61,7 +69,13 @@ def trigger_for_value(*, user, glycemia_value: int) -> list[AlertEvent]:
         rule = ur.rule
         min_v, max_v = compute_thresholds(ur, rule)
 
-        if not matches(min_v, max_v, glycemia_value):
+        matched = matches(min_v, max_v, glycemia_value)
+        logger.info(
+            f"[TRIGGER] rule={rule.code} min={min_v} max={max_v} "
+            f"value={glycemia_value} matched={matched}"
+        )
+
+        if not matched:
             continue
 
         event = AlertEvent.objects.create(
@@ -72,7 +86,10 @@ def trigger_for_value(*, user, glycemia_value: int) -> list[AlertEvent]:
             inapp_created_at=now,
         )
 
-        if can_send_push(user, rule, ur.cooldown_seconds):
+        push_ok = can_send_push(user, rule, ur.cooldown_seconds)
+        logger.info(f"[TRIGGER] event={event.id} can_send_push={push_ok}")
+
+        if push_ok:
             try:
                 send_push(
                     user=user,
@@ -83,7 +100,14 @@ def trigger_for_value(*, user, glycemia_value: int) -> list[AlertEvent]:
                 event.push_sent_at = now
                 event.status = AlertEventStatus.SENT
                 event.save(update_fields=["push_sent_at", "status"])
+                logger.info(f"[TRIGGER] Push SENT for event={event.id}")
             except PushSendError as e:
+                event.status = AlertEventStatus.FAILED
+                event.error_message = str(e)
+                event.save(update_fields=["status", "error_message"])
+                logger.error(f"[TRIGGER] Push FAILED for event={event.id}: {e}")
+            except Exception as e:
+                logger.error(f"[TRIGGER] Unexpected error sending push: {e}")
                 event.status = AlertEventStatus.FAILED
                 event.error_message = str(e)
                 event.save(update_fields=["status", "error_message"])

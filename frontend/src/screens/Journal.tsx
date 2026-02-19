@@ -11,7 +11,6 @@ export default function JournalScreen({ navigation }: JournalScreenProps) {
     <Layout
       navigation={navigation}
       currentRoute="Journal"
-      onNotificationPress={() => console.log('Notifications')}
     >
       <View style={styles.container}>
         <Text style={styles.title}>Journal</Text>
