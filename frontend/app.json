@@ -24,7 +24,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      "package": "com.glycopilot.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,6 +37,11 @@
           "locationAlwaysAndWhenInUsePermission": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "181b8eef-e61f-4942-8aa8-2acc377489da"
+      }
+    }
   }
 }

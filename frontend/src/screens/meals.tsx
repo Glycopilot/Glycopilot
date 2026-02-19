@@ -122,7 +122,6 @@ export default function NutritionScreen({
       navigation={navigation}
       currentRoute="Home"
       userName="Utilisateur"
-      onNotificationPress={() => console.log('Notifications')}
     >
       <View style={{ flex: 1 }}>
         <ScrollView
