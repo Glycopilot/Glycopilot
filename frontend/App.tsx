@@ -32,7 +32,7 @@ export default function App() {
   return (
     <>
       <AppNavigator />
-      <Toast />
+      <Toast onPress={() => navigate('Notifications')} />
       <StatusBar style="auto" />
     </>
   );

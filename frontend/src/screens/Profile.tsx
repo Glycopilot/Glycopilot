@@ -249,7 +249,6 @@ export default function ProfileScreen({
         navigation={navigation}
         currentRoute="Profile"
         userName=""
-        onNotificationPress={() => console.log('Notifications')}
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -263,7 +262,6 @@ export default function ProfileScreen({
       navigation={navigation}
       currentRoute="Profile"
       userName={userData?.firstName || 'Utilisateur'}
-      onNotificationPress={() => console.log('Notifications')}
     >
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <ProfileHeader user={userData} />
