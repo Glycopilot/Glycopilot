@@ -325,7 +325,6 @@ export default function GlycemiaScreen({
       navigation={navigation}
       currentRoute="Glycemia"
       userName="Utilisateur"
-      onNotificationPress={() => console.log('Notifications')}
     >
       <View style={{ flex: 1 }}>
         {loading ? (

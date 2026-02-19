@@ -11,6 +11,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -29,17 +31,31 @@ async function setupAndroidChannel(): Promise<void> {
 }
 
 /**
- * Enregistre le device pour les notifications push
- * Demande la permission et envoie le token au backend
+ * Enregistre le device pour les notifications push.
+ *
+ * IMPORTANT : Les notifications push nécessitent un **development build**
+ * (APK/IPA compilé via EAS). Elles ne fonctionnent PAS dans Expo Go
+ * depuis le SDK 49+.
+ *
+ * Flux :
+ *   1. eas build --profile development --platform android
+ *   2. Installer l'APK sur le téléphone
+ *   3. npx expo start --dev-client
  */
 export const registerForPushNotifications = async (): Promise<string | null> => {
-  // Les notifications push ne fonctionnent que sur un vrai device
   if (!Device.isDevice) {
-    console.log('Push notifications require a physical device');
+    console.log('[Push] Notifications require a physical device (not simulator)');
     return null;
   }
 
-  // Configurer le canal Android
+  // Détecter si on est dans Expo Go (pas de support push)
+  if (!Constants.expoConfig?.extra?.eas?.projectId) {
+    console.warn(
+      '[Push] No EAS projectId found. Push notifications require a development build, not Expo Go.'
+    );
+    return null;
+  }
+
   await setupAndroidChannel();
 
   // Vérifier/demander la permission
@@ -52,33 +68,32 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
   }
 
   if (finalStatus !== 'granted') {
-    console.log('Permission not granted for push notifications');
+    console.log('[Push] Permission not granted for push notifications');
     return null;
   }
 
   try {
-    // Obtenir le token Expo avec projectId (requis depuis SDK 49+)
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ??
-      '181b8eef-e61f-4942-8aa8-2acc377489da';
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId,
-    });
+    const projectId = Constants.expoConfig.extra.eas.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenData.data;
 
     // Envoyer au backend
     await apiClient.post('/notifications/push-token/', {
-      token: token,
+      token,
       device_type: Platform.OS,
     });
 
     // Sauvegarder localement pour pouvoir le supprimer au logout
     await AsyncStorage.setItem('push_token', token);
 
-    console.log('Push token registered:', token);
+    console.log('[Push] Token registered:', token);
     return token;
   } catch (error) {
-    console.error('Failed to register push token:', error);
+    console.error('[Push] Failed to register push token:', error);
+    console.error(
+      '[Push] If you see this in Expo Go, you need a development build. ' +
+        'Run: eas build --profile development --platform android'
+    );
     return null;
   }
 };
@@ -94,10 +109,10 @@ export const unregisterPushToken = async (): Promise<void> => {
         data: { token },
       });
       await AsyncStorage.removeItem('push_token');
-      console.log('Push token unregistered');
+      console.log('[Push] Token unregistered');
     }
   } catch (error) {
-    console.error('Failed to unregister push token:', error);
+    console.error('[Push] Failed to unregister push token:', error);
   }
 };
 

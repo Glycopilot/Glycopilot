@@ -14,8 +14,9 @@ import StatCard from '../components/dashboard/StatCard';
 import ActionButton from '../components/common/ActionButton';
 import useDashboard from '../hooks/useDashboard';
 import { Activity, Pill } from 'lucide-react-native';
-import { GLYCEMIA_TARGET } from '../constants/glycemia.constants';
+import { GLYCEMIA_TARGET, getGlycemiaStatus } from '../constants/glycemia.constants';
 import { useGlycemiaWebSocket } from '../hooks/useGlycemiaWebSocket';
+import { toastError, toastInfo } from '../services/toastService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications } from '../services/pushService';
 
@@ -70,10 +71,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // Afficher une alerte si reçue du WebSocket
   useEffect(() => {
     if (alert) {
-      // Vous pouvez afficher une notification ou une alerte ici
-      console.warn(
-        `Alert: ${alert.type} - ${alert.data.value} ${alert.data.unit}`
-      );
+      const value = alert.data.value;
+      const unit = alert.data.unit || 'mg/dL';
+      const status = getGlycemiaStatus(value);
+
+      if (status === 'hypo') {
+        toastError('Hypoglycémie', `Glycémie: ${value} ${unit}`);
+      } else if (status === 'hyper') {
+        toastInfo('Hyperglycémie', `Glycémie: ${value} ${unit}`);
+      }
     }
   }, [alert]);
 
@@ -87,7 +93,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     <Layout
       navigation={navigation}
       currentRoute="Home"
-      onNotificationPress={() => console.log('Notifications')}
     >
       <ScrollView
         style={styles.scrollContent}
