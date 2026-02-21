@@ -10,6 +10,7 @@ import MealsScreen from '../screens/meals';
 import MedicationsScreen from '../screens/medicins';
 import ActivitiesScreen from '../screens/Activities';
 import GlycemiaScreen from '@/screens/Glycemia';
+import DexcomConnect from '../screens/DexcomConnect';
 
 type ScreenName =
   | 'Login'
@@ -66,6 +67,9 @@ export default function AppNavigator() {
   if (currentScreen === 'Glycemia') {
     return <GlycemiaScreen navigation={navigation} />;
   }
-
+  if (currentScreen === 'DexcomConnect'){ 
+    return <DexcomConnect navigation={navigation} />;
+  }
+  
   return <LoginScreen navigation={navigation} />;
 }

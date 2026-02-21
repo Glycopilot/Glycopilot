@@ -309,7 +309,6 @@ export default function HomeScreen({ navigation }) {
             <span>Settings</span>
           </button>
         </nav>
-
         <button className="logout-btn" onClick={handleLogout}>
           <LogOut size={20} />
           <span>Déconnexion</span>

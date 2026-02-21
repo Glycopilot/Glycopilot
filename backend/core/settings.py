@@ -277,6 +277,45 @@ if EMAIL_PORT == 465:
 DEFAULT_FROM_EMAIL = _env("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "noreply@glycopilot.com"
 FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 
+# --- DEXCOM (Web API) ---
+# Environnement Dexcom : sandbox (dev) ou prod (EU/US/JP)
+DEXCOM_ENV = (_env("DEXCOM_ENV") or "sandbox").lower()
+DEXCOM_REGION = (_env("DEXCOM_REGION") or "EU").upper()
+
+DEXCOM_CLIENT_ID = _env("DEXCOM_CLIENT_ID")
+DEXCOM_CLIENT_SECRET = _env("DEXCOM_CLIENT_SECRET")
+
+PUBLIC_BACKEND_URL = _env("PUBLIC_BACKEND_URL") or "http://localhost:8006"
+DEXCOM_REDIRECT_PATH = _env("DEXCOM_REDIRECT_PATH") or "/api/integrations/dexcom/callback"
+DEXCOM_REDIRECT_URI = f"{PUBLIC_BACKEND_URL.rstrip('/')}{DEXCOM_REDIRECT_PATH}"  # à changer après
+
+DEXCOM_SCOPE = _env("DEXCOM_SCOPE") or "offline_access"
+
+# Base URLs Dexcom (v3)
+# Sandbox: https://sandbox-api.dexcom.com
+# Prod US: https://api.dexcom.com | Prod EU: https://api.dexcom.eu | Prod JP: https://api.dexcom.jp
+if DEXCOM_ENV == "sandbox":
+    DEXCOM_BASE_URL = "https://sandbox-api.dexcom.com"
+elif DEXCOM_ENV == "prod":
+    if DEXCOM_REGION == "EU":
+        DEXCOM_BASE_URL = "https://api.dexcom.eu"
+    elif DEXCOM_REGION == "US":
+        DEXCOM_BASE_URL = "https://api.dexcom.com"
+    elif DEXCOM_REGION == "JP":
+        DEXCOM_BASE_URL = "https://api.dexcom.jp"
+    else:
+        raise ImproperlyConfigured("DEXCOM_REGION must be one of: EU, US, JP")
+else:
+    raise ImproperlyConfigured("DEXCOM_ENV must be 'sandbox' or 'prod'")
+
+DEXCOM_OAUTH_AUTHORIZE_URL = f"{DEXCOM_BASE_URL}/v3/oauth2/login"
+DEXCOM_OAUTH_TOKEN_URL = f"{DEXCOM_BASE_URL}/v3/oauth2/token"
+
+# Validation minimale : en prod, on exige les secrets
+if ENV == "production" and (not DEXCOM_CLIENT_ID or not DEXCOM_CLIENT_SECRET):
+    raise ImproperlyConfigured("DEXCOM_CLIENT_ID and DEXCOM_CLIENT_SECRET must be set in production.")
+
+
 
 # --- INTERNATIONALIZATION ---
 LANGUAGE_CODE = "fr-fr"

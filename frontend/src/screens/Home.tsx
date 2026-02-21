@@ -177,6 +177,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               }
             }}
           />
+
+          <ActionButton
+            type="action"
+            label="Dexcom"
+            onPress={() => {
+              if (navigation && navigation.navigate) {
+                navigation.navigate('DexcomConnect');
+              }
+            }}
+          />
         </View>
 
         <View style={styles.bottomPadding} />
@@ -210,6 +220,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 16,
     marginTop: 8,
     marginBottom: 16,
