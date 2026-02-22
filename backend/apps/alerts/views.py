@@ -36,6 +36,21 @@ class AlertHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return AlertEvent.objects.filter(user=self.request.user).order_by("-triggered_at")
 
+    @action(detail=False, methods=['post'], url_path='treat')
+    def treat(self, request):
+        event_id = request.data.get("event_id")
+        if not event_id:
+            return Response({"error": "event_id required"}, status=400)
+            
+        try:
+            event = AlertEvent.objects.get(id=event_id, user=request.user)
+            event.status = "TREATING"
+            # Optional: record treatment start time if field exists, otherwise just status updated_at
+            event.save()
+            return Response({"status": "treating"})
+        except AlertEvent.DoesNotExist:
+             return Response({"error": "Event not found"}, status=404)
+
     @action(detail=False, methods=['post'], url_path='ack')
     def ack(self, request):
         event_id = request.data.get("event_id")
@@ -50,3 +65,4 @@ class AlertHistoryViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"status": "acked"})
         except AlertEvent.DoesNotExist:
              return Response({"error": "Event not found"}, status=404)
+
