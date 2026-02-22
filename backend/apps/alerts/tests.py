@@ -13,7 +13,7 @@ def mk_user(email="u1@test.com"):
     return User.objects.create_user(email=email, password="x")
 
 
-def mk_rule(code="HYPO", min_g=80, max_g=120):
+def mk_rule(code="HYPO", min_g=None, max_g=80):
     return AlertRule.objects.create(
         code=code,
         name=code,

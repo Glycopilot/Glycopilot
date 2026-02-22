@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Bell, User as UserIcon, LogOut } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 import authService from '../../services/authService';
 import useUser from '../../hooks/useUser';
+import alertService from '../../services/alertService';
 
 interface HeaderProps {
   onNotificationPress?: () => void;
@@ -15,7 +16,21 @@ export default function Header({
   navigation,
 }: HeaderProps) {
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [hasUnackedAlerts, setHasUnackedAlerts] = useState(false);
   const { user } = useUser();
+
+  const checkAlerts = useCallback(async () => {
+    const alerts = await alertService.getHistory();
+    setHasUnackedAlerts(
+      alerts.some(a => a.status !== 'ACKED' && a.status !== 'RESOLVED')
+    );
+  }, []);
+
+  useEffect(() => {
+    checkAlerts();
+    const interval = setInterval(checkAlerts, 30000);
+    return () => clearInterval(interval);
+  }, [checkAlerts]);
 
   const displayName = user
     ? `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
@@ -63,6 +78,7 @@ export default function Header({
           activeOpacity={0.7}
         >
           <Bell size={24} color={colors.textPrimary} strokeWidth={2} />
+          {hasUnackedAlerts && <View style={styles.alertDot} />}
         </TouchableOpacity>
 
         <View style={styles.profileContainer}>
@@ -160,6 +176,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  alertDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#DC2626',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   profileContainer: {
     position: 'relative',

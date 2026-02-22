@@ -140,8 +140,8 @@ def reset_database():
         defaults={
             "name": "Hypoglycémie",
             "description": "Glycémie en dessous du seuil bas",
-            "min_glycemia": 70,
-            "max_glycemia": None,
+            "min_glycemia": None,
+            "max_glycemia": 69,
             "severity": AlertSeverity.CRITICAL,
             "is_active": True,
         },
@@ -151,8 +151,8 @@ def reset_database():
         defaults={
             "name": "Hyperglycémie",
             "description": "Glycémie au dessus du seuil haut",
-            "min_glycemia": None,
-            "max_glycemia": 180,
+            "min_glycemia": 181,
+            "max_glycemia": None,
             "severity": AlertSeverity.HIGH,
             "is_active": True,
         },
