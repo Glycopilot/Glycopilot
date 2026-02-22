@@ -509,7 +509,6 @@ export default function GlucoseTrackingScreen({
       navigation={navigation}
       currentRoute="Stats"
       userName="Utilisateur"
-      onNotificationPress={() => console.log('Notifications')}
     >
       {loading ? (
         <View style={styles.loadingContainer}>

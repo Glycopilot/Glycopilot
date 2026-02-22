@@ -4,3 +4,4 @@ export { default as dashboardService } from './dashboardService';
 export { default as glycemiaService } from './glycemiaService';
 export { default as apiClient } from './apiClient';
 export * from './toastService';
+export * from './pushService';

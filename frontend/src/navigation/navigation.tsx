@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoginScreen from '../screens/LogIn';
 import SignInScreen from '../screens/SignIn';
 import HomeScreen from '../screens/Home';
@@ -10,6 +10,7 @@ import MealsScreen from '../screens/meals';
 import MedicationsScreen from '../screens/medicins';
 import ActivitiesScreen from '../screens/Activities';
 import GlycemiaScreen from '@/screens/Glycemia';
+import { setNavigate } from './navigationRef';
 
 type ScreenName =
   | 'Login'
@@ -26,6 +27,10 @@ type ScreenName =
   | 'Test';
 export default function AppNavigator() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('Login');
+
+  useEffect(() => {
+    setNavigate((screen: string) => setCurrentScreen(screen as ScreenName));
+  }, []);
 
   const navigation = {
     navigate: (screen: string) => setCurrentScreen(screen as ScreenName),
