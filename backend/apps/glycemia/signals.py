@@ -8,10 +8,11 @@ alert rules to create AlertEvent entries in the database.
 
 import logging
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 from .models import GlycemiaHisto
 
@@ -39,6 +40,7 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
     # ── 1. Trigger alert rules (DB) ──────────────────────────────
     try:
         from apps.alerts.services.trigger import trigger_for_value
+
         events = trigger_for_value(
             user=instance.user,
             glycemia_value=int(instance.value),
@@ -65,7 +67,9 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
         "value": instance.value,
         "unit": instance.unit,
         "measured_at": instance.measured_at.isoformat(),
-        "recorded_at": instance.recorded_at.isoformat() if instance.recorded_at else None,
+        "recorded_at": instance.recorded_at.isoformat()
+        if instance.recorded_at
+        else None,
         "trend": instance.trend,
         "rate": instance.rate,
         "source": instance.source,
@@ -79,9 +83,11 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
             {
                 "type": "glycemia_update",
                 "data": data,
-            }
+            },
         )
-        logger.info(f"Broadcast glycemia_update to {group_name}: {instance.value} {instance.unit}")
+        logger.info(
+            f"Broadcast glycemia_update to {group_name}: {instance.value} {instance.unit}"
+        )
     except Exception as e:
         logger.error(f"Failed to broadcast glycemia_update: {e}")
 
@@ -101,8 +107,10 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
                     "type": "glycemia_alert",
                     "alert_type": alert_type,
                     "data": data,
-                }
+                },
             )
-            logger.warning(f"Broadcast glycemia_alert ({alert_type}) to {group_name}: {instance.value} {instance.unit}")
+            logger.warning(
+                f"Broadcast glycemia_alert ({alert_type}) to {group_name}: {instance.value} {instance.unit}"
+            )
         except Exception as e:
             logger.error(f"Failed to broadcast glycemia_alert: {e}")

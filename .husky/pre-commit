@@ -58,14 +58,18 @@ done
 
 # Vérifier flake8 uniquement sur les fichiers modifiés
 echo "Verification de la qualite du code (flake8)..."
+cd backend
 FLAKE8_ERRORS=""
 for file in $PYTHON_FILES; do
-    if [ -f "$file" ]; then
-        if ! $PYTHON_CMD -m flake8 "$file" 2>/dev/null; then
+    # Enlever le préfixe backend/ si présent
+    relative_file="${file#backend/}"
+    if [ -f "$relative_file" ]; then
+        if ! $PYTHON_CMD -m flake8 "$relative_file" 2>/dev/null; then
             FLAKE8_ERRORS="1"
         fi
     fi
 done
+cd ..
 
 if [ -n "$FLAKE8_ERRORS" ]; then
     echo ""

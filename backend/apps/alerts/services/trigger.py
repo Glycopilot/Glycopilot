@@ -1,9 +1,8 @@
+import logging
 from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
-
-import logging
 
 from apps.alerts.models import AlertEvent, AlertEventStatus, AlertRule, UserAlertRule
 from apps.alerts.services.push import PushSendError, send_push

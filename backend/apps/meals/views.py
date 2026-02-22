@@ -1,20 +1,25 @@
-from rest_framework import viewsets, permissions
+from rest_framework import permissions, viewsets
+
 from .models import Meal, UserMeal
 from .serializers import MealSerializer, UserMealSerializer
+
 
 class MealViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ReadOnly ViewSet for reference meals data.
     """
+
     queryset = Meal.objects.all()
     serializer_class = MealSerializer
     permission_classes = [permissions.IsAuthenticated]
+
 
 class UserMealViewSet(viewsets.ModelViewSet):
     """
     CRUD ViewSet for user's meals.
     Automatically filters by current user.
     """
+
     serializer_class = UserMealSerializer
     permission_classes = [permissions.IsAuthenticated]
 

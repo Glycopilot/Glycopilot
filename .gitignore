@@ -45,6 +45,10 @@ gitleaks-report.json
 *.pem
 *.key
 
+# Clés SSH projet (privées et publiques)
+infra/ssh/*
+!infra/ssh/.gitkeep
+
 # macOS metadata
 .DS_Store
 
