@@ -11,6 +11,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def user(db):
     return User.objects.create_user(
@@ -20,9 +21,7 @@ def user(db):
 
 @pytest.fixture
 def other_user(db):
-    return User.objects.create_user(
-        email="other@example.com", password="pass1234"
-    )
+    return User.objects.create_user(email="other@example.com", password="pass1234")
 
 
 @pytest.fixture
@@ -68,15 +67,16 @@ def device_payload():
 # 1. MODÈLE
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestDeviceModel:
-
     def test_str_representation(self, device):
         assert "Dexcom G6" in str(device)
         assert "dexcom" in str(device)
 
     def test_uuid_primary_key(self, device):
         import uuid
+
         assert isinstance(device.pk, uuid.UUID)
 
     def test_default_values(self, user):
@@ -122,9 +122,9 @@ class TestDeviceModel:
 # 2. API – CRUD
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestDeviceAPI:
-
     # ── CREATE ───────────────────────────────────────────────────
 
     def test_create_device(self, client, user, device_payload):
@@ -181,6 +181,7 @@ class TestDeviceAPI:
 
     def test_retrieve_nonexistent_device(self, client):
         import uuid
+
         r = client.get(f"/api/devices/{uuid.uuid4()}/")
         assert r.status_code == 404
 
@@ -231,6 +232,7 @@ class TestDeviceAPI:
 
     def test_delete_nonexistent_device(self, client):
         import uuid
+
         r = client.delete(f"/api/devices/{uuid.uuid4()}/")
         assert r.status_code == 404
 
@@ -239,9 +241,9 @@ class TestDeviceAPI:
 # 3. ISOLATION ENTRE UTILISATEURS
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestDeviceIsolation:
-
     def test_user_cannot_list_other_user_devices(self, client, other_user):
         Device.objects.create(user=other_user, name="Other Device")
         r = client.get("/api/devices/")
@@ -275,9 +277,9 @@ class TestDeviceIsolation:
 # 4. AUTHENTIFICATION
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestDeviceAuth:
-
     def test_unauthenticated_list(self, unauth_client):
         assert unauth_client.get("/api/devices/").status_code == 401
 
@@ -298,11 +300,12 @@ class TestDeviceAuth:
 # 5. SERIALIZER
 # ═══════════════════════════════════════════════════════════════════
 
+
 @pytest.mark.django_db
 class TestDeviceSerializer:
-
     def test_serializer_fields(self, device):
         from apps.devices.serializers import DeviceSerializer
+
         data = DeviceSerializer(device).data
         assert "id" in data
         assert "name" in data
@@ -317,6 +320,7 @@ class TestDeviceSerializer:
 
     def test_serializer_read_only_fields(self):
         from apps.devices.serializers import DeviceSerializer
+
         s = DeviceSerializer()
         assert "id" in s.Meta.read_only_fields
         assert "created_at" in s.Meta.read_only_fields

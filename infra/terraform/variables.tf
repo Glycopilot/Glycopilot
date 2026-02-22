@@ -9,3 +9,9 @@ variable "instance_type" {
   type        = string
   default     = "t3.micro"
 }
+
+variable "ssh_public_key" {
+  description = "Clé SSH publique pour l'accès EC2 (passée via GitHub Actions ou fichier local)"
+  type        = string
+  default     = ""
+}

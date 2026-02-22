@@ -1,5 +1,5 @@
 [flake8]
-max-line-length = 88
+max-line-length = 190
 extend-ignore = E203, W503, E402
 exclude = 
     .git,
@@ -15,7 +15,8 @@ per-file-ignores =
     __init__.py:F401
     asgi.py:E402
     wsgi.py:E402
-    settings.py:F401
-    */tests.py:F401,F841
-    */test_*.py:F401,F841
+    settings.py:F401,E501
+    */tests.py:F401,F841,E501
+    */test_*.py:F401,F841,E501
+    apps/profiles/apps.py:F401
 

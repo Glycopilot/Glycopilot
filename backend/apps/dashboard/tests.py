@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.urls import reverse
+
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -246,7 +247,7 @@ class DashboardWidgetLayoutAPITest(APITestCase):
         for i in range(12):
             layout.append(
                 {
-                    "widgetId": "glucose_live" if i == 0 else f"medications",
+                    "widgetId": "glucose_live" if i == 0 else "medications",
                     "column": i % 4,
                     "row": i // 4,
                     "size": "normal",

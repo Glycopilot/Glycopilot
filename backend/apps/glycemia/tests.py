@@ -18,12 +18,16 @@ User = get_user_model()
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(email="test@example.com", password="pass1234")  # NOSONAR
+    return User.objects.create_user(
+        email="test@example.com", password="pass1234"
+    )  # NOSONAR
 
 
 @pytest.fixture
 def other_user(db):
-    return User.objects.create_user(email="other@example.com", password="pass1234")  # NOSONAR
+    return User.objects.create_user(
+        email="other@example.com", password="pass1234"
+    )  # NOSONAR
 
 
 @pytest.fixture
