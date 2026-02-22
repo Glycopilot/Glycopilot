@@ -104,7 +104,7 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_key_pair" "deployer" {
   key_name   = "glycopilot-key-deployer"
-  public_key = file("~/.ssh/id_ed25519.pub")
+  public_key = var.ssh_public_key != "" ? var.ssh_public_key : file("${path.module}/../ssh/glycopilot_deploy_key.pub")
 }
 
 resource "aws_instance" "web" {

@@ -292,22 +292,34 @@ USE_I18N = True
 USE_TZ = True
 
 # --- AWS S3 ---
-# Secrets uniquement via variables d'environnement ; pas de valeur par défaut pour les clés.
-AWS_ACCESS_KEY_ID = _env("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = _env("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = _env("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = _env("AWS_S3_REGION_NAME") or "eu-west-3"
+# Basculer entre stockage local et S3 via USE_S3
+USE_S3 = _env_bool("USE_S3", default=False)
 
-if AWS_STORAGE_BUCKET_NAME and not DEBUG:
+if USE_S3:
+    # Production (AWS S3) - Utilise le rôle IAM EC2 implicitement
+    # Les credentials AWS ne sont PAS nécessaires si l'instance EC2 a un rôle IAM attaché
+    AWS_STORAGE_BUCKET_NAME = _env("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_REGION_NAME = _env("AWS_S3_REGION_NAME") or "eu-west-3"
+
+    # Optionnel : pour forcer les credentials explicites (dev local avec AWS CLI)
+    # Si vides, boto3 utilisera automatiquement le rôle IAM de l'instance EC2
+    _aws_key_id = _env("AWS_ACCESS_KEY_ID")
+    _aws_secret = _env("AWS_SECRET_ACCESS_KEY")
+    if _aws_key_id and _aws_secret:
+        AWS_ACCESS_KEY_ID = _aws_key_id
+        AWS_SECRET_ACCESS_KEY = _aws_secret
+
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
-    AWS_DEFAULT_ACL = "public-read"
+    AWS_DEFAULT_ACL = "private"  # FORCER LE MODE PRIVÉ
+    AWS_QUERYSTRING_AUTH = True  # Génère des URLs temporaires signées
+    AWS_S3_FILE_OVERWRITE = False  # Évite d'écraser deux images avec le même nom
     AWS_S3_OBJECT_PARAMETERS = {
         "CacheControl": "max-age=86400",
     }
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 else:
-    # Place locale pour dev
+    # Développement local (Stockage classique)
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
 
