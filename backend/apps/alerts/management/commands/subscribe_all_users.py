@@ -17,7 +17,8 @@ class Command(BaseCommand):
         for user in users:
             for rule in active_rules:
                 _, created = UserAlertRule.objects.get_or_create(
-                    user=user, rule=rule,
+                    user=user,
+                    rule=rule,
                 )
                 if created:
                     created_count += 1

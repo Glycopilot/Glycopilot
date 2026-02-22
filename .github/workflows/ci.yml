@@ -124,7 +124,7 @@ jobs:
         node-version: '22'
 
     - name: Install frontend dependencies (for tsconfig resolution)
-      run: cd frontend && npm install
+      run: cd frontend && npm install --legacy-peer-deps
 
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
@@ -310,7 +310,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd frontend
-        npm install
+        npm install --legacy-peer-deps
     
     - name: Run tests with coverage
       run: |
