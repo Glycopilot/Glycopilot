@@ -3,8 +3,9 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
-from decouple import config, Csv
 from django.core.exceptions import ImproperlyConfigured
+
+from decouple import Csv, config
 
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,7 +24,9 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv(
 SECRET_KEY = config("SECRET_KEY", default="")
 if not SECRET_KEY.strip():
     if ENV == "production":
-        raise ImproperlyConfigured("SECRET_KEY must be set in production (environment variable).")
+        raise ImproperlyConfigured(
+            "SECRET_KEY must be set in production (environment variable)."
+        )
     SECRET_KEY = "django-insecure-ci-tests-only-do-not-use-in-production-xxxxxxxxxx"
 SECRET_KEY_ADMIN = config("SECRET_KEY_ADMIN", default="")
 
@@ -217,6 +220,7 @@ TEMPLATES = [
 # Configuration optionnelle : si SMTP_* non renseignés ou vides, backend console en dev.
 # Ne jamais mettre de secrets en défaut ; valeur vide = config non fournie.
 
+
 def _env(key: str, default: str = "") -> str:
     """Lit une variable d'environnement ; chaîne vide si absente ou non renseignée."""
     value = config(key, default=default)
@@ -275,7 +279,9 @@ if EMAIL_PORT == 465:
     EMAIL_USE_TLS = False
     EMAIL_USE_SSL = True
 
-DEFAULT_FROM_EMAIL = _env("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "noreply@glycopilot.com"
+DEFAULT_FROM_EMAIL = (
+    _env("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "noreply@glycopilot.com"
+)
 FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 
 
@@ -286,22 +292,34 @@ USE_I18N = True
 USE_TZ = True
 
 # --- AWS S3 ---
-# Secrets uniquement via variables d'environnement ; pas de valeur par défaut pour les clés.
-AWS_ACCESS_KEY_ID = _env("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = _env("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = _env("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = _env("AWS_S3_REGION_NAME") or "eu-west-3"
+# Basculer entre stockage local et S3 via USE_S3
+USE_S3 = _env_bool("USE_S3", default=False)
 
-if AWS_STORAGE_BUCKET_NAME and not DEBUG:
+if USE_S3:
+    # Production (AWS S3) - Utilise le rôle IAM EC2 implicitement
+    # Les credentials AWS ne sont PAS nécessaires si l'instance EC2 a un rôle IAM attaché
+    AWS_STORAGE_BUCKET_NAME = _env("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_REGION_NAME = _env("AWS_S3_REGION_NAME") or "eu-west-3"
+
+    # Optionnel : pour forcer les credentials explicites (dev local avec AWS CLI)
+    # Si vides, boto3 utilisera automatiquement le rôle IAM de l'instance EC2
+    _aws_key_id = _env("AWS_ACCESS_KEY_ID")
+    _aws_secret = _env("AWS_SECRET_ACCESS_KEY")
+    if _aws_key_id and _aws_secret:
+        AWS_ACCESS_KEY_ID = _aws_key_id
+        AWS_SECRET_ACCESS_KEY = _aws_secret
+
     AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
-    AWS_DEFAULT_ACL = "public-read"
+    AWS_DEFAULT_ACL = "private"  # FORCER LE MODE PRIVÉ
+    AWS_QUERYSTRING_AUTH = True  # Génère des URLs temporaires signées
+    AWS_S3_FILE_OVERWRITE = False  # Évite d'écraser deux images avec le même nom
     AWS_S3_OBJECT_PARAMETERS = {
         "CacheControl": "max-age=86400",
     }
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 else:
-    # Place locale pour dev
+    # Développement local (Stockage classique)
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
 
@@ -320,7 +338,12 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(config("REDIS_HOST", default="redis"), config("REDIS_PORT", default=6379, cast=int))],
+            "hosts": [
+                (
+                    config("REDIS_HOST", default="redis"),
+                    config("REDIS_PORT", default=6379, cast=int),
+                )
+            ],
         },
     },
 }

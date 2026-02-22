@@ -124,7 +124,7 @@ jobs:
         node-version: '22'
 
     - name: Install frontend dependencies (for tsconfig resolution)
-      run: cd frontend && npm install
+      run: cd frontend && npm install --legacy-peer-deps
 
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
@@ -310,7 +310,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd frontend
-        npm install
+        npm install --legacy-peer-deps
     
     - name: Run tests with coverage
       run: |
@@ -327,69 +327,46 @@ jobs:
       continue-on-error: true #a retirer plus tard si on configure les tests frontend
 
   deploy:
+    name: Deploy to EC2
     needs: [test-backend, test-frontend, sonarqube]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' 
+    if: github.ref == 'refs/heads/main'
+    
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout the code
+      uses: actions/checkout@v4
     
-    - name: Copy files to EC2
-      uses: appleboy/scp-action@master
+    - name: Transfer files to EC2 via SCP
+      uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        source: "."
-        target: "/var/www/glycopilot_app"
-        rm: false
+        # On transfère le backend, le nginx et le docker-compose
+        source: "backend/,.nginx/,docker-compose.yml"
+        target: "/home/ubuntu/glycopilot-app"
     
-    - name: Deploy to AWS EC2
-      uses: appleboy/ssh-action@master
-      env:
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        SECRET_KEY_ADMIN: ${{ secrets.SECRET_KEY_ADMIN }}
-        ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
-        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        SMTP_HOST: ${{ secrets.SMTP_HOST }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+    - name: Execute deployment on EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        envs: SECRET_KEY,SECRET_KEY_ADMIN,ALLOWED_HOSTS,DB_PASSWORD,SMTP_HOST,SMTP_PORT,SMTP_USERNAME,SMTP_PASSWORD,SMTP_USE_TLS,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_STORAGE_BUCKET_NAME
         script: |
-          cd /var/www/glycopilot_app
+          cd /home/ubuntu/glycopilot-app
           
-          cat > .env << EOF
-          DEBUG=False
-          SECRET_KEY=${SECRET_KEY}
-          SECRET_KEY_ADMIN=${SECRET_KEY_ADMIN}
-          ALLOWED_HOSTS=${ALLOWED_HOSTS}
-          DB_ENGINE=postgresql
-          DB_NAME=django_db
-          DB_USER=django_user
-          DB_PASSWORD=${DB_PASSWORD}
-          DB_HOST=localhost
-          DB_PORT=5432
-          SMTP_HOST=${SMTP_HOST}
-          SMTP_PORT=${SMTP_PORT}
-          SMTP_USERNAME=${SMTP_USERNAME}
-          SMTP_PASSWORD=${SMTP_PASSWORD}
-          SMTP_USE_TLS=${SMTP_USE_TLS}
-          AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-          AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-          AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
-          AWS_S3_REGION_NAME=eu-west-3
-          EOF
+          # 1. Création dynamique du fichier .env.prod à partir des secrets GitHub
+          # Cela évite d'avoir les secrets en clair dans le repo
+          echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
           
-          chmod +x deploy.sh
-          ./deploy.sh
+          # 2. Déploiement des conteneurs AWS (avec build pour les nouveautés Django)
+          # On utilise le profil 'aws' comme défini dans ton docker-compose
+          sudo docker compose --profile aws down
+          sudo docker compose --profile aws build backend_aws
+          sudo docker compose --profile aws up -d
+          
+          # 3. Nettoyage des anciennes images Docker pour ne pas saturer le disque (Plan A à 20Go)
+          sudo docker image prune -f
 
   notify:
     needs: [secret-scan, test-backend, test-frontend, sonarqube, deploy]

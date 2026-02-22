@@ -54,8 +54,9 @@ class UserModelTest(TestCase):
             User.objects.create_user(**duplicate_data)
 
 
-from apps.users.models import User as UserIdentity
 from apps.profiles.models import Role
+from apps.users.models import User as UserIdentity
+
 
 class UserAPITest(TestCase):
     """
@@ -65,26 +66,24 @@ class UserAPITest(TestCase):
     def setUp(self):
         """Setup test data"""
         self.client = APIClient()
-        
+
         # Create Identity
         self.identity = UserIdentity.objects.create(first_name="API", last_name="User")
-        
+
         # Create Auth
         self.user = User.objects.create_user(
             email="apiuser@example.com",
             password="testpassword123",
-            user_identity=self.identity
+            user_identity=self.identity,
         )
-        
+
         # Assign Admin role via Profile
         self.admin_role, _ = Role.objects.get_or_create(name="ADMIN")
-        self.profile = Profile.objects.create(
-            user=self.identity,
-            role=self.admin_role
-        )
+        self.profile = Profile.objects.create(user=self.identity, role=self.admin_role)
 
         # Generate JWT
         from rest_framework_simplejwt.tokens import RefreshToken
+
         refresh = RefreshToken.for_user(self.user)
         self.access_token = str(refresh.access_token)
 
