@@ -47,7 +47,7 @@ class AuthAccountAdmin(BaseUserAdmin):
     # Configuration spécifique pour notre modèle d'auth par Email
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Identité Liée", {"fields": ("user",)}), # Lien vers UserIdentity
+        ("Identité Liée", {"fields": ("user",)}),
         ("Permissions", {
             "fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")
         }),
@@ -57,7 +57,7 @@ class AuthAccountAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
-            "fields": ("email", "password", "password_2", "user"), # user est requis à la création
+            "fields": ("email", "password", "password_2", "user"),
         }),
     )
     

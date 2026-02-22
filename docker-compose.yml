@@ -1,5 +1,7 @@
+version: "3.9"
+
 services:
-  # Base de données MySQL
+  # --- Base de données MySQL ---
   database:
     image: mysql:8.0
     container_name: glycopilot-db
@@ -10,8 +12,13 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$MYSQL_USER", "--password=$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Redis for WebSocket channel layer
+  # --- Redis for WebSocket channel layer ---
   redis:
     image: redis:7-alpine
     container_name: glycopilot-redis
@@ -20,8 +27,13 @@ services:
     volumes:
       - redis_data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Backend Django
+  # --- Backend Django ---
   backend:
     build:
       context: ./backend
@@ -35,11 +47,14 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - database
-      - redis
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
+    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
 
-  # Frontend React Native
+  # --- Frontend React Native ---
   frontend:
     image: node:20-alpine
     container_name: glycopilot-front
@@ -50,7 +65,8 @@ services:
     working_dir: /app
     command: sh -c "npm install && npx expo start --lan"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     stdin_open: true
     tty: true
     restart: unless-stopped
