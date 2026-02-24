@@ -157,7 +157,7 @@ jobs:
         # Récupération du status du Quality Gate avec retry
         for i in {1..3}; do
           RESPONSE=$(curl -s -w "\n%{http_code}" -u "${SONAR_TOKEN}:" \
-            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=glycopilot_glycopilot")
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Glycopilot_Glycopilot")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | head -n-1)
           
@@ -183,7 +183,7 @@ jobs:
       run: |
         # Récupération des métriques principales avec gestion d'erreur
         RESPONSE=$(curl -s -w "\n%{http_code}" -u "${SONAR_TOKEN}:" \
-          "https://sonarcloud.io/api/measures/component?component=glycopilot_glycopilot&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc")
+          "https://sonarcloud.io/api/measures/component?component=Glycopilot_Glycopilot&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc")
         
         HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
         METRICS=$(echo "$RESPONSE" | head -n-1)
@@ -250,10 +250,10 @@ jobs:
           
           ### Liens utiles
           
-          - [Dashboard complet](https://sonarcloud.io/summary/overall?id=glycopilot_glycopilot)
-          - [Liste des bugs](https://sonarcloud.io/project/issues?resolved=false&types=BUG&id=glycopilot_glycopilot)
-          - [Vulnérabilités](https://sonarcloud.io/project/security_hotspots?id=glycopilot_glycopilot)
-          - [Code Coverage](https://sonarcloud.io/component_measures?metric=coverage&id=glycopilot_glycopilot)
+          - [Dashboard complet](https://sonarcloud.io/summary/overall?id=Glycopilot_Glycopilot)
+          - [Liste des bugs](https://sonarcloud.io/project/issues?resolved=false&types=BUG&id=Glycopilot_Glycopilot)
+          - [Vulnérabilités](https://sonarcloud.io/project/security_hotspots?id=Glycopilot_Glycopilot)
+          - [Code Coverage](https://sonarcloud.io/component_measures?metric=coverage&id=Glycopilot_Glycopilot)
           
           ---
           

@@ -1,0 +1,1302 @@
+secret-scan	Set up job	﻿2026-02-24T10:45:22.5023789Z Current runner version: '2.331.0'
+secret-scan	Set up job	2026-02-24T10:45:22.5050384Z ##[group]Runner Image Provisioner
+secret-scan	Set up job	2026-02-24T10:45:22.5051283Z Hosted Compute Agent
+secret-scan	Set up job	2026-02-24T10:45:22.5051856Z Version: 20260123.484
+secret-scan	Set up job	2026-02-24T10:45:22.5052398Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+secret-scan	Set up job	2026-02-24T10:45:22.5053183Z Build Date: 2026-01-23T19:41:17Z
+secret-scan	Set up job	2026-02-24T10:45:22.5053803Z Worker ID: {01ef3df1-a81c-4838-b6f3-90a71766a9fe}
+secret-scan	Set up job	2026-02-24T10:45:22.5054502Z Azure Region: westus
+secret-scan	Set up job	2026-02-24T10:45:22.5055071Z ##[endgroup]
+secret-scan	Set up job	2026-02-24T10:45:22.5056480Z ##[group]Operating System
+secret-scan	Set up job	2026-02-24T10:45:22.5057078Z Ubuntu
+secret-scan	Set up job	2026-02-24T10:45:22.5057622Z 24.04.3
+secret-scan	Set up job	2026-02-24T10:45:22.5058087Z LTS
+secret-scan	Set up job	2026-02-24T10:45:22.5058543Z ##[endgroup]
+secret-scan	Set up job	2026-02-24T10:45:22.5059090Z ##[group]Runner Image
+secret-scan	Set up job	2026-02-24T10:45:22.5060025Z Image: ubuntu-24.04
+secret-scan	Set up job	2026-02-24T10:45:22.5060562Z Version: 20260201.15.1
+secret-scan	Set up job	2026-02-24T10:45:22.5061568Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
+secret-scan	Set up job	2026-02-24T10:45:22.5063236Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
+secret-scan	Set up job	2026-02-24T10:45:22.5064183Z ##[endgroup]
+secret-scan	Set up job	2026-02-24T10:45:22.5065229Z ##[group]GITHUB_TOKEN Permissions
+secret-scan	Set up job	2026-02-24T10:45:22.5067157Z Contents: read
+secret-scan	Set up job	2026-02-24T10:45:22.5067767Z Metadata: read
+secret-scan	Set up job	2026-02-24T10:45:22.5068276Z Packages: read
+secret-scan	Set up job	2026-02-24T10:45:22.5068807Z ##[endgroup]
+secret-scan	Set up job	2026-02-24T10:45:22.5071199Z Secret source: Actions
+secret-scan	Set up job	2026-02-24T10:45:22.5071947Z Prepare workflow directory
+secret-scan	Set up job	2026-02-24T10:45:22.5406135Z Prepare all required actions
+secret-scan	Set up job	2026-02-24T10:45:22.5445000Z Getting action download info
+secret-scan	Set up job	2026-02-24T10:45:23.0091087Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+secret-scan	Set up job	2026-02-24T10:45:23.1982564Z Complete job name: secret-scan
+secret-scan	Run actions/checkout@v4	﻿2026-02-24T10:45:23.2793572Z ##[group]Run actions/checkout@v4
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2794912Z with:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2795351Z   fetch-depth: 0
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2795793Z   repository: Glycopilot/Glycopilot
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2796516Z   token: ***
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2796900Z   ssh-strict: true
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2797289Z   ssh-user: git
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2797680Z   persist-credentials: true
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2798118Z   clean: true
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2798507Z   sparse-checkout-cone-mode: true
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2798984Z   fetch-tags: false
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2799531Z   show-progress: true
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2799940Z   lfs: false
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2800300Z   submodules: false
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2800701Z   set-safe-directory: true
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.2801431Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.3886625Z Syncing repository: Glycopilot/Glycopilot
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.3888403Z ##[group]Getting Git version info
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.3889428Z Working directory is '/home/runner/work/Glycopilot/Glycopilot'
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.3890469Z [command]/usr/bin/git version
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.3997420Z git version 2.52.0
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4023848Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4038344Z Temporarily overriding HOME='/home/runner/work/_temp/4141438e-33d5-40c6-b1ad-df5360f00ea4' before making global git config changes
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4040648Z Adding repository directory to the temporary git global config as a safe directory
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4051577Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4094556Z Deleting the contents of '/home/runner/work/Glycopilot/Glycopilot'
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4098452Z ##[group]Initializing the repository
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4103571Z [command]/usr/bin/git init /home/runner/work/Glycopilot/Glycopilot
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4230076Z hint: Using 'master' as the name for the initial branch. This default branch name
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4231604Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4232560Z hint: to use in all of your new repositories, which will suppress this warning,
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4233584Z hint: call:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4234245Z hint:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4234889Z hint: 	git config --global init.defaultBranch <name>
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4236140Z hint:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4237117Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4238723Z hint: 'development'. The just-created branch can be renamed via this command:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4240226Z hint:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4240927Z hint: 	git branch -m <name>
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4241709Z hint:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4242739Z hint: Disable this message with "git config set advice.defaultBranchName false"
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4244433Z Initialized empty Git repository in /home/runner/work/Glycopilot/Glycopilot/.git/
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4249528Z [command]/usr/bin/git remote add origin https://github.com/Glycopilot/Glycopilot
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4289102Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4290557Z ##[group]Disabling automatic garbage collection
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4294389Z [command]/usr/bin/git config --local gc.auto 0
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4324318Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4325504Z ##[group]Setting up auth
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4331854Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4363952Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4750785Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.4784027Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.5017620Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.5048170Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.5279095Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.5314558Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.5323061Z ##[group]Fetching the repository
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:23.5325116Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6632303Z From https://github.com/Glycopilot/Glycopilot
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6634072Z  * [new branch]      develop                 -> origin/develop
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6635514Z  * [new branch]      develop-front-web       -> origin/develop-front-web
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6636977Z  * [new branch]      feat-back/addia         -> origin/feat-back/addia
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6638666Z  * [new branch]      feat-back/coverage-backend -> origin/feat-back/coverage-backend
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6640830Z  * [new branch]      feat-front/frontend-web-docker -> origin/feat-front/frontend-web-docker
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6641893Z  * [new branch]      feat-front/migration-ts -> origin/feat-front/migration-ts
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6642819Z  * [new branch]      feat-front/tooltip      -> origin/feat-front/tooltip
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6643682Z  * [new branch]      feat/AI-b               -> origin/feat/AI-b
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6644442Z  * [new branch]      feat/IA                 -> origin/feat/IA
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6645262Z  * [new branch]      feat/deploy-aws         -> origin/feat/deploy-aws
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6646177Z  * [new branch]      feat/glycemia-improvements -> origin/feat/glycemia-improvements
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6647141Z  * [new branch]      feat/medecin-back       -> origin/feat/medecin-back
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6647967Z  * [new branch]      feat/medecin-fix        -> origin/feat/medecin-fix
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6648823Z  * [new branch]      feat/profile            -> origin/feat/profile
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6650109Z  * [new branch]      feature/coverage-backend -> origin/feature/coverage-backend
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6651069Z  * [new branch]      feature/migration       -> origin/feature/migration
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6652393Z  * [new branch]      fix/dev-to-delete       -> origin/fix/dev-to-delete
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6653437Z  * [new branch]      fix/glycemia-missing-columns -> origin/fix/glycemia-missing-columns
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6654371Z  * [new branch]      main                    -> origin/main
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6655089Z  * [new branch]      medecine                -> origin/medecine
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6655781Z  * [new branch]      patch                   -> origin/patch
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6656503Z  * [new branch]      revert-75-feat/IA       -> origin/revert-75-feat/IA
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6725668Z [command]/usr/bin/git branch --list --remote origin/develop
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6754439Z   origin/develop
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6765410Z [command]/usr/bin/git rev-parse refs/remotes/origin/develop
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6788500Z cb25c34569d3df082c87e3760dce867421c46799
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6795369Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6796833Z ##[group]Determining the checkout info
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6798317Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6802559Z [command]/usr/bin/git sparse-checkout disable
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6851943Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6878740Z ##[group]Checking out the ref
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.6884129Z [command]/usr/bin/git checkout --progress --force -B develop refs/remotes/origin/develop
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.7194384Z Switched to a new branch 'develop'
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.7195742Z branch 'develop' set up to track 'origin/develop'.
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.7204584Z ##[endgroup]
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.7242775Z [command]/usr/bin/git log -1 --format=%H
+secret-scan	Run actions/checkout@v4	2026-02-24T10:45:24.7265448Z cb25c34569d3df082c87e3760dce867421c46799
+secret-scan	Install gitleaks	﻿2026-02-24T10:45:24.7467064Z ##[group]Run GITLEAKS_VERSION="8.29.0"
+secret-scan	Install gitleaks	2026-02-24T10:45:24.7468011Z [36;1mGITLEAKS_VERSION="8.29.0"[0m
+secret-scan	Install gitleaks	2026-02-24T10:45:24.7470811Z [36;1mcurl -sSL https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz -o gitleaks.tar.gz[0m
+secret-scan	Install gitleaks	2026-02-24T10:45:24.7473403Z [36;1mtar -xzf gitleaks.tar.gz gitleaks[0m
+secret-scan	Install gitleaks	2026-02-24T10:45:24.7474322Z [36;1msudo mv gitleaks /usr/local/bin/gitleaks[0m
+secret-scan	Install gitleaks	2026-02-24T10:45:24.7475209Z [36;1mrm gitleaks.tar.gz[0m
+secret-scan	Install gitleaks	2026-02-24T10:45:24.7510823Z shell: /usr/bin/bash -e {0}
+secret-scan	Install gitleaks	2026-02-24T10:45:24.7511479Z ##[endgroup]
+secret-scan	Run gitleaks scan	﻿2026-02-24T10:45:25.3257443Z ##[group]Run gitleaks detect --source . --redact --report-path gitleaks-report.json
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.3258934Z [36;1mgitleaks detect --source . --redact --report-path gitleaks-report.json[0m
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.3293993Z shell: /usr/bin/bash -e {0}
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.3294987Z ##[endgroup]
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.6006772Z 
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.6007869Z     ○
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.6009146Z     │╲
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.6010443Z     │ ○
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.6011235Z     ○ ░
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.6012016Z     ░    gitleaks
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.6012450Z 
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.9560118Z [90m10:45AM[0m [32mINF[0m [1m223 commits scanned.[0m
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.9561218Z [90m10:45AM[0m [32mINF[0m [1mscanned ~6857100 bytes (6.86 MB) in 355ms[0m
+secret-scan	Run gitleaks scan	2026-02-24T10:45:25.9561987Z [90m10:45AM[0m [32mINF[0m [1mno leaks found[0m
+secret-scan	Post Run actions/checkout@v4	﻿2026-02-24T10:45:25.9673225Z Post job cleanup.
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.0635454Z [command]/usr/bin/git version
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.0673106Z git version 2.52.0
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.0718819Z Temporarily overriding HOME='/home/runner/work/_temp/709bb0e7-5374-4f86-bb4b-f661e6655984' before making global git config changes
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.0720464Z Adding repository directory to the temporary git global config as a safe directory
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.0734228Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.0771608Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.0805854Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.1048751Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.1072140Z http.https://github.com/.extraheader
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.1085510Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.1120766Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.1352061Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+secret-scan	Post Run actions/checkout@v4	2026-02-24T10:45:26.1384251Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+secret-scan	Complete job	﻿2026-02-24T10:45:26.1719665Z Cleaning up orphan processes
+test-backend	Set up job	﻿2026-02-24T10:45:31.3764901Z Current runner version: '2.331.0'
+test-backend	Set up job	2026-02-24T10:45:31.3789543Z ##[group]Runner Image Provisioner
+test-backend	Set up job	2026-02-24T10:45:31.3790502Z Hosted Compute Agent
+test-backend	Set up job	2026-02-24T10:45:31.3791141Z Version: 20260123.484
+test-backend	Set up job	2026-02-24T10:45:31.3791794Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+test-backend	Set up job	2026-02-24T10:45:31.3792594Z Build Date: 2026-01-23T19:41:17Z
+test-backend	Set up job	2026-02-24T10:45:31.3793332Z Worker ID: {9af3af4f-3c16-4eb4-a39f-82f0faa98b09}
+test-backend	Set up job	2026-02-24T10:45:31.3794064Z Azure Region: northcentralus
+test-backend	Set up job	2026-02-24T10:45:31.3794745Z ##[endgroup]
+test-backend	Set up job	2026-02-24T10:45:31.3796176Z ##[group]Operating System
+test-backend	Set up job	2026-02-24T10:45:31.3796897Z Ubuntu
+test-backend	Set up job	2026-02-24T10:45:31.3797541Z 24.04.3
+test-backend	Set up job	2026-02-24T10:45:31.3798482Z LTS
+test-backend	Set up job	2026-02-24T10:45:31.3799106Z ##[endgroup]
+test-backend	Set up job	2026-02-24T10:45:31.3799675Z ##[group]Runner Image
+test-backend	Set up job	2026-02-24T10:45:31.3800262Z Image: ubuntu-24.04
+test-backend	Set up job	2026-02-24T10:45:31.3800944Z Version: 20260201.15.1
+test-backend	Set up job	2026-02-24T10:45:31.3802008Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
+test-backend	Set up job	2026-02-24T10:45:31.3803779Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
+test-backend	Set up job	2026-02-24T10:45:31.3804708Z ##[endgroup]
+test-backend	Set up job	2026-02-24T10:45:31.3806365Z ##[group]GITHUB_TOKEN Permissions
+test-backend	Set up job	2026-02-24T10:45:31.3808725Z Contents: read
+test-backend	Set up job	2026-02-24T10:45:31.3809476Z Metadata: read
+test-backend	Set up job	2026-02-24T10:45:31.3810053Z Packages: read
+test-backend	Set up job	2026-02-24T10:45:31.3810651Z ##[endgroup]
+test-backend	Set up job	2026-02-24T10:45:31.3812730Z Secret source: Actions
+test-backend	Set up job	2026-02-24T10:45:31.3813783Z Prepare workflow directory
+test-backend	Set up job	2026-02-24T10:45:31.4237272Z Prepare all required actions
+test-backend	Set up job	2026-02-24T10:45:31.4293453Z Getting action download info
+test-backend	Set up job	2026-02-24T10:45:31.8019172Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+test-backend	Set up job	2026-02-24T10:45:31.9310390Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+test-backend	Set up job	2026-02-24T10:45:32.0132288Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+test-backend	Set up job	2026-02-24T10:45:32.2355258Z Complete job name: test-backend
+test-backend	Run actions/checkout@v4	﻿2026-02-24T10:45:32.3096280Z ##[group]Run actions/checkout@v4
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3097260Z with:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3097771Z   repository: Glycopilot/Glycopilot
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3098789Z   token: ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3099293Z   ssh-strict: ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3099778Z   ssh-user: git
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3100280Z   persist-credentials: ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3100827Z   clean: ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3101333Z   sparse-checkout-cone-mode: ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3101904Z   fetch-depth: 1
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3102373Z   fetch-tags: false
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3102891Z   show-progress: ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3103386Z   lfs: false
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3103884Z   submodules: false
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3104397Z   set-safe-directory: ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.3105216Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4347066Z Syncing repository: Glycopilot/Glycopilot
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4349289Z ##[group]Getting Git version info
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4350155Z Working directory is '/home/runner/work/Glycopilot/Glycopilot'
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4351389Z [command]/usr/bin/git version
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4449380Z git version 2.52.0
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4485381Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4501679Z Temporarily overriding HOME='/home/runner/work/_temp/5922dc9c-f3da-4586-ad99-5f4a1e9d5322' before making global git config changes
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4504636Z Adding repository directory to the temporary git global config as a safe directory
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4516456Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4556625Z Deleting the contents of '/home/runner/work/Glycopilot/Glycopilot'
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4561766Z ##[group]Initializing the repository
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4566662Z [command]/usr/bin/git init /home/runner/work/Glycopilot/Glycopilot
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4669072Z hint: Using 'master' as the name for the initial branch. This default branch name
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4671105Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4673301Z hint: to use in all of your new repositories, which will suppress this warning,
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4674546Z hint: call:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4675014Z hint:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4675582Z hint: 	git config --global init.defaultBranch <name>
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4676254Z hint:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4676899Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4677906Z hint: 'development'. The just-created branch can be renamed via this command:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4679106Z hint:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4679600Z hint: 	git branch -m <name>
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4680129Z hint:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4680842Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4682210Z Initialized empty Git repository in /home/runner/work/Glycopilot/Glycopilot/.git/
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4684748Z [command]/usr/bin/git remote add origin https://github.com/Glycopilot/Glycopilot
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4720091Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4721013Z ##[group]Disabling automatic garbage collection
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4723723Z [command]/usr/bin/git config --local gc.auto 0
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4752332Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4753176Z ##[group]Setting up auth
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4758894Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.4789631Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5143778Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5176915Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5401010Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5439191Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5684280Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5718663Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5719903Z ##[group]Fetching the repository
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:32.5727137Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +cb25c34569d3df082c87e3760dce867421c46799:refs/remotes/origin/develop
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0099964Z From https://github.com/Glycopilot/Glycopilot
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0102548Z  * [new ref]         cb25c34569d3df082c87e3760dce867421c46799 -> origin/develop
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0132229Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0133829Z ##[group]Determining the checkout info
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0135223Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0139127Z [command]/usr/bin/git sparse-checkout disable
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0179817Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0207740Z ##[group]Checking out the ref
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0212253Z [command]/usr/bin/git checkout --progress --force -B develop refs/remotes/origin/develop
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0493630Z Switched to a new branch 'develop'
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0496083Z branch 'develop' set up to track 'origin/develop'.
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0505612Z ##[endgroup]
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0541491Z [command]/usr/bin/git log -1 --format=%H
+test-backend	Run actions/checkout@v4	2026-02-24T10:45:33.0565275Z cb25c34569d3df082c87e3760dce867421c46799
+test-backend	Set up Python	﻿2026-02-24T10:45:33.0903419Z ##[group]Run actions/setup-python@v5
+test-backend	Set up Python	2026-02-24T10:45:33.0904760Z with:
+test-backend	Set up Python	2026-02-24T10:45:33.0905707Z   python-version: 3.11
+test-backend	Set up Python	2026-02-24T10:45:33.0906813Z   check-latest: false
+test-backend	Set up Python	2026-02-24T10:45:33.0908377Z   token: ***
+test-backend	Set up Python	2026-02-24T10:45:33.0909413Z   update-environment: ***
+test-backend	Set up Python	2026-02-24T10:45:33.0910560Z   allow-prereleases: false
+test-backend	Set up Python	2026-02-24T10:45:33.0911945Z   freethreaded: false
+test-backend	Set up Python	2026-02-24T10:45:33.0912974Z ##[endgroup]
+test-backend	Set up Python	2026-02-24T10:45:33.2621874Z ##[group]Installed versions
+test-backend	Set up Python	2026-02-24T10:45:33.2748789Z Successfully set up CPython (3.11.14)
+test-backend	Set up Python	2026-02-24T10:45:33.2752163Z ##[endgroup]
+test-backend	Install dependencies	﻿2026-02-24T10:45:33.3020435Z ##[group]Run cd backend
+test-backend	Install dependencies	2026-02-24T10:45:33.3021561Z [36;1mcd backend[0m
+test-backend	Install dependencies	2026-02-24T10:45:33.3022656Z [36;1mpython -m pip install --upgrade pip[0m
+test-backend	Install dependencies	2026-02-24T10:45:33.3024027Z [36;1mpip install -r requirements.txt[0m
+test-backend	Install dependencies	2026-02-24T10:45:33.3025443Z [36;1mpip install pytest pytest-cov pytest-django[0m
+test-backend	Install dependencies	2026-02-24T10:45:33.3075529Z shell: /usr/bin/bash -e {0}
+test-backend	Install dependencies	2026-02-24T10:45:33.3076599Z env:
+test-backend	Install dependencies	2026-02-24T10:45:33.3077670Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Install dependencies	2026-02-24T10:45:33.3079700Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+test-backend	Install dependencies	2026-02-24T10:45:33.3081548Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Install dependencies	2026-02-24T10:45:33.3083220Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Install dependencies	2026-02-24T10:45:33.3084920Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Install dependencies	2026-02-24T10:45:33.3086623Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+test-backend	Install dependencies	2026-02-24T10:45:33.3088208Z ##[endgroup]
+test-backend	Install dependencies	2026-02-24T10:45:33.9818614Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (26.0)
+test-backend	Install dependencies	2026-02-24T10:45:34.0827424Z Collecting pip
+test-backend	Install dependencies	2026-02-24T10:45:34.1964428Z   Downloading pip-26.0.1-py3-none-any.whl.metadata (4.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:34.2238326Z Downloading pip-26.0.1-py3-none-any.whl (1.8 MB)
+test-backend	Install dependencies	2026-02-24T10:45:34.3455771Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 27.8 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:34.3667222Z Installing collected packages: pip
+test-backend	Install dependencies	2026-02-24T10:45:34.3669014Z   Attempting uninstall: pip
+test-backend	Install dependencies	2026-02-24T10:45:34.3683454Z     Found existing installation: pip 26.0
+test-backend	Install dependencies	2026-02-24T10:45:34.4152087Z     Uninstalling pip-26.0:
+test-backend	Install dependencies	2026-02-24T10:45:34.4209855Z       Successfully uninstalled pip-26.0
+test-backend	Install dependencies	2026-02-24T10:45:35.2056670Z Successfully installed pip-26.0.1
+test-backend	Install dependencies	2026-02-24T10:45:35.7549235Z Collecting Django==4.2.7 (from -r requirements.txt (line 1))
+test-backend	Install dependencies	2026-02-24T10:45:35.8405999Z   Downloading Django-4.2.7-py3-none-any.whl.metadata (4.1 kB)
+test-backend	Install dependencies	2026-02-24T10:45:35.8736282Z Collecting djangorestframework==3.14.0 (from -r requirements.txt (line 2))
+test-backend	Install dependencies	2026-02-24T10:45:35.8886928Z   Downloading djangorestframework-3.14.0-py3-none-any.whl.metadata (10 kB)
+test-backend	Install dependencies	2026-02-24T10:45:35.9065769Z Collecting djangorestframework-simplejwt==5.3.1 (from -r requirements.txt (line 3))
+test-backend	Install dependencies	2026-02-24T10:45:35.9207021Z   Downloading djangorestframework_simplejwt-5.3.1-py3-none-any.whl.metadata (4.3 kB)
+test-backend	Install dependencies	2026-02-24T10:45:35.9382630Z Collecting django-cors-headers==4.3.1 (from -r requirements.txt (line 4))
+test-backend	Install dependencies	2026-02-24T10:45:35.9524063Z   Downloading django_cors_headers-4.3.1-py3-none-any.whl.metadata (16 kB)
+test-backend	Install dependencies	2026-02-24T10:45:35.9708502Z Collecting gunicorn==21.2.0 (from -r requirements.txt (line 5))
+test-backend	Install dependencies	2026-02-24T10:45:35.9846702Z   Downloading gunicorn-21.2.0-py3-none-any.whl.metadata (4.1 kB)
+test-backend	Install dependencies	2026-02-24T10:45:36.0036405Z Collecting mysqlclient==2.2.0 (from -r requirements.txt (line 6))
+test-backend	Install dependencies	2026-02-24T10:45:36.0175523Z   Downloading mysqlclient-2.2.0.tar.gz (89 kB)
+test-backend	Install dependencies	2026-02-24T10:45:36.0538631Z   Installing build dependencies: started
+test-backend	Install dependencies	2026-02-24T10:45:36.8898957Z   Installing build dependencies: finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:36.8904504Z   Getting requirements to build wheel: started
+test-backend	Install dependencies	2026-02-24T10:45:37.4247705Z   Getting requirements to build wheel: finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:37.4256016Z   Preparing metadata (pyproject.toml): started
+test-backend	Install dependencies	2026-02-24T10:45:37.6034579Z   Preparing metadata (pyproject.toml): finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:37.6595246Z Collecting psycopg2-binary==2.9.9 (from -r requirements.txt (line 7))
+test-backend	Install dependencies	2026-02-24T10:45:37.6735454Z   Downloading psycopg2_binary-2.9.9-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.7081780Z Collecting django-rest-passwordreset>=1.3.0 (from -r requirements.txt (line 8))
+test-backend	Install dependencies	2026-02-24T10:45:37.7224934Z   Downloading django_rest_passwordreset-1.5.0-py3-none-any.whl.metadata (16 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.7342258Z Collecting python-decouple==3.8 (from -r requirements.txt (line 9))
+test-backend	Install dependencies	2026-02-24T10:45:37.7479311Z   Downloading python_decouple-3.8-py3-none-any.whl.metadata (14 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.7615465Z Collecting django-storages==1.14.2 (from django-storages[boto3]==1.14.2->-r requirements.txt (line 10))
+test-backend	Install dependencies	2026-02-24T10:45:37.7753802Z   Downloading django_storages-1.14.2-py3-none-any.whl.metadata (63 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.7967085Z Collecting whitenoise==6.6.0 (from -r requirements.txt (line 11))
+test-backend	Install dependencies	2026-02-24T10:45:37.8106212Z   Downloading whitenoise-6.6.0-py3-none-any.whl.metadata (3.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.8531866Z Collecting black==23.12.1 (from -r requirements.txt (line 14))
+test-backend	Install dependencies	2026-02-24T10:45:37.8672442Z   Downloading black-23.12.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (68 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.8916240Z Collecting flake8==7.0.0 (from -r requirements.txt (line 15))
+test-backend	Install dependencies	2026-02-24T10:45:37.9054122Z   Downloading flake8-7.0.0-py2.py3-none-any.whl.metadata (3.8 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.9277599Z Collecting isort==5.13.2 (from -r requirements.txt (line 16))
+test-backend	Install dependencies	2026-02-24T10:45:37.9415316Z   Downloading isort-5.13.2-py3-none-any.whl.metadata (12 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.9684267Z Collecting pylint==3.0.3 (from -r requirements.txt (line 17))
+test-backend	Install dependencies	2026-02-24T10:45:37.9822848Z   Downloading pylint-3.0.3-py3-none-any.whl.metadata (12 kB)
+test-backend	Install dependencies	2026-02-24T10:45:37.9990599Z Collecting python-dotenv (from -r requirements.txt (line 18))
+test-backend	Install dependencies	2026-02-24T10:45:38.0148276Z   Downloading python_dotenv-1.2.1-py3-none-any.whl.metadata (25 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.0396457Z Collecting pytest==7.4.2 (from -r requirements.txt (line 19))
+test-backend	Install dependencies	2026-02-24T10:45:38.0545840Z   Downloading pytest-7.4.2-py3-none-any.whl.metadata (7.9 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.0739939Z Collecting pytest-django (from -r requirements.txt (line 20))
+test-backend	Install dependencies	2026-02-24T10:45:38.0883096Z   Downloading pytest_django-4.12.0-py3-none-any.whl.metadata (8.0 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.1043088Z Collecting pytest-cov (from -r requirements.txt (line 21))
+test-backend	Install dependencies	2026-02-24T10:45:38.1181265Z   Downloading pytest_cov-7.0.0-py3-none-any.whl.metadata (31 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.1421903Z Collecting channels==4.0.0 (from -r requirements.txt (line 24))
+test-backend	Install dependencies	2026-02-24T10:45:38.1558140Z   Downloading channels-4.0.0-py3-none-any.whl.metadata (1.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.1689750Z Collecting channels-redis==4.1.0 (from -r requirements.txt (line 25))
+test-backend	Install dependencies	2026-02-24T10:45:38.1828288Z   Downloading channels_redis-4.1.0-py3-none-any.whl.metadata (10 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.1988425Z Collecting daphne==4.0.0 (from -r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:38.2126645Z   Downloading daphne-4.0.0-py3-none-any.whl.metadata (6.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.2322076Z Collecting requests==2.31.0 (from -r requirements.txt (line 29))
+test-backend	Install dependencies	2026-02-24T10:45:38.2461222Z   Downloading requests-2.31.0-py3-none-any.whl.metadata (4.6 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.2629018Z Collecting asgiref<4,>=3.6.0 (from Django==4.2.7->-r requirements.txt (line 1))
+test-backend	Install dependencies	2026-02-24T10:45:38.2777204Z   Downloading asgiref-3.11.1-py3-none-any.whl.metadata (9.3 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.2915143Z Collecting sqlparse>=0.3.1 (from Django==4.2.7->-r requirements.txt (line 1))
+test-backend	Install dependencies	2026-02-24T10:45:38.3053098Z   Downloading sqlparse-0.5.5-py3-none-any.whl.metadata (4.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.3410999Z Collecting pytz (from djangorestframework==3.14.0->-r requirements.txt (line 2))
+test-backend	Install dependencies	2026-02-24T10:45:38.3577834Z   Downloading pytz-2025.2-py2.py3-none-any.whl.metadata (22 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.3781957Z Collecting pyjwt<3,>=1.7.1 (from djangorestframework-simplejwt==5.3.1->-r requirements.txt (line 3))
+test-backend	Install dependencies	2026-02-24T10:45:38.3922050Z   Downloading pyjwt-2.11.0-py3-none-any.whl.metadata (4.0 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.4101466Z Collecting packaging (from gunicorn==21.2.0->-r requirements.txt (line 5))
+test-backend	Install dependencies	2026-02-24T10:45:38.4238422Z   Downloading packaging-26.0-py3-none-any.whl.metadata (3.3 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.4417391Z Collecting click>=8.0.0 (from black==23.12.1->-r requirements.txt (line 14))
+test-backend	Install dependencies	2026-02-24T10:45:38.4555212Z   Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.4658187Z Collecting mypy-extensions>=0.4.3 (from black==23.12.1->-r requirements.txt (line 14))
+test-backend	Install dependencies	2026-02-24T10:45:38.4815323Z   Downloading mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.4944847Z Collecting pathspec>=0.9.0 (from black==23.12.1->-r requirements.txt (line 14))
+test-backend	Install dependencies	2026-02-24T10:45:38.5083144Z   Downloading pathspec-1.0.4-py3-none-any.whl.metadata (13 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.5261727Z Collecting platformdirs>=2 (from black==23.12.1->-r requirements.txt (line 14))
+test-backend	Install dependencies	2026-02-24T10:45:38.5413336Z   Downloading platformdirs-4.9.2-py3-none-any.whl.metadata (4.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.5522664Z Collecting mccabe<0.8.0,>=0.7.0 (from flake8==7.0.0->-r requirements.txt (line 15))
+test-backend	Install dependencies	2026-02-24T10:45:38.5666604Z   Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.5798445Z Collecting pycodestyle<2.12.0,>=2.11.0 (from flake8==7.0.0->-r requirements.txt (line 15))
+test-backend	Install dependencies	2026-02-24T10:45:38.5935643Z   Downloading pycodestyle-2.11.1-py2.py3-none-any.whl.metadata (4.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.6060863Z Collecting pyflakes<3.3.0,>=3.2.0 (from flake8==7.0.0->-r requirements.txt (line 15))
+test-backend	Install dependencies	2026-02-24T10:45:38.6198569Z   Downloading pyflakes-3.2.0-py2.py3-none-any.whl.metadata (3.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.6496270Z Collecting astroid<=3.1.0-dev0,>=3.0.1 (from pylint==3.0.3->-r requirements.txt (line 17))
+test-backend	Install dependencies	2026-02-24T10:45:38.6640135Z   Downloading astroid-3.0.3-py3-none-any.whl.metadata (4.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.6825063Z Collecting tomlkit>=0.10.1 (from pylint==3.0.3->-r requirements.txt (line 17))
+test-backend	Install dependencies	2026-02-24T10:45:38.6975445Z   Downloading tomlkit-0.14.0-py3-none-any.whl.metadata (2.8 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.7096675Z Collecting dill>=0.3.6 (from pylint==3.0.3->-r requirements.txt (line 17))
+test-backend	Install dependencies	2026-02-24T10:45:38.7233236Z   Downloading dill-0.4.1-py3-none-any.whl.metadata (10 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.7344643Z Collecting iniconfig (from pytest==7.4.2->-r requirements.txt (line 19))
+test-backend	Install dependencies	2026-02-24T10:45:38.7480662Z   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.7597086Z Collecting pluggy<2.0,>=0.12 (from pytest==7.4.2->-r requirements.txt (line 19))
+test-backend	Install dependencies	2026-02-24T10:45:38.7734874Z   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.8027200Z Collecting redis>=4.5.3 (from channels-redis==4.1.0->-r requirements.txt (line 25))
+test-backend	Install dependencies	2026-02-24T10:45:38.8166404Z   Downloading redis-7.2.0-py3-none-any.whl.metadata (12 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.8987266Z Collecting msgpack~=1.0 (from channels-redis==4.1.0->-r requirements.txt (line 25))
+test-backend	Install dependencies	2026-02-24T10:45:38.9129441Z   Downloading msgpack-1.1.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+test-backend	Install dependencies	2026-02-24T10:45:38.9364236Z Collecting twisted>=22.4 (from twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:38.9504536Z   Downloading twisted-25.5.0-py3-none-any.whl.metadata (22 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.0127922Z Collecting autobahn>=22.4.2 (from daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:39.0266352Z   Downloading autobahn-25.12.2-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (32 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.1136282Z Collecting charset-normalizer<4,>=2 (from requests==2.31.0->-r requirements.txt (line 29))
+test-backend	Install dependencies	2026-02-24T10:45:39.1293027Z   Downloading charset_normalizer-3.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (37 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.1449513Z Collecting idna<4,>=2.5 (from requests==2.31.0->-r requirements.txt (line 29))
+test-backend	Install dependencies	2026-02-24T10:45:39.1594413Z   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.1808505Z Collecting urllib3<3,>=1.21.1 (from requests==2.31.0->-r requirements.txt (line 29))
+test-backend	Install dependencies	2026-02-24T10:45:39.1948779Z   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.2127727Z Collecting certifi>=2017.4.17 (from requests==2.31.0->-r requirements.txt (line 29))
+test-backend	Install dependencies	2026-02-24T10:45:39.2274417Z   Downloading certifi-2026.1.4-py3-none-any.whl.metadata (2.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.5212890Z Collecting boto3>=1.4.4 (from django-storages[boto3]==1.14.2->-r requirements.txt (line 10))
+test-backend	Install dependencies	2026-02-24T10:45:39.5352876Z   Downloading boto3-1.42.55-py3-none-any.whl.metadata (6.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.8751524Z Collecting coverage>=7.10.6 (from coverage[toml]>=7.10.6->pytest-cov->-r requirements.txt (line 21))
+test-backend	Install dependencies	2026-02-24T10:45:39.8892293Z   Downloading coverage-7.13.4-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (8.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:39.9729226Z Collecting cbor2>=5.2.0 (from autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:39.9870588Z   Downloading cbor2-5.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:40.0756124Z Collecting cffi>=2.0.0 (from autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:40.0896597Z   Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+test-backend	Install dependencies	2026-02-24T10:45:40.2493798Z Collecting cryptography>=3.4.6 (from autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:40.2634573Z   Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:40.2766408Z Collecting hyperlink>=21.0.0 (from autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:40.2902957Z   Downloading hyperlink-21.0.0-py2.py3-none-any.whl.metadata (1.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:40.3015635Z Collecting py-ubjson>=0.16.1 (from autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:40.3153287Z   Downloading py-ubjson-0.16.1.tar.gz (50 kB)
+test-backend	Install dependencies	2026-02-24T10:45:40.3295869Z   Installing build dependencies: started
+test-backend	Install dependencies	2026-02-24T10:45:40.9143960Z   Installing build dependencies: finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:40.9149207Z   Getting requirements to build wheel: started
+test-backend	Install dependencies	2026-02-24T10:45:41.2502024Z   Getting requirements to build wheel: finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:41.2513207Z   Preparing metadata (pyproject.toml): started
+test-backend	Install dependencies	2026-02-24T10:45:41.4132123Z   Preparing metadata (pyproject.toml): finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:41.4252625Z Collecting txaio>=25.12.2 (from autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:41.4394968Z   Downloading txaio-25.12.2-py3-none-any.whl.metadata (7.0 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.4947215Z Collecting ujson>=4.0.2 (from autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:41.5086203Z   Downloading ujson-5.11.0-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (9.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.7670622Z Collecting botocore<1.43.0,>=1.42.55 (from boto3>=1.4.4->django-storages[boto3]==1.14.2->-r requirements.txt (line 10))
+test-backend	Install dependencies	2026-02-24T10:45:41.7812442Z   Downloading botocore-1.42.55-py3-none-any.whl.metadata (5.9 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.7944066Z Collecting jmespath<2.0.0,>=0.7.1 (from boto3>=1.4.4->django-storages[boto3]==1.14.2->-r requirements.txt (line 10))
+test-backend	Install dependencies	2026-02-24T10:45:41.8081922Z   Downloading jmespath-1.1.0-py3-none-any.whl.metadata (7.6 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.8227869Z Collecting s3transfer<0.17.0,>=0.16.0 (from boto3>=1.4.4->django-storages[boto3]==1.14.2->-r requirements.txt (line 10))
+test-backend	Install dependencies	2026-02-24T10:45:41.8366733Z   Downloading s3transfer-0.16.0-py3-none-any.whl.metadata (1.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.8506483Z Collecting python-dateutil<3.0.0,>=2.1 (from botocore<1.43.0,>=1.42.55->boto3>=1.4.4->django-storages[boto3]==1.14.2->-r requirements.txt (line 10))
+test-backend	Install dependencies	2026-02-24T10:45:41.8646348Z   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.8829919Z Collecting six>=1.5 (from python-dateutil<3.0.0,>=2.1->botocore<1.43.0,>=1.42.55->boto3>=1.4.4->django-storages[boto3]==1.14.2->-r requirements.txt (line 10))
+test-backend	Install dependencies	2026-02-24T10:45:41.8967575Z   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.9228734Z Collecting pycparser (from cffi>=2.0.0->autobahn>=22.4.2->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:41.9365394Z   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.9600811Z Collecting attrs>=22.2.0 (from twisted>=22.4->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:41.9736773Z   Downloading attrs-25.4.0-py3-none-any.whl.metadata (10 kB)
+test-backend	Install dependencies	2026-02-24T10:45:41.9843531Z Collecting automat>=24.8.0 (from twisted>=22.4->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:41.9981902Z   Downloading automat-25.4.16-py3-none-any.whl.metadata (8.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.0081436Z Collecting constantly>=15.1 (from twisted>=22.4->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.0217537Z   Downloading constantly-23.10.4-py3-none-any.whl.metadata (1.8 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.0326962Z Collecting incremental>=24.7.0 (from twisted>=22.4->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.0466255Z   Downloading incremental-24.11.0-py3-none-any.whl.metadata (9.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.0634211Z Collecting typing-extensions>=4.2.0 (from twisted>=22.4->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.0777592Z   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.1723281Z Collecting zope-interface>=5 (from twisted>=22.4->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.1869009Z   Downloading zope_interface-8.2-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (45 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.2161949Z Collecting pyopenssl>=21.0.0 (from twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.2308693Z   Downloading pyopenssl-25.3.0-py3-none-any.whl.metadata (17 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.2433428Z Collecting service-identity>=18.1.0 (from twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.2571329Z   Downloading service_identity-24.2.0-py3-none-any.whl.metadata (5.1 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.2856414Z Collecting pyasn1 (from service-identity>=18.1.0->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.2994456Z   Downloading pyasn1-0.6.2-py3-none-any.whl.metadata (8.4 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.3177802Z Collecting pyasn1-modules (from service-identity>=18.1.0->twisted[tls]>=22.4->daphne==4.0.0->-r requirements.txt (line 26))
+test-backend	Install dependencies	2026-02-24T10:45:42.3351334Z   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.3592668Z Downloading Django-4.2.7-py3-none-any.whl (8.0 MB)
+test-backend	Install dependencies	2026-02-24T10:45:42.4540923Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.0/8.0 MB 100.3 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:42.4679369Z Downloading djangorestframework-3.14.0-py3-none-any.whl (1.1 MB)
+test-backend	Install dependencies	2026-02-24T10:45:42.4761672Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 136.3 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:42.4897840Z Downloading djangorestframework_simplejwt-5.3.1-py3-none-any.whl (101 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.5066529Z Downloading django_cors_headers-4.3.1-py3-none-any.whl (12 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.5226403Z Downloading gunicorn-21.2.0-py3-none-any.whl (80 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.5390282Z Downloading psycopg2_binary-2.9.9-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.0 MB)
+test-backend	Install dependencies	2026-02-24T10:45:42.5541125Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.0/3.0 MB 217.4 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:42.5678502Z Downloading python_decouple-3.8-py3-none-any.whl (9.9 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.5843140Z Downloading django_storages-1.14.2-py3-none-any.whl (47 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.6002889Z Downloading whitenoise-6.6.0-py3-none-any.whl (19 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.6162079Z Downloading black-23.12.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.7 MB)
+test-backend	Install dependencies	2026-02-24T10:45:42.6266388Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 185.0 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:42.6405467Z Downloading flake8-7.0.0-py2.py3-none-any.whl (57 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.6566329Z Downloading isort-5.13.2-py3-none-any.whl (92 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.6733330Z Downloading pylint-3.0.3-py3-none-any.whl (510 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.6920357Z Downloading pytest-7.4.2-py3-none-any.whl (324 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.7088771Z Downloading channels-4.0.0-py3-none-any.whl (28 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.7246908Z Downloading channels_redis-4.1.0-py3-none-any.whl (18 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.7407564Z Downloading daphne-4.0.0-py3-none-any.whl (30 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.7568239Z Downloading requests-2.31.0-py3-none-any.whl (62 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.7748429Z Downloading asgiref-3.11.1-py3-none-any.whl (24 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.7908222Z Downloading astroid-3.0.3-py3-none-any.whl (275 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.8078471Z Downloading charset_normalizer-3.4.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (151 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.8241290Z Downloading idna-3.11-py3-none-any.whl (71 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.8402751Z Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.8564445Z Downloading msgpack-1.1.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (426 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.8751009Z Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.8913883Z Downloading pycodestyle-2.11.1-py2.py3-none-any.whl (31 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.9072924Z Downloading pyflakes-3.2.0-py2.py3-none-any.whl (62 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.9248632Z Downloading pyjwt-2.11.0-py3-none-any.whl (28 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.9409386Z Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.9570988Z Downloading django_rest_passwordreset-1.5.0-py3-none-any.whl (31 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.9729394Z Downloading python_dotenv-1.2.1-py3-none-any.whl (21 kB)
+test-backend	Install dependencies	2026-02-24T10:45:42.9889345Z Downloading pytest_django-4.12.0-py3-none-any.whl (26 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.0045453Z Downloading pytest_cov-7.0.0-py3-none-any.whl (22 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.0207386Z Downloading autobahn-25.12.2-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (2.2 MB)
+test-backend	Install dependencies	2026-02-24T10:45:43.0346527Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 181.4 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:43.0484284Z Downloading boto3-1.42.55-py3-none-any.whl (140 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.0649722Z Downloading botocore-1.42.55-py3-none-any.whl (14.6 MB)
+test-backend	Install dependencies	2026-02-24T10:45:43.1502080Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 14.6/14.6 MB 174.6 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:43.1641617Z Downloading jmespath-1.1.0-py3-none-any.whl (20 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.1806568Z Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.1981569Z Downloading s3transfer-0.16.0-py3-none-any.whl (86 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.2155499Z Downloading cbor2-5.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (258 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.2336390Z Downloading certifi-2026.1.4-py3-none-any.whl (152 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.2503121Z Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (215 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.2667392Z Downloading click-8.3.1-py3-none-any.whl (108 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.2830438Z Downloading coverage-7.13.4-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (252 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.2997041Z Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+test-backend	Install dependencies	2026-02-24T10:45:43.3491178Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 89.2 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:43.3628557Z Downloading dill-0.4.1-py3-none-any.whl (120 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.3787653Z Downloading hyperlink-21.0.0-py2.py3-none-any.whl (74 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.3946669Z Downloading mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.4103637Z Downloading packaging-26.0-py3-none-any.whl (74 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.4267116Z Downloading pathspec-1.0.4-py3-none-any.whl (55 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.4428493Z Downloading platformdirs-4.9.2-py3-none-any.whl (21 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.4587334Z Downloading redis-7.2.0-py3-none-any.whl (394 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.4764555Z Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.4995122Z Downloading sqlparse-0.5.5-py3-none-any.whl (46 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.5156301Z Downloading tomlkit-0.14.0-py3-none-any.whl (39 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.5316909Z Downloading twisted-25.5.0-py3-none-any.whl (3.2 MB)
+test-backend	Install dependencies	2026-02-24T10:45:43.5546357Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.2/3.2 MB 144.4 MB/s  0:00:00
+test-backend	Install dependencies	2026-02-24T10:45:43.5686540Z Downloading attrs-25.4.0-py3-none-any.whl (67 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.5849769Z Downloading automat-25.4.16-py3-none-any.whl (42 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.6021949Z Downloading constantly-23.10.4-py3-none-any.whl (13 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.6181157Z Downloading incremental-24.11.0-py3-none-any.whl (21 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.6342068Z Downloading pyopenssl-25.3.0-py3-none-any.whl (57 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.6500846Z Downloading service_identity-24.2.0-py3-none-any.whl (11 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.6657583Z Downloading txaio-25.12.2-py3-none-any.whl (31 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.6815620Z Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.7020618Z Downloading ujson-5.11.0-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (57 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.7183070Z Downloading zope_interface-8.2-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (259 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.7348457Z Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.7503812Z Downloading pyasn1-0.6.2-py3-none-any.whl (83 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.7664437Z Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.7831275Z Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.7988443Z Downloading pytz-2025.2-py2.py3-none-any.whl (509 kB)
+test-backend	Install dependencies	2026-02-24T10:45:43.9123854Z Building wheels for collected packages: mysqlclient, py-ubjson
+test-backend	Install dependencies	2026-02-24T10:45:43.9132115Z   Building wheel for mysqlclient (pyproject.toml): started
+test-backend	Install dependencies	2026-02-24T10:45:45.1750497Z   Building wheel for mysqlclient (pyproject.toml): finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:45.1757642Z   Created wheel for mysqlclient: filename=mysqlclient-2.2.0-cp311-cp311-linux_x86_64.whl size=130989 sha256=79753ef18cd1bcca621df29ff7ad0f04880a405547542bf3c428cc0377ad3d25
+test-backend	Install dependencies	2026-02-24T10:45:45.1760283Z   Stored in directory: /home/runner/.cache/pip/wheels/a4/97/41/1e55ebbb29ce69d9008782f457658f48755b861fa145538ca0
+test-backend	Install dependencies	2026-02-24T10:45:45.1782730Z   Building wheel for py-ubjson (pyproject.toml): started
+test-backend	Install dependencies	2026-02-24T10:45:46.8212419Z   Building wheel for py-ubjson (pyproject.toml): finished with status 'done'
+test-backend	Install dependencies	2026-02-24T10:45:46.8219430Z   Created wheel for py-ubjson: filename=py_ubjson-0.16.1-cp311-cp311-linux_x86_64.whl size=133226 sha256=ce8f2f6beb569372b0531df20aa456559e00356a71c2f266afdaf999222437bc
+test-backend	Install dependencies	2026-02-24T10:45:46.8220927Z   Stored in directory: /home/runner/.cache/pip/wheels/ea/6d/84/2e549e1b2579fafeab6aa931f7ea74c6a72793ae4ecdea38db
+test-backend	Install dependencies	2026-02-24T10:45:46.8239378Z Successfully built mysqlclient py-ubjson
+test-backend	Install dependencies	2026-02-24T10:45:47.0194820Z Installing collected packages: pytz, python-decouple, py-ubjson, django-rest-passwordreset, zope-interface, whitenoise, urllib3, ujson, typing-extensions, txaio, tomlkit, sqlparse, six, redis, python-dotenv, pyjwt, pyflakes, pycparser, pycodestyle, pyasn1, psycopg2-binary, pluggy, platformdirs, pathspec, packaging, mysqlclient, mypy-extensions, msgpack, mccabe, jmespath, isort, iniconfig, idna, dill, coverage, constantly, click, charset-normalizer, certifi, cbor2, automat, attrs, astroid, asgiref, requests, python-dateutil, pytest, pylint, pyasn1-modules, incremental, hyperlink, gunicorn, flake8, Django, cffi, black, twisted, pytest-django, pytest-cov, djangorestframework, django-storages, django-cors-headers, cryptography, channels, botocore, service-identity, s3transfer, pyopenssl, djangorestframework-simplejwt, channels-redis, autobahn, boto3, daphne
+test-backend	Install dependencies	2026-02-24T10:45:54.8294375Z 
+test-backend	Install dependencies	2026-02-24T10:45:54.8332095Z Successfully installed Django-4.2.7 asgiref-3.11.1 astroid-3.0.3 attrs-25.4.0 autobahn-25.12.2 automat-25.4.16 black-23.12.1 boto3-1.42.55 botocore-1.42.55 cbor2-5.8.0 certifi-2026.1.4 cffi-2.0.0 channels-4.0.0 channels-redis-4.1.0 charset-normalizer-3.4.4 click-8.3.1 constantly-23.10.4 coverage-7.13.4 cryptography-46.0.5 daphne-4.0.0 dill-0.4.1 django-cors-headers-4.3.1 django-rest-passwordreset-1.5.0 django-storages-1.14.2 djangorestframework-3.14.0 djangorestframework-simplejwt-5.3.1 flake8-7.0.0 gunicorn-21.2.0 hyperlink-21.0.0 idna-3.11 incremental-24.11.0 iniconfig-2.3.0 isort-5.13.2 jmespath-1.1.0 mccabe-0.7.0 msgpack-1.1.2 mypy-extensions-1.1.0 mysqlclient-2.2.0 packaging-26.0 pathspec-1.0.4 platformdirs-4.9.2 pluggy-1.6.0 psycopg2-binary-2.9.9 py-ubjson-0.16.1 pyasn1-0.6.2 pyasn1-modules-0.4.2 pycodestyle-2.11.1 pycparser-3.0 pyflakes-3.2.0 pyjwt-2.11.0 pylint-3.0.3 pyopenssl-25.3.0 pytest-7.4.2 pytest-cov-7.0.0 pytest-django-4.12.0 python-dateutil-2.9.0.post0 python-decouple-3.8 python-dotenv-1.2.1 pytz-2025.2 redis-7.2.0 requests-2.31.0 s3transfer-0.16.0 service-identity-24.2.0 six-1.17.0 sqlparse-0.5.5 tomlkit-0.14.0 twisted-25.5.0 txaio-25.12.2 typing-extensions-4.15.0 ujson-5.11.0 urllib3-2.6.3 whitenoise-6.6.0 zope-interface-8.2
+test-backend	Install dependencies	2026-02-24T10:45:55.5109465Z Requirement already satisfied: pytest in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (7.4.2)
+test-backend	Install dependencies	2026-02-24T10:45:55.5113367Z Requirement already satisfied: pytest-cov in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (7.0.0)
+test-backend	Install dependencies	2026-02-24T10:45:55.5117718Z Requirement already satisfied: pytest-django in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (4.12.0)
+test-backend	Install dependencies	2026-02-24T10:45:55.5127726Z Requirement already satisfied: iniconfig in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (from pytest) (2.3.0)
+test-backend	Install dependencies	2026-02-24T10:45:55.5132374Z Requirement already satisfied: packaging in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (from pytest) (26.0)
+test-backend	Install dependencies	2026-02-24T10:45:55.5138760Z Requirement already satisfied: pluggy<2.0,>=0.12 in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (from pytest) (1.6.0)
+test-backend	Install dependencies	2026-02-24T10:45:55.5171775Z Requirement already satisfied: coverage>=7.10.6 in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (from coverage[toml]>=7.10.6->pytest-cov) (7.13.4)
+test-backend	Run tests with coverage	﻿2026-02-24T10:45:55.6426164Z ##[group]Run cd backend
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6426469Z [36;1mcd backend[0m
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6426833Z [36;1mpytest --cov=. --cov-report=xml:coverage.xml --cov-report=html[0m
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6460120Z shell: /usr/bin/bash -e {0}
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6460393Z env:
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6460676Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6461148Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6461598Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6461994Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6462412Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6462810Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6463205Z   SECRET_KEY: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6463479Z   SECRET_KEY_ADMIN: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6463728Z   SMTP_HOST: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6463945Z   SMTP_PORT: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6464217Z   SMTP_USERNAME: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6464454Z   SMTP_PASSWORD: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6464673Z   SMTP_USE_TLS: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6464882Z   TESTING: ***
+test-backend	Run tests with coverage	2026-02-24T10:45:55.6465083Z ##[endgroup]
+test-backend	Run tests with coverage	2026-02-24T10:46:18.4306389Z ........................................................................ [ 64%]
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5862878Z ........................................                                 [100%]
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5863877Z =============================== warnings summary ===============================
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5865213Z ../../../../../../opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/django/conf/__init__.py:289
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5868917Z   /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/django/conf/__init__.py:289: RemovedInDjango51Warning: The STATICFILES_STORAGE setting is deprecated. Use STORAGES instead.
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5870651Z     warnings.warn(STATICFILES_STORAGE_DEPRECATED_MSG, RemovedInDjango51Warning)
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5871219Z 
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5871388Z apps/glycemia/tests.py: 18 warnings
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5872788Z   /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/channels_redis/core.py:89: DeprecationWarning: Call to deprecated close. (Use aclose() instead) -- Deprecated since version 5.0.1.
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5874252Z     await connection.close(close_connection_pool=True)
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5874559Z 
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5874926Z apps/glycemia/tests.py::TestGlycemiaSignals::test_broadcast_on_create
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5875580Z apps/glycemia/tests.py::TestGlycemiaSignals::test_no_broadcast_on_update
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5876216Z apps/glycemia/tests.py::TestGlycemiaSignals::test_hypo_alert_sent
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5876816Z apps/glycemia/tests.py::TestGlycemiaSignals::test_hyper_alert_sent
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5877453Z apps/glycemia/tests.py::TestGlycemiaSignals::test_no_alert_for_normal_value
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5878716Z   /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages/asgiref/sync.py:608: UserWarning: async_to_sync was passed a non-async-marked callable
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5879625Z     return AsyncToSync(
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5879809Z 
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5880105Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5880690Z ================================ tests coverage ================================
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5881266Z _______________ coverage: platform linux, python 3.11.14-final-0 _______________
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5881657Z 
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5881792Z Coverage HTML written to dir htmlcov
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5882173Z Coverage XML written to file coverage.xml
+test-backend	Run tests with coverage	2026-02-24T10:46:28.5882554Z 112 passed, 24 warnings in 30.60s
+test-backend	Upload coverage artifact	﻿2026-02-24T10:46:28.8255375Z ##[group]Run actions/upload-artifact@v4
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8255694Z with:
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8255904Z   name: coverage-backend
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8256157Z   path: backend/coverage.xml
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8256409Z   retention-days: 1
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8256636Z   if-no-files-found: error
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8256878Z   compression-level: 6
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8257101Z   overwrite: false
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8257329Z   include-hidden-files: false
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8257566Z env:
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8257837Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8258479Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8258926Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8259326Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8259719Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8260128Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+test-backend	Upload coverage artifact	2026-02-24T10:46:28.8260489Z ##[endgroup]
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.0377871Z With the provided path, there will be 1 file uploaded
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.0382957Z Artifact name is valid!
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.0384372Z Root directory input is valid!
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.1719859Z Beginning upload of artifact content to blob storage
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.3004428Z Uploaded bytes 10968
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.3339237Z Finished uploading artifact content to blob storage!
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.3342925Z SHA256 digest of uploaded artifact zip is 217003d52714f67bcef53ca60fe0b4e638279ebc9ed2cbf706e60f6b8a82f833
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.3344747Z Finalizing artifact upload
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.4355707Z Artifact coverage-backend.zip successfully finalized. Artifact ID 5633216390
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.4356906Z Artifact coverage-backend has been successfully uploaded! Final size is 10968 bytes. Artifact ID is 5633216390
+test-backend	Upload coverage artifact	2026-02-24T10:46:29.4358902Z Artifact download URL: https://github.com/Glycopilot/Glycopilot/actions/runs/22347420468/artifacts/5633216390
+test-backend	Lint with flake8	﻿2026-02-24T10:46:29.4446842Z ##[group]Run cd backend
+test-backend	Lint with flake8	2026-02-24T10:46:29.4447253Z [36;1mcd backend[0m
+test-backend	Lint with flake8	2026-02-24T10:46:29.4447638Z [36;1mpip install flake8[0m
+test-backend	Lint with flake8	2026-02-24T10:46:29.4449916Z [36;1mflake8 . --count --select=E9,F63,F7,F82 --show-source --statistics[0m
+test-backend	Lint with flake8	2026-02-24T10:46:29.4450541Z [36;1mflake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics[0m
+test-backend	Lint with flake8	2026-02-24T10:46:29.4482411Z shell: /usr/bin/bash -e {0}
+test-backend	Lint with flake8	2026-02-24T10:46:29.4482686Z env:
+test-backend	Lint with flake8	2026-02-24T10:46:29.4482977Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Lint with flake8	2026-02-24T10:46:29.4483443Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib/pkgconfig
+test-backend	Lint with flake8	2026-02-24T10:46:29.4483895Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Lint with flake8	2026-02-24T10:46:29.4484309Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Lint with flake8	2026-02-24T10:46:29.4484722Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.14/x64
+test-backend	Lint with flake8	2026-02-24T10:46:29.4485123Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.14/x64/lib
+test-backend	Lint with flake8	2026-02-24T10:46:29.4485497Z ##[endgroup]
+test-backend	Lint with flake8	2026-02-24T10:46:29.7743271Z Requirement already satisfied: flake8 in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (7.0.0)
+test-backend	Lint with flake8	2026-02-24T10:46:29.7753480Z Requirement already satisfied: mccabe<0.8.0,>=0.7.0 in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (from flake8) (0.7.0)
+test-backend	Lint with flake8	2026-02-24T10:46:29.7759414Z Requirement already satisfied: pycodestyle<2.12.0,>=2.11.0 in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (from flake8) (2.11.1)
+test-backend	Lint with flake8	2026-02-24T10:46:29.7764898Z Requirement already satisfied: pyflakes<3.3.0,>=3.2.0 in /opt/hostedtoolcache/Python/3.11.14/x64/lib/python3.11/site-packages (from flake8) (3.2.0)
+test-backend	Lint with flake8	2026-02-24T10:46:30.6188780Z 0
+test-backend	Lint with flake8	2026-02-24T10:46:31.1666247Z ./apps/auth/views.py:67:128: E501 line too long (172 > 127 characters)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1667384Z ./apps/doctors/models/care_team.py:79:128: E501 line too long (131 > 127 characters)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1668928Z ./apps/doctors/views/care_team_views.py:116:5: C901 'CareTeamViewSet.invite_doctor' is too complex (11)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1670182Z ./apps/doctors/views/care_team_views.py:188:128: E501 line too long (153 > 127 characters)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1671414Z ./apps/doctors/views/care_team_views.py:223:5: C901 'CareTeamViewSet.add_patient' is too complex (18)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1672682Z ./apps/doctors/views/care_team_views.py:232:128: E501 line too long (140 > 127 characters)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1673840Z ./apps/doctors/views/care_team_views.py:240:128: E501 line too long (142 > 127 characters)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1674975Z ./apps/glycemia/signals.py:27:1: C901 'broadcast_glycemia_update' is too complex (13)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1676033Z ./apps/users/views.py:34:5: C901 'UserViewSet.me' is too complex (12)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1676896Z ./reset_db.py:12:1: C901 'reset_database' is too complex (27)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1677796Z 5     C901 'CareTeamViewSet.invite_doctor' is too complex (11)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1678742Z 5     E501 line too long (172 > 127 characters)
+test-backend	Lint with flake8	2026-02-24T10:46:31.1679291Z 10
+test-backend	Post Set up Python	﻿2026-02-24T10:46:31.1907189Z Post job cleanup.
+test-backend	Post Run actions/checkout@v4	﻿2026-02-24T10:46:31.3518509Z Post job cleanup.
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4465360Z [command]/usr/bin/git version
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4500897Z git version 2.52.0
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4543252Z Temporarily overriding HOME='/home/runner/work/_temp/a226132c-f023-4450-8e4d-b6f275237330' before making global git config changes
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4544488Z Adding repository directory to the temporary git global config as a safe directory
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4555223Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4590480Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4622913Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4853051Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4873354Z http.https://github.com/.extraheader
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4886786Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.4921047Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.5172327Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test-backend	Post Run actions/checkout@v4	2026-02-24T10:46:31.5207378Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test-backend	Complete job	﻿2026-02-24T10:46:31.5586193Z Cleaning up orphan processes
+test-frontend	Set up job	﻿2026-02-24T10:45:31.2950639Z Current runner version: '2.331.0'
+test-frontend	Set up job	2026-02-24T10:45:31.2976309Z ##[group]Runner Image Provisioner
+test-frontend	Set up job	2026-02-24T10:45:31.2977135Z Hosted Compute Agent
+test-frontend	Set up job	2026-02-24T10:45:31.2977657Z Version: 20260123.484
+test-frontend	Set up job	2026-02-24T10:45:31.2978423Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+test-frontend	Set up job	2026-02-24T10:45:31.2979075Z Build Date: 2026-01-23T19:41:17Z
+test-frontend	Set up job	2026-02-24T10:45:31.2979728Z Worker ID: {060148a4-f94a-4f31-9906-56b9ef1eb995}
+test-frontend	Set up job	2026-02-24T10:45:31.2980489Z Azure Region: centralus
+test-frontend	Set up job	2026-02-24T10:45:31.2981003Z ##[endgroup]
+test-frontend	Set up job	2026-02-24T10:45:31.2982382Z ##[group]Operating System
+test-frontend	Set up job	2026-02-24T10:45:31.2983270Z Ubuntu
+test-frontend	Set up job	2026-02-24T10:45:31.2983790Z 24.04.3
+test-frontend	Set up job	2026-02-24T10:45:31.2984210Z LTS
+test-frontend	Set up job	2026-02-24T10:45:31.2984754Z ##[endgroup]
+test-frontend	Set up job	2026-02-24T10:45:31.2985241Z ##[group]Runner Image
+test-frontend	Set up job	2026-02-24T10:45:31.2985791Z Image: ubuntu-24.04
+test-frontend	Set up job	2026-02-24T10:45:31.2986339Z Version: 20260201.15.1
+test-frontend	Set up job	2026-02-24T10:45:31.2987317Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
+test-frontend	Set up job	2026-02-24T10:45:31.2989038Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
+test-frontend	Set up job	2026-02-24T10:45:31.2989961Z ##[endgroup]
+test-frontend	Set up job	2026-02-24T10:45:31.2991002Z ##[group]GITHUB_TOKEN Permissions
+test-frontend	Set up job	2026-02-24T10:45:31.2992882Z Contents: read
+test-frontend	Set up job	2026-02-24T10:45:31.2993751Z Metadata: read
+test-frontend	Set up job	2026-02-24T10:45:31.2994284Z Packages: read
+test-frontend	Set up job	2026-02-24T10:45:31.2994856Z ##[endgroup]
+test-frontend	Set up job	2026-02-24T10:45:31.2997309Z Secret source: Actions
+test-frontend	Set up job	2026-02-24T10:45:31.2997978Z Prepare workflow directory
+test-frontend	Set up job	2026-02-24T10:45:31.3327777Z Prepare all required actions
+test-frontend	Set up job	2026-02-24T10:45:31.3365936Z Getting action download info
+test-frontend	Set up job	2026-02-24T10:45:31.7175026Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+test-frontend	Set up job	2026-02-24T10:45:31.8405640Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+test-frontend	Set up job	2026-02-24T10:45:31.9319525Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+test-frontend	Set up job	2026-02-24T10:45:32.1516034Z Complete job name: test-frontend
+test-frontend	Run actions/checkout@v4	﻿2026-02-24T10:45:32.2241242Z ##[group]Run actions/checkout@v4
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2242150Z with:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2242604Z   repository: Glycopilot/Glycopilot
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2243523Z   token: ***
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2243941Z   ssh-strict: true
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2244370Z   ssh-user: git
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2244802Z   persist-credentials: true
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2245291Z   clean: true
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2245728Z   sparse-checkout-cone-mode: true
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2246253Z   fetch-depth: 1
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2246662Z   fetch-tags: false
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2247105Z   show-progress: true
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2247536Z   lfs: false
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2247946Z   submodules: false
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2248403Z   set-safe-directory: true
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.2249211Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3340005Z Syncing repository: Glycopilot/Glycopilot
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3341892Z ##[group]Getting Git version info
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3342699Z Working directory is '/home/runner/work/Glycopilot/Glycopilot'
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3344199Z [command]/usr/bin/git version
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3454066Z git version 2.52.0
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3496209Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3515713Z Temporarily overriding HOME='/home/runner/work/_temp/3fc68cfa-fdd9-48f4-ae10-b8d81c078e01' before making global git config changes
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3517621Z Adding repository directory to the temporary git global config as a safe directory
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3532401Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3579712Z Deleting the contents of '/home/runner/work/Glycopilot/Glycopilot'
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3584142Z ##[group]Initializing the repository
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3590537Z [command]/usr/bin/git init /home/runner/work/Glycopilot/Glycopilot
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3705336Z hint: Using 'master' as the name for the initial branch. This default branch name
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3707212Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3709363Z hint: to use in all of your new repositories, which will suppress this warning,
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3710778Z hint: call:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3711242Z hint:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3711821Z hint: 	git config --global init.defaultBranch <name>
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3712530Z hint:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3713457Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3714458Z hint: 'development'. The just-created branch can be renamed via this command:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3715206Z hint:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3715635Z hint: 	git branch -m <name>
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3716115Z hint:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3716749Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3717802Z Initialized empty Git repository in /home/runner/work/Glycopilot/Glycopilot/.git/
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3726130Z [command]/usr/bin/git remote add origin https://github.com/Glycopilot/Glycopilot
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3763453Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3764307Z ##[group]Disabling automatic garbage collection
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3768859Z [command]/usr/bin/git config --local gc.auto 0
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3806651Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3807909Z ##[group]Setting up auth
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3816846Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.3854445Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4204219Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4233691Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4452746Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4483120Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4719023Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4757321Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4759942Z ##[group]Fetching the repository
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.4770661Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +cb25c34569d3df082c87e3760dce867421c46799:refs/remotes/origin/develop
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9836461Z From https://github.com/Glycopilot/Glycopilot
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9839294Z  * [new ref]         cb25c34569d3df082c87e3760dce867421c46799 -> origin/develop
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9869424Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9870458Z ##[group]Determining the checkout info
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9871776Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9877913Z [command]/usr/bin/git sparse-checkout disable
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9919322Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9945980Z ##[group]Checking out the ref
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:32.9950193Z [command]/usr/bin/git checkout --progress --force -B develop refs/remotes/origin/develop
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:33.0228354Z Switched to a new branch 'develop'
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:33.0230239Z branch 'develop' set up to track 'origin/develop'.
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:33.0240309Z ##[endgroup]
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:33.0273263Z [command]/usr/bin/git log -1 --format=%H
+test-frontend	Run actions/checkout@v4	2026-02-24T10:45:33.0294561Z cb25c34569d3df082c87e3760dce867421c46799
+test-frontend	Set up Node.js	﻿2026-02-24T10:45:33.0619761Z ##[group]Run actions/setup-node@v4
+test-frontend	Set up Node.js	2026-02-24T10:45:33.0620958Z with:
+test-frontend	Set up Node.js	2026-02-24T10:45:33.0621748Z   node-version: 22
+test-frontend	Set up Node.js	2026-02-24T10:45:33.0622637Z   always-auth: false
+test-frontend	Set up Node.js	2026-02-24T10:45:33.0623727Z   check-latest: false
+test-frontend	Set up Node.js	2026-02-24T10:45:33.0624979Z   token: ***
+test-frontend	Set up Node.js	2026-02-24T10:45:33.0625802Z ##[endgroup]
+test-frontend	Set up Node.js	2026-02-24T10:45:33.2425877Z Found in cache @ /opt/hostedtoolcache/node/22.22.0/x64
+test-frontend	Set up Node.js	2026-02-24T10:45:33.2432830Z ##[group]Environment details
+test-frontend	Set up Node.js	2026-02-24T10:45:33.6002134Z node: v22.22.0
+test-frontend	Set up Node.js	2026-02-24T10:45:33.6003860Z npm: 10.9.4
+test-frontend	Set up Node.js	2026-02-24T10:45:33.6005052Z yarn: 1.22.22
+test-frontend	Set up Node.js	2026-02-24T10:45:33.6006666Z ##[endgroup]
+test-frontend	Install dependencies	﻿2026-02-24T10:45:33.6141428Z ##[group]Run cd frontend
+test-frontend	Install dependencies	2026-02-24T10:45:33.6142439Z [36;1mcd frontend[0m
+test-frontend	Install dependencies	2026-02-24T10:45:33.6143676Z [36;1mnpm install --legacy-peer-deps[0m
+test-frontend	Install dependencies	2026-02-24T10:45:33.6190311Z shell: /usr/bin/bash -e {0}
+test-frontend	Install dependencies	2026-02-24T10:45:33.6191319Z ##[endgroup]
+test-frontend	Install dependencies	2026-02-24T10:45:56.6667978Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+test-frontend	Install dependencies	2026-02-24T10:45:58.0024172Z npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+test-frontend	Install dependencies	2026-02-24T10:45:59.4036574Z npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+test-frontend	Install dependencies	2026-02-24T10:45:59.5919381Z npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead
+test-frontend	Install dependencies	2026-02-24T10:45:59.9841833Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+test-frontend	Install dependencies	2026-02-24T10:46:00.1011788Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+test-frontend	Install dependencies	2026-02-24T10:46:00.1017210Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+test-frontend	Install dependencies	2026-02-24T10:46:00.4800865Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+test-frontend	Install dependencies	2026-02-24T10:46:03.1074100Z npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+test-frontend	Install dependencies	2026-02-24T10:46:09.1900699Z 
+test-frontend	Install dependencies	2026-02-24T10:46:09.1901822Z added 954 packages, and audited 955 packages in 36s
+test-frontend	Install dependencies	2026-02-24T10:46:09.1906238Z 
+test-frontend	Install dependencies	2026-02-24T10:46:09.1906734Z 191 packages are looking for funding
+test-frontend	Install dependencies	2026-02-24T10:46:09.1907164Z   run `npm fund` for details
+test-frontend	Install dependencies	2026-02-24T10:46:09.3220609Z 
+test-frontend	Install dependencies	2026-02-24T10:46:09.3222836Z 29 high severity vulnerabilities
+test-frontend	Install dependencies	2026-02-24T10:46:09.3223626Z 
+test-frontend	Install dependencies	2026-02-24T10:46:09.3224323Z To address all issues possible (including breaking changes), run:
+test-frontend	Install dependencies	2026-02-24T10:46:09.3225321Z   npm audit fix --force
+test-frontend	Install dependencies	2026-02-24T10:46:09.3225694Z 
+test-frontend	Install dependencies	2026-02-24T10:46:09.3226132Z Some issues need review, and may require choosing
+test-frontend	Install dependencies	2026-02-24T10:46:09.3226943Z a different dependency.
+test-frontend	Install dependencies	2026-02-24T10:46:09.3227332Z 
+test-frontend	Install dependencies	2026-02-24T10:46:09.3227605Z Run `npm audit` for details.
+test-frontend	Run tests with coverage	﻿2026-02-24T10:46:09.4062044Z ##[group]Run cd frontend
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.4062343Z [36;1mcd frontend[0m
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.4062693Z [36;1mnpm test -- --coverage --watchAll=false || echo "No tests configured"[0m
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.4094853Z shell: /usr/bin/bash -e {0}
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.4095108Z ##[endgroup]
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.5249873Z npm error Missing script: "test"
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.5250636Z npm error
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.5251148Z npm error To see a list of scripts, run:
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.5251739Z npm error   npm run
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.5261259Z npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-02-24T10_46_09_460Z-debug-0.log
+test-frontend	Run tests with coverage	2026-02-24T10:46:09.5306584Z No tests configured
+test-frontend	Upload coverage artifact	﻿2026-02-24T10:46:09.5369035Z ##[group]Run actions/upload-artifact@v4
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5369359Z with:
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5369536Z   name: coverage-frontend
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5369763Z   path: frontend/coverage/
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5369971Z   retention-days: 1
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5370166Z   if-no-files-found: ignore
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5370378Z   compression-level: 6
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5370573Z   overwrite: false
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5370764Z   include-hidden-files: false
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.5370985Z ##[endgroup]
+test-frontend	Upload coverage artifact	2026-02-24T10:46:09.7463374Z No files were found with the provided path: frontend/coverage/. No artifacts will be uploaded.
+test-frontend	Post Set up Node.js	﻿2026-02-24T10:46:09.7616585Z Post job cleanup.
+test-frontend	Post Run actions/checkout@v4	﻿2026-02-24T10:46:09.9291779Z Post job cleanup.
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0242345Z [command]/usr/bin/git version
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0279210Z git version 2.52.0
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0322094Z Temporarily overriding HOME='/home/runner/work/_temp/f9cd150b-2a33-423c-a864-cda8ce3bfe21' before making global git config changes
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0323443Z Adding repository directory to the temporary git global config as a safe directory
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0334682Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0369352Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0401825Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0632161Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0654538Z http.https://github.com/.extraheader
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0667369Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0699628Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0920852Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test-frontend	Post Run actions/checkout@v4	2026-02-24T10:46:10.0953215Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test-frontend	Complete job	﻿2026-02-24T10:46:10.1332555Z Cleaning up orphan processes
+sonarqube	Set up job	﻿2026-02-24T10:46:36.7834805Z Current runner version: '2.331.0'
+sonarqube	Set up job	2026-02-24T10:46:36.7857906Z ##[group]Runner Image Provisioner
+sonarqube	Set up job	2026-02-24T10:46:36.7858740Z Hosted Compute Agent
+sonarqube	Set up job	2026-02-24T10:46:36.7859327Z Version: 20260123.484
+sonarqube	Set up job	2026-02-24T10:46:36.7859964Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+sonarqube	Set up job	2026-02-24T10:46:36.7860695Z Build Date: 2026-01-23T19:41:17Z
+sonarqube	Set up job	2026-02-24T10:46:36.7861357Z Worker ID: {4b46464f-6286-4189-9ffd-3bf78241b9d5}
+sonarqube	Set up job	2026-02-24T10:46:36.7862062Z Azure Region: westus
+sonarqube	Set up job	2026-02-24T10:46:36.7862556Z ##[endgroup]
+sonarqube	Set up job	2026-02-24T10:46:36.7864212Z ##[group]Operating System
+sonarqube	Set up job	2026-02-24T10:46:36.7864851Z Ubuntu
+sonarqube	Set up job	2026-02-24T10:46:36.7865444Z 24.04.3
+sonarqube	Set up job	2026-02-24T10:46:36.7865951Z LTS
+sonarqube	Set up job	2026-02-24T10:46:36.7866391Z ##[endgroup]
+sonarqube	Set up job	2026-02-24T10:46:36.7866926Z ##[group]Runner Image
+sonarqube	Set up job	2026-02-24T10:46:36.7867511Z Image: ubuntu-24.04
+sonarqube	Set up job	2026-02-24T10:46:36.7868007Z Version: 20260201.15.1
+sonarqube	Set up job	2026-02-24T10:46:36.7869002Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
+sonarqube	Set up job	2026-02-24T10:46:36.7870655Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
+sonarqube	Set up job	2026-02-24T10:46:36.7871581Z ##[endgroup]
+sonarqube	Set up job	2026-02-24T10:46:36.7872803Z ##[group]GITHUB_TOKEN Permissions
+sonarqube	Set up job	2026-02-24T10:46:36.7874669Z Contents: read
+sonarqube	Set up job	2026-02-24T10:46:36.7875463Z Issues: write
+sonarqube	Set up job	2026-02-24T10:46:36.7876123Z Metadata: read
+sonarqube	Set up job	2026-02-24T10:46:36.7876673Z PullRequests: write
+sonarqube	Set up job	2026-02-24T10:46:36.7877146Z ##[endgroup]
+sonarqube	Set up job	2026-02-24T10:46:36.7879391Z Secret source: Actions
+sonarqube	Set up job	2026-02-24T10:46:36.7880069Z Prepare workflow directory
+sonarqube	Set up job	2026-02-24T10:46:36.8189070Z Prepare all required actions
+sonarqube	Set up job	2026-02-24T10:46:36.8224980Z Getting action download info
+sonarqube	Set up job	2026-02-24T10:46:37.4361440Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+sonarqube	Set up job	2026-02-24T10:46:37.5312183Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+sonarqube	Set up job	2026-02-24T10:46:38.5870544Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+sonarqube	Set up job	2026-02-24T10:46:38.6867121Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+sonarqube	Set up job	2026-02-24T10:46:38.8398175Z Download action repository 'SonarSource/sonarqube-scan-action@v6' (SHA:fd88b7d7ccbaefd23d8f36f73b59db7a3d246602)
+sonarqube	Set up job	2026-02-24T10:46:39.8183397Z Download action repository 'actions/github-script@v7' (SHA:f28e40c7f34bde8b3046d885e986cb6290c5673b)
+sonarqube	Set up job	2026-02-24T10:46:40.7890254Z Complete job name: sonarqube
+sonarqube	Run actions/checkout@v4	﻿2026-02-24T10:46:40.8548366Z ##[group]Run actions/checkout@v4
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8548965Z with:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8549161Z   fetch-depth: 0
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8549375Z   repository: Glycopilot/Glycopilot
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8549764Z   token: ***
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8549948Z   ssh-strict: true
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8550133Z   ssh-user: git
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8550328Z   persist-credentials: true
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8550548Z   clean: true
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8550743Z   sparse-checkout-cone-mode: true
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8550990Z   fetch-tags: false
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8551188Z   show-progress: true
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8551378Z   lfs: false
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8551542Z   submodules: false
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8551731Z   set-safe-directory: true
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.8552130Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9601604Z Syncing repository: Glycopilot/Glycopilot
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9602912Z ##[group]Getting Git version info
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9603330Z Working directory is '/home/runner/work/Glycopilot/Glycopilot'
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9603869Z [command]/usr/bin/git version
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9690693Z git version 2.52.0
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9716117Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9729148Z Temporarily overriding HOME='/home/runner/work/_temp/d0e63a6b-9891-4c13-8377-d54af99fe6a1' before making global git config changes
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9730165Z Adding repository directory to the temporary git global config as a safe directory
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9741094Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9778267Z Deleting the contents of '/home/runner/work/Glycopilot/Glycopilot'
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9781552Z ##[group]Initializing the repository
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9785587Z [command]/usr/bin/git init /home/runner/work/Glycopilot/Glycopilot
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9888063Z hint: Using 'master' as the name for the initial branch. This default branch name
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9888904Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9889443Z hint: to use in all of your new repositories, which will suppress this warning,
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9889885Z hint: call:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9890061Z hint:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9890351Z hint: 	git config --global init.defaultBranch <name>
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9890666Z hint:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9890950Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9891460Z hint: 'development'. The just-created branch can be renamed via this command:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9891848Z hint:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9892029Z hint: 	git branch -m <name>
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9892248Z hint:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9892552Z hint: Disable this message with "git config set advice.defaultBranchName false"
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9893454Z Initialized empty Git repository in /home/runner/work/Glycopilot/Glycopilot/.git/
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9904358Z [command]/usr/bin/git remote add origin https://github.com/Glycopilot/Glycopilot
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9936676Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:40.9999349Z ##[group]Disabling automatic garbage collection
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0000078Z [command]/usr/bin/git config --local gc.auto 0
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0001444Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0001999Z ##[group]Setting up auth
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0002587Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0008698Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0346600Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0374845Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0588424Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0624276Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0854352Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0888579Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0889290Z ##[group]Fetching the repository
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:41.0897545Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0754000Z From https://github.com/Glycopilot/Glycopilot
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0756697Z  * [new branch]      develop                 -> origin/develop
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0757958Z  * [new branch]      develop-front-web       -> origin/develop-front-web
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0760198Z  * [new branch]      feat-back/addia         -> origin/feat-back/addia
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0761128Z  * [new branch]      feat-back/coverage-backend -> origin/feat-back/coverage-backend
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0762254Z  * [new branch]      feat-front/frontend-web-docker -> origin/feat-front/frontend-web-docker
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0763269Z  * [new branch]      feat-front/migration-ts -> origin/feat-front/migration-ts
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0764141Z  * [new branch]      feat-front/tooltip      -> origin/feat-front/tooltip
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0764885Z  * [new branch]      feat/AI-b               -> origin/feat/AI-b
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0765773Z  * [new branch]      feat/IA                 -> origin/feat/IA
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0766835Z  * [new branch]      feat/deploy-aws         -> origin/feat/deploy-aws
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0767716Z  * [new branch]      feat/glycemia-improvements -> origin/feat/glycemia-improvements
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0768601Z  * [new branch]      feat/medecin-back       -> origin/feat/medecin-back
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0771171Z  * [new branch]      feat/medecin-fix        -> origin/feat/medecin-fix
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0772025Z  * [new branch]      feat/profile            -> origin/feat/profile
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0772901Z  * [new branch]      feature/coverage-backend -> origin/feature/coverage-backend
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0773778Z  * [new branch]      feature/migration       -> origin/feature/migration
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0774560Z  * [new branch]      fix/dev-to-delete       -> origin/fix/dev-to-delete
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0775565Z  * [new branch]      fix/glycemia-missing-columns -> origin/fix/glycemia-missing-columns
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0776084Z  * [new branch]      main                    -> origin/main
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0776469Z  * [new branch]      medecine                -> origin/medecine
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0776834Z  * [new branch]      patch                   -> origin/patch
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0777224Z  * [new branch]      revert-75-feat/IA       -> origin/revert-75-feat/IA
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0827220Z [command]/usr/bin/git branch --list --remote origin/develop
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0852468Z   origin/develop
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0860839Z [command]/usr/bin/git rev-parse refs/remotes/origin/develop
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0879754Z cb25c34569d3df082c87e3760dce867421c46799
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0884018Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0884603Z ##[group]Determining the checkout info
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0885457Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0889585Z [command]/usr/bin/git sparse-checkout disable
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0928105Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0952395Z ##[group]Checking out the ref
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.0956764Z [command]/usr/bin/git checkout --progress --force -B develop refs/remotes/origin/develop
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.1260808Z Switched to a new branch 'develop'
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.1263590Z branch 'develop' set up to track 'origin/develop'.
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.1271399Z ##[endgroup]
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.1307131Z [command]/usr/bin/git log -1 --format=%H
+sonarqube	Run actions/checkout@v4	2026-02-24T10:46:42.1328843Z cb25c34569d3df082c87e3760dce867421c46799
+sonarqube	Download Backend Coverage	﻿2026-02-24T10:46:42.1518466Z ##[group]Run actions/download-artifact@v4
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.1518785Z with:
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.1518972Z   name: coverage-backend
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.1519185Z   path: backend/
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.1519388Z   merge-multiple: false
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.1519606Z   repository: Glycopilot/Glycopilot
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.1519847Z   run-id: 22347420468
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.1520042Z ##[endgroup]
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.3485516Z Downloading single artifact
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.6349879Z Preparing to download the following artifacts:
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.6351057Z - coverage-backend (ID: 5633216390, Size: 10968, Expected Digest: sha256:217003d52714f67bcef53ca60fe0b4e638279ebc9ed2cbf706e60f6b8a82f833)
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.8452603Z Redirecting to blob download url: https://productionresultssa6.blob.core.windows.net/actions-results/0f2c2bb4-36cc-45f8-b4b7-ee57178b92e0/workflow-job-run-0d4e5475-852c-5aac-8996-b54503c0ce61/artifacts/28444237ef556720e99138a70e38246c704f5608e3bde7745965c6d7c386323c.zip
+sonarqube	Download Backend Coverage	2026-02-24T10:46:42.8454130Z Starting download of artifact to: /home/runner/work/Glycopilot/Glycopilot/backend
+sonarqube	Download Backend Coverage	2026-02-24T10:46:43.1097660Z (node:2279) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+sonarqube	Download Backend Coverage	2026-02-24T10:46:43.1099198Z (Use `node --trace-deprecation ...` to show where the warning was created)
+sonarqube	Download Backend Coverage	2026-02-24T10:46:43.1168889Z SHA256 digest of downloaded artifact is 217003d52714f67bcef53ca60fe0b4e638279ebc9ed2cbf706e60f6b8a82f833
+sonarqube	Download Backend Coverage	2026-02-24T10:46:43.1169542Z Artifact download completed successfully.
+sonarqube	Download Backend Coverage	2026-02-24T10:46:43.1170039Z Total of 1 artifact(s) downloaded
+sonarqube	Download Backend Coverage	2026-02-24T10:46:43.1175112Z Download artifact has finished successfully
+sonarqube	Verify Backend Coverage	﻿2026-02-24T10:46:43.1275938Z ##[group]Run if [ -f backend/coverage.xml ]; then
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1276384Z [36;1mif [ -f backend/coverage.xml ]; then[0m
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1276709Z [36;1m  echo "Backend coverage file found"[0m
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1276995Z [36;1m  ls -lh backend/coverage.xml[0m
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1277249Z [36;1melse[0m
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1277465Z [36;1m  echo "Backend coverage file not found"[0m
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1277740Z [36;1mfi[0m
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1311293Z shell: /usr/bin/bash -e {0}
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1311559Z ##[endgroup]
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1379886Z Backend coverage file found
+sonarqube	Verify Backend Coverage	2026-02-24T10:46:43.1393022Z -rw-r--r-- 1 runner runner 180K Feb 24 10:46 backend/coverage.xml
+sonarqube	Download Frontend Coverage	﻿2026-02-24T10:46:43.1450404Z ##[group]Run actions/download-artifact@v4
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.1450703Z with:
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.1450902Z   name: coverage-frontend
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.1451129Z   path: frontend/coverage/
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.1451347Z   merge-multiple: false
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.1451572Z   repository: Glycopilot/Glycopilot
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.1451828Z   run-id: 22347420468
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.1452026Z ##[endgroup]
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.3413943Z Downloading single artifact
+sonarqube	Download Frontend Coverage	2026-02-24T10:46:43.6422612Z ##[error]Unable to download artifact(s): Artifact not found for name: coverage-frontend
+sonarqube	Download Frontend Coverage	        Please ensure that your artifact is not expired and the artifact was uploaded using a compatible version of toolkit/upload-artifact.
+sonarqube	Download Frontend Coverage	        For more information, visit the GitHub Artifacts FAQ: https://github.com/actions/toolkit/blob/main/packages/artifact/docs/faq.md
+sonarqube	Verify Frontend Coverage	﻿2026-02-24T10:46:43.6504590Z ##[group]Run if [ -f frontend/coverage/lcov.info ]; then
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6505030Z [36;1mif [ -f frontend/coverage/lcov.info ]; then[0m
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6505624Z [36;1m  echo "Frontend coverage file found"[0m
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6505955Z [36;1m  ls -lh frontend/coverage/lcov.info[0m
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6506222Z [36;1melse[0m
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6506441Z [36;1m  echo "Frontend coverage file not found"[0m
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6506703Z [36;1mfi[0m
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6537392Z shell: /usr/bin/bash -e {0}
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6537635Z ##[endgroup]
+sonarqube	Verify Frontend Coverage	2026-02-24T10:46:43.6584875Z Frontend coverage file not found
+sonarqube	Set up Node.js	﻿2026-02-24T10:46:43.6649586Z ##[group]Run actions/setup-node@v4
+sonarqube	Set up Node.js	2026-02-24T10:46:43.6649865Z with:
+sonarqube	Set up Node.js	2026-02-24T10:46:43.6650043Z   node-version: 22
+sonarqube	Set up Node.js	2026-02-24T10:46:43.6650241Z   always-auth: false
+sonarqube	Set up Node.js	2026-02-24T10:46:43.6650436Z   check-latest: false
+sonarqube	Set up Node.js	2026-02-24T10:46:43.6650743Z   token: ***
+sonarqube	Set up Node.js	2026-02-24T10:46:43.6650926Z ##[endgroup]
+sonarqube	Set up Node.js	2026-02-24T10:46:43.8388101Z Found in cache @ /opt/hostedtoolcache/node/22.22.0/x64
+sonarqube	Set up Node.js	2026-02-24T10:46:43.8394402Z ##[group]Environment details
+sonarqube	Set up Node.js	2026-02-24T10:46:44.2013770Z node: v22.22.0
+sonarqube	Set up Node.js	2026-02-24T10:46:44.2014183Z npm: 10.9.4
+sonarqube	Set up Node.js	2026-02-24T10:46:44.2014481Z yarn: 1.22.22
+sonarqube	Set up Node.js	2026-02-24T10:46:44.2015487Z ##[endgroup]
+sonarqube	Install frontend dependencies (for tsconfig resolution)	﻿2026-02-24T10:46:44.2101975Z ##[group]Run cd frontend && npm install --legacy-peer-deps
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:46:44.2102413Z [36;1mcd frontend && npm install --legacy-peer-deps[0m
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:46:44.2140561Z shell: /usr/bin/bash -e {0}
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:46:44.2140813Z ##[endgroup]
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:01.0191588Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:02.2903554Z npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:03.7385904Z npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:03.8487638Z npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:04.1434499Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:04.2721434Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:04.2725630Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:04.5946415Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:07.3256683Z npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.2819438Z 
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.2820336Z added 954 packages, and audited 955 packages in 29s
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.2820884Z 
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.2821196Z 191 packages are looking for funding
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.2821817Z   run `npm fund` for details
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4116048Z 
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4116714Z 29 high severity vulnerabilities
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4117070Z 
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4117516Z To address all issues possible (including breaking changes), run:
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4118167Z   npm audit fix --force
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4118415Z 
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4118738Z Some issues need review, and may require choosing
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4119270Z a different dependency.
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4119514Z 
+sonarqube	Install frontend dependencies (for tsconfig resolution)	2026-02-24T10:47:13.4119684Z Run `npm audit` for details.
+sonarqube	Cache SonarCloud packages	﻿2026-02-24T10:47:16.8569856Z ##[group]Run actions/cache@v4
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8570128Z with:
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8570304Z   path: ~/.sonar/cache
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8570737Z   key: Linux-sonar-79db846956ccbe3c981b7d12140a545c446fde4b9cf690b21890dcd98907725f
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8571193Z   restore-keys: Linux-sonar-
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8571438Z   enableCrossOsArchive: false
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8571670Z   fail-on-cache-miss: false
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8571891Z   lookup-only: false
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8572087Z   save-always: false
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:16.8572278Z ##[endgroup]
+sonarqube	Cache SonarCloud packages	2026-02-24T10:47:17.2512049Z Cache not found for input keys: Linux-sonar-79db846956ccbe3c981b7d12140a545c446fde4b9cf690b21890dcd98907725f, Linux-sonar-
+sonarqube	SonarCloud Scan	﻿2026-02-24T10:47:17.2609678Z ##[group]Run SonarSource/sonarqube-scan-action@v6
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2609993Z with:
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2610173Z   projectBaseDir: .
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2610383Z   scannerVersion: 7.2.0.5079
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2610782Z   scannerBinariesUrl: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2611204Z env:
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2611590Z   GITHUB_TOKEN: ***
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2611850Z   SONAR_TOKEN: ***
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2612065Z   SONAR_HOST_URL: https://sonarcloud.io
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.2612320Z ##[endgroup]
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.3301168Z Installing Sonar Scanner CLI 7.2.0.5079 for linux-x64...
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.3302783Z Downloading from: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-7.2.0.5079-linux-x64.zip
+sonarqube	SonarCloud Scan	2026-02-24T10:47:17.7321592Z [command]/usr/bin/unzip -o -q /home/runner/work/_temp/e7606287-a3cb-4ab5-a1c3-b25b9547cacc
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.0443880Z Sonar Scanner CLI cached to: /opt/hostedtoolcache/sonar-scanner-cli/7.2.0.5079/linux-x64
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.0462900Z [command]/opt/hostedtoolcache/sonar-scanner-cli/7.2.0.5079/linux-x64/bin/sonar-scanner -Dsonar.projectBaseDir=.
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.3109637Z 10:47:19.307 INFO  Scanner configuration file: /opt/hostedtoolcache/sonar-scanner-cli/7.2.0.5079/linux-x64/conf/sonar-scanner.properties
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.3115482Z 10:47:19.310 INFO  Project root configuration file: /home/runner/work/Glycopilot/Glycopilot/sonar-project.properties
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.3238250Z 10:47:19.323 INFO  SonarScanner CLI 7.2.0.5079
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.3254965Z 10:47:19.325 INFO  Linux 6.11.0-1018-azure amd64
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.9508216Z 10:47:19.950 INFO  Communicating with SonarQube Cloud
+sonarqube	SonarCloud Scan	2026-02-24T10:47:19.9524139Z 10:47:19.951 INFO  JRE provisioning: os[linux], arch[x86_64]
+sonarqube	SonarCloud Scan	2026-02-24T10:47:23.1038725Z 10:47:23.103 INFO  Starting SonarScanner Engine...
+sonarqube	SonarCloud Scan	2026-02-24T10:47:23.1052286Z 10:47:23.104 INFO  Java 21.0.9 Eclipse Adoptium (64-bit)
+sonarqube	SonarCloud Scan	2026-02-24T10:47:24.1926496Z 10:47:24.191 INFO  Load global settings
+sonarqube	SonarCloud Scan	2026-02-24T10:47:25.2776927Z 10:47:25.277 INFO  Load global settings (done) | time=1084ms
+sonarqube	SonarCloud Scan	2026-02-24T10:47:25.3374357Z 10:47:25.336 INFO  Server id: 1BD809FA-AWHW8ct9-T_TB3XqouNu
+sonarqube	SonarCloud Scan	2026-02-24T10:47:25.5612814Z 10:47:25.560 INFO  Loading required plugins
+sonarqube	SonarCloud Scan	2026-02-24T10:47:25.5613610Z 10:47:25.560 INFO  Load plugins index
+sonarqube	SonarCloud Scan	2026-02-24T10:47:25.7618191Z 10:47:25.760 INFO  Load plugins index (done) | time=200ms
+sonarqube	SonarCloud Scan	2026-02-24T10:47:25.7619018Z 10:47:25.761 INFO  Load/download plugins
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.4291425Z 10:47:26.426 INFO  Load/download plugins (done) | time=666ms
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.7019594Z 10:47:26.699 INFO  Loaded core extensions: a3s, architecture, sca
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.9529672Z 10:47:26.952 INFO  Process project properties
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.9683594Z 10:47:26.967 INFO  Project key: glycopilot_glycopilot
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.9711255Z 10:47:26.970 INFO  Base dir: /home/runner/work/Glycopilot/Glycopilot
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.9712692Z 10:47:26.970 INFO  Working dir: /home/runner/work/Glycopilot/Glycopilot/.scannerwork
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.9843284Z 10:47:26.984 INFO  Found an active CI vendor: 'Github Actions'
+sonarqube	SonarCloud Scan	2026-02-24T10:47:26.9880068Z 10:47:26.987 INFO  Load project branches
+sonarqube	SonarCloud Scan	2026-02-24T10:47:27.7227490Z 10:47:27.722 INFO  Load project branches (done) | time=735ms
+sonarqube	SonarCloud Scan	2026-02-24T10:47:27.7278754Z 10:47:27.727 INFO  Load project settings for component key: 'glycopilot_glycopilot'
+sonarqube	SonarCloud Scan	2026-02-24T10:47:28.7996181Z 10:47:28.798 INFO  Check ALM binding of project 'glycopilot_glycopilot'
+sonarqube	SonarCloud Scan	2026-02-24T10:47:29.4816646Z 10:47:29.481 INFO  Detected project binding: NONEXISTENT
+sonarqube	SonarCloud Scan	2026-02-24T10:47:29.4819960Z 10:47:29.481 INFO  Check ALM binding of project 'glycopilot_glycopilot' (done) | time=682ms
+sonarqube	SonarCloud Scan	2026-02-24T10:47:29.4847103Z 10:47:29.484 INFO  Load project pull requests
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.0482138Z 10:47:30.047 INFO  Load project pull requests (done) | time=563ms
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.0537567Z 10:47:30.053 INFO  Load branch configuration
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.0542732Z 10:47:30.054 INFO  Github event: push
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.0585824Z 10:47:30.058 INFO  Auto-configuring branch develop
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.1152445Z 10:47:30.113 ERROR Could not find a default branch for project with key 'glycopilot_glycopilot'. Make sure project exists.
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.4412714Z 10:47:30.440 INFO  EXECUTION FAILURE
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.4422509Z 10:47:30.442 INFO  Total time: 11.136s
+sonarqube	SonarCloud Scan	2026-02-24T10:47:30.7663115Z ##[error]Action failed: The process '/opt/hostedtoolcache/sonar-scanner-cli/7.2.0.5079/linux-x64/bin/sonar-scanner' failed with exit code 3
+sonarqube	Post Run actions/checkout@v4	﻿2026-02-24T10:47:30.7816566Z Post job cleanup.
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.8731216Z [command]/usr/bin/git version
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.8766972Z git version 2.52.0
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.8808111Z Temporarily overriding HOME='/home/runner/work/_temp/5eb2006a-980f-4a73-9673-1934db3d2446' before making global git config changes
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.8809309Z Adding repository directory to the temporary git global config as a safe directory
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.8819735Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Glycopilot/Glycopilot
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.8852153Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.8883437Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.9106799Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.9126772Z http.https://github.com/.extraheader
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.9138949Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.9168501Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.9380907Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+sonarqube	Post Run actions/checkout@v4	2026-02-24T10:47:30.9410398Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+sonarqube	Complete job	﻿2026-02-24T10:47:30.9729072Z Cleaning up orphan processes
+notify	Set up job	﻿2026-02-24T10:47:36.3893429Z Current runner version: '2.331.0'
+notify	Set up job	2026-02-24T10:47:36.3919394Z ##[group]Runner Image Provisioner
+notify	Set up job	2026-02-24T10:47:36.3920236Z Hosted Compute Agent
+notify	Set up job	2026-02-24T10:47:36.3920797Z Version: 20260123.484
+notify	Set up job	2026-02-24T10:47:36.3921347Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+notify	Set up job	2026-02-24T10:47:36.3922142Z Build Date: 2026-01-23T19:41:17Z
+notify	Set up job	2026-02-24T10:47:36.3922832Z Worker ID: {8510ed44-aea5-4607-a0fc-46981d38b74c}
+notify	Set up job	2026-02-24T10:47:36.3923503Z Azure Region: northcentralus
+notify	Set up job	2026-02-24T10:47:36.3924210Z ##[endgroup]
+notify	Set up job	2026-02-24T10:47:36.3925766Z ##[group]Operating System
+notify	Set up job	2026-02-24T10:47:36.3926662Z Ubuntu
+notify	Set up job	2026-02-24T10:47:36.3927273Z 24.04.3
+notify	Set up job	2026-02-24T10:47:36.3927742Z LTS
+notify	Set up job	2026-02-24T10:47:36.3928201Z ##[endgroup]
+notify	Set up job	2026-02-24T10:47:36.3928856Z ##[group]Runner Image
+notify	Set up job	2026-02-24T10:47:36.3929418Z Image: ubuntu-24.04
+notify	Set up job	2026-02-24T10:47:36.3929907Z Version: 20260201.15.1
+notify	Set up job	2026-02-24T10:47:36.3930976Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
+notify	Set up job	2026-02-24T10:47:36.3932600Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
+notify	Set up job	2026-02-24T10:47:36.3933594Z ##[endgroup]
+notify	Set up job	2026-02-24T10:47:36.3934667Z ##[group]GITHUB_TOKEN Permissions
+notify	Set up job	2026-02-24T10:47:36.3937099Z Contents: read
+notify	Set up job	2026-02-24T10:47:36.3937692Z Metadata: read
+notify	Set up job	2026-02-24T10:47:36.3938163Z Packages: read
+notify	Set up job	2026-02-24T10:47:36.3938756Z ##[endgroup]
+notify	Set up job	2026-02-24T10:47:36.3941103Z Secret source: Actions
+notify	Set up job	2026-02-24T10:47:36.3942104Z Prepare workflow directory
+notify	Set up job	2026-02-24T10:47:36.4272111Z Prepare all required actions
+notify	Set up job	2026-02-24T10:47:36.4408578Z Complete job name: notify
+notify	Pipeline Summary	﻿2026-02-24T10:47:36.5451875Z ##[group]Run echo "======================================"
+notify	Pipeline Summary	2026-02-24T10:47:36.5452968Z [36;1mecho "======================================"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5453625Z [36;1mecho "PIPELINE SUMMARY"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5454272Z [36;1mecho "======================================"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5455145Z [36;1mecho "Branch: develop"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5455936Z [36;1mecho "Commit: cb25c34569d3df082c87e3760dce867421c46799"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5456857Z [36;1mecho "Triggered by: fahadiali"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5457535Z [36;1mecho ""[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5458068Z [36;1mecho "======================================"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5458667Z [36;1mecho "Job Status:"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5459355Z [36;1mecho "======================================"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5460019Z [36;1mecho "Secret Scan: success"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5460619Z [36;1mecho "Backend Tests: success"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5461344Z [36;1mecho "Frontend Tests: success"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5462021Z [36;1mecho "SonarQube: success"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5462688Z [36;1mecho "Deploy: skipped"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5463286Z [36;1mecho "======================================"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5463944Z [36;1mecho ""[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5464446Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5465225Z [36;1m# Résumé des résultats (informatif uniquement, ne fait pas échouer la pipeline)[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5466224Z [36;1mCRITICAL_FAILED=false[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5466863Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5467386Z [36;1m# Vérifier les jobs critiques[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5467989Z [36;1mif [ "success" != "success" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5468748Z [36;1m  echo "CRITICAL: Secret scan failed"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5469356Z [36;1m  CRITICAL_FAILED=true[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5469900Z [36;1mfi[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5470384Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5470899Z [36;1mif [ "success" != "success" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5471565Z [36;1m  echo "CRITICAL: Backend tests failed"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5472285Z [36;1m  CRITICAL_FAILED=true[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5472856Z [36;1mfi[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5473267Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5473831Z [36;1mif [ "success" != "success" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5474457Z [36;1m  echo "CRITICAL: Frontend tests failed"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5475157Z [36;1m  CRITICAL_FAILED=true[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5476004Z [36;1mfi[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5476702Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5477233Z [36;1m# Informations sur les jobs non-critiques[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5477975Z [36;1mif [ "success" != "success" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5478887Z [36;1m  echo "INFO: SonarQube analysis completed with issues (temporarily allowed)"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5479668Z [36;1mfi[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5480203Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5480661Z [36;1mif [ "skipped" == "failure" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5481310Z [36;1m  echo "WARNING: Deployment failed"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5482051Z [36;1melif [ "skipped" == "skipped" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5483063Z [36;1m  echo "INFO: Deployment skipped (not on main branch)"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5483808Z [36;1melif [ "skipped" == "success" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5484512Z [36;1m  echo "SUCCESS: Deployment completed"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5485153Z [36;1mfi[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5485563Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5486389Z [36;1mecho ""[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5486975Z [36;1mecho "======================================"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5487563Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5488132Z [36;1m# Résumé final[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5488671Z [36;1mif [ "$CRITICAL_FAILED" = true ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5489473Z [36;1m  echo "FINAL STATUS: FAILED - Critical quality checks did not pass"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5490474Z [36;1m  echo "The pipeline is marked as failed by the failed jobs themselves"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5491303Z [36;1melse[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5491926Z [36;1m  echo "FINAL STATUS: SUCCESS - All critical quality checks passed"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5492993Z [36;1m  if [ "skipped" == "success" ]; then[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5493685Z [36;1m    echo "Application deployed successfully"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5494279Z [36;1m  fi[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5494816Z [36;1mfi[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5495270Z [36;1m[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5495802Z [36;1mecho "======================================"[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5496683Z [36;1mecho ""[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5497358Z [36;1mecho "Note: This notification job does not affect the pipeline status."[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5498401Z [36;1mecho "The actual pipeline status is determined by the individual jobs."[0m
+notify	Pipeline Summary	2026-02-24T10:47:36.5836376Z shell: /usr/bin/bash -e {0}
+notify	Pipeline Summary	2026-02-24T10:47:36.5837682Z ##[endgroup]
+notify	Pipeline Summary	2026-02-24T10:47:36.6037496Z ======================================
+notify	Pipeline Summary	2026-02-24T10:47:36.6038675Z PIPELINE SUMMARY
+notify	Pipeline Summary	2026-02-24T10:47:36.6039530Z ======================================
+notify	Pipeline Summary	2026-02-24T10:47:36.6040828Z Branch: develop
+notify	Pipeline Summary	2026-02-24T10:47:36.6041889Z Commit: cb25c34569d3df082c87e3760dce867421c46799
+notify	Pipeline Summary	2026-02-24T10:47:36.6043106Z Triggered by: fahadiali
+notify	Pipeline Summary	2026-02-24T10:47:36.6043638Z 
+notify	Pipeline Summary	2026-02-24T10:47:36.6044229Z ======================================
+notify	Pipeline Summary	2026-02-24T10:47:36.6045425Z Job Status:
+notify	Pipeline Summary	2026-02-24T10:47:36.6046531Z ======================================
+notify	Pipeline Summary	2026-02-24T10:47:36.6047828Z Secret Scan: success
+notify	Pipeline Summary	2026-02-24T10:47:36.6048775Z Backend Tests: success
+notify	Pipeline Summary	2026-02-24T10:47:36.6049722Z Frontend Tests: success
+notify	Pipeline Summary	2026-02-24T10:47:36.6050951Z SonarQube: success
+notify	Pipeline Summary	2026-02-24T10:47:36.6051869Z Deploy: skipped
+notify	Pipeline Summary	2026-02-24T10:47:36.6052744Z ======================================
+notify	Pipeline Summary	2026-02-24T10:47:36.6053576Z 
+notify	Pipeline Summary	2026-02-24T10:47:36.6054066Z INFO: Deployment skipped (not on main branch)
+notify	Pipeline Summary	2026-02-24T10:47:36.6054880Z 
+notify	Pipeline Summary	2026-02-24T10:47:36.6055271Z ======================================
+notify	Pipeline Summary	2026-02-24T10:47:36.6057366Z FINAL STATUS: SUCCESS - All critical quality checks passed
+notify	Pipeline Summary	2026-02-24T10:47:36.6058691Z ======================================
+notify	Pipeline Summary	2026-02-24T10:47:36.6059414Z 
+notify	Pipeline Summary	2026-02-24T10:47:36.6060016Z Note: This notification job does not affect the pipeline status.
+notify	Pipeline Summary	2026-02-24T10:47:36.6061780Z The actual pipeline status is determined by the individual jobs.
+notify	Complete job	﻿2026-02-24T10:47:36.6249728Z Cleaning up orphan processes
