@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
-    "test": "jest --coverage"
+    "test": "jest --coverage --passWithNoTests"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
