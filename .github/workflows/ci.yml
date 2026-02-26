@@ -135,10 +135,6 @@ jobs:
 
     - name: SonarCloud Scan
       uses: SonarSource/sonarqube-scan-action@v6
-      with:
-        args: >
-          -Dsonar.organization=glycopilot-1
-          -Dsonar.projectKey=Glycopilot_Glycopilot
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FAHAD }}
