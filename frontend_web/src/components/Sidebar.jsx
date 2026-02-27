@@ -1,6 +1,6 @@
 import { LayoutDashboard, Users, User, LogOut } from 'lucide-react';
 import authService from '../services/authService';
-import './sidebar.css';
+import './css/sidebar.css';
 
 function getInitials(firstName, lastName) {
   return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
@@ -27,7 +27,7 @@ export default function Sidebar({ activePage, navigation }) {
   return (
     <aside className="sidebar">
       <div className="sb-logo">
-        <img src="/glycopilot.png" alt="GlycoPilot" />
+        <img src="../assets/glycopilot.png" alt="GlycoPilot" />
       </div>
 
       <nav className="sb-nav">
@@ -48,7 +48,7 @@ export default function Sidebar({ activePage, navigation }) {
           <div className="sb-avatar">{getInitials(firstName, lastName)}</div>
           <div className="sb-doc-text">
             <span className="sb-doc-name">
-              <span className="sb-doc-prefix">Dr.</span> {lastName}
+              Dr. {lastName}
             </span>
           </div>
         </div>
