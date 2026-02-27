@@ -54,7 +54,6 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // Si un refresh est en cours, attendre son résultat
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -74,7 +73,6 @@ apiClient.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        // Créer une requête sans les intercepteurs pour éviter les boucles
         const response = await axios.post(`${API_URL}/auth/refresh`, {
           refresh: refreshToken,
         });
@@ -87,20 +85,13 @@ apiClient.interceptors.response.use(
         isRefreshing = false;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Token invalide, nettoyer le stockage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        console.error(
-          'Erreur lors du rafraîchissement du token:',
-          refreshError
-        );
+        console.error('Erreur lors du rafraîchissement du token:', refreshError);
         processQueue(refreshError, null);
         isRefreshing = false;
-        
-        // Rediriger vers la page de connexion
         window.location.href = '/login';
-        
         return Promise.reject(refreshError);
       }
     }
@@ -113,9 +104,6 @@ apiClient.interceptors.response.use(
 const authService = {
   /**
    * Connexion utilisateur
-   * @param {string} email - Email de l'utilisateur
-   * @param {string} password - Mot de passe de l'utilisateur
-   * @returns {Promise} Réponse contenant les tokens et les infos utilisateur
    */
   async login(email, password) {
     try {
@@ -126,7 +114,6 @@ const authService = {
 
       const { access, refresh, user } = response.data;
 
-      // Stocker les tokens
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
       localStorage.setItem('user', JSON.stringify(user));
@@ -140,39 +127,42 @@ const authService = {
 
   /**
    * Inscription utilisateur
-   * @param {object} userData - Données utilisateur
-   * @returns {Promise} Réponse contenant les tokens et les infos utilisateur
+   * Supporte les rôles DOCTOR et PATIENT (en majuscules).
+   * Pour le rôle DOCTOR, les champs licenseNumber, specialty et medicalCenterAddress sont requis.
    */
   async register(userData) {
     try {
-      const response = await apiClient.post('/auth/register', {
+      // Payload de base
+      const payload = {
         email: userData.email,
         first_name: userData.firstName,
         last_name: userData.lastName,
         password: userData.password,
         password_confirm: userData.passwordConfirm,
-        role: userData.role || 'doctor', // Rôle par défaut: doctor
-      });
+        role: userData.role || 'DOCTOR',
+      };
+
+      // Champs supplémentaires pour les médecins
+      if (payload.role === 'DOCTOR') {
+        payload.license_number = userData.licenseNumber;
+        payload.specialty = userData.specialty;
+        payload.medical_center_address = userData.medicalCenterAddress;
+      }
+
+      const response = await apiClient.post('/auth/register', payload);
 
       const { access, refresh, user } = response.data;
 
-      // Stocker les tokens
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
       localStorage.setItem('user', JSON.stringify(user));
 
       return response.data;
     } catch (error) {
-      // Log full backend validation payload to help debugging
-      console.error(
-        'authService.register error response:',
-        error.response?.data
-      );
+      console.error('authService.register error response:', error.response?.data);
 
-      // Prefer explicit backend error message(s) when present
       let message = "Erreur lors de l'inscription";
       if (error.response?.data) {
-        // If backend returns an object with field errors, stringify it for visibility
         if (typeof error.response.data === 'string') {
           message = error.response.data;
         } else if (error.response.data.error) {
@@ -181,7 +171,6 @@ const authService = {
           try {
             message = JSON.stringify(error.response.data);
           } catch (_e) {
-            // fallback
             message = "Erreur lors de l'inscription (voir logs)";
           }
         }
@@ -193,7 +182,6 @@ const authService = {
 
   /**
    * Déconnexion utilisateur
-   * @returns {Promise} Confirmation de déconnexion
    */
   async logout() {
     try {
@@ -205,14 +193,12 @@ const authService = {
         });
       }
 
-      // Nettoyer le stockage
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
 
       return { message: 'Déconnexion réussie' };
     } catch (error) {
-      // Nettoyer le stockage même en cas d'erreur
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
@@ -224,7 +210,6 @@ const authService = {
 
   /**
    * Récupérer les infos utilisateur actuel
-   * @returns {Promise} Données utilisateur
    */
   async getCurrentUser() {
     try {
@@ -240,7 +225,6 @@ const authService = {
 
   /**
    * Rafraîchir le token d'accès
-   * @returns {Promise} Nouveau token d'accès
    */
   async refreshToken() {
     try {
@@ -272,29 +256,21 @@ const authService = {
 
   /**
    * Récupérer les tokens stockés
-   * @returns {object} Objet contenant access_token et refresh_token
    */
   getTokens() {
     try {
-      const accessToken = localStorage.getItem('access_token');
-      const refreshToken = localStorage.getItem('refresh_token');
-
       return {
-        accessToken,
-        refreshToken,
+        accessToken: localStorage.getItem('access_token'),
+        refreshToken: localStorage.getItem('refresh_token'),
       };
     } catch (error) {
       console.error('Erreur lors de la récupération des tokens:', error);
-      return {
-        accessToken: null,
-        refreshToken: null,
-      };
+      return { accessToken: null, refreshToken: null };
     }
   },
 
   /**
    * Récupérer l'utilisateur stocké localement
-   * @returns {object|null} Données utilisateur
    */
   getStoredUser() {
     try {
@@ -308,24 +284,18 @@ const authService = {
 
   /**
    * Vérifier si l'utilisateur est connecté
-   * @returns {boolean} Booléen indiquant si l'utilisateur est connecté
    */
   isAuthenticated() {
     try {
-      const token = localStorage.getItem('access_token');
-      return !!token;
+      return !!localStorage.getItem('access_token');
     } catch (error) {
-      console.error(
-        "Erreur lors de la vérification de l'authentification:",
-        error
-      );
+      console.error("Erreur lors de la vérification de l'authentification:", error);
       return false;
     }
   },
 
   /**
    * Obtenir l'instance axios configurée
-   * @returns {object} Instance axios
    */
   getApiClient() {
     return apiClient;
