@@ -1,25 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
 
 :root {
-  --blue:        #4A90E2;
-  --blue-dark:   #3A7BD5;
-  --blue-pale:   #EEF5FD;
-  --dark:        #1A2B45;
-  --mid:         #334155;
-  --muted:       #94A3B8;
-  --border:      #E2E8F0;
-  --surface:     #FFFFFF;
-  --bg:          #F8FAFC;
-  --radius:      12px;
+  --blue:      #4A90E2;
+  --blue-dark: #3A7BD5;
+  --blue-pale: #EEF5FD;
+  --dark:      #1A2B45;
+  --mid:       #334155;
+  --muted:     #94A3B8;
+  --border:    #E2E8F0;
+  --surface:   #FFFFFF;
+  --bg:        #F8FAFC;
+  --radius:    12px;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; }
+/* Reset ciblé — ne pas écraser le reste de l'app */
+.auth-root *, .auth-root *::before, .auth-root *::after {
+  box-sizing: border-box;
+}
 
 /* ── Layout ────────────────────────────────── */
 .auth-root {
   display: flex;
   min-height: 100vh;
+  text-align: left; /* annule le text-align:center du App.css */
+  font-family: 'DM Sans', sans-serif;
 }
 
 /* ── Aside ─────────────────────────────────── */
@@ -76,9 +80,10 @@ body { font-family: 'DM Sans', sans-serif; }
   max-width: 290px;
 }
 
-/* Steps (inscription) */
 .aside-steps {
   list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -108,7 +113,6 @@ body { font-family: 'DM Sans', sans-serif; }
   flex-shrink: 0;
 }
 
-/* Dots (connexion) */
 .step-dot {
   width: 8px;
   height: 8px;
@@ -117,7 +121,6 @@ body { font-family: 'DM Sans', sans-serif; }
   flex-shrink: 0;
 }
 
-/* Aside bottom */
 .aside-bottom {
   display: flex;
   align-items: center;
@@ -141,8 +144,12 @@ body { font-family: 'DM Sans', sans-serif; }
 }
 .aside-link:hover { opacity: .75; }
 
-/* Cercles déco */
-.aside-circles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.aside-circles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
 .circle {
   position: absolute;
   border-radius: 50%;
@@ -168,7 +175,6 @@ body { font-family: 'DM Sans', sans-serif; }
   max-width: 560px;
 }
 
-/* Centrage vertical pour login (formulaire court) */
 .auth-form-centered {
   display: flex;
   flex-direction: column;
@@ -191,9 +197,10 @@ body { font-family: 'DM Sans', sans-serif; }
 .form-header p {
   font-size: 14px;
   color: var(--muted);
+  margin: 0;
 }
 
-/* ── Form sections ─────────────────────────── */
+/* ── Sections ──────────────────────────────── */
 .form-section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -230,14 +237,13 @@ body { font-family: 'DM Sans', sans-serif; }
   flex-shrink: 0;
 }
 
-/* ── 2-col grid ────────────────────────────── */
 .row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-/* ── Input fields ──────────────────────────── */
+/* ── Inputs ────────────────────────────────── */
 .input-field { margin-bottom: 16px; }
 .input-field:last-child { margin-bottom: 0; }
 
@@ -300,7 +306,6 @@ body { font-family: 'DM Sans', sans-serif; }
 }
 .password-toggle:hover { color: var(--blue); }
 
-/* ── Misc form elements ────────────────────── */
 .password-hint {
   font-size: 12px;
   color: var(--muted);
@@ -349,7 +354,7 @@ body { font-family: 'DM Sans', sans-serif; }
   margin-bottom: 16px;
 }
 
-/* ── Submit button ─────────────────────────── */
+/* ── Submit ────────────────────────────────── */
 .submit-btn {
   width: 100%;
   padding: 14px 24px;
@@ -386,6 +391,7 @@ body { font-family: 'DM Sans', sans-serif; }
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin .7s linear infinite;
+  display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 

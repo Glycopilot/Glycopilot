@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #4A90E2;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sb-logo img {
+  height: 36px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: .92;
+  margin-bottom: 40px;
+}
+
+.sb-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  color: rgba(255,255,255,.7);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+  text-align: left;
+}
+.sb-item:hover {
+  background: rgba(255,255,255,.15);
+  color: #fff;
+}
+.sb-active {
+  background: rgba(255,255,255,.22);
+  color: #fff;
+  font-weight: 600;
+}
+
+.sb-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.2);
+}
+
+.sb-doctor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.25);
+  color: #fff;
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sb-doc-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sb-doc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-doc-role { font-size: 11px; color: rgba(255,255,255,.6); }
+
+.sb-logout {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color .2s, background .2s;
+}
+.sb-logout:hover { color: #fff; background: rgba(255,255,255,.15); }
+
+@media (max-width: 860px) {
+  .sidebar { display: none; }
+}
+
+.sb-doc-prefix {
+  color: var(--blue, #fff);
+  font-weight: 700;
+}
