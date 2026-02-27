@@ -139,3 +139,44 @@ jest.mock('lucide-react-native', () => {
         }
     });
 });
+
+// Basic navigation mocks so screens/components can render without a real navigator
+jest.mock('@react-navigation/native', () => {
+    const actualNav = jest.requireActual('@react-navigation/native');
+    return {
+        ...actualNav,
+        useNavigation: () => ({
+            navigate: jest.fn(),
+            reset: jest.fn(),
+            goBack: jest.fn(),
+        }),
+        useRoute: () => ({
+            params: {},
+        }),
+        NavigationContainer: ({ children }) => children,
+    };
+});
+
+jest.mock('@react-navigation/native-stack', () => {
+    return {
+        createNativeStackNavigator: () => {
+            return {
+                Navigator: ({ children }) => children,
+                Screen: ({ children }) => children,
+            };
+        },
+    };
+});
+
+// Default mock for expo-location (tests can override with jest.mock in files if needed)
+jest.mock('expo-location', () => ({
+    requestForegroundPermissionsAsync: jest
+        .fn()
+        .mockResolvedValue({ status: 'granted' }),
+    getCurrentPositionAsync: jest.fn().mockResolvedValue({
+        coords: { latitude: 0, longitude: 0 },
+    }),
+    watchPositionAsync: jest.fn().mockResolvedValue({
+        remove: jest.fn(),
+    }),
+}));
