@@ -19,24 +19,29 @@ describe('SignIn Screen', () => {
     });
 
     it('renders correctly', () => {
-        const { getByPlaceholderText, getByText } = render(<SignIn navigation={mockNavigation as any} />);
+        const { getByPlaceholderText, getByText } = render(
+            <SignIn navigation={mockNavigation as any} />,
+        );
 
-        expect(getByPlaceholderText(/Prénom/i)).toBeTruthy();
-        expect(getByPlaceholderText(/Nom/i)).toBeTruthy();
-        expect(getByPlaceholderText(/Email/i)).toBeTruthy();
+        expect(getByPlaceholderText('Prénom')).toBeTruthy();
         expect(getByText(/S'inscrire/i)).toBeTruthy();
     });
 
     it('calls register function on submit', async () => {
-        const { getByPlaceholderText, getByText, getByLabelText } = render(<SignIn navigation={mockNavigation as any} />);
+        const { getByPlaceholderText, getAllByPlaceholderText, getByText } = render(
+            <SignIn navigation={mockNavigation as any} />,
+        );
 
-        // Find by placeholder
         fireEvent.changeText(getByPlaceholderText('Prénom'), 'John');
         fireEvent.changeText(getByPlaceholderText('Nom'), 'Doe');
-        fireEvent.changeText(getByPlaceholderText('user@example.com')[0], 'john@example.com'); // First is email
-        fireEvent.changeText(getByPlaceholderText('user@example.com')[1], 'john@example.com'); // Second is confirm email
-        fireEvent.changeText(getByPlaceholderText('••••••••')[0], 'Password123'); // First is password
-        fireEvent.changeText(getByPlaceholderText('••••••••')[1], 'Password123'); // Second is confirm password
+
+        const emailInputs = getAllByPlaceholderText('user@example.com');
+        fireEvent.changeText(emailInputs[0], 'john@example.com'); // email
+        fireEvent.changeText(emailInputs[1], 'john@example.com'); // confirm email
+
+        const passwordInputs = getAllByPlaceholderText('••••••••');
+        fireEvent.changeText(passwordInputs[0], 'Password123'); // password
+        fireEvent.changeText(passwordInputs[1], 'Password123'); // confirm password
 
         fireEvent.press(getByText(/S'inscrire/i));
 
