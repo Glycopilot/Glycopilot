@@ -11,10 +11,6 @@ import './css/profile.css';
 
 const apiClient = authService.getApiClient();
 
-/**
- * Extrait les données "à plat" depuis la réponse de /api/auth/me/
- * afin de simplifier leur utilisation dans le composant.
- */
 function flattenAuthMe(data) {
   const identity = data?.identity ?? {};
   const profile  = identity?.profiles?.[0] ?? {};
@@ -70,7 +66,6 @@ export default function ProfileScreen({ navigation }) {
   const [resetSent, setResetSent] = useState(false);
   const [loading,   setLoading]   = useState(true);
 
-  /* ── Chargement initial ─────────────────────────────────────────── */
   useEffect(() => {
     setLoading(true);
     apiClient
@@ -81,7 +76,6 @@ export default function ProfileScreen({ navigation }) {
         setForm(flat);
       })
       .catch(() => {
-        // Fallback sur le stockage local (ancien format)
         const stored = authService.getStoredUser();
         const flat = stored ? flattenAuthMe(stored) : {};
         setDoctor(flat);
@@ -104,28 +98,10 @@ export default function ProfileScreen({ navigation }) {
         phone_number: form.phone_number || '',
       };
       await apiClient.patch('/users/me/', userPayload);
-
-      // 2. Mettre à jour les infos médecin (spécialité, centre)
-      // Si votre API expose une route dédiée pour le profil médecin, adaptez ici.
-      // En l'absence d'une telle route séparée dans la spec fournie,
-      // on suppose que /users/me/ accepte aussi ces champs (ou on les ignore).
-      // Si une route /doctors/me/ existe, décommentez :
-      /*
-      const doctorPayload = {
-        specialty:              form.specialty,
-        medical_center_name:    form.medical_center_name || '',
-        medical_center_address: form.medical_center_address || '',
-      };
-      await apiClient.patch('/doctors/me/', doctorPayload);
-      */
-
-      // 3. Re-fetch les données fraîches depuis /auth/me/
       const res = await apiClient.get('/auth/me/');
       const updated = flattenAuthMe(res.data);
       setDoctor(updated);
       setForm(updated);
-
-      // Mettre à jour le stockage local
       localStorage.setItem('user', JSON.stringify(res.data));
 
       toastSuccess('Profil mis à jour', 'Vos informations ont été sauvegardées');

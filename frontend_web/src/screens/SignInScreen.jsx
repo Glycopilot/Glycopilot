@@ -34,7 +34,7 @@ export default function SignInScreen({ navigation }) {
   const [licenseNumber, setLicenseNumber]               = useState('');
   const [specialty, setSpecialty]                       = useState('');
   const [medicalCenterAddress, setMedicalCenterAddress] = useState('');
-  const [registeredEmail, setRegisteredEmail]           = useState(null); // null = formulaire, string = succès
+  const [registeredEmail, setRegisteredEmail]           = useState(null);
 
   const goToLogin = () => navigation.navigate('/login');
 

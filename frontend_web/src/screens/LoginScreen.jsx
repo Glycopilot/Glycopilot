@@ -31,7 +31,7 @@ export default function LoginScreen({ navigation }) {
   const [resetEmail, setResetEmail]     = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
-  const [pendingEmail, setPendingEmail] = useState(null); // null = formulaire, string = compte en attente
+  const [pendingEmail, setPendingEmail] = useState(null);
   const { login, loading, error } = useAuth();
 
   const goToSignin = () => navigation.navigate('/signin');
