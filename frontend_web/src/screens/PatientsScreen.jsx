@@ -3,7 +3,7 @@ import {
   Users, Clock, Search, ChevronRight, UserCheck,
   Mail, Phone, Stethoscope, AlertCircle, Plus, X,
   Activity, Utensils, Pill, Droplets, Heart, Footprints,
-  Flame, AlertTriangle, CheckCircle
+  Flame, AlertTriangle, CheckCircle, Send, UserPlus
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
@@ -116,17 +116,147 @@ function ProgressBar({ value, max, color }) {
   );
 }
 
+/* ─── Helpers graphique SVG glycémie ─────────────────────────── */
+function GlycemiaSparkline({ data }) {
+  if (!data || data.length === 0) return null;
+  const W = 560, H = 120, PAD = 12;
+  const values = data.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const xStep = (W - PAD * 2) / (values.length - 1);
+  const toX = i => PAD + i * xStep;
+  const toY = v => H - PAD - ((v - min) / range) * (H - PAD * 2);
+  const points = values.map((v, i) => `${toX(i)},${toY(v)}`).join(' ');
+  const areaPoints = `${toX(0)},${H} ` + values.map((v, i) => `${toX(i)},${toY(v)}`).join(' ') + ` ${toX(values.length - 1)},${H}`;
+  // zone cible 0.7–1.4 g/L
+  const targetTop    = toY(1.4);
+  const targetBottom = toY(0.7);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: 120 }}>
+      <defs>
+        <linearGradient id="glyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4A90E2" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#4A90E2" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* Zone cible */}
+      <rect x={PAD} y={Math.min(targetTop, targetBottom)} width={W - PAD * 2}
+        height={Math.abs(targetBottom - targetTop)}
+        fill="#16A34A" opacity="0.08" rx="4" />
+      {/* Aire */}
+      <polygon points={areaPoints} fill="url(#glyGrad)" />
+      {/* Ligne */}
+      <polyline points={points} fill="none" stroke="#4A90E2" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {/* Points */}
+      {values.map((v, i) => {
+        const isHigh = v > 1.8, isLow = v < 0.7;
+        const color = isHigh ? '#DC2626' : isLow ? '#F97316' : '#4A90E2';
+        return <circle key={i} cx={toX(i)} cy={toY(v)} r="3.5" fill={color} stroke="#fff" strokeWidth="1.5" />;
+      })}
+    </svg>
+  );
+}
+
+/* ─── Jauge circulaire ───────────────────────────────────────── */
+function RadialGauge({ value, max, color, size = 72 }) {
+  const pct = max > 0 ? Math.min(1, value / max) : 0;
+  const r = (size - 10) / 2;
+  const circ = 2 * Math.PI * r;
+  const dash = pct * circ;
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E2E8F0" strokeWidth="7" />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color}
+        strokeWidth="7" strokeLinecap="round"
+        strokeDasharray={`${dash} ${circ - dash}`}
+        style={{ transition: 'stroke-dasharray .6s ease' }} />
+    </svg>
+  );
+}
+
+/* ─── Carte métrique avec jauge ──────────────────────────────── */
+function MetricCard({ icon, label, value, unit, goal, goalLabel, color, colorBg }) {
+  const pct = goal > 0 ? Math.min(100, Math.round((value / goal) * 100)) : null;
+  return (
+    <div className="mcard">
+      <div className="mcard-top">
+        <div className="mcard-icon" style={{ background: colorBg, color }}>{icon}</div>
+        <span className="mcard-label">{label}</span>
+      </div>
+      <div className="mcard-body">
+        <div className="mcard-value" style={{ color }}>
+          {value ?? '—'}
+          {unit && <span className="mcard-unit">{unit}</span>}
+        </div>
+        {goal != null && (
+          <>
+            <div className="mcard-progress-track">
+              <div className="mcard-progress-fill" style={{ width: `${pct}%`, background: color }} />
+            </div>
+            <div className="mcard-goal">{pct}% · Objectif : {goal}{unit ? ' ' + unit : ''}</div>
+          </>
+        )}
+        {goalLabel && !goal && <div className="mcard-goal">{goalLabel}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Carte alerte ───────────────────────────────────────────── */
+function AlertCard({ alert, index }) {
+  const colors = [
+    { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626', bar: '#DC2626' },
+    { bg: '#FFF7ED', border: '#FED7AA', text: '#EA580C', bar: '#F97316' },
+    { bg: '#FFFBEB', border: '#FDE68A', text: '#D97706', bar: '#F59E0B' },
+  ];
+  const c = colors[index % colors.length];
+  return (
+    <div className="alert-card" style={{ background: c.bg, borderColor: c.border }}>
+      <div className="alert-card-bar" style={{ background: c.bar }} />
+      <div className="alert-card-body">
+        <div className="alert-card-title" style={{ color: c.text }}>
+          <AlertTriangle size={13} /> {typeof alert === 'string' ? alert : alert.message || JSON.stringify(alert)}
+        </div>
+        {alert.time && <div className="alert-card-time">{alert.time}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Score santé ────────────────────────────────────────────── */
+function HealthScore({ score }) {
+  const color = score >= 75 ? '#16A34A' : score >= 50 ? '#F97316' : '#DC2626';
+  const label = score >= 75 ? 'Bon' : score >= 50 ? 'Moyen' : 'Faible';
+  return (
+    <div className="health-score-card">
+      <div className="health-score-inner">
+        <RadialGauge value={score} max={100} color={color} size={88} />
+        <div className="health-score-center">
+          <span className="health-score-num" style={{ color }}>{score}</span>
+          <span className="health-score-denom">/100</span>
+        </div>
+      </div>
+      <div className="health-score-info">
+        <div className="health-score-label">Score de santé</div>
+        <div className="health-score-status" style={{ color }}>{label}</div>
+        <div className="health-score-desc">Basé sur l'activité, la nutrition et l'observance</div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Modal : Dossier patient ────────────────────────────────── */
 function PatientDashboardModal({ member, onClose }) {
-  const p            = member.patient_details;
-  const patientId    = p.id_user;
-  const [activeTab, setActiveTab] = useState('dashboard');
-
-  const [dashboard,    setDashboard]    = useState(null);
-  const [meals,        setMeals]        = useState([]);
-  const [medications,  setMedications]  = useState([]);
-  const [glycemia,     setGlycemia]     = useState([]);
-  const [loadingData,  setLoadingData]  = useState(true);
+  const p         = member.patient_details;
+  const patientId = p.id_user;
+  const [activeTab,   setActiveTab]   = useState('dashboard');
+  const [dashboard,   setDashboard]   = useState(null);
+  const [meals,       setMeals]       = useState([]);
+  const [medications, setMedications] = useState([]);
+  const [glycemia,    setGlycemia]    = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -139,9 +269,9 @@ function PatientDashboardModal({ member, onClose }) {
           apiClient.get(`/doctors/care-team/patient-glycemia/?patient_user_id=${patientId}`),
         ]);
         setDashboard(d.data);
-        setMeals(m.data);
-        setMedications(med.data);
-        setGlycemia(g.data);
+        setMeals(Array.isArray(m.data) ? m.data : []);
+        setMedications(Array.isArray(med.data) ? med.data : []);
+        setGlycemia(Array.isArray(g.data) ? g.data : []);
       } catch (err) {
         toastError('Erreur', 'Impossible de charger les données du patient');
       } finally {
@@ -152,31 +282,39 @@ function PatientDashboardModal({ member, onClose }) {
   }, [patientId]);
 
   const tabs = [
-    { id: 'dashboard',   label: 'Résumé',      icon: <Heart size={15} /> },
-    { id: 'glycemia',    label: 'Glycémie',     icon: <Droplets size={15} /> },
-    { id: 'meals',       label: 'Repas',        icon: <Utensils size={15} /> },
-    { id: 'medications', label: 'Médicaments',  icon: <Pill size={15} /> },
+    { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <Heart size={15} /> },
+    { id: 'glycemia',    label: 'Glycémie',         icon: <Droplets size={15} /> },
+    { id: 'meals',       label: 'Repas',            icon: <Utensils size={15} /> },
+    { id: 'medications', label: 'Traitements',      icon: <Pill size={15} /> },
   ];
+
+  /* Statistiques glycémie */
+  const glycValues = glycemia.map(g => parseFloat(g.value)).filter(v => !isNaN(v));
+  const glycAvg    = glycValues.length ? (glycValues.reduce((a, b) => a + b, 0) / glycValues.length).toFixed(2) : null;
+  const glycMax    = glycValues.length ? Math.max(...glycValues).toFixed(2) : null;
+  const glycMin    = glycValues.length ? Math.min(...glycValues).toFixed(2) : null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box modal-large" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="modal-header">
-          <div className="modal-title-row">
-            <div className="patient-avatar-lg">{getInitials(p.first_name, p.last_name)}</div>
+      <div className="modal-box modal-xl" onClick={e => e.stopPropagation()}>
+
+        {/* ── Header patient ── */}
+        <div className="pdm-header">
+          <div className="pdm-header-left">
+            <div className="pdm-avatar">{getInitials(p.first_name, p.last_name)}</div>
             <div>
-              <h2>{p.first_name} {p.last_name}</h2>
-              <p>{p.email}</p>
+              <h2 className="pdm-name">{p.first_name} {p.last_name}</h2>
+              <div className="pdm-meta">
+                {p.email && <span><Mail size={12} /> {p.email}</span>}
+                {p.phone_number && <span><Phone size={12} /> {p.phone_number}</span>}
+                <StatusBadge status={member.status} />
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <StatusBadge status={member.status} />
-            <button className="modal-close" onClick={onClose}><X size={20} /></button>
-          </div>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
 
-        {/* Tabs */}
+        {/* ── Tabs ── */}
         <div className="modal-tabs">
           {tabs.map(t => (
             <button
@@ -189,116 +327,88 @@ function PatientDashboardModal({ member, onClose }) {
           ))}
         </div>
 
-        {/* Content */}
+        {/* ── Content ── */}
         <div className="modal-scroll">
           {loadingData ? (
-            <div className="state-center" style={{ minHeight: 240 }}>
-              <div className="big-spinner" /><p>Chargement…</p>
+            <div className="state-center" style={{ minHeight: 280 }}>
+              <div className="big-spinner" /><p>Chargement des données…</p>
             </div>
           ) : (
             <>
-              {/* ── Dashboard ── */}
+              {/* ══ Vue d'ensemble ══ */}
               {activeTab === 'dashboard' && dashboard && (
-                <div className="dash-grid">
-                  {/* Health score */}
-                  <div className="dash-card dash-score">
-                    <div className="score-circle" style={{
-                      background: `conic-gradient(#4A90E2 ${dashboard.healthScore * 3.6}deg, #E2E8F0 0deg)`
-                    }}>
-                      <span>{dashboard.healthScore}</span>
-                    </div>
-                    <div>
-                      <div className="dash-card-title">Score de santé</div>
-                      <div className="dash-card-sub">sur 100</div>
+                <div className="pdm-overview">
+
+                  {/* Ligne 1 : score + alertes */}
+                  <div className="pdm-row pdm-row-top">
+                    <HealthScore score={dashboard.healthScore ?? 0} />
+
+                    <div className="pdm-alerts-block">
+                      <div className="pdm-section-title"><AlertTriangle size={14} /> Alertes récentes</div>
+                      {(!dashboard.alerts || dashboard.alerts.length === 0) ? (
+                        <div className="pdm-no-alert"><CheckCircle size={16} /> Aucune alerte active</div>
+                      ) : (
+                        <div className="pdm-alerts-list">
+                          {dashboard.alerts.map((a, i) => <AlertCard key={i} alert={a} index={i} />)}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Glucose */}
-                  <div className="dash-card">
-                    <div className="dash-card-icon" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                      <Droplets size={18} />
-                    </div>
-                    <div className="dash-card-title">Glycémie</div>
-                    <div className="dash-card-value">
-                      {dashboard.glucose != null ? `${dashboard.glucose} mg/dL` : '—'}
-                    </div>
-                  </div>
-
-                  {/* Calories */}
-                  <div className="dash-card">
-                    <div className="dash-card-icon" style={{ background: '#FFF7ED', color: '#EA580C' }}>
-                      <Flame size={18} />
-                    </div>
-                    <div className="dash-card-title">Calories</div>
-                    <div className="dash-card-value">
-                      {dashboard.nutrition.calories.consumed}
-                      <span className="dash-card-max">/ {dashboard.nutrition.calories.goal} kcal</span>
-                    </div>
-                    <ProgressBar value={dashboard.nutrition.calories.consumed} max={dashboard.nutrition.calories.goal} color="#EA580C" />
-                  </div>
-
-                  {/* Glucides */}
-                  <div className="dash-card">
-                    <div className="dash-card-icon" style={{ background: '#F0FDF4', color: '#16A34A' }}>
-                      <Utensils size={18} />
-                    </div>
-                    <div className="dash-card-title">Glucides</div>
-                    <div className="dash-card-value">
-                      {dashboard.nutrition.carbs.grams}
-                      <span className="dash-card-max">/ {dashboard.nutrition.carbs.goal} g</span>
-                    </div>
-                    <ProgressBar value={dashboard.nutrition.carbs.grams} max={dashboard.nutrition.carbs.goal} color="#16A34A" />
-                  </div>
-
-                  {/* Pas */}
-                  <div className="dash-card">
-                    <div className="dash-card-icon" style={{ background: '#F5F3FF', color: '#7C3AED' }}>
-                      <Footprints size={18} />
-                    </div>
-                    <div className="dash-card-title">Pas</div>
-                    <div className="dash-card-value">
-                      {dashboard.activity.steps.value.toLocaleString()}
-                      <span className="dash-card-max">/ {dashboard.activity.steps.goal.toLocaleString()}</span>
-                    </div>
-                    <ProgressBar value={dashboard.activity.steps.value} max={dashboard.activity.steps.goal} color="#7C3AED" />
-                  </div>
-
-                  {/* Activité */}
-                  <div className="dash-card">
-                    <div className="dash-card-icon" style={{ background: '#FFF1F2', color: '#E11D48' }}>
-                      <Activity size={18} />
-                    </div>
-                    <div className="dash-card-title">Minutes actives</div>
-                    <div className="dash-card-value">{dashboard.activity.activeMinutes} min</div>
-                  </div>
-
-                  {/* Alertes */}
-                  {dashboard.alerts.length > 0 && (
-                    <div className="dash-card dash-alerts">
-                      <div className="dash-card-icon" style={{ background: '#FEF2F2', color: '#DC2626' }}>
-                        <AlertTriangle size={18} />
-                      </div>
-                      <div className="dash-card-title">Alertes</div>
-                      {dashboard.alerts.map((a, i) => (
-                        <div key={i} className="alert-item">{a}</div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Prochain médicament */}
-                  <div className="dash-card">
-                    <div className="dash-card-icon" style={{ background: '#F0FDF4', color: '#15803D' }}>
-                      <Pill size={18} />
-                    </div>
-                    <div className="dash-card-title">Prochain médicament</div>
-                    <div className="dash-card-value">
-                      {dashboard.medication.nextDose ?? '—'}
-                    </div>
+                  {/* Ligne 2 : métriques */}
+                  <div className="pdm-section-title" style={{ marginTop: 20 }}><Activity size={14} /> Métriques du jour</div>
+                  <div className="pdm-metrics-grid">
+                    <MetricCard
+                      icon={<Droplets size={18} />}
+                      label="Glycémie actuelle"
+                      value={dashboard.glucose != null ? dashboard.glucose : '—'}
+                      unit={dashboard.glucose != null ? ' g/L' : ''}
+                      color="#2563EB" colorBg="#EFF6FF"
+                      goalLabel={dashboard.glucose == null ? 'Aucune mesure récente' : null}
+                    />
+                    <MetricCard
+                      icon={<Flame size={18} />}
+                      label="Calories"
+                      value={dashboard.nutrition.calories.consumed}
+                      unit=" kcal"
+                      goal={dashboard.nutrition.calories.goal}
+                      color="#EA580C" colorBg="#FFF7ED"
+                    />
+                    <MetricCard
+                      icon={<Utensils size={18} />}
+                      label="Glucides"
+                      value={dashboard.nutrition.carbs.grams}
+                      unit=" g"
+                      goal={dashboard.nutrition.carbs.goal}
+                      color="#16A34A" colorBg="#F0FDF4"
+                    />
+                    <MetricCard
+                      icon={<Footprints size={18} />}
+                      label="Pas"
+                      value={dashboard.activity.steps.value.toLocaleString('fr-FR')}
+                      goal={dashboard.activity.steps.goal}
+                      color="#7C3AED" colorBg="#F5F3FF"
+                    />
+                    <MetricCard
+                      icon={<Activity size={18} />}
+                      label="Minutes actives"
+                      value={dashboard.activity.activeMinutes}
+                      unit=" min"
+                      color="#E11D48" colorBg="#FFF1F2"
+                      goalLabel="Objectif : 30 min/jour"
+                    />
+                    <MetricCard
+                      icon={<Pill size={18} />}
+                      label="Prochain médicament"
+                      value={dashboard.medication.nextDose ?? '—'}
+                      color="#15803D" colorBg="#F0FDF4"
+                      goalLabel={dashboard.medication.nextDose ? '' : 'Aucune prise prévue'}
+                    />
                   </div>
                 </div>
               )}
 
-              {/* ── Glycémie ── */}
+              {/* ══ Glycémie ══ */}
               {activeTab === 'glycemia' && (
                 glycemia.length === 0 ? (
                   <div className="empty-state">
@@ -306,25 +416,72 @@ function PatientDashboardModal({ member, onClose }) {
                     <p>Aucune mesure de glycémie enregistrée</p>
                   </div>
                 ) : (
-                  <table className="data-table">
-                    <thead>
-                      <tr><th>Date</th><th>Valeur</th><th>Type</th><th>Note</th></tr>
-                    </thead>
-                    <tbody>
-                      {glycemia.map((g, i) => (
-                        <tr key={i}>
-                          <td>{g.measured_at ? new Date(g.measured_at).toLocaleString('fr-FR') : '—'}</td>
-                          <td><strong>{g.value} mg/dL</strong></td>
-                          <td>{g.measurement_type || '—'}</td>
-                          <td>{g.notes || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="pdm-glycemia">
+                    {/* Stats résumé */}
+                    <div className="gly-stats">
+                      <div className="gly-stat">
+                        <span className="gly-stat-val" style={{ color: '#2563EB' }}>{glycAvg} <small>g/L</small></span>
+                        <span className="gly-stat-lbl">Moyenne</span>
+                      </div>
+                      <div className="gly-stat-sep" />
+                      <div className="gly-stat">
+                        <span className="gly-stat-val" style={{ color: '#DC2626' }}>{glycMax} <small>g/L</small></span>
+                        <span className="gly-stat-lbl">Maximum</span>
+                      </div>
+                      <div className="gly-stat-sep" />
+                      <div className="gly-stat">
+                        <span className="gly-stat-val" style={{ color: '#16A34A' }}>{glycMin} <small>g/L</small></span>
+                        <span className="gly-stat-lbl">Minimum</span>
+                      </div>
+                      <div className="gly-stat-sep" />
+                      <div className="gly-stat">
+                        <span className="gly-stat-val">{glycemia.length}</span>
+                        <span className="gly-stat-lbl">Mesures</span>
+                      </div>
+                    </div>
+
+                    {/* Graphique */}
+                    <div className="gly-chart-wrap">
+                      <div className="gly-chart-title">Évolution de la glycémie</div>
+                      <div className="gly-legend">
+                        <span className="gly-legend-dot" style={{ background: '#DC2626' }} /> Hyperglycémie (&gt;1.8)
+                        <span className="gly-legend-dot" style={{ background: '#4A90E2', marginLeft: 12 }} /> Normal
+                        <span className="gly-legend-zone" /> Zone cible (0.7–1.4 g/L)
+                      </div>
+                      <GlycemiaSparkline data={glycemia.slice().reverse()} />
+                    </div>
+
+                    {/* Tableau */}
+                    <table className="data-table" style={{ marginTop: 16 }}>
+                      <thead>
+                        <tr><th>Date & Heure</th><th>Valeur</th><th>Type</th><th>Note</th></tr>
+                      </thead>
+                      <tbody>
+                        {glycemia.map((g, i) => {
+                          const val = parseFloat(g.value);
+                          const isHigh = val > 1.8, isLow = val < 0.7;
+                          return (
+                            <tr key={i}>
+                              <td style={{ color: 'var(--muted)', fontSize: 12 }}>
+                                {g.measured_at ? new Date(g.measured_at).toLocaleString('fr-FR') : '—'}
+                              </td>
+                              <td>
+                                <span className={`gly-val-badge ${isHigh ? 'gly-high' : isLow ? 'gly-low' : 'gly-normal'}`}>
+                                  {g.value} g/L
+                                </span>
+                              </td>
+                              <td>{g.measurement_type || '—'}</td>
+                              <td style={{ color: 'var(--muted)' }}>{g.notes || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )
               )}
 
-              {/* ── Repas ── */}
+              {/* ══ Repas ══ */}
               {activeTab === 'meals' && (
                 meals.length === 0 ? (
                   <div className="empty-state">
@@ -332,25 +489,50 @@ function PatientDashboardModal({ member, onClose }) {
                     <p>Aucun repas enregistré</p>
                   </div>
                 ) : (
-                  <table className="data-table">
-                    <thead>
-                      <tr><th>Date</th><th>Repas</th><th>Calories</th><th>Glucides</th></tr>
-                    </thead>
-                    <tbody>
-                      {meals.map((m, i) => (
-                        <tr key={i}>
-                          <td>{m.date ? new Date(m.date).toLocaleDateString('fr-FR') : '—'}</td>
-                          <td>{m.name || m.meal_type || '—'}</td>
-                          <td>{m.calories ?? '—'} kcal</td>
-                          <td>{m.carbs ?? '—'} g</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="pdm-meals">
+                    {/* Résumé nutrition */}
+                    <div className="meals-summary">
+                      <div className="meals-sum-item">
+                        <Flame size={16} style={{ color: '#EA580C' }} />
+                        <span className="meals-sum-val">{meals.reduce((acc, m) => acc + (m.calories ?? 0), 0)}</span>
+                        <span className="meals-sum-lbl">kcal totales</span>
+                      </div>
+                      <div className="meals-sum-sep" />
+                      <div className="meals-sum-item">
+                        <Utensils size={16} style={{ color: '#16A34A' }} />
+                        <span className="meals-sum-val">{meals.reduce((acc, m) => acc + (m.carbs ?? 0), 0)} g</span>
+                        <span className="meals-sum-lbl">Glucides totaux</span>
+                      </div>
+                      <div className="meals-sum-sep" />
+                      <div className="meals-sum-item">
+                        <span className="meals-sum-val" style={{ fontSize: 20 }}>{meals.length}</span>
+                        <span className="meals-sum-lbl">Repas enregistrés</span>
+                      </div>
+                    </div>
+                    <table className="data-table" style={{ marginTop: 16 }}>
+                      <thead>
+                        <tr><th>Date</th><th>Type de repas</th><th>Calories</th><th>Glucides</th></tr>
+                      </thead>
+                      <tbody>
+                        {meals.map((m, i) => (
+                          <tr key={i}>
+                            <td style={{ color: 'var(--muted)', fontSize: 12 }}>
+                              {m.date ? new Date(m.date).toLocaleDateString('fr-FR') : '—'}
+                            </td>
+                            <td><strong>{m.name || m.meal_type || '—'}</strong></td>
+                            <td>
+                              <span className="meal-cal-badge">{m.calories ?? '—'} kcal</span>
+                            </td>
+                            <td style={{ color: '#16A34A', fontWeight: 600 }}>{m.carbs ?? '—'} g</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )
               )}
 
-              {/* ── Médicaments ── */}
+              {/* ══ Médicaments ══ */}
               {activeTab === 'medications' && (
                 medications.length === 0 ? (
                   <div className="empty-state">
@@ -358,25 +540,52 @@ function PatientDashboardModal({ member, onClose }) {
                     <p>Aucun médicament enregistré</p>
                   </div>
                 ) : (
-                  <table className="data-table">
-                    <thead>
-                      <tr><th>Médicament</th><th>Dosage</th><th>Fréquence</th><th>Statut</th></tr>
-                    </thead>
-                    <tbody>
-                      {medications.map((m, i) => (
-                        <tr key={i}>
-                          <td><strong>{m.name || '—'}</strong></td>
-                          <td>{m.dosage || '—'}</td>
-                          <td>{m.frequency || '—'}</td>
-                          <td>
-                            {m.is_active
-                              ? <span className="status-badge badge-active">Actif</span>
-                              : <span className="status-badge badge-inactive">Inactif</span>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div className="pdm-medications">
+                    <div className="med-summary">
+                      <div className="med-sum-item">
+                        <span className="med-sum-val" style={{ color: '#16A34A' }}>
+                          {medications.filter(m => m.is_active).length}
+                        </span>
+                        <span className="med-sum-lbl">Actifs</span>
+                      </div>
+                      <div className="med-sum-sep" />
+                      <div className="med-sum-item">
+                        <span className="med-sum-val" style={{ color: 'var(--muted)' }}>
+                          {medications.filter(m => !m.is_active).length}
+                        </span>
+                        <span className="med-sum-lbl">Inactifs</span>
+                      </div>
+                      <div className="med-sum-sep" />
+                      <div className="med-sum-item">
+                        <span className="med-sum-val">{medications.length}</span>
+                        <span className="med-sum-lbl">Total</span>
+                      </div>
+                    </div>
+                    <table className="data-table" style={{ marginTop: 16 }}>
+                      <thead>
+                        <tr><th>Médicament</th><th>Dosage</th><th>Fréquence</th><th>Statut</th></tr>
+                      </thead>
+                      <tbody>
+                        {medications.map((m, i) => (
+                          <tr key={i}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div className="med-icon-sm"><Pill size={13} /></div>
+                                <strong>{m.name || '—'}</strong>
+                              </div>
+                            </td>
+                            <td style={{ color: 'var(--blue)', fontWeight: 600 }}>{m.dosage || '—'}</td>
+                            <td style={{ color: 'var(--muted)' }}>{m.frequency || '—'}</td>
+                            <td>
+                              {m.is_active
+                                ? <span className="status-badge badge-active">Actif</span>
+                                : <span className="status-badge badge-inactive">Inactif</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )
               )}
             </>
@@ -413,15 +622,75 @@ function PatientCard({ member, onClick }) {
   );
 }
 
-function InviteCard({ invite }) {
+/** Invitation envoyée par le médecin → en attente de réponse du patient */
+function SentInviteCard({ invite }) {
+  const p = invite.patient_details;
   return (
-    <div className="patient-card invite-card">
+    <div className="patient-card invite-card invite-sent">
       <div className="card-top">
-        <div className="patient-avatar invite-avatar"><Mail size={20} /></div>
+        <div className="patient-avatar invite-avatar-sent"><Send size={18} /></div>
         <div className="patient-meta">
-          <h3 className="patient-name">{invite.invitation_email}</h3>
+          <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : invite.invitation_email || '—'}</h3>
           <span className="status-badge badge-pending">Invitation envoyée</span>
         </div>
+      </div>
+      <div className="card-body" style={{ marginTop: 12 }}>
+        {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
+        {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
+      </div>
+      <div className="invite-waiting">
+        <Clock size={13} /> En attente de la réponse du patient
+      </div>
+    </div>
+  );
+}
+
+/** Invitation reçue par le médecin → il peut l'accepter */
+function ReceivedInviteCard({ invite, onAccepted }) {
+  const p = invite.patient_details;
+  const [accepting, setAccepting] = useState(false);
+
+  const handleAccept = async (e) => {
+    e.stopPropagation();
+    setAccepting(true);
+    try {
+      await apiClient.post('/doctors/care-team/accept-invitation/', {
+        id_team_member: invite.id_team_member,
+      });
+      toastSuccess('Invitation acceptée', `${p?.first_name ?? ''} ${p?.last_name ?? ''} a rejoint votre équipe`);
+      onAccepted();
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
+      toastError('Erreur', msg);
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  return (
+    <div className="patient-card invite-card invite-received">
+      <div className="invite-received-banner">
+        <UserPlus size={13} /> Demande reçue d'un patient
+      </div>
+      <div className="card-top" style={{ marginTop: 12 }}>
+        <div className="patient-avatar invite-avatar-received">
+          {getInitials(p?.first_name, p?.last_name)}
+        </div>
+        <div className="patient-meta">
+          <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : '—'}</h3>
+          <span className="status-badge badge-received">À accepter</span>
+        </div>
+      </div>
+      <div className="card-body" style={{ marginTop: 12 }}>
+        {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
+        {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
+      </div>
+      <div className="card-footer">
+        <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
+          {accepting
+            ? <><span className="mini-spinner-sm" /> Acceptation…</>
+            : <><CheckCircle size={14} /> Accepter la demande</>}
+        </button>
       </div>
     </div>
   );
@@ -436,6 +705,13 @@ export default function PatientsScreen({ navigation }) {
   const [tab,            setTab]            = useState('active');
   const [showAddModal,   setShowAddModal]   = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+
+  // Récupère l'ID du médecin connecté pour distinguer les invitations envoyées/reçues
+  const storedUser = authService.getStoredUser();
+  // Supporte l'ancien format à plat et le nouveau format imbriqué (/auth/me/)
+  const myDoctorId =
+    storedUser?.doctor_id ??
+    storedUser?.identity?.profiles?.[0]?.doctor_details?.doctor_id;
 
   const fetchTeam = useCallback(async () => {
     try {
@@ -467,8 +743,19 @@ export default function PatientsScreen({ navigation }) {
     );
   });
 
-  const activeCount  = data.active_patients.length;
-  const pendingCount = data.pending_invites.length;
+  /**
+   * Distinction des invitations :
+   * - "envoyées"  : le médecin a initié et approuvé de son côté → approved_by est renseigné (son doctor_id)
+   *                 En attente que le patient confirme de son côté.
+   * - "reçues"    : invitation venant d'un patient, pas encore acceptée par le médecin → approved_by === null
+   */
+  const sentInvites     = data.pending_invites.filter(inv => inv.approved_by !== null);
+  const receivedInvites = data.pending_invites.filter(inv => inv.approved_by === null);
+
+  const activeCount    = data.active_patients.length;
+  const sentCount      = sentInvites.length;
+  const receivedCount  = receivedInvites.length;
+  const pendingCount   = data.pending_invites.length;
 
   return (
     <div className="patients-root">
@@ -493,21 +780,31 @@ export default function PatientsScreen({ navigation }) {
           </div>
           <div className="stat-card">
             <div className="stat-icon stat-orange"><Clock size={20} /></div>
-            <div><div className="stat-value">{pendingCount}</div><div className="stat-label">Invitations en attente</div></div>
+            <div><div className="stat-value">{sentCount}</div><div className="stat-label">Invitations envoyées</div></div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon stat-teal"><Stethoscope size={20} /></div>
-            <div><div className="stat-value">{activeCount + pendingCount}</div><div className="stat-label">Total équipe</div></div>
+          <div className="stat-card stat-card-received" style={{ position: 'relative' }}>
+            <div className="stat-icon stat-green"><UserPlus size={20} /></div>
+            <div>
+              <div className="stat-value">{receivedCount}</div>
+              <div className="stat-label">Demandes reçues</div>
+            </div>
+            {receivedCount > 0 && <span className="stat-notif">{receivedCount}</span>}
           </div>
         </div>
 
         <div className="toolbar">
           <div className="tabs">
-            <button className={`tab ${tab === 'active'  ? 'tab-active' : ''}`} onClick={() => setTab('active')}>
+            <button className={`tab ${tab === 'active'   ? 'tab-active' : ''}`} onClick={() => setTab('active')}>
               Actifs <span className="tab-count">{activeCount}</span>
             </button>
-            <button className={`tab ${tab === 'pending' ? 'tab-active' : ''}`} onClick={() => setTab('pending')}>
-              En attente <span className="tab-count">{pendingCount}</span>
+            <button className={`tab ${tab === 'sent'     ? 'tab-active' : ''}`} onClick={() => setTab('sent')}>
+              Envoyées <span className="tab-count">{sentCount}</span>
+            </button>
+            <button className={`tab tab-received ${tab === 'received' ? 'tab-active' : ''}`} onClick={() => setTab('received')}>
+              Reçues
+              {receivedCount > 0
+                ? <span className="tab-count tab-count-received">{receivedCount}</span>
+                : <span className="tab-count">{receivedCount}</span>}
             </button>
           </div>
           <div className="search-wrapper">
@@ -528,6 +825,8 @@ export default function PatientsScreen({ navigation }) {
           {!loading && error && (
             <div className="state-center state-error"><AlertCircle size={40} /><p>{error}</p></div>
           )}
+
+          {/* Patients actifs */}
           {!loading && !error && tab === 'active' && (
             filtered.length === 0
               ? <div className="state-center"><Users size={48} strokeWidth={1} /><p>{search ? 'Aucun résultat.' : 'Aucun patient actif pour le moment.'}</p></div>
@@ -537,11 +836,28 @@ export default function PatientsScreen({ navigation }) {
                   ))}
                 </div>
           )}
-          {!loading && !error && tab === 'pending' && (
-            data.pending_invites.length === 0
-              ? <div className="state-center"><Clock size={48} strokeWidth={1} /><p>Aucune invitation en attente.</p></div>
+
+          {/* Invitations envoyées par le médecin */}
+          {!loading && !error && tab === 'sent' && (
+            sentInvites.length === 0
+              ? <div className="state-center"><Send size={48} strokeWidth={1} /><p>Aucune invitation envoyée en attente.</p></div>
               : <div className="cards-grid">
-                  {data.pending_invites.map((inv, i) => <InviteCard key={i} invite={inv} />)}
+                  {sentInvites.map(inv => <SentInviteCard key={inv.id_team_member} invite={inv} />)}
+                </div>
+          )}
+
+          {/* Invitations reçues par le médecin (à accepter) */}
+          {!loading && !error && tab === 'received' && (
+            receivedInvites.length === 0
+              ? <div className="state-center"><UserPlus size={48} strokeWidth={1} /><p>Aucune demande reçue.</p></div>
+              : <div className="cards-grid">
+                  {receivedInvites.map(inv => (
+                    <ReceivedInviteCard
+                      key={inv.id_team_member}
+                      invite={inv}
+                      onAccepted={() => { setLoading(true); fetchTeam(); }}
+                    />
+                  ))}
                 </div>
           )}
         </div>

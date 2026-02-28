@@ -3,6 +3,7 @@ import { Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
+import logo from '../assets/glycopilot.png';
 import './css/auth.css';
 
 const InputField = ({ label, value, onChangeText, icon, placeholder, type = 'text', rightElement }) => (
@@ -30,6 +31,7 @@ export default function LoginScreen({ navigation }) {
   const [resetEmail, setResetEmail]     = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
 
+  const [pendingEmail, setPendingEmail] = useState(null); // null = formulaire, string = compte en attente
   const { login, loading, error } = useAuth();
 
   const goToSignin = () => navigation.navigate('/signin');
@@ -42,7 +44,11 @@ export default function LoginScreen({ navigation }) {
       setEmail(''); setPassword('');
       navigation.navigate('/home');
     } catch (err) {
-      toastError('Erreur de connexion', err.message);
+      if (err.code === 'ACCOUNT_PENDING') {
+        setPendingEmail(email);
+      } else {
+        toastError('Erreur de connexion', err.message);
+      }
     }
   };
 
@@ -65,6 +71,99 @@ export default function LoginScreen({ navigation }) {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') isPasswordResetMode ? handlePasswordReset() : handleLogin();
   };
+
+  // ── Écran compte en attente de vérification ──
+  if (pendingEmail) {
+    return (
+      <div className="auth-root">
+        <aside className="auth-aside">
+          <div className="aside-top">
+            <img src={logo} alt="GlycoPilot" className="aside-logo" />
+          </div>
+          <div className="aside-body">
+            <div className="aside-tag">Compte en attente</div>
+            <h1 className="aside-title">Vérification en cours…</h1>
+            <p className="aside-desc">
+              Votre licence médicale est en cours de vérification par notre équipe. Vous recevrez un email dès que votre compte sera activé.
+            </p>
+            <ul className="aside-steps">
+              <li><span className="step-dot" /><span>Vérification sous 24 à 48h</span></li>
+              <li><span className="step-dot" /><span>Notification par email à l'activation</span></li>
+              <li><span className="step-dot" /><span>Accès complet à la plateforme</span></li>
+            </ul>
+          </div>
+          <div className="aside-bottom">
+            <span>Pas encore inscrit ?</span>
+            <button className="aside-link" onClick={goToSignin}>S'inscrire →</button>
+          </div>
+          <div className="aside-circles">
+            <div className="circle c1" /><div className="circle c2" /><div className="circle c3" />
+          </div>
+        </aside>
+
+        <main className="auth-main">
+          <div className="auth-form-wrapper auth-form-centered">
+            <div className="verification-card">
+              <div className="verif-icon-wrap">
+                <svg viewBox="0 0 64 64" fill="none" className="verif-svg">
+                  <circle cx="32" cy="32" r="30" stroke="#4A90E2" strokeWidth="2.5" strokeDasharray="6 4" />
+                  <circle cx="32" cy="32" r="20" fill="#EEF5FD" />
+                  <path d="M22 32l7 7 13-13" stroke="#4A90E2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+
+              <h2 className="verif-title">Licence en cours de vérification</h2>
+              <p className="verif-subtitle">Votre compte existe mais n'est pas encore activé</p>
+
+              <div className="verif-info-box">
+                <div className="verif-email-row">
+                  <span className="verif-email-label">Email de contact</span>
+                  <span className="verif-email-value">{pendingEmail}</span>
+                </div>
+              </div>
+
+              <div className="verif-steps">
+                <div className="vstep vstep-done">
+                  <div className="vstep-dot vstep-dot-done">✓</div>
+                  <div className="vstep-body">
+                    <div className="vstep-title">Compte créé</div>
+                    <div className="vstep-desc">Vos informations ont été enregistrées</div>
+                  </div>
+                </div>
+                <div className="vstep-line" />
+                <div className="vstep vstep-active">
+                  <div className="vstep-dot vstep-dot-active">
+                    <span className="vstep-pulse" />
+                  </div>
+                  <div className="vstep-body">
+                    <div className="vstep-title">Vérification de la licence</div>
+                    <div className="vstep-desc">Notre équipe vérifie votre numéro de licence médicale. Ce processus prend généralement <strong>24 à 48h</strong>.</div>
+                  </div>
+                </div>
+                <div className="vstep-line" />
+                <div className="vstep vstep-pending">
+                  <div className="vstep-dot vstep-dot-pending">3</div>
+                  <div className="vstep-body">
+                    <div className="vstep-title">Accès à la plateforme</div>
+                    <div className="vstep-desc">Vous recevrez un email dès que votre compte sera activé</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="verif-notice">
+                <span>📧</span>
+                <p>Un email vous sera envoyé à <strong>{pendingEmail}</strong> dès que votre licence sera validée.</p>
+              </div>
+
+              <button className="submit-btn" style={{ marginBottom: 12 }} onClick={() => setPendingEmail(null)}>
+                ← Réessayer avec un autre compte
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-root">

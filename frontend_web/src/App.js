@@ -6,18 +6,37 @@ import SignInScreen   from './screens/SignInScreen';
 import HomeScreen     from './screens/HomeScreen';
 import PatientsScreen from './screens/PatientsScreen';
 import ProfileScreen  from './screens/ProfileScreen';
+import authService    from './services/authService';
+// ✅ Import CSS sidebar au niveau racine pour garantir son chargement
+import './components/css/sidebar.css';
 import './App.css';
 
+function getInitialPage() {
+  if (!authService.isAuthenticated()) return 'login';
+  const saved = sessionStorage.getItem('currentPage');
+  const validPages = ['home', 'patients', 'profile'];
+  return validPages.includes(saved) ? saved : 'home';
+}
+
 function App() {
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState(getInitialPage);
 
   const navigation = {
     navigate: (page) => {
-      if      (page === '/login'    || page === 'Login')    setCurrentPage('login');
-      else if (page === '/signin'   || page === 'SignIn')   setCurrentPage('signin');
-      else if (page === '/home'     || page === 'Home')     setCurrentPage('home');
-      else if (page === '/patients' || page === 'Patients') setCurrentPage('patients');
-      else if (page === '/profile'  || page === 'Profile')  setCurrentPage('profile');
+      let resolved = page;
+      if      (page === '/login'    || page === 'Login')    resolved = 'login';
+      else if (page === '/signin'   || page === 'SignIn')   resolved = 'signin';
+      else if (page === '/home'     || page === 'Home')     resolved = 'home';
+      else if (page === '/patients' || page === 'Patients') resolved = 'patients';
+      else if (page === '/profile'  || page === 'Profile')  resolved = 'profile';
+
+      if (resolved !== 'login' && resolved !== 'signin') {
+        sessionStorage.setItem('currentPage', resolved);
+      } else {
+        sessionStorage.removeItem('currentPage');
+      }
+
+      setCurrentPage(resolved);
     }
   };
 

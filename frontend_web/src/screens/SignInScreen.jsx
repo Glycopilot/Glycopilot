@@ -34,6 +34,7 @@ export default function SignInScreen({ navigation }) {
   const [licenseNumber, setLicenseNumber]               = useState('');
   const [specialty, setSpecialty]                       = useState('');
   const [medicalCenterAddress, setMedicalCenterAddress] = useState('');
+  const [registeredEmail, setRegisteredEmail]           = useState(null); // null = formulaire, string = succès
 
   const goToLogin = () => navigation.navigate('/login');
 
@@ -58,17 +59,106 @@ export default function SignInScreen({ navigation }) {
         passwordConfirm: confirmationPassword,
         role: 'DOCTOR', licenseNumber, specialty, medicalCenterAddress,
       });
-      toastSuccess('Inscription réussie!', 'Bienvenue !');
-      setEmail(''); setFirstName(''); setLastName(''); setPassword('');
-      setConfirmationPassword(''); setConfirmationEmail('');
-      setLicenseNumber(''); setSpecialty(''); setMedicalCenterAddress('');
-      goToLogin();
+      setRegisteredEmail(email);
     } catch (error) {
       toastError('Erreur inscription', error.message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // ── Écran de confirmation post-inscription ──
+  if (registeredEmail) {
+    return (
+      <div className="auth-root">
+        <aside className="auth-aside">
+          <div className="aside-top">
+            <img src="/glycopilot.png" alt="GlycoPilot" className="aside-logo" />
+          </div>
+          <div className="aside-body">
+            <div className="aside-tag">Compte créé</div>
+            <h1 className="aside-title">Plus qu'une étape !</h1>
+            <p className="aside-desc">
+              Votre compte a bien été créé. Notre équipe va maintenant vérifier votre licence médicale avant de vous donner accès à la plateforme.
+            </p>
+            <ul className="aside-steps">
+              <li><span className="step-num" style={{background:'rgba(255,255,255,.35)'}}>✓</span><span>Compte créé avec succès</span></li>
+              <li><span className="step-num">02</span><span>Vérification de votre licence en cours</span></li>
+              <li><span className="step-num">03</span><span>Accès à votre espace médecin</span></li>
+            </ul>
+          </div>
+          <div className="aside-bottom">
+            <span>Déjà vérifié ?</span>
+            <button className="aside-link" onClick={goToLogin}>Se connecter →</button>
+          </div>
+          <div className="aside-circles">
+            <div className="circle c1" /><div className="circle c2" /><div className="circle c3" />
+          </div>
+        </aside>
+
+        <main className="auth-main">
+          <div className="auth-form-wrapper auth-form-centered">
+            <div className="verification-card">
+              <div className="verif-icon-wrap">
+                <svg viewBox="0 0 64 64" fill="none" className="verif-svg">
+                  <circle cx="32" cy="32" r="30" stroke="#4A90E2" strokeWidth="2.5" strokeDasharray="6 4" />
+                  <circle cx="32" cy="32" r="20" fill="#EEF5FD" />
+                  <path d="M22 32l7 7 13-13" stroke="#4A90E2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+
+              <h2 className="verif-title">Inscription réussie !</h2>
+              <p className="verif-subtitle">Votre licence est en cours de vérification</p>
+
+              <div className="verif-info-box">
+                <div className="verif-email-row">
+                  <span className="verif-email-label">Email de contact</span>
+                  <span className="verif-email-value">{registeredEmail}</span>
+                </div>
+              </div>
+
+              <div className="verif-steps">
+                <div className="vstep vstep-done">
+                  <div className="vstep-dot vstep-dot-done">✓</div>
+                  <div className="vstep-body">
+                    <div className="vstep-title">Compte créé</div>
+                    <div className="vstep-desc">Vos informations ont été enregistrées</div>
+                  </div>
+                </div>
+                <div className="vstep-line" />
+                <div className="vstep vstep-active">
+                  <div className="vstep-dot vstep-dot-active">
+                    <span className="vstep-pulse" />
+                  </div>
+                  <div className="vstep-body">
+                    <div className="vstep-title">Vérification de la licence</div>
+                    <div className="vstep-desc">Notre équipe vérifie votre numéro de licence médicale. Ce processus prend généralement <strong>24 à 48h</strong>.</div>
+                  </div>
+                </div>
+                <div className="vstep-line" />
+                <div className="vstep vstep-pending">
+                  <div className="vstep-dot vstep-dot-pending">3</div>
+                  <div className="vstep-body">
+                    <div className="vstep-title">Accès à la plateforme</div>
+                    <div className="vstep-desc">Vous recevrez un email dès que votre compte sera activé</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="verif-notice">
+                <span>📧</span>
+                <p>Un email de confirmation vous a été envoyé à <strong>{registeredEmail}</strong>. Vérifiez aussi vos spams.</p>
+              </div>
+
+              <button className="submit-btn" onClick={goToLogin}>
+                Aller à la page de connexion <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-root">
