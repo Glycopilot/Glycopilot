@@ -854,3 +854,452 @@
 }
 .empty-state svg { opacity: .3; }
 .empty-state p { font-size: 14px; }
+/* ═══════════════════════════════════════════
+   INVITATIONS — distinction envoyées / reçues
+═══════════════════════════════════════════ */
+
+/* Avatar envoyée */
+.invite-avatar-sent {
+  background: #FFF7ED;
+  color: #F97316;
+}
+
+/* Avatar reçue */
+.invite-avatar-received {
+  background: #F0FDF4;
+  color: #16A34A;
+  font-family: 'Sora', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* Bandeau "Demande reçue" */
+.invite-received-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #16A34A;
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  padding: 5px 10px;
+  margin-bottom: 4px;
+}
+
+/* Bordure colorée sur la carte reçue */
+.invite-received {
+  border-color: #BBF7D0 !important;
+  box-shadow: 0 0 0 2px rgba(22,163,74,.08) !important;
+}
+
+/* Pied "en attente de réponse" */
+.invite-waiting {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Badge "À accepter" */
+.badge-received {
+  background: #F0FDF4;
+  color: #16A34A;
+}
+
+/* Bouton accepter */
+.card-btn-accept {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  padding: 9px;
+  background: #F0FDF4;
+  color: #16A34A;
+  border: 1.5px solid #BBF7D0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.card-btn-accept:hover:not(:disabled) {
+  background: #DCFCE7;
+  border-color: #16A34A;
+}
+.card-btn-accept:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Onglet reçues avec badge */
+.tab-count-received {
+  background: #16A34A !important;
+  color: #fff !important;
+}
+
+/* Stat card demandes reçues — badge de notification */
+.stat-notif {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #16A34A;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Sora', sans-serif;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border: 2px solid var(--surface);
+}
+
+/* Icône stat verte */
+.stat-green {
+  background: #F0FDF4;
+  color: #16A34A;
+}
+
+/* Mini spinner sm pour bouton accepter */
+.mini-spinner-sm {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(22,163,74,.3);
+  border-top-color: #16A34A;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+}
+
+/* ═══════════════════════════════════════════
+   PATIENT DASHBOARD MODAL — REDESIGN
+═══════════════════════════════════════════ */
+
+.modal-xl {
+  max-width: 900px;
+  width: 96vw;
+}
+
+/* ── Header patient ── */
+.pdm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 28px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pdm-header-left { display: flex; align-items: center; gap: 16px; }
+.pdm-avatar {
+  width: 52px; height: 52px;
+  border-radius: 16px;
+  background: var(--blue);
+  color: #fff;
+  font-family: 'Sora', sans-serif;
+  font-size: 18px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.pdm-name {
+  font-family: 'Sora', sans-serif;
+  font-size: 18px; font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 6px;
+}
+.pdm-meta {
+  display: flex; align-items: center;
+  gap: 14px; flex-wrap: wrap;
+  font-size: 13px; color: var(--muted);
+}
+.pdm-meta span { display: flex; align-items: center; gap: 5px; }
+
+/* ── Section title ── */
+.pdm-section-title {
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'Sora', sans-serif;
+  font-size: 12px; font-weight: 700;
+  color: var(--mid);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 12px;
+}
+
+/* ── Vue d'ensemble layout ── */
+.pdm-overview { display: flex; flex-direction: column; gap: 6px; }
+
+.pdm-row-top {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Health Score card ── */
+.health-score-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.health-score-inner {
+  position: relative;
+  flex-shrink: 0;
+}
+.health-score-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.health-score-num {
+  font-family: 'Sora', sans-serif;
+  font-size: 22px; font-weight: 700;
+  line-height: 1;
+}
+.health-score-denom { font-size: 11px; color: var(--muted); }
+.health-score-label {
+  font-size: 13px; font-weight: 600;
+  color: var(--mid); margin-bottom: 4px;
+}
+.health-score-status {
+  font-family: 'Sora', sans-serif;
+  font-size: 18px; font-weight: 700;
+  margin-bottom: 6px;
+}
+.health-score-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+
+/* ── Alerts block ── */
+.pdm-alerts-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+}
+.pdm-alerts-list { display: flex; flex-direction: column; gap: 8px; }
+.pdm-no-alert {
+  display: flex; align-items: center; gap: 8px;
+  color: #16A34A;
+  font-size: 13.5px; font-weight: 500;
+  padding: 12px;
+  background: #F0FDF4;
+  border-radius: 10px;
+  border: 1px solid #BBF7D0;
+}
+
+/* Alert card */
+.alert-card {
+  display: flex;
+  border: 1px solid;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.alert-card-bar { width: 4px; flex-shrink: 0; }
+.alert-card-body { padding: 10px 12px; }
+.alert-card-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600;
+  line-height: 1.4;
+}
+.alert-card-time { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+/* ── Metrics grid ── */
+.pdm-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.mcard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: box-shadow .2s;
+}
+.mcard:hover { box-shadow: 0 4px 16px rgba(15,23,42,.07); }
+
+.mcard-top {
+  display: flex; align-items: center; gap: 10px;
+}
+.mcard-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mcard-label {
+  font-size: 12px; font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.mcard-body { display: flex; flex-direction: column; gap: 6px; }
+.mcard-value {
+  font-family: 'Sora', sans-serif;
+  font-size: 24px; font-weight: 700;
+  line-height: 1;
+}
+.mcard-unit { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 2px; }
+.mcard-progress-track {
+  height: 5px; background: var(--border);
+  border-radius: 99px; overflow: hidden;
+}
+.mcard-progress-fill {
+  height: 100%; border-radius: 99px;
+  transition: width .5s ease;
+}
+.mcard-goal { font-size: 11px; color: var(--muted); }
+
+/* ══ Glycémie tab ══ */
+.pdm-glycemia { display: flex; flex-direction: column; gap: 0; }
+
+.gly-stats {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 24px;
+  margin-bottom: 16px;
+  gap: 0;
+}
+.gly-stat {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+}
+.gly-stat-val {
+  font-family: 'Sora', sans-serif;
+  font-size: 22px; font-weight: 700;
+  color: var(--dark);
+}
+.gly-stat-val small { font-size: 13px; font-weight: 400; color: var(--muted); }
+.gly-stat-lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.gly-stat-sep { width: 1px; height: 40px; background: var(--border); margin: 0 12px; }
+
+.gly-chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 0;
+}
+.gly-chart-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+}
+.gly-legend {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--muted);
+  margin-bottom: 10px;
+}
+.gly-legend-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.gly-legend-zone {
+  display: inline-block;
+  width: 16px; height: 8px;
+  background: rgba(22,163,74,.15);
+  border: 1px solid rgba(22,163,74,.3);
+  border-radius: 3px;
+  margin-left: 12px;
+}
+
+/* Glycémie value badges */
+.gly-val-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+}
+.gly-high  { background: #FEF2F2; color: #DC2626; }
+.gly-low   { background: #FFF7ED; color: #F97316; }
+.gly-normal{ background: #F0FDF4; color: #16A34A; }
+
+/* ══ Repas tab ══ */
+.meals-summary {
+  display: flex; align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 28px;
+  gap: 0;
+}
+.meals-sum-item {
+  flex: 1; display: flex;
+  flex-direction: column; align-items: center; gap: 4px;
+}
+.meals-sum-val {
+  font-family: 'Sora', sans-serif;
+  font-size: 22px; font-weight: 700;
+  color: var(--dark);
+  display: flex; align-items: center; gap: 6px;
+}
+.meals-sum-lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.meals-sum-sep { width: 1px; height: 40px; background: var(--border); margin: 0 12px; }
+
+.meal-cal-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: #FFF7ED; color: #EA580C;
+  font-size: 12px; font-weight: 600;
+}
+
+/* ══ Médicaments tab ══ */
+.med-summary {
+  display: flex; align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 28px;
+}
+.med-sum-item {
+  flex: 1; display: flex;
+  flex-direction: column; align-items: center; gap: 4px;
+}
+.med-sum-val {
+  font-family: 'Sora', sans-serif;
+  font-size: 26px; font-weight: 700;
+}
+.med-sum-lbl { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.med-sum-sep { width: 1px; height: 40px; background: var(--border); margin: 0 12px; }
+
+.med-icon-sm {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: #F0FDF4; color: #15803D;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .pdm-row-top { grid-template-columns: 1fr; }
+  .pdm-metrics-grid { grid-template-columns: 1fr 1fr; }
+  .modal-xl { max-width: 100%; border-radius: 16px; }
+}
+@media (max-width: 500px) {
+  .pdm-metrics-grid { grid-template-columns: 1fr; }
+}

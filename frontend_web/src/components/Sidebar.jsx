@@ -1,6 +1,9 @@
 import { LayoutDashboard, Users, User, LogOut } from 'lucide-react';
 import authService from '../services/authService';
-import './css/sidebar.css';
+// ✅ CSS retiré ici — importé dans App.jsx pour garantir le chargement
+import logo from '../assets/glycopilot.png';
+
+const apiClient = authService.getApiClient();
 
 function getInitials(firstName, lastName) {
   return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
@@ -9,13 +12,18 @@ function getInitials(firstName, lastName) {
 export default function Sidebar({ activePage, navigation }) {
   const stored = authService.getStoredUser();
 
-  // Compatibilité avec l'ancien format (à plat) et le nouveau format imbriqué (/auth/me/)
   const firstName = stored?.first_name ?? stored?.identity?.first_name;
   const lastName  = stored?.last_name  ?? stored?.identity?.last_name;
 
   const handleLogout = async () => {
-    await authService.logout();
-    navigation.navigate('/login');
+    try {
+      await apiClient.post('/auth/logout/');
+    } catch (err) {
+      console.warn('Logout API warning:', err?.response?.status);
+    } finally {
+      authService.logout();
+      navigation.navigate('/login');
+    }
   };
 
   const links = [
@@ -27,7 +35,7 @@ export default function Sidebar({ activePage, navigation }) {
   return (
     <aside className="sidebar">
       <div className="sb-logo">
-        <img src="../assets/glycopilot.png" alt="GlycoPilot" />
+        <img src={logo} alt="GlycoPilot" />
       </div>
 
       <nav className="sb-nav">
@@ -47,9 +55,8 @@ export default function Sidebar({ activePage, navigation }) {
         <div className="sb-doctor">
           <div className="sb-avatar">{getInitials(firstName, lastName)}</div>
           <div className="sb-doc-text">
-            <span className="sb-doc-name">
-              Dr. {lastName}
-            </span>
+            <span className="sb-doc-name">Dr. {lastName}</span>
+            <span className="sb-doc-role">Médecin</span>
           </div>
         </div>
         <button className="sb-logout" onClick={handleLogout} title="Se déconnecter">

@@ -13,11 +13,11 @@
 }
 
 .sb-logo img {
-  height: 36px;
+  height: 90px;
   object-fit: contain;
   filter: brightness(0) invert(1);
   opacity: .92;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 }
 
 .sb-nav {
@@ -118,7 +118,9 @@
   .sidebar { display: none; }
 }
 
+/* "Dr." affiché en blanc légèrement plus lumineux sur fond bleu */
 .sb-doc-prefix {
-  color: var(--blue, #fff);
-  font-weight: 700;
+  color: #fff;
+  font-weight: 800;
+  opacity: .95;
 }
