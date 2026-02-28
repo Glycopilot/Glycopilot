@@ -4,49 +4,39 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8006/api';
 const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '10000');
 
-// Créer une instance axios
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Intercepteur pour ajouter le token à chaque requête
+// Intercepteur request — ajout du token
 apiClient.interceptors.request.use(
   (config) => {
     try {
       const token = localStorage.getItem('access_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) config.headers.Authorization = `Bearer ${token}`;
     } catch (error) {
       console.error('Erreur lors de la récupération du token:', error);
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Mécanisme de gestion des refreshes concurrents
+// Refresh concurrent
 let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+    if (error) prom.reject(error);
+    else prom.resolve(token);
   });
   failedQueue = [];
 };
 
-// Intercepteur pour gérer le rafraîchissement automatique du token
+// Intercepteur response — refresh automatique
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -69,14 +59,9 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
+        if (!refreshToken) throw new Error('No refresh token available');
 
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
-          refresh: refreshToken,
-        });
-
+        const response = await axios.post(`${API_URL}/auth/refresh/`, { refresh: refreshToken });
         const { access } = response.data;
         localStorage.setItem('access_token', access);
 
@@ -88,7 +73,6 @@ apiClient.interceptors.response.use(
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        console.error('Erreur lors du rafraîchissement du token:', refreshError);
         processQueue(refreshError, null);
         isRefreshing = false;
         window.location.href = '/login';
@@ -100,18 +84,13 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Service d'authentification
 const authService = {
   /**
    * Connexion utilisateur
    */
   async login(email, password) {
     try {
-      const response = await apiClient.post('/auth/login', {
-        email,
-        password,
-      });
-
+      const response = await apiClient.post('/auth/login/', { email, password });
       const { access, refresh, user } = response.data;
 
       localStorage.setItem('access_token', access);
@@ -120,19 +99,26 @@ const authService = {
 
       return response.data;
     } catch (error) {
-      const message = error.response?.data?.error || 'Erreur de connexion';
+      const data = error.response?.data;
+
+      // ✅ Compte créé mais licence pas encore validée par un admin
+      const nonFieldErr = data?.non_field_errors?.[0];
+      if (nonFieldErr) {
+        const err = new Error(nonFieldErr);
+        err.code = 'ACCOUNT_PENDING';
+        throw err;
+      }
+
+      const message = data?.error || data?.detail || 'Erreur de connexion';
       throw new Error(message);
     }
   },
 
   /**
    * Inscription utilisateur
-   * Supporte les rôles DOCTOR et PATIENT (en majuscules).
-   * Pour le rôle DOCTOR, les champs licenseNumber, specialty et medicalCenterAddress sont requis.
    */
   async register(userData) {
     try {
-      // Payload de base
       const payload = {
         email: userData.email,
         first_name: userData.firstName,
@@ -142,15 +128,13 @@ const authService = {
         role: userData.role || 'DOCTOR',
       };
 
-      // Champs supplémentaires pour les médecins
       if (payload.role === 'DOCTOR') {
         payload.license_number = userData.licenseNumber;
         payload.specialty = userData.specialty;
         payload.medical_center_address = userData.medicalCenterAddress;
       }
 
-      const response = await apiClient.post('/auth/register', payload);
-
+      const response = await apiClient.post('/auth/register/', payload);
       const { access, refresh, user } = response.data;
 
       localStorage.setItem('access_token', access);
@@ -160,52 +144,35 @@ const authService = {
       return response.data;
     } catch (error) {
       console.error('authService.register error response:', error.response?.data);
-
       let message = "Erreur lors de l'inscription";
       if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          message = error.response.data;
-        } else if (error.response.data.error) {
-          message = error.response.data.error;
-        } else {
-          try {
-            message = JSON.stringify(error.response.data);
-          } catch (_e) {
-            message = "Erreur lors de l'inscription (voir logs)";
-          }
+        if (typeof error.response.data === 'string') message = error.response.data;
+        else if (error.response.data.error) message = error.response.data.error;
+        else {
+          try { message = JSON.stringify(error.response.data); }
+          catch (_e) { message = "Erreur lors de l'inscription (voir logs)"; }
         }
       }
-
       throw new Error(message);
     }
   },
 
   /**
    * Déconnexion utilisateur
+   * POST /auth/logout/ — token lu depuis Authorization header
    */
   async logout() {
     try {
-      const refreshToken = localStorage.getItem('refresh_token');
-
-      if (refreshToken) {
-        await apiClient.post('/auth/logout', {
-          refresh: refreshToken,
-        });
-      }
-
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-
-      return { message: 'Déconnexion réussie' };
+      const token = localStorage.getItem('access_token');
+      if (token) await apiClient.post('/auth/logout/');
     } catch (error) {
+      console.warn('Logout API warning:', error.response?.status, error.response?.data);
+    } finally {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-
-      const message = error.response?.data?.error || 'Erreur de déconnexion';
-      throw new Error(message);
     }
+    return { message: 'Déconnexion réussie' };
   },
 
   /**
@@ -213,12 +180,10 @@ const authService = {
    */
   async getCurrentUser() {
     try {
-      const response = await apiClient.get('/auth/me');
+      const response = await apiClient.get('/auth/me/');
       return response.data;
     } catch (error) {
-      const message =
-        error.response?.data?.detail ||
-        "Erreur lors de la récupération de l'utilisateur";
+      const message = error.response?.data?.detail || "Erreur lors de la récupération de l'utilisateur";
       throw new Error(message);
     }
   },
@@ -229,15 +194,9 @@ const authService = {
   async refreshToken() {
     try {
       const refreshToken = localStorage.getItem('refresh_token');
+      if (!refreshToken) throw new Error('No refresh token available');
 
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-
-      const response = await axios.post(`${API_URL}/auth/refresh`, {
-        refresh: refreshToken,
-      });
-
+      const response = await axios.post(`${API_URL}/auth/refresh/`, { refresh: refreshToken });
       const { access } = response.data;
       localStorage.setItem('access_token', access);
 
@@ -246,17 +205,11 @@ const authService = {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      const message =
-        error.response?.data?.error ||
-        error.message ||
-        'Erreur lors du rafraîchissement du token';
+      const message = error.response?.data?.error || error.message || 'Erreur lors du rafraîchissement du token';
       throw new Error(message);
     }
   },
 
-  /**
-   * Récupérer les tokens stockés
-   */
   getTokens() {
     try {
       return {
@@ -264,39 +217,27 @@ const authService = {
         refreshToken: localStorage.getItem('refresh_token'),
       };
     } catch (error) {
-      console.error('Erreur lors de la récupération des tokens:', error);
       return { accessToken: null, refreshToken: null };
     }
   },
 
-  /**
-   * Récupérer l'utilisateur stocké localement
-   */
   getStoredUser() {
     try {
       const user = localStorage.getItem('user');
       return user ? JSON.parse(user) : null;
     } catch (error) {
-      console.error("Erreur lors de la récupération de l'utilisateur:", error);
       return null;
     }
   },
 
-  /**
-   * Vérifier si l'utilisateur est connecté
-   */
   isAuthenticated() {
     try {
       return !!localStorage.getItem('access_token');
     } catch (error) {
-      console.error("Erreur lors de la vérification de l'authentification:", error);
       return false;
     }
   },
 
-  /**
-   * Obtenir l'instance axios configurée
-   */
   getApiClient() {
     return apiClient;
   },

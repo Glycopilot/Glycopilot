@@ -159,7 +159,7 @@ export default function HomeScreen({ navigation }) {
         {/* Greeting */}
         <div className="home-greeting">
           <div>
-            <h1>{getGreeting()}, {doctor?.first_name} 👋</h1>
+            <h1>{getGreeting()} {doctor?.first_name}</h1>
             <p>Voici un aperçu de l'état de santé de vos patients aujourd'hui</p>
           </div>
           <div className="home-date">
