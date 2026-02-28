@@ -26,7 +26,7 @@ function StatusBadge({ status }) {
   return <span className={`status-badge ${cls}`}>{label}</span>;
 }
 
-/* ─── Modal : Ajouter un patient ─────────────────────────────── */
+/* ─── Modal : Ajouter un patient ─── */
 function AddPatientModal({ onClose, onSuccess }) {
   const [email, setEmail]       = useState('');
   const [phone, setPhone]       = useState('');
@@ -106,7 +106,7 @@ function AddPatientModal({ onClose, onSuccess }) {
   );
 }
 
-/* ─── Jauge de progression ───────────────────────────────────── */
+/* ─── Jauge de progression ─── */
 function ProgressBar({ value, max, color }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
@@ -116,7 +116,7 @@ function ProgressBar({ value, max, color }) {
   );
 }
 
-/* ─── Helpers graphique SVG glycémie ─────────────────────────── */
+/* ─── Helpers graphique SVG glycémie ─ */
 function GlycemiaSparkline({ data }) {
   if (!data || data.length === 0) return null;
   const W = 560, H = 120, PAD = 12;
@@ -159,7 +159,7 @@ function GlycemiaSparkline({ data }) {
   );
 }
 
-/* ─── Jauge circulaire ───────────────────────────────────────── */
+/* ─── Jauge circulaire ───── */
 function RadialGauge({ value, max, color, size = 72 }) {
   const pct = max > 0 ? Math.min(1, value / max) : 0;
   const r = (size - 10) / 2;
@@ -176,7 +176,7 @@ function RadialGauge({ value, max, color, size = 72 }) {
   );
 }
 
-/* ─── Carte métrique avec jauge ──────────────────────────────── */
+/* ─── Carte métrique avec jauge ─── */
 function MetricCard({ icon, label, value, unit, goal, goalLabel, color, colorBg }) {
   const pct = goal > 0 ? Math.min(100, Math.round((value / goal) * 100)) : null;
   return (
@@ -204,7 +204,7 @@ function MetricCard({ icon, label, value, unit, goal, goalLabel, color, colorBg 
   );
 }
 
-/* ─── Carte alerte ───────────────────────────────────────────── */
+/* ─── Carte alerte ── */
 function AlertCard({ alert, index }) {
   const colors = [
     { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626', bar: '#DC2626' },
@@ -225,7 +225,7 @@ function AlertCard({ alert, index }) {
   );
 }
 
-/* ─── Score santé ────────────────────────────────────────────── */
+/* ─── Score santé ─── */
 function HealthScore({ score }) {
   const color = score >= 75 ? '#16A34A' : score >= 50 ? '#F97316' : '#DC2626';
   const label = score >= 75 ? 'Bon' : score >= 50 ? 'Moyen' : 'Faible';
@@ -247,7 +247,7 @@ function HealthScore({ score }) {
   );
 }
 
-/* ─── Modal : Dossier patient ────────────────────────────────── */
+/* ─── Modal : Dossier patient ── */
 function PatientDashboardModal({ member, onClose }) {
   const p         = member.patient_details;
   const patientId = p.id_user;
@@ -596,7 +596,7 @@ function PatientDashboardModal({ member, onClose }) {
   );
 }
 
-/* ─── Card patient ───────────────────────────────────────────── */
+/* ─── Card patient ──*/
 function PatientCard({ member, onClick }) {
   const p = member.patient_details;
   return (
@@ -695,8 +695,6 @@ function ReceivedInviteCard({ invite, onAccepted }) {
     </div>
   );
 }
-
-/* ─── Page principale ────────────────────────────────────────── */
 export default function PatientsScreen({ navigation }) {
   const [data,           setData]           = useState({ active_patients: [], pending_invites: [] });
   const [loading,        setLoading]        = useState(true);
@@ -706,9 +704,7 @@ export default function PatientsScreen({ navigation }) {
   const [showAddModal,   setShowAddModal]   = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
 
-  // Récupère l'ID du médecin connecté pour distinguer les invitations envoyées/reçues
   const storedUser = authService.getStoredUser();
-  // Supporte l'ancien format à plat et le nouveau format imbriqué (/auth/me/)
   const myDoctorId =
     storedUser?.doctor_id ??
     storedUser?.identity?.profiles?.[0]?.doctor_details?.doctor_id;
@@ -743,12 +739,6 @@ export default function PatientsScreen({ navigation }) {
     );
   });
 
-  /**
-   * Distinction des invitations :
-   * - "envoyées"  : le médecin a initié et approuvé de son côté → approved_by est renseigné (son doctor_id)
-   *                 En attente que le patient confirme de son côté.
-   * - "reçues"    : invitation venant d'un patient, pas encore acceptée par le médecin → approved_by === null
-   */
   const sentInvites     = data.pending_invites.filter(inv => inv.approved_by !== null);
   const receivedInvites = data.pending_invites.filter(inv => inv.approved_by === null);
 
