@@ -1,0 +1,70 @@
+<mxfile host="app.diagrams.net" modified="2026-03-08T11:00:00.000Z" agent="Codex" version="24.7.17" editor="www.draw.io">
+  <diagram id="functional-arch" name="Schema fonctionnel">
+    <mxGraphModel dx="1400" dy="850" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="patient" value="Patient" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="180" width="60" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="doctor" value="Medecin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="360" width="60" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="admin" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="540" width="60" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="appbox" value="Application Glycopilot" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;dashed=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="220" y="80" width="1450" height="760" as="geometry" />
+        </mxCell>
+
+        <mxCell id="auth" value="Authentification&lt;br&gt;(login/register/logout)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="300" y="130" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="profile" value="Gestion profil&lt;br&gt;(utilisateur + roles)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="580" y="130" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="input" value="Saisie glycemie&lt;br&gt;(manuel)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="300" y="280" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="history" value="Historique glycemie&lt;br&gt;(jour/semaine/mois)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="580" y="280" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="live" value="Suivi temps reel&lt;br&gt;(WebSocket glycemie)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="860" y="280" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard" value="Dashboard sante&lt;br&gt;(glucose/alertes/activite)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="280" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="alerts" value="Alertes glycemie&lt;br&gt;(hypo/hyper)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="440" y="450" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="doctorSpace" value="Espace medecin&lt;br&gt;(patients + care team)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="760" y="450" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="patient" target="auth"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="patient" target="profile"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="patient" target="input"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="patient" target="history"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="patient" target="live"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="patient" target="dashboard"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="patient" target="alerts"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e8" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="doctor" target="auth"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="doctor" target="doctorSpace"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="doctor" target="dashboard"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="doctor" target="history"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e12" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="admin" target="auth"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e13" value="" style="endArrow=block;html=1;" edge="1" parent="1" source="admin" target="profile"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e14" value="alimente" style="endArrow=block;html=1;strokeColor=#82b366;" edge="1" parent="1" source="input" target="history"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e15" value="declenche" style="endArrow=block;html=1;strokeColor=#b85450;" edge="1" parent="1" source="input" target="alerts"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e16" value="diffuse" style="endArrow=block;html=1;strokeColor=#6c8ebf;" edge="1" parent="1" source="input" target="live"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e17" value="remonte" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="alerts" target="dashboard"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

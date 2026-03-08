@@ -1,0 +1,45 @@
+@startuml
+title Glycopilot - Schema Fonctionnel
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+actor "Patient" as Patient
+actor "Medecin" as Doctor
+actor "Admin" as Admin
+
+rectangle "Application Glycopilot" {
+  usecase "Authentification\n(login/register/logout)" as UCAuth
+  usecase "Gestion profil\n(utilisateur + roles)" as UCProfile
+  usecase "Saisie glycemie\n(manuel)" as UCGlyInput
+  usecase "Historique glycemie\n(jour/semaine/mois)" as UCGlyHistory
+  usecase "Suivi temps reel\n(WebSocket glycemie)" as UCLive
+  usecase "Dashboard sante\n(glucose/alertes/activite)" as UCDashboard
+  usecase "Alertes glycemie\n(hypo/hyper)" as UCAlerts
+  usecase "Espace medecin\n(patients + care team)" as UCDoctor
+}
+
+Patient --> UCAuth
+Patient --> UCProfile
+Patient --> UCGlyInput
+Patient --> UCGlyHistory
+Patient --> UCLive
+Patient --> UCDashboard
+Patient --> UCAlerts
+
+Doctor --> UCAuth
+Doctor --> UCDoctor
+Doctor --> UCDashboard
+Doctor --> UCGlyHistory
+
+Admin --> UCAuth
+Admin --> UCProfile
+
+UCGlyInput --> UCGlyHistory : alimente
+UCGlyInput --> UCAlerts : declenche
+UCGlyInput --> UCLive : diffuse
+UCAlerts --> UCDashboard : remonte
+
+@enduml
