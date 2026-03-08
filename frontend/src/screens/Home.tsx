@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,12 @@ import GlycemieCard from '../components/dashboard/GlycemieCard';
 import StatCard from '../components/dashboard/StatCard';
 import ActionButton from '../components/common/ActionButton';
 import useDashboard from '../hooks/useDashboard';
+import { useMedications } from '../hooks/useMedications';
 import { Activity, Pill } from 'lucide-react-native';
-import { GLYCEMIA_TARGET, getGlycemiaStatus } from '../constants/glycemia.constants';
+import {
+  GLYCEMIA_TARGET,
+  getGlycemiaStatus,
+} from '../constants/glycemia.constants';
 import { useGlycemiaWebSocket } from '../hooks/useGlycemiaWebSocket';
 import { toastError, toastInfo } from '../services/toastService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,12 +29,36 @@ interface HomeScreenProps {
 }
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-  const { glucose, medication, activity, healthScore, refreshing, refresh } =
+  const { glucose, activity, healthScore, refreshing, refresh } =
     useDashboard({
-      modules: ['glucose', 'alerts', 'medication', 'nutrition', 'activity'],
+      modules: ['glucose', 'alerts', 'nutrition', 'activity'],
       refreshInterval: 30000,
       autoLoad: true,
     });
+
+  const { todayIntakes } = useMedications();
+
+  // Calcul identique à medicins.tsx
+  const medicationSummary = useMemo(() => {
+    const taken_count = todayIntakes.filter(i => i.status === 'taken').length;
+    const total_count = todayIntakes.length;
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    const pending = todayIntakes.filter(i => i.status === 'pending');
+    const nextIntake =
+      pending.find(i => i.scheduled_time >= nowTime) ?? pending[0] ?? null;
+
+    return {
+      taken_count,
+      total_count,
+      nextDose: nextIntake
+        ? {
+            name: nextIntake.medication_name ?? '',
+            scheduledAt: `${nextIntake.scheduled_date}T${nextIntake.scheduled_time}`,
+            status: nextIntake.status,
+          }
+        : null,
+    };
+  }, [todayIntakes]);
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [realtimeGlucose, setRealtimeGlucose] = useState(glucose);
@@ -90,10 +118,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   };
 
   return (
-    <Layout
-      navigation={navigation}
-      currentRoute="Home"
-    >
+    <Layout navigation={navigation} currentRoute="Home">
       <ScrollView
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -109,7 +134,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           healthScore={healthScore}
           glucoseTrend={realtimeGlucose?.trend}
           glucoseValue={realtimeGlucose?.value}
-          medication={medication}
+          medication={medicationSummary}
         />
 
         <View style={styles.sectionHeader}>
@@ -138,18 +163,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               onPress={() => console.log('Navigate to Activity')}
             />
           )}
-          {medication && (
-            <StatCard
-              title="Médic"
-              icon={Pill}
-              iconColor="#AF52DE"
-              iconBgColor="#F5EBFF"
-              value={medication.taken_count || 0}
-              secondaryValue={medication.total_count || 0}
-              subtitle="Prises aujourd'hui"
-              onPress={() => console.log('Navigate to Medications')}
-            />
-          )}
+          <StatCard
+            title="Médicaments"
+            icon={Pill}
+            iconColor="#AF52DE"
+            iconBgColor="#F5EBFF"
+            value={medicationSummary.taken_count}
+            secondaryValue={medicationSummary.total_count}
+            subtitle="Prises aujourd'hui"
+            onPress={() => navigation.navigate('Traitements')}
+          />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -161,29 +184,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <ActionButton
             type="repas"
             label="Repas"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Repas');
-              }
-            }}
+            onPress={() => navigation?.navigate('Repas')}
           />
           <ActionButton
             type="medic"
             label="Médic"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Traitements');
-              }
-            }}
+            onPress={() => navigation?.navigate('Traitements')}
           />
           <ActionButton
             type="action"
             label="Activité"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Activite');
-              }
-            }}
+            onPress={() => navigation?.navigate('Activite')}
           />
         </View>
 
