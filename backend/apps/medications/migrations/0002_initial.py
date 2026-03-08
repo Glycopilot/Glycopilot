@@ -23,4 +23,41 @@ class Migration(migrations.Migration):
                 to=settings.AUTH_USER_MODEL,
             ),
         ),
+        migrations.AddField(
+            model_name="medicationschedule",
+            name="user_medication",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="schedules",
+                to="medications.usermedication",
+            ),
+        ),
+        migrations.AddField(
+            model_name="medicationintake",
+            name="schedule",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="intakes",
+                to="medications.medicationschedule",
+            ),
+        ),
+        migrations.AddField(
+            model_name="medicationintake",
+            name="user_medication",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="intakes",
+                to="medications.usermedication",
+            ),
+        ),
+        migrations.AlterUniqueTogether(
+            name="medicationschedule",
+            unique_together={("user_medication", "time")},
+        ),
+        migrations.AlterUniqueTogether(
+            name="medicationintake",
+            unique_together={("user_medication", "scheduled_date", "scheduled_time")},
+        ),
     ]

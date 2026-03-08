@@ -96,20 +96,37 @@ export default function Banner({
   };
 
   const getMedicationMessage = () => {
-    if (!medication?.nextDose) {
-      return 'Aucun médicament prévu';
+    if (!medication || medication.total_count === 0) {
+      return 'Aucun traitement prévu aujourd\'hui';
     }
+
+    const progress = `${medication.taken_count}/${medication.total_count} prises`;
+
+    if (!medication.nextDose) {
+      if (medication.taken_count >= medication.total_count) {
+        return `Toutes les prises effectuées • ${progress}`;
+      }
+      return `${progress} effectuées`;
+    }
+
     const scheduledDate = new Date(medication.nextDose.scheduledAt);
     const time = scheduledDate.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
     });
-    return `${medication.nextDose.name} à ${time}`;
+    return `${medication.nextDose.name} à ${time} • ${progress}`;
   };
 
   const getMedicationTitle = () => {
     if (!medication?.nextDose) {
-      return 'Rappel médicaments';
+      if (
+        medication &&
+        medication.total_count > 0 &&
+        medication.taken_count < medication.total_count
+      ) {
+        return 'Rappel médicaments';
+      }
+      return 'Médicaments';
     }
     return 'Prochain médicament';
   };

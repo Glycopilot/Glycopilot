@@ -14,14 +14,77 @@ class Migration(migrations.Migration):
             name="Medication",
             fields=[
                 ("medication_id", models.AutoField(primary_key=True, serialize=False)),
-                ("name", models.CharField(max_length=150)),
+                ("name", models.CharField(max_length=300)),
                 ("type", models.CharField(blank=True, max_length=100, null=True)),
                 ("dosage", models.CharField(blank=True, max_length=100, null=True)),
                 ("interval_h", models.IntegerField(blank=True, null=True)),
                 ("max_duration_d", models.IntegerField(blank=True, null=True)),
+                (
+                    "cis_code",
+                    models.CharField(blank=True, max_length=50, null=True, unique=True),
+                ),
+                ("form", models.CharField(blank=True, max_length=150, null=True)),
+                ("route", models.CharField(blank=True, max_length=200, null=True)),
             ],
             options={
                 "db_table": "medications",
+            },
+        ),
+        migrations.CreateModel(
+            name="MedicationIntake",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("scheduled_date", models.DateField()),
+                ("scheduled_time", models.TimeField()),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "En attente"),
+                            ("taken", "Pris"),
+                            ("missed", "Manqué"),
+                            ("snoozed", "Reporté"),
+                        ],
+                        default="pending",
+                        max_length=10,
+                    ),
+                ),
+                ("taken_at", models.DateTimeField(blank=True, null=True)),
+                ("snoozed_until", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+            ],
+            options={
+                "db_table": "medication_intakes",
+                "ordering": ["scheduled_date", "scheduled_time"],
+            },
+        ),
+        migrations.CreateModel(
+            name="MedicationSchedule",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("time", models.TimeField()),
+                ("reminder_enabled", models.BooleanField(default=True)),
+            ],
+            options={
+                "db_table": "medication_schedules",
+                "ordering": ["time"],
             },
         ),
         migrations.CreateModel(
@@ -36,13 +99,51 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
+                (
+                    "custom_name",
+                    models.CharField(blank=True, max_length=150, null=True),
+                ),
+                (
+                    "custom_dosage",
+                    models.CharField(blank=True, max_length=100, null=True),
+                ),
                 ("start_date", models.DateField()),
-                ("taken_at", models.DateTimeField(blank=True, null=True)),
+                ("end_date", models.DateField(blank=True, null=True)),
+                ("doses_per_day", models.PositiveIntegerField(default=1)),
+                (
+                    "meal_timing",
+                    models.CharField(
+                        choices=[
+                            ("before_meal", "Avant repas"),
+                            ("after_meal", "Après repas"),
+                            ("anytime", "Indifférent"),
+                        ],
+                        default="anytime",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "source",
+                    models.CharField(
+                        choices=[
+                            ("api", "Base de données (BDPM)"),
+                            ("manual", "Ajout manuel"),
+                            ("prescribed", "Prescrit par médecin"),
+                        ],
+                        default="manual",
+                        max_length=20,
+                    ),
+                ),
                 ("statut", models.BooleanField(default=True)),
+                ("taken_at", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
                 (
                     "medication",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         related_name="user_medications",
                         to="medications.medication",
                     ),
