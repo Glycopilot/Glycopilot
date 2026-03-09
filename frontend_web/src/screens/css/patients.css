@@ -1303,3 +1303,102 @@
 @media (max-width: 500px) {
   .pdm-metrics-grid { grid-template-columns: 1fr; }
 }
+
+.gly-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 99px;
+}
+
+.gly-status-high {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+.gly-status-low {
+  background: #FFF7ED;
+  color: #EA580C;
+}
+
+.gly-status-normal {
+  background: #F0FDF4;
+  color: #16A34A;
+}
+
+/* Stats filtrables */
+.gly-stat-clickable { cursor: pointer; border-radius: 10px; padding: 8px 12px; transition: background .15s; }
+.gly-stat-clickable:hover { background: #F1F5F9; }
+.gly-stat-active { background: #EFF6FF; outline: 2px solid #BFDBFE; }
+.gly-stat-active-high { background: #FEF2F2 !important; outline-color: #FECACA !important; }
+.gly-stat-active-low { background: #FFF7ED !important; outline-color: #FED7AA !important; }
+.gly-stat-active-normal { background: #F0FDF4 !important; outline-color: #BBF7D0 !important; }
+
+/* Barre filtre actif */
+.gly-filter-bar { display: flex; align-items: center; justify-content: space-between; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 14px; font-size: 13px; color: var(--muted); margin-top: 16px; }
+.gly-filter-clear { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #64748B; background: none; border: 1px solid #CBD5E1; border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+.gly-filter-clear:hover { background: #F1F5F9; }
+
+/* Message vide après filtre */
+.gly-empty-filter { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 32px; color: var(--muted); font-size: 13px; }
+
+/* ── Tabs row avec période ── */
+.modal-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 0 24px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.modal-tabs-row .modal-tabs {
+  border-bottom: none;
+  padding: 0;
+}
+
+/* ── Sélecteur de période ── */
+.period-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+.period-btn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 99px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  color: #64748B;
+  cursor: pointer;
+  transition: all .15s;
+}
+.period-btn:hover { background: #F1F5F9; border-color: #CBD5E1; }
+.period-btn-active {
+  background: #EFF6FF;
+  border-color: #93C5FD;
+  color: #2563EB;
+  font-weight: 600;
+}
+.period-custom-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.period-date-input {
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  color: #374151;
+  outline: none;
+}
+.period-date-input:focus { border-color: #93C5FD; }
+.period-date-sep { font-size: 12px; color: #94A3B8; }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, CreditCard, Stethoscope, MapPin, User, ChevronRight } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
+import logo from '../assets/glycopilot.png';
 import './css/auth.css';
 
 const InputField = ({ label, value, onChangeText, icon, placeholder, type = 'text', rightElement }) => (
@@ -67,20 +68,21 @@ export default function SignInScreen({ navigation }) {
     }
   };
 
-  // ── Écran de confirmation post-inscription ──
+  // ── Post-inscription ──
   if (registeredEmail) {
     return (
       <div className="auth-root">
+        <div className="auth-mobile-topbar">
+          <img src={logo} alt="GlycoPilot" />
+          <button className="auth-mobile-topbar-link" onClick={goToLogin}>Se connecter →</button>
+        </div>
+
         <aside className="auth-aside">
-          <div className="aside-top">
-            <img src="/glycopilot.png" alt="GlycoPilot" className="aside-logo" />
-          </div>
+          <div className="aside-top"><img src={logo} alt="GlycoPilot" className="aside-logo" /></div>
           <div className="aside-body">
             <div className="aside-tag">Compte créé</div>
             <h1 className="aside-title">Plus qu'une étape !</h1>
-            <p className="aside-desc">
-              Votre compte a bien été créé. Notre équipe va maintenant vérifier votre licence médicale avant de vous donner accès à la plateforme.
-            </p>
+            <p className="aside-desc">Votre compte a bien été créé. Notre équipe va maintenant vérifier votre licence médicale avant de vous donner accès à la plateforme.</p>
             <ul className="aside-steps">
               <li><span className="step-num" style={{background:'rgba(255,255,255,.35)'}}>✓</span><span>Compte créé avec succès</span></li>
               <li><span className="step-num">02</span><span>Vérification de votre licence en cours</span></li>
@@ -106,17 +108,14 @@ export default function SignInScreen({ navigation }) {
                   <path d="M22 32l7 7 13-13" stroke="#4A90E2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-
               <h2 className="verif-title">Inscription réussie !</h2>
               <p className="verif-subtitle">Votre licence est en cours de vérification</p>
-
               <div className="verif-info-box">
                 <div className="verif-email-row">
                   <span className="verif-email-label">Email de contact</span>
                   <span className="verif-email-value">{registeredEmail}</span>
                 </div>
               </div>
-
               <div className="verif-steps">
                 <div className="vstep vstep-done">
                   <div className="vstep-dot vstep-dot-done">✓</div>
@@ -127,9 +126,7 @@ export default function SignInScreen({ navigation }) {
                 </div>
                 <div className="vstep-line" />
                 <div className="vstep vstep-active">
-                  <div className="vstep-dot vstep-dot-active">
-                    <span className="vstep-pulse" />
-                  </div>
+                  <div className="vstep-dot vstep-dot-active"><span className="vstep-pulse" /></div>
                   <div className="vstep-body">
                     <div className="vstep-title">Vérification de la licence</div>
                     <div className="vstep-desc">Notre équipe vérifie votre numéro de licence médicale. Ce processus prend généralement <strong>24 à 48h</strong>.</div>
@@ -144,12 +141,10 @@ export default function SignInScreen({ navigation }) {
                   </div>
                 </div>
               </div>
-
               <div className="verif-notice">
                 <span>📧</span>
                 <p>Un email de confirmation vous a été envoyé à <strong>{registeredEmail}</strong>. Vérifiez aussi vos spams.</p>
               </div>
-
               <button className="submit-btn" onClick={goToLogin}>
                 Aller à la page de connexion <ChevronRight size={18} />
               </button>
@@ -162,16 +157,18 @@ export default function SignInScreen({ navigation }) {
 
   return (
     <div className="auth-root">
+      {/* ── Mobile topbar ── */}
+      <div className="auth-mobile-topbar">
+        <img src={logo} alt="GlycoPilot" />
+        <button className="auth-mobile-topbar-link" onClick={goToLogin}>Se connecter →</button>
+      </div>
+
       <aside className="auth-aside">
-        <div className="aside-top">
-          <img src="/glycopilot.png" alt="GlycoPilot" className="aside-logo" />
-        </div>
+        <div className="aside-top"><img src={logo} alt="GlycoPilot" className="aside-logo" /></div>
         <div className="aside-body">
           <div className="aside-tag">Inscription</div>
           <h1 className="aside-title">Rejoignez<br />GlycoPilot</h1>
-          <p className="aside-desc">
-            Créez votre espace médecin en quelques minutes et commencez à suivre vos patients dès aujourd'hui.
-          </p>
+          <p className="aside-desc">Créez votre espace médecin en quelques minutes et commencez à suivre vos patients dès aujourd'hui.</p>
           <ul className="aside-steps">
             <li><span className="step-num">01</span><span>Renseignez votre identité</span></li>
             <li><span className="step-num">02</span><span>Ajoutez vos informations professionnelles</span></li>
@@ -231,6 +228,12 @@ export default function SignInScreen({ navigation }) {
               ? <span className="btn-loading"><span className="spinner"/>Inscription en cours…</span>
               : <span>Créer mon compte <ChevronRight size={18}/></span>}
           </button>
+
+          {/* Lien connexion visible uniquement sur mobile */}
+          <p className="auth-mobile-switch">
+            Déjà inscrit ?{' '}
+            <button className="auth-mobile-switch-btn" onClick={goToLogin}>Se connecter</button>
+          </p>
         </div>
       </main>
     </div>

@@ -22,7 +22,7 @@
 .auth-root {
   display: flex;
   min-height: 100vh;
-  text-align: left; /* annule le text-align:center du App.css */
+  text-align: left;
   font-family: 'DM Sans', sans-serif;
 }
 
@@ -38,10 +38,10 @@
   overflow: hidden;
 }
 
-.aside-top { margin-bottom: 56px; }
+.aside-top { margin-bottom: 1px; }
 
 .aside-logo {
-  height: 48px;
+  height: 90px;
   object-fit: contain;
   filter: brightness(0) invert(1);
   opacity: .92;
@@ -571,3 +571,87 @@
   line-height: 1.5;
 }
 .verif-notice strong { color: #78350F; }
+
+.auth-mobile-topbar {
+  display: none;
+}
+
+@media (max-width: 860px) {
+
+  .auth-aside {
+    display: none;
+  }
+
+  .auth-mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #4A90E2;
+    padding: 0 20px;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(74,144,226,.3);
+  }
+
+  .auth-mobile-topbar img {
+    height: 44px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: .92;
+  }
+
+  .auth-mobile-topbar-link {
+    background: rgba(255,255,255,.18);
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    padding: 7px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background .2s;
+    white-space: nowrap;
+  }
+  .auth-mobile-topbar-link:hover { background: rgba(255,255,255,.28); }
+
+  .auth-main {
+    padding-top: calc(60px + 32px);
+    align-items: flex-start;
+  }
+
+  .auth-form-centered {
+    min-height: auto;
+    justify-content: flex-start;
+    padding-top: 16px;
+  }
+}
+
+/* Lien switch (Se connecter / S'inscrire) visible uniquement sur mobile */
+.auth-mobile-switch {
+  display: none;
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.auth-mobile-switch-btn {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+  padding: 0;
+}
+.auth-mobile-switch-btn:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+  .auth-mobile-switch {
+    display: block;
+  }
+}
