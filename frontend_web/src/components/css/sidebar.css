@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
 
+/* ── Shared sidebar styles ── */
 .sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -7,9 +8,6 @@
   display: flex;
   flex-direction: column;
   padding: 28px 20px;
-  position: sticky;
-  top: 0;
-  height: 100vh;
 }
 
 .sb-logo img {
@@ -85,11 +83,7 @@
   flex-shrink: 0;
 }
 
-.sb-doc-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
+.sb-doc-text { display: flex; flex-direction: column; min-width: 0; }
 .sb-doc-name {
   font-size: 13px;
   font-weight: 600;
@@ -114,13 +108,134 @@
 }
 .sb-logout:hover { color: #fff; background: rgba(255,255,255,.15); }
 
-@media (max-width: 860px) {
-  .sidebar { display: none; }
+.sb-doc-prefix { color: #fff; font-weight: 800; opacity: .95; }
+
+/* ── Desktop sidebar ── */
+.sidebar-desktop {
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
 
-/* "Dr." affiché en blanc légèrement plus lumineux sur fond bleu */
-.sb-doc-prefix {
-  color: #fff;
-  font-weight: 800;
-  opacity: .95;
+/* ── Mobile topbar (hidden on desktop) ── */
+.mobile-topbar {
+  display: none;
+}
+
+/* ── Mobile drawer (hidden on desktop) ── */
+.sidebar-mobile {
+  display: none;
+}
+
+/* ── Close button (mobile only) ── */
+.sb-close {
+  display: none;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 860px) {
+
+  /* Hide desktop sidebar */
+  .sidebar-desktop {
+    display: none;
+  }
+
+  /* Show mobile topbar */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: #4A90E2;
+    padding: 0 20px;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(74,144,226,.3);
+  }
+
+  .mobile-logo {
+    height: 44px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+    opacity: .92;
+  }
+
+  .hamburger-btn {
+    background: rgba(255,255,255,.18);
+    border: none;
+    color: #fff;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .hamburger-btn:hover { background: rgba(255,255,255,.28); }
+
+  /* Overlay */
+  .mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 110;
+    backdrop-filter: blur(2px);
+    animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Drawer */
+  .sidebar-mobile {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    z-index: 120;
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+    box-shadow: 4px 0 24px rgba(15,23,42,.2);
+    padding-top: 20px;
+  }
+
+  .sidebar-mobile-open {
+    transform: translateX(0);
+  }
+
+  .sb-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.18);
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s;
+    z-index: 1;
+  }
+  .sb-close:hover { background: rgba(255,255,255,.28); }
+
+  /* Push content below topbar on all main screens */
+  .patients-root > main,
+  .home-root > main {
+    padding-top: calc(60px + 24px) !important;
+  }
+
+  /* Patients root / home root need flex-col on mobile */
+  .patients-root,
+  .home-root {
+    flex-direction: column;
+  }
 }

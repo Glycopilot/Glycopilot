@@ -464,3 +464,36 @@
   .kpi-row { grid-template-columns: 1fr; }
   .home-greeting { flex-direction: column; gap: 12px; }
 }
+
+.alert-row {
+  border-left: 3px solid #DC2626;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.alert-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 2px;
+}
+.alert-severity-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.alert-time {
+  display: block;
+  font-size: 11px;
+  color: #94A3B8;
+  margin-top: 3px;
+}

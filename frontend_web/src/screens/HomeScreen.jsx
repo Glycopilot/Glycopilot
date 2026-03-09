@@ -28,9 +28,7 @@ function ScoreGauge({ score }) {
   return (
     <div className="gauge-wrap">
       <svg viewBox="0 0 120 70" className="gauge-svg">
-        {/* Track */}
         <path d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke="#E2E8F0" strokeWidth="10" strokeLinecap="round"/>
-        {/* Fill */}
         <path
           d="M10,60 A50,50 0 0,1 110,60"
           fill="none"
@@ -45,15 +43,46 @@ function ScoreGauge({ score }) {
   );
 }
 
+const ALERT_TYPE_LABELS = {
+  hypo:         'Hypoglycémie',
+  hyper:        'Hyperglycémie',
+  missed_dose:  'Dose manquée',
+  low_activity: 'Activité insuffisante',
+  high_glucose: 'Glycémie élevée',
+  low_glucose:  'Glycémie basse',
+};
+
+const SEVERITY_CONFIG = {
+  critical: { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', label: 'Critique' },
+  warning:  { color: '#EA580C', bg: '#FFF7ED', border: '#FED7AA', label: 'Attention' },
+  info:     { color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', label: 'Info' },
+};
+
 function AlertItem({ alert, patientName }) {
+  const isObj    = alert && typeof alert === 'object';
+  const severity = isObj ? (alert.severity || 'critical') : 'critical';
+  const cfg      = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.critical;
+
+  const typeLabel   = isObj ? (ALERT_TYPE_LABELS[alert.type] || alert.type || 'Alerte') : (alert || 'Alerte');
+  const triggeredAt = isObj ? (alert.triggeredAt || alert.triggered_at || alert.time) : null;
+  const timeLabel   = triggeredAt
+    ? new Date(triggeredAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
+    : null;
+
   return (
-    <div className="alert-row">
-      <div className="alert-dot" />
+    <div className="alert-row" style={{ borderLeftColor: cfg.color, background: cfg.bg }}>
+      <div className="alert-dot" style={{ background: cfg.color }} />
       <div className="alert-text">
         <span className="alert-patient">{patientName}</span>
-        <span className="alert-msg">{typeof alert === 'string' ? alert : JSON.stringify(alert)}</span>
+        <span className="alert-msg" style={{ color: cfg.color }}>
+          {typeLabel}
+          <span className="alert-severity-tag" style={{ background: cfg.color }}>
+            {cfg.label}
+          </span>
+        </span>
+        {timeLabel && <span className="alert-time">{timeLabel}</span>}
       </div>
-      <AlertTriangle size={15} className="alert-icon" />
+      <AlertTriangle size={15} className="alert-icon" style={{ color: cfg.color }} />
     </div>
   );
 }
@@ -99,7 +128,6 @@ export default function HomeScreen({ navigation }) {
         const teamData = teamRes.data;
         setTeam(teamData);
 
-        // Charger tous les dashboards en parallèle
         const entries = await Promise.allSettled(
           teamData.active_patients.map(async (m) => {
             const pid = m.patient_details.id_user;
@@ -125,7 +153,6 @@ export default function HomeScreen({ navigation }) {
     load();
   }, []);
 
-  // Calcul des stats agrégées
   const activeCount = team.active_patients.length;
   const allDashes   = Object.values(dashboards);
   const avgScore    = allDashes.length
@@ -140,7 +167,6 @@ export default function HomeScreen({ navigation }) {
     }
   });
 
-  // Tri par score de santé pour "activité récente"
   const sortedByActivity = [...team.active_patients]
     .filter(m => dashboards[m.patient_details.id_user])
     .sort((a, b) => {
@@ -154,9 +180,7 @@ export default function HomeScreen({ navigation }) {
     <div className="home-root">
       <Sidebar activePage="home" navigation={navigation} />
 
-      {/* ── Main ── */}
       <main className="home-main">
-        {/* Greeting */}
         <div className="home-greeting">
           <div>
             <h1>{getGreeting()} {doctor?.first_name}</h1>
@@ -173,7 +197,6 @@ export default function HomeScreen({ navigation }) {
           </div>
         ) : (
           <>
-            {/* ── KPIs ── */}
             <div className="kpi-row">
               <div className="kpi-card">
                 <div className="kpi-icon kpi-blue"><Users size={22} /></div>
@@ -213,7 +236,6 @@ export default function HomeScreen({ navigation }) {
               </div>
             </div>
 
-            {/* ── Contenu principal ── */}
             <div className="home-grid">
               {/* Score moyen */}
               <div className="hcard hcard-score">
@@ -232,9 +254,9 @@ export default function HomeScreen({ navigation }) {
                 {allDashes.length > 0 && (
                   <div className="score-dist">
                     {[
-                      { label: 'Bon',   count: allDashes.filter(d => d.healthScore >= 70).length, cls: 'dist-good' },
-                      { label: 'Moyen', count: allDashes.filter(d => d.healthScore >= 40 && d.healthScore < 70).length, cls: 'dist-mid' },
-                      { label: 'Faible',count: allDashes.filter(d => d.healthScore < 40).length, cls: 'dist-low' },
+                      { label: 'Bon',    count: allDashes.filter(d => d.healthScore >= 70).length,                              cls: 'dist-good' },
+                      { label: 'Moyen',  count: allDashes.filter(d => d.healthScore >= 40 && d.healthScore < 70).length,        cls: 'dist-mid'  },
+                      { label: 'Faible', count: allDashes.filter(d => d.healthScore < 40).length,                               cls: 'dist-low'  },
                     ].map(({ label, count, cls }) => (
                       <div key={label} className={`dist-item ${cls}`}>
                         <div className="dist-count">{count}</div>
