@@ -7,7 +7,7 @@ import authService from '../services/authService';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
-import './css/profile.css';
+import './css/Profile.css';
 
 const apiClient = authService.getApiClient();
 

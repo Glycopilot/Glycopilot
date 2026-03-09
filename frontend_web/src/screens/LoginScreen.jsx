@@ -30,8 +30,8 @@ export default function LoginScreen({ navigation }) {
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
   const [resetEmail, setResetEmail]     = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
-
   const [pendingEmail, setPendingEmail] = useState(null);
+
   const { login, loading, error } = useAuth();
 
   const goToSignin = () => navigation.navigate('/signin');
@@ -72,20 +72,22 @@ export default function LoginScreen({ navigation }) {
     if (e.key === 'Enter') isPasswordResetMode ? handlePasswordReset() : handleLogin();
   };
 
-  // ── Écran compte en attente de vérification ──
+  // ── Compte en attente ──
   if (pendingEmail) {
     return (
       <div className="auth-root">
+        {/* Mobile topbar */}
+        <div className="auth-mobile-topbar">
+          <img src={logo} alt="GlycoPilot" />
+          <button className="auth-mobile-topbar-link" onClick={goToSignin}>S'inscrire →</button>
+        </div>
+
         <aside className="auth-aside">
-          <div className="aside-top">
-            <img src={logo} alt="GlycoPilot" className="aside-logo" />
-          </div>
+          <div className="aside-top"><img src={logo} alt="GlycoPilot" className="aside-logo" /></div>
           <div className="aside-body">
             <div className="aside-tag">Compte en attente</div>
             <h1 className="aside-title">Vérification en cours…</h1>
-            <p className="aside-desc">
-              Votre licence médicale est en cours de vérification par notre équipe. Vous recevrez un email dès que votre compte sera activé.
-            </p>
+            <p className="aside-desc">Votre licence médicale est en cours de vérification par notre équipe. Vous recevrez un email dès que votre compte sera activé.</p>
             <ul className="aside-steps">
               <li><span className="step-dot" /><span>Vérification sous 24 à 48h</span></li>
               <li><span className="step-dot" /><span>Notification par email à l'activation</span></li>
@@ -111,17 +113,14 @@ export default function LoginScreen({ navigation }) {
                   <path d="M22 32l7 7 13-13" stroke="#4A90E2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-
               <h2 className="verif-title">Licence en cours de vérification</h2>
               <p className="verif-subtitle">Votre compte existe mais n'est pas encore activé</p>
-
               <div className="verif-info-box">
                 <div className="verif-email-row">
                   <span className="verif-email-label">Email de contact</span>
                   <span className="verif-email-value">{pendingEmail}</span>
                 </div>
               </div>
-
               <div className="verif-steps">
                 <div className="vstep vstep-done">
                   <div className="vstep-dot vstep-dot-done">✓</div>
@@ -132,9 +131,7 @@ export default function LoginScreen({ navigation }) {
                 </div>
                 <div className="vstep-line" />
                 <div className="vstep vstep-active">
-                  <div className="vstep-dot vstep-dot-active">
-                    <span className="vstep-pulse" />
-                  </div>
+                  <div className="vstep-dot vstep-dot-active"><span className="vstep-pulse" /></div>
                   <div className="vstep-body">
                     <div className="vstep-title">Vérification de la licence</div>
                     <div className="vstep-desc">Notre équipe vérifie votre numéro de licence médicale. Ce processus prend généralement <strong>24 à 48h</strong>.</div>
@@ -149,12 +146,10 @@ export default function LoginScreen({ navigation }) {
                   </div>
                 </div>
               </div>
-
               <div className="verif-notice">
                 <span>📧</span>
                 <p>Un email vous sera envoyé à <strong>{pendingEmail}</strong> dès que votre licence sera validée.</p>
               </div>
-
               <button className="submit-btn" style={{ marginBottom: 12 }} onClick={() => setPendingEmail(null)}>
                 ← Réessayer avec un autre compte
               </button>
@@ -167,10 +162,14 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <div className="auth-root">
+      {/* ── Mobile topbar ── */}
+      <div className="auth-mobile-topbar">
+        <img src={logo} alt="GlycoPilot" />
+        <button className="auth-mobile-topbar-link" onClick={goToSignin}>S'inscrire →</button>
+      </div>
+
       <aside className="auth-aside">
-        <div className="aside-top">
-          <img src="/glycopilot.png" alt="GlycoPilot" className="aside-logo" />
-        </div>
+        <div className="aside-top"><img src={logo} alt="GlycoPilot" className="aside-logo" /></div>
         <div className="aside-body">
           <div className="aside-tag">Connexion</div>
           <h1 className="aside-title">
@@ -231,6 +230,11 @@ export default function LoginScreen({ navigation }) {
                   ? <span className="btn-loading"><span className="spinner"/>Connexion…</span>
                   : <span>Se connecter <ChevronRight size={18}/></span>}
               </button>
+              {/* Lien inscription visible uniquement sur mobile */}
+              <p className="auth-mobile-switch">
+                Pas encore de compte ?{' '}
+                <button className="auth-mobile-switch-btn" onClick={goToSignin}>S'inscrire</button>
+              </p>
             </>
           ) : (
             <>
