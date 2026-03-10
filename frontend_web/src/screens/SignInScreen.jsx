@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, CreditCard, Stethoscope, MapPin, User, ChevronRight } from 'lucide-react';
 import authService from '../services/authService';
-import { toastError, toastSuccess } from '../services/toastService';
+import { toastError } from '../services/toastService';
 import logo from '../assets/glycopilot.png';
 import './css/auth.css';
 
