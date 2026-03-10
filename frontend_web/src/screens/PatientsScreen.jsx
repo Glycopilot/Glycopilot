@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Users, Clock, Search, ChevronRight, UserCheck,
-  Mail, Phone, Stethoscope, AlertCircle, Plus, X,
+  Users, Clock, Search, ChevronRight,
+  Mail, Phone, AlertCircle, Plus, X,
   Activity, Utensils, Pill, Droplets, Heart, Footprints,
   Flame, AlertTriangle, CheckCircle, Send, UserPlus
 } from 'lucide-react';
@@ -110,16 +110,6 @@ function AddPatientModal({ onClose, onSuccess }) {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ─── Jauge de progression ─── */
-function ProgressBar({ value, max, color }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
-  return (
-    <div className="progress-track">
-      <div className="progress-fill" style={{ width: `${pct}%`, background: color }} />
     </div>
   );
 }
@@ -263,12 +253,6 @@ function AlertCard({ alert, index }) {
     ? new Date(triggeredAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
     : null;
 
-  const severityLabel = {
-    critical: 'Critique',
-    warning:  'Attention',
-    info:     'Info',
-  }[severity] || severity;
-
   return (
     <div className="alert-card" style={{ background: c.bg, borderColor: c.border }}>
       <div className="alert-card-bar" style={{ background: c.bar }} />
@@ -276,9 +260,6 @@ function AlertCard({ alert, index }) {
         <div className="alert-card-title" style={{ color: c.text }}>
           <AlertTriangle size={13} />
           <span>{message}</span>
-          <span className="alert-severity-badge" style={{ background: c.badge }}>
-            {severityLabel}
-          </span>
         </div>
         {alert.type && alert.message && (
           <div className="alert-card-type">{typeLabel}</div>
@@ -327,7 +308,7 @@ function PatientDashboardModal({ member, onClose }) {
   const [customEnd,   setCustomEnd]   = useState('');
 
   /* Calcule start/end en fonction de la période sélectionnée */
-  const getPeriodDates = (p = period) => {
+  const getPeriodDates = useCallback((p = period) => {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -341,7 +322,7 @@ function PatientDashboardModal({ member, onClose }) {
     }
     if (p === 'custom') return { start_date: customStart, end_date: customEnd };
     return {};
-  };
+  }, [period, customStart, customEnd]);
 
   useEffect(() => {
     // Pour 'custom', n'envoie la requête que si les deux dates sont remplies
@@ -374,7 +355,7 @@ function PatientDashboardModal({ member, onClose }) {
       }
     };
     load();
-  }, [patientId, period, customStart, customEnd]);
+  }, [patientId, period, customStart, customEnd, getPeriodDates]);
 
   const tabs = [
     { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <Heart size={15} /> },
@@ -386,8 +367,6 @@ function PatientDashboardModal({ member, onClose }) {
   /* Statistiques glycémie */
   const glycValues = glycemia.map(g => parseFloat(g.value)).filter(v => !isNaN(v));
   const glycAvg    = glycValues.length ? (glycValues.reduce((a, b) => a + b, 0) / glycValues.length).toFixed(2) : null;
-  const glycMax    = glycValues.length ? Math.max(...glycValues).toFixed(2) : null;
-  const glycMin    = glycValues.length ? Math.min(...glycValues).toFixed(2) : null;
 
   /* ── Extraction sécurisée des champs dashboard ──
      L'API peut renvoyer un scalaire OU un objet { value, unit, trend, recordedAt, … }
@@ -775,7 +754,6 @@ function PatientDashboardModal({ member, onClose }) {
                           const mealCals  = m.calories ?? m.total_calories ?? m.kcal ?? m.energy;
                           const mealCarbs = m.carbs ?? m.carbohydrates ?? m.glucides ?? m.carb_grams;
                           const mealProts = m.proteins ?? m.protein ?? m.proteines;
-                          const mealFats  = m.fats ?? m.fat ?? m.lipids ?? m.lipides;
                           return (
                             <tr key={i}>
                               <td style={{ color: 'var(--muted)', fontSize: 12 }}>
@@ -960,7 +938,7 @@ function ReceivedInviteCard({ invite, onAccepted }) {
         </div>
         <div className="patient-meta">
           <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : '—'}</h3>
-          <span className="status-badge badge-received">À accepter</span>
+          <span className="status-badge badge-received">Souhaite que vous deveniez son médecin référent</span>
         </div>
       </div>
       <div className="card-body" style={{ marginTop: 12 }}>
@@ -986,11 +964,6 @@ export default function PatientsScreen({ navigation }) {
   const [tab,            setTab]            = useState('active');
   const [showAddModal,   setShowAddModal]   = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
-
-  const storedUser = authService.getStoredUser();
-  const myDoctorId =
-    storedUser?.doctor_id ??
-    storedUser?.identity?.profiles?.[0]?.doctor_details?.doctor_id;
 
   const fetchTeam = useCallback(async () => {
     try {
@@ -1044,25 +1017,6 @@ export default function PatientsScreen({ navigation }) {
             <Plus size={16} /> Ajouter un patient
           </button>
         </header>
-
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="stat-icon stat-blue"><UserCheck size={20} /></div>
-            <div><div className="stat-value">{activeCount}</div><div className="stat-label">Patients actifs</div></div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon stat-orange"><Clock size={20} /></div>
-            <div><div className="stat-value">{sentCount}</div><div className="stat-label">Invitations envoyées</div></div>
-          </div>
-          <div className="stat-card stat-card-received" style={{ position: 'relative' }}>
-            <div className="stat-icon stat-green"><UserPlus size={20} /></div>
-            <div>
-              <div className="stat-value">{receivedCount}</div>
-              <div className="stat-label">Demandes reçues</div>
-            </div>
-            {receivedCount > 0 && <span className="stat-notif">{receivedCount}</span>}
-          </div>
-        </div>
 
         <div className="toolbar">
           <div className="tabs">

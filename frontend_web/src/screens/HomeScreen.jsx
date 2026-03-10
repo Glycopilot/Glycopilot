@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, Heart, Activity, AlertTriangle,
   TrendingUp, ArrowRight, Footprints,
-  Bell, CheckCircle
+  Bell, CheckCircle, Droplets
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
@@ -58,7 +58,7 @@ const SEVERITY_CONFIG = {
   info:     { color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', label: 'Info' },
 };
 
-function AlertItem({ alert, patientName }) {
+function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
   const isObj    = alert && typeof alert === 'object';
   const severity = isObj ? (alert.severity || 'critical') : 'critical';
   const cfg      = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.critical;
@@ -69,18 +69,32 @@ function AlertItem({ alert, patientName }) {
     ? new Date(triggeredAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
     : null;
 
+  // Mesure qui a déclenché l'alerte, issue de dashboard.glucose
+  const isGlycAlert = isObj && ['hypo', 'hyper', 'high_glucose', 'low_glucose'].includes(alert.type);
+  const unit        = triggerUnit ?? (triggerValue != null && triggerValue > 10 ? 'mg/dL' : 'g/L');
+  const glycLabel   = isGlycAlert && triggerValue != null
+    ? `${parseFloat(triggerValue).toFixed(1)} ${unit}`
+    : null;
+
   return (
     <div className="alert-row" style={{ borderLeftColor: cfg.color, background: cfg.bg }}>
       <div className="alert-dot" style={{ background: cfg.color }} />
       <div className="alert-text">
-        <span className="alert-patient">{patientName}</span>
-        <span className="alert-msg" style={{ color: cfg.color }}>
-          {typeLabel}
-          <span className="alert-severity-tag" style={{ background: cfg.color }}>
-            {cfg.label}
-          </span>
-        </span>
-        {timeLabel && <span className="alert-time">{timeLabel}</span>}
+        {/* Ligne 1 : nom du patient + valeur glycémie à droite */}
+        <div className="alert-top-row">
+          <span className="alert-patient">{patientName}</span>
+          {glycLabel && (
+            <span className="alert-glyc-badge" style={{ background: cfg.color }}>
+              <Droplets size={12} />
+              {glycLabel}
+            </span>
+          )}
+        </div>
+        {/* Ligne 2 : type d'alerte + heure */}
+        <div className="alert-bottom-row">
+          <span className="alert-msg" style={{ color: cfg.color }}>{typeLabel}</span>
+          {timeLabel && <span className="alert-time">{timeLabel}</span>}
+        </div>
       </div>
       <AlertTriangle size={15} className="alert-icon" style={{ color: cfg.color }} />
     </div>
@@ -117,33 +131,57 @@ function ActivityRow({ patient, dashboard }) {
 
 export default function HomeScreen({ navigation }) {
   const doctor = authService.getStoredUser();
-  const [team,       setTeam]       = useState({ active_patients: [], pending_invites: [] });
-  const [dashboards, setDashboards] = useState({});
-  const [loading,    setLoading]    = useState(true);
+  const [team,        setTeam]        = useState({ active_patients: [], pending_invites: [] });
+  const [dashboards,  setDashboards]  = useState({});
+  const [glycemiaMap, setGlycemiaMap] = useState({}); // { [pid]: [records] }
+  const [loading,     setLoading]     = useState(true);
 
   useEffect(() => {
+    const getFmt = () => {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const start = new Date(now); start.setDate(now.getDate() - 6);
+      return { start_date: fmt(start), end_date: fmt(now) };
+    };
+    const toArr = (data) => {
+      if (Array.isArray(data)) return data;
+      for (const k of ['results', 'glycemia', 'data']) if (Array.isArray(data?.[k])) return data[k];
+      return [];
+    };
+
     const load = async () => {
       try {
-        const teamRes = await apiClient.get('/doctors/care-team/my-team/');
+        const teamRes  = await apiClient.get('/doctors/care-team/my-team/');
         const teamData = teamRes.data;
         setTeam(teamData);
 
+        const dates = getFmt();
+
+        // Fetch dashboard + glycémie en parallèle pour chaque patient
         const entries = await Promise.allSettled(
           teamData.active_patients.map(async (m) => {
             const pid = m.patient_details.id_user;
-            const res = await apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${pid}`);
-            return [pid, res.data];
+            const qs  = new URLSearchParams({ patient_user_id: pid, ...dates }).toString();
+            const [dashRes, glycRes] = await Promise.all([
+              apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${pid}`),
+              apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`),
+            ]);
+            return [pid, dashRes.data, toArr(glycRes.data)];
           })
         );
 
-        const map = {};
+        const dashMap = {};
+        const glycMap = {};
         entries.forEach(e => {
           if (e.status === 'fulfilled') {
-            const [pid, data] = e.value;
-            map[pid] = data;
+            const [pid, dash, glycRecords] = e.value;
+            dashMap[pid] = dash;
+            glycMap[pid] = glycRecords;
           }
         });
-        setDashboards(map);
+        setDashboards(dashMap);
+        setGlycemiaMap(glycMap);
       } catch (err) {
         toastError('Erreur', 'Impossible de charger les données');
       } finally {
@@ -153,18 +191,51 @@ export default function HomeScreen({ navigation }) {
     load();
   }, []);
 
+  // Retourne la mesure anormale la plus récente correspondant au type d'alerte
+  const getTriggerRecord = (pid, alertType) => {
+    const records = glycemiaMap[pid] ?? [];
+    const isHyper = ['hyper', 'high_glucose'].includes(alertType);
+    const isHypo  = ['hypo',  'low_glucose' ].includes(alertType);
+    if (!isHyper && !isHypo) return null;
+
+    const matching = records.filter(g => {
+      const v      = parseFloat(g.value);
+      const isMg   = (g.unit === 'mg/dL') || v > 10;
+      const high   = isMg ? v > 180 : v > 1.8;
+      const low    = isMg ? v < 70  : v < 0.7;
+      return isHyper ? high : low;
+    });
+    // Trier par date décroissante, prendre la plus récente
+    matching.sort((a, b) =>
+      new Date(b.measuredAt ?? b.recorded_at ?? b.date ?? 0) -
+      new Date(a.measuredAt ?? a.recorded_at ?? a.date ?? 0)
+    );
+    return matching[0] ?? null;
+  };
+
   const activeCount = team.active_patients.length;
   const allDashes   = Object.values(dashboards);
   const avgScore    = allDashes.length
     ? Math.round(allDashes.reduce((s, d) => s + (d.healthScore || 0), 0) / allDashes.length)
     : null;
 
+  // Dédupliquer par (pid, type) pour n'avoir qu'une alerte par type par patient
   const allAlerts = [];
+  const seen = new Set();
   team.active_patients.forEach(m => {
-    const d = dashboards[m.patient_details.id_user];
-    if (d?.alerts?.length) {
-      d.alerts.forEach(a => allAlerts.push({ alert: a, patient: m.patient_details }));
-    }
+    const pid = m.patient_details.id_user;
+    const d   = dashboards[pid];
+    if (!d?.alerts?.length) return;
+    d.alerts.forEach(a => {
+      const alertType = typeof a === 'object' ? a.type : a;
+      const key = `${pid}::${alertType}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const rec          = getTriggerRecord(pid, alertType);
+      const triggerValue = rec ? parseFloat(rec.value) : null;
+      const triggerUnit  = rec?.unit ?? (triggerValue != null && triggerValue > 10 ? 'mg/dL' : 'g/L');
+      allAlerts.push({ alert: a, patient: m.patient_details, triggerValue, triggerUnit });
+    });
   });
 
   const sortedByActivity = [...team.active_patients]
@@ -202,7 +273,7 @@ export default function HomeScreen({ navigation }) {
                 <div className="kpi-icon kpi-blue"><Users size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{activeCount}</div>
-                  <div className="kpi-label">Patients actifs</div>
+                  <div className="kpi-label">Patients suivis</div>
                 </div>
               </div>
 
@@ -210,7 +281,7 @@ export default function HomeScreen({ navigation }) {
                 <div className="kpi-icon kpi-red"><AlertTriangle size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{allAlerts.length}</div>
-                  <div className="kpi-label">Alertes en cours</div>
+                  <div className="kpi-label">Alertes enregistrées</div>
                 </div>
                 {allAlerts.length > 0 && (
                   <div className="kpi-badge">{allAlerts.length}</div>
@@ -285,6 +356,8 @@ export default function HomeScreen({ navigation }) {
                         key={i}
                         alert={item.alert}
                         patientName={`${item.patient.first_name} ${item.patient.last_name}`}
+                        triggerValue={item.triggerValue}
+                        triggerUnit={item.triggerUnit}
                       />
                     ))}
                   </div>
