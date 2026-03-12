@@ -82,22 +82,23 @@ services:
   # --- Frontend Web (local) ---
   frontend_web:
     profiles: ["local"]
-    image: node:20-alpine
+    build:
+      context: ./frontend_web
+      dockerfile: Dockerfile.dev
     container_name: glycopilot-front-web
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend_web:/app
-    working_dir: /app
+      - ./frontend_web/src:/app/src
+      - ./frontend_web/public:/app/public
     environment:
-      - REACT_APP_API_URL=http://backend_local:8000/api
-    command: sh -c "npm install && npm start"
+      - REACT_APP_API_URL=http://localhost:8006/api
+      - FAST_REFRESH=false
     depends_on:
       - backend_local
     stdin_open: true
     tty: true
-    restart: unless-stopped
-
+  
   # ========================================
   # MODE AWS (production)
   # ========================================
