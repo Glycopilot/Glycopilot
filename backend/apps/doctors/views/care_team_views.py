@@ -431,11 +431,15 @@ class CareTeamViewSet(viewsets.ViewSet):
         doctors = team.filter(
             role__in=["REFERENT_DOCTOR", "SPECIALIST"], status__label="ACTIVE"
         )
+        pending_doctor_invites = team.filter(
+            role__in=["REFERENT_DOCTOR", "SPECIALIST"], status__label="PENDING"
+        )
         family = team.filter(
             role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="ACTIVE"
         )
         data = {
             "doctors": PatientCareTeamSerializer(doctors, many=True).data,
+            "pending_doctor_invites": PatientCareTeamSerializer(pending_doctor_invites, many=True).data,
             "family": PatientCareTeamSerializer(family, many=True).data,
         }
         return Response(data)
