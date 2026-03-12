@@ -1,450 +1,398 @@
 import { useState, useEffect } from 'react';
-import { 
-  LogOut, 
-  User, 
-  Activity, 
-  AlertTriangle, 
-  TrendingUp, 
-  TrendingDown,
-  FileText,
-  Pill,
-  Clock,
-  Search,
-  MoreVertical,
-  ChevronRight,
-  Bell,
-  Menu,
-  X,
-  UserPlus,
-  Settings
+import {
+  Users, Heart, Activity, AlertTriangle,
+  TrendingUp, ArrowRight, Footprints,
+  Bell, CheckCircle, Droplets
 } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
 import authService from '../services/authService';
-import { toastSuccess, toastError } from '../services/toastService';
-import AddPatient from './AddPatient';
-import Profile from './Profile';
+import { toastError } from '../services/toastService';
+import Sidebar from '../components/Sidebar';
 import './css/HomeScreen.css';
 
+const apiClient = authService.getApiClient();
+
+function getInitials(firstName, lastName) {
+  return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bonjour';
+  if (h < 18) return 'Bon après-midi';
+  return 'Bonsoir';
+}
+
+function ScoreGauge({ score }) {
+  const color = score >= 70 ? '#16A34A' : score >= 40 ? '#F97316' : '#DC2626';
+  const deg   = Math.round((score / 100) * 180);
+  return (
+    <div className="gauge-wrap">
+      <svg viewBox="0 0 120 70" className="gauge-svg">
+        <path d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke="#E2E8F0" strokeWidth="10" strokeLinecap="round"/>
+        <path
+          d="M10,60 A50,50 0 0,1 110,60"
+          fill="none"
+          stroke={color}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={`${(deg / 180) * 157} 157`}
+        />
+      </svg>
+      <div className="gauge-value" style={{ color }}>{score}<span>/100</span></div>
+    </div>
+  );
+}
+
+const ALERT_TYPE_LABELS = {
+  hypo:         'Hypoglycémie',
+  hyper:        'Hyperglycémie',
+  missed_dose:  'Dose manquée',
+  low_activity: 'Activité insuffisante',
+  high_glucose: 'Glycémie élevée',
+  low_glucose:  'Glycémie basse',
+};
+
+const SEVERITY_CONFIG = {
+  critical: { color: '#DC2626', bg: '#FEF2F2', border: '#FECACA', label: 'Critique' },
+  warning:  { color: '#EA580C', bg: '#FFF7ED', border: '#FED7AA', label: 'Attention' },
+  info:     { color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', label: 'Info' },
+};
+
+function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
+  const isObj    = alert && typeof alert === 'object';
+  const severity = isObj ? (alert.severity || 'critical') : 'critical';
+  const cfg      = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.critical;
+
+  const typeLabel   = isObj ? (ALERT_TYPE_LABELS[alert.type] || alert.type || 'Alerte') : (alert || 'Alerte');
+  const triggeredAt = isObj ? (alert.triggeredAt || alert.triggered_at || alert.time) : null;
+  const timeLabel   = triggeredAt
+    ? new Date(triggeredAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
+    : null;
+
+  // Mesure qui a déclenché l'alerte, issue de dashboard.glucose
+  const isGlycAlert = isObj && ['hypo', 'hyper', 'high_glucose', 'low_glucose'].includes(alert.type);
+  const unit        = triggerUnit ?? (triggerValue != null && triggerValue > 10 ? 'mg/dL' : 'g/L');
+  const glycLabel   = isGlycAlert && triggerValue != null
+    ? `${parseFloat(triggerValue).toFixed(1)} ${unit}`
+    : null;
+
+  return (
+    <div className="alert-row" style={{ borderLeftColor: cfg.color, background: cfg.bg }}>
+      <div className="alert-dot" style={{ background: cfg.color }} />
+      <div className="alert-text">
+        {/* Ligne 1 : nom du patient + valeur glycémie à droite */}
+        <div className="alert-top-row">
+          <span className="alert-patient">{patientName}</span>
+          {glycLabel && (
+            <span className="alert-glyc-badge" style={{ background: cfg.color }}>
+              <Droplets size={12} />
+              {glycLabel}
+            </span>
+          )}
+        </div>
+        {/* Ligne 2 : type d'alerte + heure */}
+        <div className="alert-bottom-row">
+          <span className="alert-msg" style={{ color: cfg.color }}>{typeLabel}</span>
+          {timeLabel && <span className="alert-time">{timeLabel}</span>}
+        </div>
+      </div>
+      <AlertTriangle size={15} className="alert-icon" style={{ color: cfg.color }} />
+    </div>
+  );
+}
+
+function ActivityRow({ patient, dashboard }) {
+  if (!dashboard) return null;
+  const steps = dashboard.activity?.steps;
+  const pct   = steps?.goal > 0 ? Math.min(100, Math.round((steps.value / steps.goal) * 100)) : 0;
+  const name  = `${patient.first_name} ${patient.last_name}`;
+
+  return (
+    <div className="activity-row">
+      <div className="act-avatar">{getInitials(patient.first_name, patient.last_name)}</div>
+      <div className="act-info">
+        <div className="act-name">{name}</div>
+        <div className="act-bar-wrap">
+          <div className="act-bar">
+            <div className="act-bar-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="act-pct">{pct}%</span>
+        </div>
+        <div className="act-sub">
+          <Footprints size={12} /> {steps?.value?.toLocaleString() ?? '—'} / {steps?.goal?.toLocaleString() ?? '—'} pas
+        </div>
+      </div>
+      <div className={`act-score ${dashboard.healthScore >= 70 ? 'score-good' : dashboard.healthScore >= 40 ? 'score-mid' : 'score-low'}`}>
+        {dashboard.healthScore}
+      </div>
+    </div>
+  );
+}
+
 export default function HomeScreen({ navigation }) {
-  const [doctor, setDoctor] = useState(null);
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [allUsers, setAllUsers] = useState([]);
-  const [showAddPatient, setShowAddPatient] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const { logout } = useAuth();
+  const doctor = authService.getStoredUser();
+  const [team,        setTeam]        = useState({ active_patients: [], pending_invites: [] });
+  const [dashboards,  setDashboards]  = useState({});
+  const [glycemiaMap, setGlycemiaMap] = useState({}); // { [pid]: [records] }
+  const [loading,     setLoading]     = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        if (!authService.isAuthenticated()) {
-          if (navigation?.navigate) {
-            navigation.navigate('/login');
-          } else {
-            window.location.href = '/login';
-          }
-          return;
-        }
+    const getFmt = () => {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const start = new Date(now); start.setDate(now.getDate() - 6);
+      return { start_date: fmt(start), end_date: fmt(now) };
+    };
+    const toArr = (data) => {
+      if (Array.isArray(data)) return data;
+      for (const k of ['results', 'glycemia', 'data']) if (Array.isArray(data?.[k])) return data[k];
+      return [];
+    };
 
-        const storedUser = authService.getStoredUser();
-        if (storedUser) {
-          setDoctor(storedUser);
-          
-          // Récupération de tous les utilisateurs depuis la base de données
-          try {
-            const response = await fetch('/api/users', {
-              headers: {
-                'Authorization': `Bearer ${authService.getTokens().accessToken}`
-              }
-            });
-            
-            if (response.ok) {
-              const users = await response.json();
-              setAllUsers(users);
-              
-              // Transformation des utilisateurs en format patients avec des données aléatoires
-              const transformedPatients = users.map((user, index) => {
-                const glycemiaValues = [0.65, 0.85, 1.10, 1.15, 1.28, 1.45, 1.65, 1.85];
-                const statuses = ['low', 'normal', 'normal', 'normal', 'normal', 'high', 'high', 'critical'];
-                const trends = ['down', 'stable', 'stable', 'stable', 'stable', 'up', 'up', 'up'];
-                const messages = [
-                  'Hypoglycémie légère',
-                  'Tout va bien',
-                  'Valeurs stables',
-                  'Médicament pris à 9h',
-                  'Glycémie en hausse',
-                  'À surveiller',
-                  'Glycémie critique détectée',
-                  'Consultation recommandée'
-                ];
-                
-                const randomIndex = index % glycemiaValues.length;
-                const glycemia = glycemiaValues[randomIndex];
-                const status = statuses[randomIndex];
-                const firstName = user.first_name || 'Patient';
-                const lastName = user.last_name || 'Inconnu';
-                
-                // Couleur de fond selon le statut
-                let bgColor = '2ECC71';
-                if (status === 'critical') bgColor = 'E74C3C';
-                else if (status === 'high') bgColor = 'F39C12';
-                else if (status === 'low') bgColor = '3498DB';
-                
-                return {
-                  id: user.id,
-                  firstName,
-                  lastName,
-                  email: user.email,
-                  age: Math.floor(Math.random() * 40) + 30,
-                  lastGlycemia: glycemia,
-                  status,
-                  trend: trends[randomIndex],
-                  lastUpdate: ['2 min', '5 min', '15 min', '30 min', '45 min', '1h'][Math.floor(Math.random() * 6)],
-                  medicationCompliance: Math.floor(Math.random() * 30) + 70,
-                  avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}+${encodeURIComponent(lastName)}&background=${bgColor}&color=fff&bold=true`,
-                  pendingPrescriptions: Math.floor(Math.random() * 3),
-                  unreadAlerts: status === 'critical' || status === 'low' ? Math.floor(Math.random() * 5) + 1 : 0,
-                  lastMessage: messages[randomIndex]
-                };
-              });
-              
-              setPatients(transformedPatients);
-            } else {
-              toastError('Erreur', 'Impossible de récupérer la liste des patients');
-            }
-          } catch (fetchError) {
-            console.error('Erreur lors de la récupération des utilisateurs:', fetchError);
-            toastError('Erreur', 'Impossible de récupérer les patients');
+    const load = async () => {
+      try {
+        const teamRes  = await apiClient.get('/doctors/care-team/my-team/');
+        const teamData = teamRes.data;
+        setTeam(teamData);
+
+        const dates = getFmt();
+
+        // Fetch dashboard + glycémie en parallèle pour chaque patient
+        const entries = await Promise.allSettled(
+          teamData.active_patients.map(async (m) => {
+            const pid = m.patient_details.id_user;
+            const qs  = new URLSearchParams({ patient_user_id: pid, ...dates }).toString();
+            const [dashRes, glycRes] = await Promise.all([
+              apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${pid}`),
+              apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`),
+            ]);
+            return [pid, dashRes.data, toArr(glycRes.data)];
+          })
+        );
+
+        const dashMap = {};
+        const glycMap = {};
+        entries.forEach(e => {
+          if (e.status === 'fulfilled') {
+            const [pid, dash, glycRecords] = e.value;
+            dashMap[pid] = dash;
+            glycMap[pid] = glycRecords;
           }
-          
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Erreur:', error);
-        toastError('Erreur', 'Impossible de récupérer vos informations');
+        });
+        setDashboards(dashMap);
+        setGlycemiaMap(glycMap);
+      } catch (err) {
+        toastError('Erreur', 'Impossible de charger les données');
+      } finally {
         setLoading(false);
       }
     };
+    load();
+  }, []);
 
-    checkAuth();
-  }, [navigation]);
+  // Retourne la mesure anormale la plus récente correspondant au type d'alerte
+  const getTriggerRecord = (pid, alertType) => {
+    const records = glycemiaMap[pid] ?? [];
+    const isHyper = ['hyper', 'high_glucose'].includes(alertType);
+    const isHypo  = ['hypo',  'low_glucose' ].includes(alertType);
+    if (!isHyper && !isHypo) return null;
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toastSuccess('Déconnexion réussie', 'À bientôt !');
-      
-      if (navigation?.navigate) {
-        navigation.navigate('/login');
-      } else {
-        window.location.href = '/login';
-      }
-    } catch (error) {
-      toastError('Erreur', 'Erreur lors de la déconnexion');
-    }
+    const matching = records.filter(g => {
+      const v      = parseFloat(g.value);
+      const isMg   = (g.unit === 'mg/dL') || v > 10;
+      const high   = isMg ? v > 180 : v > 1.8;
+      const low    = isMg ? v < 70  : v < 0.7;
+      return isHyper ? high : low;
+    });
+    // Trier par date décroissante, prendre la plus récente
+    matching.sort((a, b) =>
+      new Date(b.measuredAt ?? b.recorded_at ?? b.date ?? 0) -
+      new Date(a.measuredAt ?? a.recorded_at ?? a.date ?? 0)
+    );
+    return matching[0] ?? null;
   };
 
-  const handlePatientClick = (patient) => {
-    toastSuccess('Patient sélectionné', `${patient.firstName} ${patient.lastName}`);
-  };
+  const activeCount = team.active_patients.length;
+  const allDashes   = Object.values(dashboards);
+  const avgScore    = allDashes.length
+    ? Math.round(allDashes.reduce((s, d) => s + (d.healthScore || 0), 0) / allDashes.length)
+    : null;
 
-  const handleProfileUpdated = (updatedUser) => {
-    setDoctor(updatedUser);
-  };
-
-  const handlePatientAdded = (newPatient) => {
-    // Recharger la liste des patients
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/users', {
-          headers: {
-            'Authorization': `Bearer ${authService.getTokens().accessToken}`
-          }
-        });
-        
-        if (response.ok) {
-          const users = await response.json();
-          setAllUsers(users);
-          
-          const transformedPatients = users.map((user, index) => {
-            const glycemiaValues = [0.65, 0.85, 1.10, 1.15, 1.28, 1.45, 1.65, 1.85];
-            const statuses = ['low', 'normal', 'normal', 'normal', 'normal', 'high', 'high', 'critical'];
-            const trends = ['down', 'stable', 'stable', 'stable', 'stable', 'up', 'up', 'up'];
-            const messages = [
-              'Hypoglycémie légère',
-              'Tout va bien',
-              'Valeurs stables',
-              'Médicament pris à 9h',
-              'Glycémie en hausse',
-              'À surveiller',
-              'Glycémie critique détectée',
-              'Consultation recommandée'
-            ];
-            
-            const randomIndex = index % glycemiaValues.length;
-            const glycemia = glycemiaValues[randomIndex];
-            const status = statuses[randomIndex];
-            const firstName = user.first_name || 'Patient';
-            const lastName = user.last_name || 'Inconnu';
-            
-            let bgColor = '2ECC71';
-            if (status === 'critical') bgColor = 'E74C3C';
-            else if (status === 'high') bgColor = 'F39C12';
-            else if (status === 'low') bgColor = '3498DB';
-            
-            return {
-              id: user.id,
-              firstName,
-              lastName,
-              email: user.email,
-              age: Math.floor(Math.random() * 40) + 30,
-              lastGlycemia: glycemia,
-              status,
-              trend: trends[randomIndex],
-              lastUpdate: ['2 min', '5 min', '15 min', '30 min', '45 min', '1h'][Math.floor(Math.random() * 6)],
-              medicationCompliance: Math.floor(Math.random() * 30) + 70,
-              avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}+${encodeURIComponent(lastName)}&background=${bgColor}&color=fff&bold=true`,
-              pendingPrescriptions: Math.floor(Math.random() * 3),
-              unreadAlerts: status === 'critical' || status === 'low' ? Math.floor(Math.random() * 5) + 1 : 0,
-              lastMessage: messages[randomIndex]
-            };
-          });
-          
-          setPatients(transformedPatients);
-        }
-      } catch (error) {
-        console.error('Erreur lors du rechargement des patients:', error);
-      }
-    };
-    
-    checkAuth();
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'critical': return '#E74C3C';
-      case 'high': return '#F39C12';
-      case 'normal': return '#2ECC71';
-      case 'low': return '#3498DB';
-      default: return '#95A5A6';
-    }
-  };
-
-  const getTrendIcon = (trend) => {
-    switch (trend) {
-      case 'up': return <TrendingUp size={16} />;
-      case 'down': return <TrendingDown size={16} />;
-      default: return <Activity size={16} />;
-    }
-  };
-
-  const filteredPatients = patients.filter(patient => {
-    const matchesSearch = 
-      patient.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.lastName.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesFilter = 
-      selectedFilter === 'all' ||
-      (selectedFilter === 'critical' && (patient.status === 'critical' || patient.status === 'low')) ||
-      (selectedFilter === 'normal' && patient.status === 'normal');
-    
-    return matchesSearch && matchesFilter;
+  // Dédupliquer par (pid, type) pour n'avoir qu'une alerte par type par patient
+  const allAlerts = [];
+  const seen = new Set();
+  team.active_patients.forEach(m => {
+    const pid = m.patient_details.id_user;
+    const d   = dashboards[pid];
+    if (!d?.alerts?.length) return;
+    d.alerts.forEach(a => {
+      const alertType = typeof a === 'object' ? a.type : a;
+      const key = `${pid}::${alertType}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const rec          = getTriggerRecord(pid, alertType);
+      const triggerValue = rec ? parseFloat(rec.value) : null;
+      const triggerUnit  = rec?.unit ?? (triggerValue != null && triggerValue > 10 ? 'mg/dL' : 'g/L');
+      allAlerts.push({ alert: a, patient: m.patient_details, triggerValue, triggerUnit });
+    });
   });
 
-  const stats = {
-    totalPatients: patients.length,
-    criticalPatients: patients.filter(p => p.status === 'critical' || p.status === 'low').length,
-    averageCompliance: Math.round(patients.reduce((acc, p) => acc + p.medicationCompliance, 0) / patients.length) || 0
-  };
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner"></div>
-        <p>Chargement...</p>
-      </div>
-    );
-  }
-
-  if (!doctor) {
-    return null;
-  }
+  const sortedByActivity = [...team.active_patients]
+    .filter(m => dashboards[m.patient_details.id_user])
+    .sort((a, b) => {
+      const da = dashboards[a.patient_details.id_user];
+      const db = dashboards[b.patient_details.id_user];
+      return (db?.activity?.steps?.value || 0) - (da?.activity?.steps?.value || 0);
+    })
+    .slice(0, 5);
 
   return (
-    <div className="medical-dashboard">
-      {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo-container">
-            <img src="/glycopilot.png" alt="Logo" className="sidebar-logo" />
-            <h2>GLYCOPILOT</h2>
+    <div className="home-root">
+      <Sidebar activePage="home" navigation={navigation} />
+
+      <main className="home-main">
+        <div className="home-greeting">
+          <div>
+            <h1>{getGreeting()} {doctor?.first_name}</h1>
+            <p>Voici un aperçu de l'état de santé de vos patients aujourd'hui</p>
           </div>
-          <button className="close-sidebar" onClick={() => setSidebarOpen(false)}>
-            <X size={24} />
-          </button>
+          <div className="home-date">
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
         </div>
 
-        <nav className="sidebar-nav">
-          <button className="nav-item active">
-            <Activity size={20} />
-            <span>Dashboard</span>
-          </button>
-          <button className="nav-item">
-            <User size={20} />
-            <span>Patients</span>
-          </button>
-          <button className="nav-item">
-            <Bell size={20} />
-            <span>Alerts</span>
-          </button>
-          <button className="nav-item">
-            <FileText size={20} />
-            <span>Reports</span>
-          </button>
-          <button className="nav-item">
-            <Settings size={20} />
-            <span>Settings</span>
-          </button>
-        </nav>
-
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut size={20} />
-          <span>Déconnexion</span>
-        </button>
-      </aside>
-
-      {/* Main Content */}
-      <main className="main-content">
-        {/* Top Bar */}
-        <div className="top-bar">
-          <button className="menu-btn" onClick={() => setSidebarOpen(true)}>
-            <Menu size={24} />
-          </button>
-          <h1>Hello, {doctor.first_name} {doctor.last_name}</h1>
-          <div className="top-bar-actions">
-            <div className="user-profile" onClick={() => setShowProfile(true)}>
-              <div className="user-avatar">
-                {doctor.first_name?.[0]}{doctor.last_name?.[0]}
+        {loading ? (
+          <div className="home-loading">
+            <div className="big-spinner" /><p>Chargement du tableau de bord…</p>
+          </div>
+        ) : (
+          <>
+            <div className="kpi-row">
+              <div className="kpi-card">
+                <div className="kpi-icon kpi-blue"><Users size={22} /></div>
+                <div className="kpi-body">
+                  <div className="kpi-value">{activeCount}</div>
+                  <div className="kpi-label">Patients suivis</div>
+                </div>
               </div>
-              <span className="user-name">{doctor.first_name} {doctor.last_name}</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Dashboard Stats */}
-        <div className="dashboard-stats">
-          <div className="stat-card">
-            <div className="stat-number">{stats.totalPatients}</div>
-            <div className="stat-label">Patients</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{Math.floor(stats.averageCompliance)}%</div>
-            <div className="stat-label">Patients with TIR &lt; 70%</div>
-            <div className="stat-sublabel">&lt; 70 %</div>
-          </div>
-          <div className="stat-card alert">
-            <div className="stat-number">{stats.criticalPatients}</div>
-            <div className="stat-label">Critical alerts</div>
-            <div className="stat-sublabel">last 24 h</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{Math.floor(stats.totalPatients * 0.35)}</div>
-            <div className="stat-label">Patients with nighttime</div>
-            <div className="stat-sublabel">hypo</div>
-          </div>
-        </div>
+              <div className="kpi-card">
+                <div className="kpi-icon kpi-red"><AlertTriangle size={22} /></div>
+                <div className="kpi-body">
+                  <div className="kpi-value">{allAlerts.length}</div>
+                  <div className="kpi-label">Alertes enregistrées</div>
+                </div>
+                {allAlerts.length > 0 && (
+                  <div className="kpi-badge">{allAlerts.length}</div>
+                )}
+              </div>
 
-        {/* High-Risk Patients Table */}
-        <div className="patients-table-container">
-          <div className="table-header">
-            <h2>High-Risk Patients</h2>
-            <div className="table-filters">
-              <select className="table-select">
-                <option>TIR</option>
-              </select>
-              <select className="table-select">
-                <option>Hypo</option>
-              </select>
-              <select className="table-select">
-                <option>Status</option>
-              </select>
-            </div>
-          </div>
-          
-          <table className="patients-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>TIR (7d)</th>
-                <th>Hypo / day</th>
-                <th>Last alert</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPatients.slice(0, 5).map((patient) => (
-                <tr key={patient.id}>
-                  <td className="patient-name-cell">{patient.firstName} {patient.lastName}</td>
-                  <td>Type {Math.random() > 0.5 ? '1' : '2'}</td>
-                  <td>{Math.floor(patient.medicationCompliance)}%</td>
-                  <td>{(Math.random() * 2).toFixed(1)}</td>
-                  <td>{patient.lastUpdate} ago</td>
-                  <td>
-                    <button className="view-chart-btn">View chart</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              <div className="kpi-card">
+                <div className="kpi-icon kpi-green"><Heart size={22} /></div>
+                <div className="kpi-body">
+                  <div className="kpi-value">{avgScore ?? '—'}</div>
+                  <div className="kpi-label">Score santé moyen</div>
+                </div>
+              </div>
 
-        {/* Time in Range Distribution */}
-        <div className="chart-container">
-          <h2>Time in Range Distribution</h2>
-          <div className="chart-bars">
-            <div className="bar-group">
-              <div className="bar" style={{ height: '120px' }}></div>
-              <div className="bar-label">0-40%</div>
+              <div className="kpi-card">
+                <div className="kpi-icon kpi-teal"><CheckCircle size={22} /></div>
+                <div className="kpi-body">
+                  <div className="kpi-value">
+                    {allDashes.filter(d => d.healthScore >= 70).length}
+                  </div>
+                  <div className="kpi-label">Patients en bonne santé</div>
+                </div>
+              </div>
             </div>
-            <div className="bar-group">
-              <div className="bar" style={{ height: '140px' }}></div>
-              <div className="bar-label">40-60%</div>
+
+            <div className="home-grid">
+              {/* Score moyen */}
+              <div className="hcard hcard-score">
+                <div className="hcard-header">
+                  <div className="hcard-title"><TrendingUp size={16} /> Score de santé moyen</div>
+                </div>
+                {avgScore !== null
+                  ? <ScoreGauge score={avgScore} />
+                  : <div className="empty-mini">Aucune donnée disponible</div>
+                }
+                <div className="score-legend">
+                  <span className="leg-good">● Bon (≥70)</span>
+                  <span className="leg-mid">● Moyen (40–69)</span>
+                  <span className="leg-low">● Faible (&lt;40)</span>
+                </div>
+                {allDashes.length > 0 && (
+                  <div className="score-dist">
+                    {[
+                      { label: 'Bon',    count: allDashes.filter(d => d.healthScore >= 70).length,                              cls: 'dist-good' },
+                      { label: 'Moyen',  count: allDashes.filter(d => d.healthScore >= 40 && d.healthScore < 70).length,        cls: 'dist-mid'  },
+                      { label: 'Faible', count: allDashes.filter(d => d.healthScore < 40).length,                               cls: 'dist-low'  },
+                    ].map(({ label, count, cls }) => (
+                      <div key={label} className={`dist-item ${cls}`}>
+                        <div className="dist-count">{count}</div>
+                        <div className="dist-label">{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Alertes glycémiques */}
+              <div className="hcard hcard-alerts">
+                <div className="hcard-header">
+                  <div className="hcard-title"><Bell size={16} /> Alertes glycémiques</div>
+                  {allAlerts.length > 0 && <span className="alert-count-badge">{allAlerts.length}</span>}
+                </div>
+                {allAlerts.length === 0 ? (
+                  <div className="empty-mini">
+                    <CheckCircle size={32} strokeWidth={1} />
+                    <p>Aucune alerte active</p>
+                  </div>
+                ) : (
+                  <div className="alerts-list">
+                    {allAlerts.map((item, i) => (
+                      <AlertItem
+                        key={i}
+                        alert={item.alert}
+                        patientName={`${item.patient.first_name} ${item.patient.last_name}`}
+                        triggerValue={item.triggerValue}
+                        triggerUnit={item.triggerUnit}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Activité récente */}
+              <div className="hcard hcard-activity">
+                <div className="hcard-header">
+                  <div className="hcard-title"><Activity size={16} /> Activité récente des patients</div>
+                  <button className="see-all-btn" onClick={() => navigation.navigate('/patients')}>
+                    Voir tous <ArrowRight size={13} />
+                  </button>
+                </div>
+                {sortedByActivity.length === 0 ? (
+                  <div className="empty-mini">
+                    <Footprints size={32} strokeWidth={1} />
+                    <p>Aucune donnée d'activité</p>
+                  </div>
+                ) : (
+                  <div className="activity-list">
+                    {sortedByActivity.map(m => (
+                      <ActivityRow
+                        key={m.id_team_member}
+                        patient={m.patient_details}
+                        dashboard={dashboards[m.patient_details.id_user]}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="bar-group">
-              <div className="bar" style={{ height: '200px' }}></div>
-              <div className="bar-label">60-80%</div>
-            </div>
-            <div className="bar-group">
-              <div className="bar" style={{ height: '100px' }}></div>
-              <div className="bar-label">&gt;80%</div>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </main>
-
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div className="overlay" onClick={() => setSidebarOpen(false)}></div>
-      )}
-
-      {/* Add Patient Modal */}
-      <AddPatient 
-        isOpen={showAddPatient}
-        onClose={() => setShowAddPatient(false)}
-        onPatientAdded={handlePatientAdded}
-      />
-
-      {/* Profile Modal */}
-      <Profile
-        isOpen={showProfile}
-        onClose={() => setShowProfile(false)}
-        doctor={doctor}
-        onProfileUpdated={handleProfileUpdated}
-      />
     </div>
   );
 }
