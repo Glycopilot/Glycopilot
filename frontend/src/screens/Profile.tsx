@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import {
   Bell,
@@ -30,6 +31,9 @@ import ProfileActions from '../components/profile/ProfileActions';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import AddContactModal from '../components/profile/AddContactModal';
 import LocationModal from '../components/profile/LocationModal';
+import InviteDoctorModal from '../components/profile/InviteDoctorModal';
+import doctorService from '../services/doctorService';
+import type { Doctor, PendingInvite } from '../components/profile/DoctorCard';
 import type { EmergencyContact } from '../components/profile/EmergencyContactCard';
 
 interface ProfileScreenProps {
@@ -63,17 +67,90 @@ export default function ProfileScreen({
   // Modal de localisation
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
+  // Modal invitation médecin
+  const [inviteDoctorModalVisible, setInviteDoctorModalVisible] = useState(false);
+  const [inviteDoctorEmail, setInviteDoctorEmail] = useState('');
+  const [inviteDoctorLoading, setInviteDoctorLoading] = useState(false);
+
   // Récupérer les données utilisateur depuis le backend
   const { user: userData, loading: userLoading, refetch } = useUser();
   const { logout } = useAuth();
 
   // Médecin traitant
-  const doctor = {
-    name: 'Dr. Sophie Dubois',
-    specialty: 'Endocrinologue',
-    phone: '+33 1 42 34 56 78',
-    email: 'sophie.dubois@hopital.fr',
-    address: '15 Rue de la Santé, 75014 Paris',
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+
+  const fetchDoctor = useCallback(async (): Promise<void> => {
+    try {
+      const team = await doctorService.getMyTeam();
+      const referent = team.doctors.find(
+        d => d.role === 'REFERENT_DOCTOR' && d.status === 'ACTIVE'
+      ) ?? team.doctors[0] ?? null;
+
+      if (referent) {
+        const d = referent.member_details;
+        setDoctor({
+          name: `Dr. ${d.first_name} ${d.last_name}`,
+          specialty: d.specialty ?? null,
+          phone: d.phone_number ?? null,
+          email: d.email ?? null,
+          address: d.medical_center_address ?? null,
+        });
+      } else {
+        setDoctor(null);
+      }
+
+      const pending = (team.pending_doctor_invites ?? []).map(inv => ({
+        id_team_member: inv.id_team_member,
+        doctorName: `Dr. ${inv.member_details.first_name} ${inv.member_details.last_name}`,
+        specialty: inv.member_details.specialty ?? null,
+      }));
+      setPendingInvites(pending);
+
+      const family = (team.family ?? []).map(f => ({
+        id: f.id_team_member,
+        name: `${f.member_details.first_name} ${f.member_details.last_name}`,
+        relation: f.relation_type || 'Proche',
+        phone: f.member_details.phone_number || '',
+      }));
+      setEmergencyContacts(family);
+    } catch {
+      setDoctor(null);
+      setPendingInvites([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDoctor();
+  }, [fetchDoctor]);
+
+  const handleAcceptInvite = async (id: string): Promise<void> => {
+    try {
+      setAcceptingId(id);
+      await doctorService.acceptInvitation(id);
+      Alert.alert('Succès', 'Invitation acceptée. Le médecin peut maintenant suivre vos données.');
+      await fetchDoctor();
+    } catch (error) {
+      Alert.alert('Erreur', (error as Error).message || "Impossible d'accepter l'invitation");
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleInviteDoctor = async (): Promise<void> => {
+    try {
+      setInviteDoctorLoading(true);
+      await doctorService.inviteDoctor(inviteDoctorEmail);
+      Alert.alert('Invitation envoyée', `Une invitation a été envoyée à ${inviteDoctorEmail}.`);
+      setInviteDoctorModalVisible(false);
+      setInviteDoctorEmail('');
+      await fetchDoctor();
+    } catch (error) {
+      Alert.alert('Erreur', (error as Error).message || "Impossible d'envoyer l'invitation");
+    } finally {
+      setInviteDoctorLoading(false);
+    }
   };
 
   // Contacts d'urgence
@@ -129,21 +206,36 @@ export default function ProfileScreen({
     },
   ];
 
-  const addEmergencyContact = (): void => {
+  const addEmergencyContact = async (): Promise<void> => {
     if (!contactName.trim() || !contactPhone.trim()) return;
 
-    const newContact: EmergencyContact = {
-      id: `${Date.now()}`,
-      name: contactName,
-      relation: contactRelation || 'Proche',
-      phone: contactPhone,
-    };
+    const parts = contactName.trim().split(' ');
+    const first_name = parts[0];
+    const last_name = parts.slice(1).join(' ') || '.';
 
-    setEmergencyContacts(prev => [...prev, newContact]);
-    setModalVisible(false);
-    setContactName('');
-    setContactRelation('');
-    setContactPhone('');
+    try {
+      const result = await doctorService.addFamilyMember({
+        first_name,
+        last_name,
+        phone_number: contactPhone,
+        relation_type: contactRelation || 'Proche',
+      });
+
+      const newContact: EmergencyContact = {
+        id: result.id,
+        name: contactName,
+        relation: contactRelation || 'Proche',
+        phone: contactPhone,
+      };
+
+      setEmergencyContacts(prev => [...prev, newContact]);
+      setModalVisible(false);
+      setContactName('');
+      setContactRelation('');
+      setContactPhone('');
+    } catch (error) {
+      Alert.alert('Erreur', (error as Error).message || "Impossible d'ajouter le contact");
+    }
   };
 
   const removeContact = (id: string): void => {
@@ -273,8 +365,16 @@ export default function ProfileScreen({
 
         <DoctorCard
           doctor={doctor}
-          onEdit={() => console.log('Modifier médecin')}
-          onCall={() => console.log('Appeler médecin')}
+          pendingInvites={pendingInvites}
+          onEdit={() => setInviteDoctorModalVisible(true)}
+          onCall={() => {
+            if (doctor?.phone) {
+              Linking.openURL(`tel:${doctor.phone}`);
+            }
+          }}
+          onInvite={() => setInviteDoctorModalVisible(true)}
+          onAcceptInvite={handleAcceptInvite}
+          acceptingId={acceptingId}
         />
 
         <EmergencyContactsList
@@ -334,6 +434,18 @@ export default function ProfileScreen({
         onLocationUpdate={(lat, lng, address) => {
           console.log('Position mise à jour:', { lat, lng, address });
         }}
+      />
+
+      <InviteDoctorModal
+        visible={inviteDoctorModalVisible}
+        onClose={() => {
+          setInviteDoctorModalVisible(false);
+          setInviteDoctorEmail('');
+        }}
+        email={inviteDoctorEmail}
+        onEmailChange={setInviteDoctorEmail}
+        onSubmit={handleInviteDoctor}
+        loading={inviteDoctorLoading}
       />
     </Layout>
   );
