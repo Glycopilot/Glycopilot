@@ -7,7 +7,7 @@ import ProfileScreen from '../screens/Profile';
 import NotificationsScreen from '../screens/Notifications';
 import JournalScreen from '../screens/Journal';
 import MealsScreen from '../screens/meals';
-import MedicationsScreen from '../screens/medicins';
+import MedicationsScreen from '../screens/Medications';
 import ActivitiesScreen from '../screens/Activities';
 import GlycemiaScreen from '@/screens/Glycemia';
 import { setNavigate } from './navigationRef';
