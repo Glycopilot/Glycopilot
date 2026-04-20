@@ -72,6 +72,8 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_email');
         localStorage.removeItem('user');
         processQueue(refreshError, null);
         isRefreshing = false;
@@ -95,13 +97,13 @@ const authService = {
 
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('user_id', user.id_auth);
+      localStorage.setItem('user_email', user.email);
 
       return response.data;
     } catch (error) {
       const data = error.response?.data;
 
-      // ✅ Compte créé mais licence pas encore validée par un admin
       const nonFieldErr = data?.non_field_errors?.[0];
       if (nonFieldErr) {
         const err = new Error(nonFieldErr);
@@ -137,20 +139,22 @@ const authService = {
       const response = await apiClient.post('/auth/register/', payload);
       const { access, refresh, user } = response.data;
 
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
-      localStorage.setItem('user', JSON.stringify(user));
+      if (access) localStorage.setItem('access_token', access);
+      if (refresh) localStorage.setItem('refresh_token', refresh);
+      if (user) {
+        localStorage.setItem('user_id', user.id_auth);
+        localStorage.setItem('user_email', user.email);
+      }
 
       return response.data;
     } catch (error) {
-      console.error('authService.register error response:', error.response?.data);
       let message = "Erreur lors de l'inscription";
       if (error.response?.data) {
         if (typeof error.response.data === 'string') message = error.response.data;
         else if (error.response.data.error) message = error.response.data.error;
         else {
           try { message = JSON.stringify(error.response.data); }
-          catch (_e) { message = "Erreur lors de l'inscription (voir logs)"; }
+          catch (_e) { message = "Erreur lors de l'inscription"; }
         }
       }
       throw new Error(message);
@@ -165,11 +169,13 @@ const authService = {
     try {
       const token = localStorage.getItem('access_token');
       if (token) await apiClient.post('/auth/logout/');
-    } catch (error) {
-      console.warn('Logout API warning:', error.response?.status, error.response?.data);
+    } catch (_error) {
+      // Logout API failure is non-critical — tokens are cleared client-side regardless
     } finally {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('user_email');
       localStorage.removeItem('user');
     }
     return { message: 'Déconnexion réussie' };
@@ -204,6 +210,8 @@ const authService = {
     } catch (error) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('user_email');
       localStorage.removeItem('user');
       const message = error.response?.data?.error || error.message || 'Erreur lors du rafraîchissement du token';
       throw new Error(message);
@@ -223,8 +231,10 @@ const authService = {
 
   getStoredUser() {
     try {
-      const user = localStorage.getItem('user');
-      return user ? JSON.parse(user) : null;
+      const userId = localStorage.getItem('user_id');
+      const userEmail = localStorage.getItem('user_email');
+      if (!userId) return null;
+      return { id_auth: userId, email: userEmail };
     } catch (error) {
       return null;
     }

@@ -3,9 +3,13 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
 } from 'axios';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const API_URL =
+  Platform.OS === 'web'
+    ? 'http://localhost:8006/api'
+    : process.env.EXPO_PUBLIC_API_URL;
 const API_TIMEOUT = parseInt(
   process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',
   10
