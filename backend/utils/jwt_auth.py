@@ -35,10 +35,14 @@ Deux possibilités (voir README ou AUTH_API pour les détails) :
 
 from django.conf import settings
 
+import logging
+
 import jwt
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
 from rest_framework_simplejwt.settings import api_settings
+
+logger = logging.getLogger(__name__)
 
 
 class _PayloadWrapper:
@@ -66,8 +70,8 @@ class JWTAuthenticationDualKey(JWTAuthentication):
                 return AuthToken(raw_token)
             except InvalidToken:
                 pass
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Unexpected error during token validation: %s", type(e).__name__)
 
         # Si SECRET_KEY_ADMIN est défini, tenter validation avec cette clé (admin, superadmin)
         admin_key = getattr(settings, "SECRET_KEY_ADMIN", None)
@@ -76,7 +80,7 @@ class JWTAuthenticationDualKey(JWTAuthentication):
                 payload = jwt.decode(
                     raw_token.decode() if isinstance(raw_token, bytes) else raw_token,
                     admin_key,
-                    algorithms=[getattr(api_settings, "ALGORITHM", "HS256")],
+                    algorithms=["HS256"],
                 )
                 return _PayloadWrapper(payload)
             except Exception:
