@@ -88,9 +88,11 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend_web:/app
+      - frontend_web_modules:/app/node_modules
     working_dir: /app
     environment:
       - REACT_APP_API_URL=http://backend_local:8000/api
+      - FAST_REFRESH=false
     command: sh -c "npm install && npm start"
     depends_on:
       - backend_local
@@ -186,6 +188,7 @@ volumes:
   # Local volumes
   mysql_data:
   redis_data:
+  frontend_web_modules:
   
   # AWS volumes
   postgres_data:

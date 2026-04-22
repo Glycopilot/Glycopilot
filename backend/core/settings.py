@@ -164,11 +164,17 @@ LOGGING = {
 }
 
 # --- CORS ---
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # En dev uniquement
-if not DEBUG:
+CORS_ALLOW_ALL_ORIGINS = DEBUG or ENV == "development"
+CORS_ALLOW_CREDENTIALS = True
+if not CORS_ALLOW_ALL_ORIGINS:
     CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+    CSRF_TRUSTED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 
 # --- REST FRAMEWORK CONFIG ---
+# Throttling is disabled when running tests so the auth rate limit
+# (5/minute) does not break suites that perform many logins.
+TESTING = config("TESTING", default=False, cast=bool) or "pytest" in sys.argv[0]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "utils.jwt_auth.JWTAuthenticationDualKey",
@@ -178,6 +184,19 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_THROTTLE_CLASSES": (
+        []
+        if TESTING
+        else [
+            "rest_framework.throttling.AnonRateThrottle",
+            "rest_framework.throttling.UserRateThrottle",
+        ]
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+        "auth": "5/minute",
+    },
 }
 
 ACCESS_TOKEN_LIFETIME = timedelta(
@@ -284,6 +303,42 @@ DEFAULT_FROM_EMAIL = (
 )
 FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 
+
+# --- SECURITY SETTINGS ---
+if not DEBUG:
+    SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Strict"
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SAMESITE = "Strict"
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+else:
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# --- PASSWORD VALIDATION ---
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
 
 # --- INTERNATIONALIZATION ---
 LANGUAGE_CODE = "fr-fr"

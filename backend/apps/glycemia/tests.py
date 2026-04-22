@@ -489,12 +489,12 @@ class TestGlycemiaSerializers:
             assert not s.is_valid()
             assert "value" in s.errors
 
-    def test_glycemia_serializer_includes_email(self, user):
+    def test_glycemia_serializer_excludes_email(self, user):
         from apps.glycemia.serializers import GlycemiaSerializer
 
         g = Glycemia.objects.create(user=user, measured_at=now(), value=100)
         data = GlycemiaSerializer(g).data
-        assert data["user_email"] == "test@example.com"
+        assert "user_email" not in data
 
     def test_data_ia_serializer_read_only_fields(self):
         from apps.glycemia.serializers import GlycemiaDataIASerializer

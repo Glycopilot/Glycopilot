@@ -15,7 +15,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             "user",
             "role",
             "label",
-            "is_active",
             "created_at",
             "updated_at",
         ]
