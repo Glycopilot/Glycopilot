@@ -7,10 +7,13 @@ from rest_framework.decorators import (
     api_view,
     authentication_classes,
     permission_classes,
+    throttle_classes,
 )
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from utils.throttles import AuthRateThrottle
 
 from apps.auth.serializers import (
     AuthAccountSerializer,
@@ -27,6 +30,7 @@ from utils.permissions import allowed_roles
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def register(request):
     """
     Endpoint pour l'inscription d'un nouvel utilisateur
@@ -79,6 +83,7 @@ def register(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def login(request):
     """
     Endpoint pour la connexion d'un utilisateur

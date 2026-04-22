@@ -66,7 +66,12 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         Utilise Glycemia (cache 30 jours avec context et notes).
         """
 
-        days = int(request.query_params.get("days", 7))
+        try:
+            days = int(request.query_params.get("days", 7))
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Days must be a valid integer"}, status=400
+            )
 
         if days < 1 or days > 30:
             return Response({"error": "Days must be between 1 and 30"}, status=400)

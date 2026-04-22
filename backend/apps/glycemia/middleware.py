@@ -27,7 +27,7 @@ def get_user_from_token(token_str):
     Supports dual-key authentication (SECRET_KEY and SECRET_KEY_ADMIN).
     """
     if not token_str:
-        return AnonymousUser()
+        return None
 
     # USER_ID_CLAIM is the claim name in the token (default: "user_id")
     # USER_ID_FIELD is the model field name (e.g., "id_auth")
@@ -60,7 +60,7 @@ def get_user_from_token(token_str):
         except Exception:
             pass
 
-    return AnonymousUser()
+    return None
 
 
 class JWTAuthMiddleware(BaseMiddleware):
@@ -75,7 +75,11 @@ class JWTAuthMiddleware(BaseMiddleware):
         token_list = query_params.get("token", [])
         token = token_list[0] if token_list else None
 
-        # Authenticate user
-        scope["user"] = await get_user_from_token(token)
+        # Authenticate user — reject if no valid token
+        user = await get_user_from_token(token)
+        if user is None:
+            await send({"type": "websocket.close", "code": 4001})
+            return
 
+        scope["user"] = user
         return await super().__call__(scope, receive, send)

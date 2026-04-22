@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 
 import jwt
 from rest_framework import serializers
@@ -16,7 +17,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
         required=True,
-        min_length=8,
+        min_length=12,
         style={"input_type": "password"},
     )
     password_confirm = serializers.CharField(
@@ -59,6 +60,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             )
         if not Role.objects.filter(name=value).exists():
             raise serializers.ValidationError(f"Rôle '{value}' inexistant.")
+        return value
+
+    def validate_password(self, value):
+        validate_password(value)
         return value
 
     def validate(self, data):
@@ -151,7 +156,7 @@ class CreateAdminAccountSerializer(serializers.Serializer):
     password = serializers.CharField(
         write_only=True,
         required=True,
-        min_length=8,
+        min_length=12,
         style={"input_type": "password"},
     )
     password_confirm = serializers.CharField(

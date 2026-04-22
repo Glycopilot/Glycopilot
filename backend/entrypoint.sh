@@ -1,4 +1,5 @@
 #!/bin/bash
+set +x  # Never echo commands (avoids leaking credentials in logs)
 
 echo "=== Glycopilot Backend Entrypoint ==="
 
@@ -13,14 +14,20 @@ done
 echo "Database is ready!"
 sleep 2
 
-# Variables de DB
-DB_NAME="${DB_NAME:-glycopilot_db}"
-DB_USER="${DB_USER:-glycopilot_user}"
-DB_PASSWORD="${DB_PASSWORD:-glycopilot_password}"
-DB_HOST="${DB_HOST:-database}"
-
 # Mode développement : si les migrations échouent, reset la DB
 ENV=${Django_ENV:-development}
+
+# Variables de DB — defaults autorisés en dev uniquement
+if [ "$ENV" = "production" ]; then
+    DB_NAME="${DB_NAME:?DB_NAME must be set in production}"
+    DB_USER="${DB_USER:?DB_USER must be set in production}"
+    DB_PASSWORD="${DB_PASSWORD:?DB_PASSWORD must be set in production}"
+else
+    DB_NAME="${DB_NAME:-glycopilot_db}"
+    DB_USER="${DB_USER:-glycopilot_user}"
+    DB_PASSWORD="${DB_PASSWORD:-glycopilot_password}"
+fi
+DB_HOST="${DB_HOST:-database}"
 echo "Environment: $ENV"
 
 # Fonction pour tenter les migrations
@@ -49,11 +56,11 @@ reset_database() {
         echo "MySQL client not available, trying Python fallback..."
         # Fallback: utiliser Python avec connexion séparée
         python << EOF
-import MySQLdb
+import os, MySQLdb
 conn = MySQLdb.connect(
     host='$DB_HOST',
     user='root',
-    password='${MYSQL_ROOT_PASSWORD:-rootpass}'
+    password=os.environ.get('MYSQL_ROOT_PASSWORD', 'rootpass')
 )
 cursor = conn.cursor()
 cursor.execute('DROP DATABASE IF EXISTS \`$DB_NAME\`')
