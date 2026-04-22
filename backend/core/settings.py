@@ -171,6 +171,10 @@ if not CORS_ALLOW_ALL_ORIGINS:
     CSRF_TRUSTED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 
 # --- REST FRAMEWORK CONFIG ---
+# Throttling is disabled when running tests so the auth rate limit
+# (5/minute) does not break suites that perform many logins.
+TESTING = config("TESTING", default=False, cast=bool) or "pytest" in sys.argv[0]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "utils.jwt_auth.JWTAuthenticationDualKey",
@@ -180,10 +184,14 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
-    ],
+    "DEFAULT_THROTTLE_CLASSES": (
+        []
+        if TESTING
+        else [
+            "rest_framework.throttling.AnonRateThrottle",
+            "rest_framework.throttling.UserRateThrottle",
+        ]
+    ),
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
         "user": "1000/hour",
