@@ -1,0 +1,58 @@
+# AI Module - .gitignore
+
+# Datasets (si trop gros ou contiennent des données sensibles)
+data/*.csv
+data/*.xlsx
+data/*.json
+data/*.parquet
+
+# Sauf le dataset de démo (si petit)
+!data/demo_*.csv
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Model artifacts (optionnel - à commenter si vous voulez versionner les modèles)
+# models/*.pkl
+# models/*.joblib
+# models/*.h5
+# models/*.pt
+
+# Experiment tracking
+mlruns/
+wandb/
+
+# Large files warning
+# Si un fichier dépasse 50MB, utiliser Git LFS
