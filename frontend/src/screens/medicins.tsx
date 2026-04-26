@@ -60,9 +60,9 @@ interface MedicationsScreenProps {
 }
 
 interface MedicationItemProps {
-  item: Medication;
-  onPress: () => void;
-  onMarkAsTaken: (id: string) => void;
+  readonly item: Medication;
+  readonly onPress: () => void;
+  readonly onMarkAsTaken: (id: string) => void;
 }
 
 function MedicationItem({

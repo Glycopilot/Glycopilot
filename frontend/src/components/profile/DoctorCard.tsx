@@ -102,7 +102,7 @@ export default function DoctorCard({
         </View>
       ))}
 
-      {doctor ? (
+      {doctor && (
         <View style={styles.card}>
           <View style={styles.doctorInfo}>
             <View style={styles.doctorAvatar}>
@@ -172,7 +172,8 @@ export default function DoctorCard({
             </TouchableOpacity>
           ) : null}
         </View>
-      ) : pendingInvites.length === 0 ? (
+      )}
+      {!doctor && pendingInvites.length === 0 && (
         <View style={styles.emptyCard}>
           <View style={styles.emptyAvatar}>
             <Stethoscope size={32} color="#9CA3AF" strokeWidth={1.5} />
@@ -186,7 +187,7 @@ export default function DoctorCard({
             <Text style={styles.inviteButtonText}>Inviter un médecin</Text>
           </TouchableOpacity>
         </View>
-      ) : null}
+      )}
     </View>
   );
 }

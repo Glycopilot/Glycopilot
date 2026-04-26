@@ -110,7 +110,7 @@ export default function ProfileScreen({
         id_team_member: inv.id_team_member,
         doctorName: `Dr. ${inv.member_details.first_name} ${inv.member_details.last_name}`,
         specialty: inv.member_details.specialty ?? null,
-        direction: (inv.approved_by ? 'received' : 'sent') as 'sent' | 'received',
+        direction: inv.approved_by ? ('received' as const) : ('sent' as const),
       }));
       setPendingInvites(pending);
 
@@ -273,23 +273,25 @@ export default function ProfileScreen({
     }
   };
 
+  const confirmRemoveContact = async (id: string): Promise<void> => {
+    try {
+      await doctorService.removeTeamMember(id);
+      setEmergencyContacts(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      Alert.alert('Erreur', (error as Error).message || 'Impossible de supprimer le contact');
+    }
+  };
+
   const removeContact = (id: string): void => {
     Alert.alert(
       'Supprimer le contact',
-      'Êtes-vous sûr de vouloir supprimer ce contact d\'urgence ?',
+      "Êtes-vous sûr de vouloir supprimer ce contact d'urgence ?",
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Supprimer',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await doctorService.removeTeamMember(id);
-              setEmergencyContacts(prev => prev.filter(c => c.id !== id));
-            } catch (error) {
-              Alert.alert('Erreur', (error as Error).message || 'Impossible de supprimer le contact');
-            }
-          },
+          onPress: () => confirmRemoveContact(id),
         },
       ]
     );
