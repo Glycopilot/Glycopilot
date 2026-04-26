@@ -59,15 +59,15 @@ export const useLocation = (): UseLocationReturn => {
     setError(null);
 
     try {
-      // Utiliser l'API française pour la géolocalisation inverse
       const response = await fetch(
-        `https://api-adresse.data.gouv.fr/reverse/?lon=${longitude}&lat=${latitude}`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=fr`,
+        { headers: { 'User-Agent': 'GlycoPilot/1.0' } }
       );
 
       const data = await response.json();
 
-      if (data.features && data.features.length > 0) {
-        return data.features[0].properties.label;
+      if (data.display_name) {
+        return data.display_name;
       }
 
       return null;
