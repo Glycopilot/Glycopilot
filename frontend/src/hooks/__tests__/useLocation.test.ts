@@ -14,7 +14,7 @@ jest.mock('expo-location', () => ({
 describe('useLocation hook', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        global.fetch = jest.fn();
+        globalThis.fetch = jest.fn();
     });
 
     it('should getCurrentLocation successfully', async () => {
@@ -47,7 +47,7 @@ describe('useLocation hook', () => {
     });
 
     it('should handle reverseGeocode', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (globalThis.fetch as jest.Mock).mockResolvedValue({
             json: jest.fn().mockResolvedValue({
                 display_name: '123 Test St, Paris'
             })
@@ -61,14 +61,14 @@ describe('useLocation hook', () => {
         });
 
         expect(address).toBe('123 Test St, Paris');
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(globalThis.fetch).toHaveBeenCalledWith(
             expect.stringContaining('lat=48.8566'),
             expect.any(Object)
         );
     });
 
     it('should return null if reverseGeocode finds nothing', async () => {
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (globalThis.fetch as jest.Mock).mockResolvedValue({
             json: jest.fn().mockResolvedValue({})
         });
 
