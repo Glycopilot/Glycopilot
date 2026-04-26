@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Stethoscope, Phone, Mail, MapPin, Edit2, UserPlus, Clock, Check } from 'lucide-react-native';
+import { Stethoscope, Phone, Mail, MapPin, UserPlus, Clock, Check, X } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
 export interface Doctor {
@@ -15,26 +15,33 @@ export interface PendingInvite {
   id_team_member: string;
   doctorName: string;
   specialty: string | null;
+  direction: 'sent' | 'received';
 }
 
 interface DoctorCardProps {
   readonly doctor: Doctor | null;
   readonly pendingInvites: PendingInvite[];
-  readonly onEdit: () => void;
   readonly onCall: () => void;
   readonly onInvite: () => void;
   readonly onAcceptInvite: (id: string) => void;
+  readonly onCancelInvite: (id: string) => void;
+  readonly onRemoveDoctor: () => void;
   readonly acceptingId: string | null;
+  readonly cancelingId: string | null;
+  readonly removingDoctor: boolean;
 }
 
 export default function DoctorCard({
   doctor,
   pendingInvites,
-  onEdit,
   onCall,
   onInvite,
   onAcceptInvite,
+  onCancelInvite,
+  onRemoveDoctor,
   acceptingId,
+  cancelingId,
+  removingDoctor,
 }: DoctorCardProps): React.JSX.Element {
   return (
     <View style={styles.section}>
@@ -43,40 +50,55 @@ export default function DoctorCard({
           <Stethoscope size={20} color={colors.textPrimary} />
           <Text style={styles.sectionTitle}>Médecin traitant</Text>
         </View>
-        {doctor ? (
-          <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-            <Edit2 size={16} color="#007AFF" />
-            <Text style={styles.editButtonText}>Modifier</Text>
-          </TouchableOpacity>
-        ) : null}
       </View>
 
       {pendingInvites.map(invite => (
         <View key={invite.id_team_member} style={styles.pendingCard}>
-          <View style={styles.pendingAvatar}>
-            <Clock size={20} color="#F59E0B" />
+          <View style={[styles.pendingAvatar, invite.direction === 'sent' && styles.pendingAvatarSent]}>
+            <Clock size={20} color={invite.direction === 'sent' ? '#6B7280' : '#F59E0B'} />
           </View>
           <View style={styles.pendingInfo}>
             <Text style={styles.pendingName}>{invite.doctorName}</Text>
             {invite.specialty ? (
-              <Text style={styles.pendingSpecialty}>{invite.specialty}</Text>
+              <Text style={[styles.pendingSpecialty, invite.direction === 'sent' && styles.pendingSpecialtySent]}>
+                {invite.specialty}
+              </Text>
             ) : null}
-            <Text style={styles.pendingLabel}>Invitation reçue</Text>
+            <Text style={[styles.pendingLabel, invite.direction === 'sent' && styles.pendingLabelSent]}>
+              {invite.direction === 'sent' ? 'En attente de confirmation' : 'Invitation reçue'}
+            </Text>
           </View>
-          <TouchableOpacity
-            style={styles.acceptButton}
-            onPress={() => onAcceptInvite(invite.id_team_member)}
-            disabled={acceptingId === invite.id_team_member}
-          >
-            {acceptingId === invite.id_team_member ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Check size={16} color="#fff" />
-                <Text style={styles.acceptButtonText}>Accepter</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {invite.direction === 'received' ? (
+            <TouchableOpacity
+              style={styles.acceptButton}
+              onPress={() => onAcceptInvite(invite.id_team_member)}
+              disabled={acceptingId === invite.id_team_member}
+            >
+              {acceptingId === invite.id_team_member ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Check size={16} color="#fff" />
+                  <Text style={styles.acceptButtonText}>Accepter</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => onCancelInvite(invite.id_team_member)}
+              disabled={cancelingId === invite.id_team_member}
+            >
+              {cancelingId === invite.id_team_member ? (
+                <ActivityIndicator size="small" color="#6B7280" />
+              ) : (
+                <>
+                  <X size={16} color="#6B7280" />
+                  <Text style={styles.cancelButtonText}>Annuler</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       ))}
 
@@ -92,6 +114,17 @@ export default function DoctorCard({
                 <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
               ) : null}
             </View>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={onRemoveDoctor}
+              disabled={removingDoctor}
+            >
+              {removingDoctor ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <X size={18} color="#EF4444" />
+              )}
+            </TouchableOpacity>
           </View>
 
           <View style={styles.contactDetails}>
@@ -180,20 +213,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#EBF5FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  editButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
   pendingCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -228,9 +247,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 2,
   },
+  pendingAvatarSent: {
+    backgroundColor: '#F3F4F6',
+  },
   pendingLabel: {
     fontSize: 12,
     color: '#92400E',
+  },
+  pendingLabelSent: {
+    color: '#6B7280',
+  },
+  pendingSpecialtySent: {
+    color: '#9CA3AF',
   },
   acceptButton: {
     flexDirection: 'row',
@@ -245,6 +273,22 @@ const styles = StyleSheet.create({
   },
   acceptButtonText: {
     color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minWidth: 90,
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -277,6 +321,14 @@ const styles = StyleSheet.create({
   },
   doctorDetails: {
     flex: 1,
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   doctorName: {
     fontSize: 18,
