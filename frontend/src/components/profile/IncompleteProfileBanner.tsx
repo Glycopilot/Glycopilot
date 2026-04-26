@@ -48,7 +48,7 @@ export default function IncompleteProfileBanner({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    marginTop: -10,
+    marginTop: 16,
     marginBottom: 10,
   },
   card: {
