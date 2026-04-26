@@ -17,6 +17,7 @@ export interface DoctorMember {
   role: string;
   role_label: string;
   status: string;
+  approved_by: string | null;
 }
 
 export interface FamilyMember {
@@ -54,6 +55,10 @@ const doctorService = {
 
   async acceptInvitation(id_team_member: string): Promise<void> {
     await apiClient.post('/doctors/care-team/accept-invitation/', { id_team_member });
+  },
+
+  async removeTeamMember(id_team_member: string): Promise<void> {
+    await apiClient.post('/doctors/care-team/remove-member/', { id_team_member });
   },
 
   async addFamilyMember(data: {

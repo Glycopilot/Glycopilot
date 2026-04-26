@@ -78,8 +78,11 @@ export default function ProfileScreen({
 
   // Médecin traitant
   const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [doctorTeamMemberId, setDoctorTeamMemberId] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [removingDoctor, setRemovingDoctor] = useState(false);
 
   const fetchDoctor = useCallback(async (): Promise<void> => {
     try {
@@ -97,14 +100,17 @@ export default function ProfileScreen({
           email: d.email ?? null,
           address: d.medical_center_address ?? null,
         });
+        setDoctorTeamMemberId(referent.id_team_member);
       } else {
         setDoctor(null);
+        setDoctorTeamMemberId(null);
       }
 
       const pending = (team.pending_doctor_invites ?? []).map(inv => ({
         id_team_member: inv.id_team_member,
         doctorName: `Dr. ${inv.member_details.first_name} ${inv.member_details.last_name}`,
         specialty: inv.member_details.specialty ?? null,
+        direction: (inv.approved_by ? 'received' : 'sent') as 'sent' | 'received',
       }));
       setPendingInvites(pending);
 
@@ -138,6 +144,44 @@ export default function ProfileScreen({
     }
   };
 
+  const handleCancelInvite = async (id: string): Promise<void> => {
+    try {
+      setCancelingId(id);
+      await doctorService.removeTeamMember(id);
+      await fetchDoctor();
+    } catch (error) {
+      Alert.alert('Erreur', (error as Error).message || "Impossible d'annuler l'invitation");
+    } finally {
+      setCancelingId(null);
+    }
+  };
+
+  const handleRemoveDoctor = async (): Promise<void> => {
+    if (!doctorTeamMemberId) return;
+    Alert.alert(
+      'Retirer le médecin',
+      'Êtes-vous sûr de vouloir retirer ce médecin de votre équipe de soin ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Retirer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setRemovingDoctor(true);
+              await doctorService.removeTeamMember(doctorTeamMemberId);
+              await fetchDoctor();
+            } catch (error) {
+              Alert.alert('Erreur', (error as Error).message || 'Impossible de retirer le médecin');
+            } finally {
+              setRemovingDoctor(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleInviteDoctor = async (): Promise<void> => {
     try {
       setInviteDoctorLoading(true);
@@ -154,16 +198,7 @@ export default function ProfileScreen({
   };
 
   // Contacts d'urgence
-  const [emergencyContacts, setEmergencyContacts] = useState<
-    EmergencyContact[]
-  >([
-    {
-      id: '1',
-      name: 'Test User',
-      relation: 'Frère',
-      phone: '+33 0 00 00 00 00',
-    },
-  ]);
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
 
   // Menu settings
   const settingsMenu: SettingMenuItem[] = [
@@ -239,7 +274,25 @@ export default function ProfileScreen({
   };
 
   const removeContact = (id: string): void => {
-    setEmergencyContacts(prev => prev.filter(c => c.id !== id));
+    Alert.alert(
+      'Supprimer le contact',
+      'Êtes-vous sûr de vouloir supprimer ce contact d\'urgence ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await doctorService.removeTeamMember(id);
+              setEmergencyContacts(prev => prev.filter(c => c.id !== id));
+            } catch (error) {
+              Alert.alert('Erreur', (error as Error).message || 'Impossible de supprimer le contact');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const openEditProfileModal = (): void => {
@@ -366,7 +419,6 @@ export default function ProfileScreen({
         <DoctorCard
           doctor={doctor}
           pendingInvites={pendingInvites}
-          onEdit={() => setInviteDoctorModalVisible(true)}
           onCall={() => {
             if (doctor?.phone) {
               Linking.openURL(`tel:${doctor.phone}`);
@@ -374,7 +426,11 @@ export default function ProfileScreen({
           }}
           onInvite={() => setInviteDoctorModalVisible(true)}
           onAcceptInvite={handleAcceptInvite}
+          onCancelInvite={handleCancelInvite}
+          onRemoveDoctor={handleRemoveDoctor}
           acceptingId={acceptingId}
+          cancelingId={cancelingId}
+          removingDoctor={removingDoctor}
         />
 
         <EmergencyContactsList
