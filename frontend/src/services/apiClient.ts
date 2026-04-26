@@ -43,7 +43,7 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    return Promise.reject(error);
+    throw error;
   }
 );
 
@@ -82,7 +82,7 @@ apiClient.interceptors.response.use(
             }
             return apiClient(originalRequest);
           })
-          .catch(err => Promise.reject(err));
+          .catch(err => { throw err; });
       }
 
       originalRequest._retry = true;
@@ -115,11 +115,11 @@ apiClient.interceptors.response.use(
         await AsyncStorage.removeItem('refresh_token');
         processQueue(refreshError, null);
         isRefreshing = false;
-        return Promise.reject(refreshError);
+        throw refreshError;
       }
     }
 
-    return Promise.reject(error);
+    throw error;
   }
 );
 

@@ -65,6 +65,83 @@ interface MedicationItemProps {
   onMarkAsTaken: (id: string) => void;
 }
 
+function MedicationItem({
+  item,
+  onPress,
+  onMarkAsTaken,
+}: MedicationItemProps): React.JSX.Element {
+  const Icon = item.icon === 'syringe' ? Syringe : Pill;
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.medicationCard,
+        item.taken && styles.medicationCardTaken,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.medicationContent}>
+        <View style={styles.medicationLeft}>
+          <View
+            style={[styles.medicationIcon, { backgroundColor: item.color }]}
+          >
+            <Icon size={24} color="#fff" />
+          </View>
+          <View style={styles.medicationInfo}>
+            <Text
+              style={[
+                styles.medicationName,
+                item.taken && styles.medicationNameTaken,
+              ]}
+            >
+              {item.name}
+            </Text>
+            <Text
+              style={[
+                styles.medicationMoment,
+                item.taken && styles.medicationMomentTaken,
+              ]}
+            >
+              {item.moment} • {item.dose}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.medicationRight}>
+          {item.taken ? (
+            <View style={styles.takenBadge}>
+              <CheckCircle size={20} color="#10B981" />
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.takeButton}
+              onPress={() => onMarkAsTaken(item.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.takeButtonText}>Prendre</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      <View style={styles.medicationFooter}>
+        <View style={styles.medicationTime}>
+          <Clock size={16} color={colors.textSecondary} />
+          <Text style={styles.medicationTimeText}>
+            {item.taken ? `Pris à ${item.time}` : `À prendre à ${item.time}`}
+          </Text>
+        </View>
+        <View
+          style={[styles.typeBadge, { backgroundColor: `${item.color}20` }]}
+        >
+          <Text style={[styles.typeBadgeText, { color: item.color }]}>
+            {item.type}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function MedicationsScreen({
   navigation,
 }: MedicationsScreenProps): React.JSX.Element {
@@ -228,83 +305,6 @@ export default function MedicationsScreen({
     const decrement = medicationType.includes('Insuline') ? 1 : 100;
     const unit = medicationType.includes('Insuline') ? ' unités' : 'mg';
     setDose(`${Math.max(0, currentDose - decrement)}${unit}`);
-  };
-
-  const MedicationItem = ({
-    item,
-    onPress,
-    onMarkAsTaken,
-  }: MedicationItemProps): React.JSX.Element => {
-    const Icon = item.icon === 'syringe' ? Syringe : Pill;
-
-    return (
-      <TouchableOpacity
-        style={[
-          styles.medicationCard,
-          item.taken && styles.medicationCardTaken,
-        ]}
-        onPress={onPress}
-        activeOpacity={0.8}
-      >
-        <View style={styles.medicationContent}>
-          <View style={styles.medicationLeft}>
-            <View
-              style={[styles.medicationIcon, { backgroundColor: item.color }]}
-            >
-              <Icon size={24} color="#fff" />
-            </View>
-            <View style={styles.medicationInfo}>
-              <Text
-                style={[
-                  styles.medicationName,
-                  item.taken && styles.medicationNameTaken,
-                ]}
-              >
-                {item.name}
-              </Text>
-              <Text
-                style={[
-                  styles.medicationMoment,
-                  item.taken && styles.medicationMomentTaken,
-                ]}
-              >
-                {item.moment} • {item.dose}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.medicationRight}>
-            {item.taken ? (
-              <View style={styles.takenBadge}>
-                <CheckCircle size={20} color="#10B981" />
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.takeButton}
-                onPress={() => onMarkAsTaken(item.id)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.takeButtonText}>Prendre</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-        <View style={styles.medicationFooter}>
-          <View style={styles.medicationTime}>
-            <Clock size={16} color={colors.textSecondary} />
-            <Text style={styles.medicationTimeText}>
-              {item.taken ? `Pris à ${item.time}` : `À prendre à ${item.time}`}
-            </Text>
-          </View>
-          <View
-            style={[styles.typeBadge, { backgroundColor: `${item.color}20` }]}
-          >
-            <Text style={[styles.typeBadgeText, { color: item.color }]}>
-              {item.type}
-            </Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   return (

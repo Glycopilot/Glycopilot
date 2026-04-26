@@ -55,53 +55,46 @@ export default function SignInScreen({ navigation }: SignInScreenProps) {
     if (!email || !password) {
       toastError('Erreur', 'Veuillez remplir tous les champs');
       return;
-    } else if (password.length < 8) {
-      toastError(
-        'Erreur',
-        'Le mot de passe doit contenir au moins 8 caractères'
-      );
+    }
+    if (password.length < 8) {
+      toastError('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
       return;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
       toastError('Erreur', "L'adresse email n'est pas valide");
       return;
-    } else if (!/\d/.test(password)) {
+    }
+    if (!/\d/.test(password)) {
       toastError('Erreur', 'Le mot de passe doit contenir au moins un chiffre');
       return;
-    } else if (!/[A-Z]/.test(password)) {
-      toastError(
-        'Erreur',
-        'Le mot de passe doit contenir au moins une lettre majuscule'
-      );
+    }
+    if (!/[A-Z]/.test(password)) {
+      toastError('Erreur', 'Le mot de passe doit contenir au moins une lettre majuscule');
       return;
-    } else {
-      try {
-        await authService.register({
-          email,
-          firstName,
-          lastName,
-          password,
-          passwordConfirm: ConfirmationPassword,
-        });
-        toastSuccess('Inscription réussie!', 'Bienvenue !');
-
-        // Vider le formulaire
-        setEmail('');
-        setfirstName('');
-        setlastName('');
-        setPassword('');
-        setConfirmationPassword('');
-        setConfirmationEmail('');
-
-        // Rediriger vers l'écran d'accueil
-        if (navigation && navigation.reset) {
-          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-        } else if (navigation && navigation.navigate) {
-          navigation.navigate('Login');
-        }
-      } catch (error) {
-        const err = error as Error;
-        toastError('Erreur inscription', err.message);
+    }
+    try {
+      await authService.register({
+        email,
+        firstName,
+        lastName,
+        password,
+        passwordConfirm: ConfirmationPassword,
+      });
+      toastSuccess('Inscription réussie!', 'Bienvenue !');
+      setEmail('');
+      setfirstName('');
+      setlastName('');
+      setPassword('');
+      setConfirmationPassword('');
+      setConfirmationEmail('');
+      if (navigation && navigation.reset) {
+        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      } else if (navigation && navigation.navigate) {
+        navigation.navigate('Login');
       }
+    } catch (error) {
+      const err = error as Error;
+      toastError('Erreur inscription', err.message);
     }
   };
 
