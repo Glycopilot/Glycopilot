@@ -23,7 +23,7 @@ from training.utils import (
 )
 
 SEQ_LEN = 24
-BATCH_SIZE = 64
+BATCH_SIZE = 256
 
 
 def pinball_loss(pred: torch.Tensor, target: torch.Tensor, alpha: float) -> torch.Tensor:
@@ -67,7 +67,7 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
 
     best_val_loss = float("inf")
     patience_counter = 0
-    PATIENCE = 15
+    PATIENCE = 5
 
     print(f"[INFO] Entraînement LSTM ({epochs} epochs max, early stopping patience={PATIENCE})...")
     for epoch in range(1, epochs + 1):
@@ -94,10 +94,11 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
         val_loss   /= len(val_loader)
         scheduler.step(val_loss)
 
-        if epoch % 10 == 0:
-            print(f"  Epoch {epoch:3d}/{epochs} — train: {train_loss:.4f} | val: {val_loss:.4f}")
+        improved = val_loss < best_val_loss
+        marker = "✓" if improved else f"({patience_counter + 1 if not improved else 0}/{PATIENCE})"
+        print(f"  Epoch {epoch:3d}/{epochs} — train: {train_loss:.4f} | val: {val_loss:.4f} {marker}", flush=True)
 
-        if val_loss < best_val_loss:
+        if improved:
             best_val_loss = val_loss
             patience_counter = 0
             os.makedirs("artifacts/lstm", exist_ok=True)
@@ -105,7 +106,7 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
         else:
             patience_counter += 1
             if patience_counter >= PATIENCE:
-                print(f"  Early stopping à l'epoch {epoch}.")
+                print(f"  Early stopping à l'epoch {epoch}.", flush=True)
                 break
 
     # Evaluate on test set
@@ -138,9 +139,9 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Entraîne le modèle LSTM")
     parser.add_argument("--data", default=DATA_PATH)
-    parser.add_argument("--test-participant", default="001")
+    parser.add_argument("--test-participant", default="1")
     parser.add_argument("--version", default="v1.0")
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
     args = parser.parse_args()
     main(args.data, args.test_participant, args.version, args.epochs, args.device)

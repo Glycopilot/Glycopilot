@@ -8,8 +8,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Glycemia, GlycemiaHisto
+from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto
 from .serializers import (
+    GlycemiaDataIASerializer,
     GlycemiaHistoCreateSerializer,
     GlycemiaHistoSerializer,
     GlycemiaSerializer,
@@ -150,3 +151,43 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
             else values[0],
             "count": len(values),
         }
+
+
+class GlycemiaDataIAViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    GET /api/glycemia/predictions/          — liste des prédictions (paginée)
+    GET /api/glycemia/predictions/{id}/     — détail d'une prédiction
+    GET /api/glycemia/predictions/latest/   — dernière prédiction disponible
+
+    Query params :
+      ?limit=N   — nombre de résultats (défaut pagination globale)
+      ?status=ok|low_confidence|error
+      ?source=baseline|lstm|transformer|ensemble
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = GlycemiaDataIASerializer
+
+    def get_queryset(self):
+        qs = GlycemiaDataIA.objects.filter(user=self.request.user).order_by("-for_time")
+
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        source_filter = self.request.query_params.get("source")
+        if source_filter:
+            qs = qs.filter(source=source_filter)
+
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="latest")
+    def latest(self, request):
+        """GET /api/glycemia/predictions/latest/ — dernière prédiction."""
+        prediction = self.get_queryset().first()
+        if not prediction:
+            return Response(
+                {"detail": "No prediction available yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(GlycemiaDataIASerializer(prediction).data)

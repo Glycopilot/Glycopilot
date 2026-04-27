@@ -45,7 +45,7 @@ def build_features(request) -> tuple[np.ndarray, float]:
                 "value": r.value,
                 "trend": r.trend,
                 "rate": r.rate if r.rate is not None else 0.0,
-                "context": CONTEXT_MAP.get(r.context or "", -1),
+                "context": CONTEXT_MAP.get(r.context or "", 0),
             }
             for r in readings
         ]

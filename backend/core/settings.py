@@ -387,6 +387,10 @@ STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 # --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.AuthAccount"
 
+# --- AI MICROSERVICE ---
+AI_SERVICE_URL = config("AI_SERVICE_URL", default="http://localhost:8001")
+AI_SERVICE_TOKEN = config("AI_SERVICE_TOKEN", default="dev_secret")
+
 # --- ASGI / CHANNELS ---
 ASGI_APPLICATION = "core.asgi.application"
 CHANNEL_LAYERS = {

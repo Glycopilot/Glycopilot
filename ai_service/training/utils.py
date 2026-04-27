@@ -100,8 +100,11 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     return df
 
 
-def loso_split(df: pd.DataFrame, test_participant: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def loso_split(df: pd.DataFrame, test_participant) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Leave-One-Subject-Out split. Returns train, val, test."""
+    # Cast to match the dtype of participant_id in the dataframe
+    if pd.api.types.is_integer_dtype(df["participant_id"].dtype):
+        test_participant = int(test_participant)
     test = df[df["participant_id"] == test_participant].copy()
     rest = df[df["participant_id"] != test_participant].copy()
 

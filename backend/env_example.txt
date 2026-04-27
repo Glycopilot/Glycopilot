@@ -16,3 +16,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 # API
 API_VERSION=1.0.0
 
+# AI Microservice
+AI_SERVICE_URL=http://localhost:8001
+AI_SERVICE_TOKEN=dev_secret
+

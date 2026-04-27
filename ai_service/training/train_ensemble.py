@@ -177,7 +177,7 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Entraîne le modèle Ensemble (stacking)")
     parser.add_argument("--data", default=DATA_PATH)
-    parser.add_argument("--test-participant", default="001")
+    parser.add_argument("--test-participant", default="1")
     parser.add_argument("--version", default="v1.0")
     parser.add_argument("--sub-version", default="v1.0", help="Version des sous-modèles à agréger")
     args = parser.parse_args()
