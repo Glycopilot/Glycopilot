@@ -1,9 +1,4 @@
-import axios, {
-  AxiosInstance,
-  AxiosError,
-  InternalAxiosRequestConfig,
-} from 'axios';
-import { Platform } from 'react-native';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
   LoginResponse,
@@ -12,162 +7,41 @@ import type {
   ApiError,
 } from '../types/auth.types';
 import { unregisterPushToken } from './pushService';
+import apiClient, { API_URL } from './apiClient';
 
-const API_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:8006/api'
-    : process.env.EXPO_PUBLIC_API_URL;
-const API_TIMEOUT = parseInt(
-  process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',
-  10
-);
-
-interface QueueItem {
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}
-
-// Créer une instance axios
-const apiClient: AxiosInstance = axios.create({
-  baseURL: API_URL,
-  timeout: API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Intercepteur pour ajouter le token à chaque requête
-apiClient.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (error) {
-      console.error('Erreur lors de la récupération du token:', error);
-    }
-    return config;
-  },
-  (error: AxiosError) => {
-    throw error;
-  }
-);
-
-// Mécanisme de gestion des refreshes concurrents
-let isRefreshing = false;
-let failedQueue: QueueItem[] = [];
-
-const processQueue = (error: unknown, token: string | null = null): void => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else if (token) {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
+const storeAuthData = async (access: string, refresh: string, user: User): Promise<void> => {
+  await AsyncStorage.setItem('access_token', access);
+  await AsyncStorage.setItem('refresh_token', refresh);
+  await AsyncStorage.setItem('user', JSON.stringify(user));
 };
 
-// Intercepteur pour gérer le rafraîchissement automatique du token
-apiClient.interceptors.response.use(
-  response => response,
-  async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
+const mapToUser = (data: Record<string, any>): User => ({
+  id: data.id_user,
+  email: data.email,
+  firstName: data.first_name,
+  lastName: data.last_name,
+  phoneNumber: data.phone_number,
+  address: data.address,
+  role: data.profiles?.[0]?.role_name,
+  diabetesType: data.profiles?.[0]?.patient_details?.diabetes_type,
+});
 
-    const isAuthPath = originalRequest.url?.includes('/auth/');
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthPath) {
-      if (isRefreshing) {
-        // Si un refresh est en cours, attendre son résultat
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(token => {
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
-            return apiClient(originalRequest);
-          })
-          .catch(err => { throw err; });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshToken = await AsyncStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        // Créer une requête sans les intercepteurs pour éviter les boucles
-        const response = await axios.post<{ access: string }>(
-          `${API_URL}/auth/refresh`,
-          {
-            refresh: refreshToken,
-          }
-        );
-
-        const { access } = response.data;
-        await AsyncStorage.setItem('access_token', access);
-
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-        }
-        processQueue(null, access);
-        isRefreshing = false;
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Token invalide, nettoyer le stockage
-        await AsyncStorage.removeItem('access_token');
-        await AsyncStorage.removeItem('refresh_token');
-        console.error(
-          'Erreur lors du rafraîchissement du token:',
-          refreshError
-        );
-        processQueue(refreshError, null);
-        isRefreshing = false;
-        throw refreshError;
-      }
-    }
-
-    throw error;
-  }
-);
-
-// Service d'authentification
 const authService = {
-  /**
-   * Connexion utilisateur
-   */
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
       const response = await apiClient.post<LoginResponse>('/auth/login', {
         email,
         password,
       });
-
       const { access, refresh, user } = response.data;
-
-      // Stocker les tokens
-      await AsyncStorage.setItem('access_token', access);
-      await AsyncStorage.setItem('refresh_token', refresh);
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-
+      await storeAuthData(access, refresh, user);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
-      const message =
-        axiosError.response?.data?.message || 'Erreur de connexion';
-      throw new Error(message);
+      throw new Error(axiosError.response?.data?.message || 'Erreur de connexion');
     }
   },
 
-  /**
-   * Inscription utilisateur
-   */
   async register(
     userData: RegisterData & { passwordConfirm: string }
   ): Promise<LoginResponse> {
@@ -179,26 +53,11 @@ const authService = {
         password: userData.password,
         password_confirm: userData.passwordConfirm,
       });
-
       const { access, refresh, user } = response.data;
-
-      // Stocker les tokens
-      await AsyncStorage.setItem('access_token', access);
-      await AsyncStorage.setItem('refresh_token', refresh);
-      await AsyncStorage.setItem('user', JSON.stringify(user));
-
+      await storeAuthData(access, refresh, user);
       return response.data;
     } catch (error) {
-      const axiosError = error as AxiosError<
-        ApiError | Record<string, unknown>
-      >;
-
-      // Log full backend validation payload to help debugging (temporary)
-      console.error(
-        'authService.register error response:',
-        axiosError.response?.data
-      );
-
+      const axiosError = error as AxiosError<ApiError | Record<string, unknown>>;
       let message = "Erreur lors de l'inscription";
       if (axiosError.response?.data) {
         const data = axiosError.response.data;
@@ -214,32 +73,21 @@ const authService = {
           }
         }
       }
-
       throw new Error(message);
     }
   },
 
-  /**
-   * Déconnexion utilisateur
-   */
   async logout(): Promise<{ message: string }> {
     try {
-      // Supprimer le token push du backend
       await unregisterPushToken();
-
       const refreshToken = await AsyncStorage.getItem('refresh_token');
-
       if (refreshToken) {
-        await apiClient.post('/auth/logout', {
-          refresh: refreshToken,
-        });
+        await apiClient.post('/auth/logout', { refresh: refreshToken });
       }
     } catch (error) {
-      // Logger l'erreur mais continuer quand même
       console.warn('Erreur lors de la déconnexion backend:', error);
     }
 
-    // Toujours nettoyer le stockage local (déconnexion côté client)
     try {
       await AsyncStorage.removeItem('access_token');
       await AsyncStorage.removeItem('refresh_token');
@@ -251,36 +99,20 @@ const authService = {
     return { message: 'Déconnexion réussie' };
   },
 
-  /**
-   * Récupérer les infos utilisateur actuel
-   */
   async getCurrentUser(): Promise<User> {
     console.log('DEBUG: authService.getCurrentUser hit');
     try {
-      const response = await apiClient.get<any>('/users/me/');
-      const data = response.data;
-      return {
-        id: data.id_user,
-        email: data.email,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        phoneNumber: data.phone_number,
-        address: data.address,
-        role: data.profiles?.[0]?.role_name,
-        diabetesType: data.profiles?.[0]?.patient_details?.diabetes_type,
-      };
+      const response = await apiClient.get<Record<string, any>>('/users/me/');
+      return mapToUser(response.data);
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
-      const message =
+      throw new Error(
         axiosError.response?.data?.message ||
-        "Erreur lors de la récupération de l'utilisateur";
-      throw new Error(message);
+          "Erreur lors de la récupération de l'utilisateur"
+      );
     }
   },
 
-  /**
-   * Mettre à jour le profil utilisateur
-   */
   async updateProfile(
     userData: Partial<{
       firstName: string;
@@ -291,85 +123,50 @@ const authService = {
     }>
   ): Promise<User> {
     try {
-      const payload: any = {};
-
-      if (userData.firstName !== undefined)
-        payload.first_name = userData.firstName;
-      if (userData.lastName !== undefined)
-        payload.last_name = userData.lastName;
-      if (userData.phoneNumber !== undefined)
-        payload.phone_number = userData.phoneNumber;
+      const payload: Record<string, unknown> = {};
+      if (userData.firstName !== undefined) payload.first_name = userData.firstName;
+      if (userData.lastName !== undefined) payload.last_name = userData.lastName;
+      if (userData.phoneNumber !== undefined) payload.phone_number = userData.phoneNumber;
       if (userData.address !== undefined) payload.address = userData.address;
-
       if (userData.diabetesType !== undefined) {
-        payload.patient_details = {
-          diabetes_type: userData.diabetesType,
-        };
+        payload.patient_details = { diabetes_type: userData.diabetesType };
       }
 
-      const response = await apiClient.patch<any>('/users/me/', payload);
-      const data = response.data;
-
-      const updatedUser = {
-        id: data.id_user,
-        email: data.email,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        phoneNumber: data.phone_number,
-        address: data.address,
-        role: data.profiles?.[0]?.role_name,
-        diabetesType: data.profiles?.[0]?.patient_details?.diabetes_type,
-      };
-
-      // Mettre à jour l'utilisateur stocké localement
+      const response = await apiClient.patch<Record<string, any>>('/users/me/', payload);
+      const updatedUser = mapToUser(response.data);
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-
       return updatedUser;
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
-      const message =
-        axiosError.response?.data?.message ||
-        'Erreur lors de la mise à jour du profil';
-      throw new Error(message);
+      throw new Error(
+        axiosError.response?.data?.message || 'Erreur lors de la mise à jour du profil'
+      );
     }
   },
 
-  /**
-   * Rafraîchir le token d'accès
-   */
   async refreshToken(): Promise<{ access: string }> {
     try {
       const refreshToken = await AsyncStorage.getItem('refresh_token');
-
       if (!refreshToken) {
         throw new Error('No refresh token available');
       }
-
       const response = await axios.post<{ access: string }>(
         `${API_URL}/auth/refresh`,
-        {
-          refresh: refreshToken,
-        }
+        { refresh: refreshToken }
       );
-
       const { access } = response.data;
       await AsyncStorage.setItem('access_token', access);
-
       return response.data;
     } catch (error) {
       await AsyncStorage.removeItem('access_token');
       await AsyncStorage.removeItem('refresh_token');
       const axiosError = error as AxiosError<ApiError>;
-      const message =
-        axiosError.response?.data?.message ||
-        'Erreur lors du rafraîchissement du token';
-      throw new Error(message);
+      throw new Error(
+        axiosError.response?.data?.message || 'Erreur lors du rafraîchissement du token'
+      );
     }
   },
 
-  /**
-   * Récupérer les tokens stockés
-   */
   async getTokens(): Promise<{
     accessToken: string | null;
     refreshToken: string | null;
@@ -377,23 +174,13 @@ const authService = {
     try {
       const accessToken = await AsyncStorage.getItem('access_token');
       const refreshToken = await AsyncStorage.getItem('refresh_token');
-
-      return {
-        accessToken,
-        refreshToken,
-      };
+      return { accessToken, refreshToken };
     } catch (error) {
       console.error('Erreur lors de la récupération des tokens:', error);
-      return {
-        accessToken: null,
-        refreshToken: null,
-      };
+      return { accessToken: null, refreshToken: null };
     }
   },
 
-  /**
-   * Récupérer l'utilisateur stocké localement
-   */
   async getStoredUser(): Promise<User | null> {
     try {
       const user = await AsyncStorage.getItem('user');
@@ -404,25 +191,16 @@ const authService = {
     }
   },
 
-  /**
-   * Vérifier si l'utilisateur est connecté
-   */
   async isAuthenticated(): Promise<boolean> {
     try {
       const token = await AsyncStorage.getItem('access_token');
       return !!token;
     } catch (error) {
-      console.error(
-        "Erreur lors de la vérification de l'authentification:",
-        error
-      );
+      console.error("Erreur lors de la vérification de l'authentification:", error);
       return false;
     }
   },
 
-  /**
-   * Obtenir l'instance axios configurée
-   */
   getApiClient(): AxiosInstance {
     return apiClient;
   },
