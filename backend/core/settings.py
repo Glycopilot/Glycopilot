@@ -32,6 +32,7 @@ if not SECRET_KEY.strip():
         )
     SECRET_KEY = "django-insecure-ci-tests-only-do-not-use-in-production-xxxxxxxxxx"
 SECRET_KEY_ADMIN = config("SECRET_KEY_ADMIN", default="")
+AI_SERVICE_TOKEN = config("AI_SERVICE_TOKEN", default="")
 
 # --- APPS INSTALLÉES ---
 INSTALLED_APPS = [
