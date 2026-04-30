@@ -30,6 +30,5 @@ urlpatterns = [
     path("api/meals/", include("apps.meals.urls")),
     path("api/medications/", include("apps.medications.urls")),
     path("api/v1/dashboard/", include("apps.dashboard.urls")),
-    path("api/devices/", include("apps.devices.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
 ]
