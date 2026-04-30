@@ -61,7 +61,79 @@ Meilleur modèle sur l'horizon court (15 min). La régression linéaire sur les 
 
 **lag_90 + lag_120 ajoutés** — même raison que Baseline.
 
-> Résultats post-modification à compléter après le prochain entraînement.
+### Résultats après modifications V1 (30 features + sample weights + early stopping)
+
+| Horizon | MAE | Best iteration |
+|---------|-----|----------------|
+| 15 min  | 4.63 mg/dL | 65/500 |
+| 30 min  | 9.48 mg/dL | 31/500 |
+| 60 min  | 11.17 mg/dL | 20/500 ⚠️ |
+
+Problème identifié : `early_stopping_rounds=20` uniforme → seulement 20 arbres pour @60min (underfitting). Le signal à 60 min est plus bruité et nécessite plus d'arbres pour converger.
+
+### Modifications V2 (basées sur la littérature)
+
+**Early stopping par horizon** — horizons longs ont un signal plus bruité, ils ont besoin de plus d'arbres avant convergence :
+
+| Horizon | early_stopping_rounds |
+|---------|----------------------|
+| 15 min  | 20 |
+| 30 min  | 50 |
+| 60 min  | **100** |
+
+**Hyperparamètres par horizon** — la littérature montre qu'arbres moins profonds + learning rate plus élevé améliorent les horizons longs :
+
+| Horizon | max_depth | learning_rate |
+|---------|-----------|---------------|
+| 15 min  | 6 | 0.05 |
+| 30 min  | 5 | 0.08 |
+| 60 min  | **4** | **0.12** |
+
+**Sample weights réduits pour @60min** — à 60 min l'incertitude est plus élevée, pénaliser autant les zones critiques nuit au MAE global. Poids critique `×50 → ×30` pour @60min uniquement.
+
+### Résultats V2 — Échec (learning rate trop élevé)
+
+| Horizon | MAE V1 | MAE V2 | Best iter |
+|---------|--------|--------|-----------|
+| 15 min  | 4.63   | 4.63   | 65/500 |
+| 30 min  | 9.48   | 9.99 ❌ | 18/500 |
+| 60 min  | 11.17  | 12.64 ❌ | 5/500 |
+
+**Cause** : LR élevé (0.08/0.12) sur signal bruité → val loss oscille davantage → early stopping déclenché encore plus tôt. Le modèle s'arrête à 5 arbres pour @60min au lieu de 20.
+
+**Enseignement** : pour des horizons longs sur données médicales bruitées, un LR plus élevé est contre-productif. La recommandation de la littérature ne s'applique pas ici.
+
+### Modifications V3
+
+**Revert LR → 0.05 pour tous les horizons** — signal trop bruité à 60 min pour supporter un LR élevé.
+
+**Garder max_depth et early_stopping par horizon** — ces deux changements restent valides :
+
+| Horizon | max_depth | learning_rate | early_stopping_rounds |
+|---------|-----------|---------------|----------------------|
+| 15 min  | 6 | 0.05 | 20 |
+| 30 min  | 5 | 0.05 | 50 |
+| 60 min  | 4 | 0.05 | **100** |
+
+### Résultats V3 — Échec (max_depth réduit contre-productif)
+
+| Horizon | MAE V1 | MAE V3 | Best iter |
+|---------|--------|--------|-----------|
+| 15 min  | **4.63** | 4.63 | 65/500 |
+| 30 min  | **9.48** | 9.89 ❌ | 31/500 |
+| 60 min  | **11.17** | 11.34 ❌ | 17/500 |
+
+**Cause** : réduire `max_depth` (6→5 pour @30min, 6→4 pour @60min) diminue la capacité du modèle → underfitting. Le `best_iteration=17` persiste malgré `early_stopping=100` — XGBoost s'est bien arrêté à l'itération 117, mais le meilleur était déjà à 17. Les arbres supplémentaires ne font qu'overfitter.
+
+**Conclusion** : XGBoost a atteint sa limite sur ce dataset pour @60min (~11 mg/dL). Le LSTM (9.91) est meilleur sur l'horizon long. Config revenue à V1 (max_depth=6, lr=0.05, early_stopping=20 pour tous les horizons).
+
+### Configuration finale retenue : V1
+
+| Horizon | max_depth | learning_rate | early_stopping | MAE final |
+|---------|-----------|---------------|----------------|-----------|
+| 15 min  | 6 | 0.05 | 20 | **4.63 mg/dL** |
+| 30 min  | 6 | 0.05 | 20 | **9.48 mg/dL** |
+| 60 min  | 6 | 0.05 | 20 | **11.17 mg/dL** |
 
 ---
 
@@ -175,6 +247,50 @@ Baseline ignorée (poids=0), Transformer avec poids aberrants.
 **alpha : 1.0 → 100.0** — régularisation plus forte pour forcer des poids stables entre sous-modèles corrélés.
 
 > Résultats finaux à compléter après re-entraînement de tous les modèles avec 30 features.
+
+---
+
+## Stratégie Fine-tuning par patient
+
+### Principe
+
+Le modèle global (30 features) est entraîné une fois sur tous les participants. Pour chaque patient, un modèle personnel LSTM est fine-tuné sur ses données récentes avec **37 features** (30 globales + 7 nouvelles).
+
+**Avantage** : le modèle s'adapte au métabolisme individuel sans re-entraîner le global. Particulièrement utile pour améliorer le @60min.
+
+### Features supplémentaires (modèle personnel uniquement)
+
+| Feature | Source | Fallback si absent |
+|---------|--------|-------------------|
+| `activity_calories_60min` | API activité (calories brûlées sur 60 min) | 0 |
+| `activity_sugar_used_60min` | API activité (sucre utilisé sur 60 min) | 0 |
+| `activity_intensity` | API activité (intensité moyenne : 1=low, 2=med, 3=high) | 0 |
+| `minutes_since_last_activity` | API activité | 999 |
+| `carbs_last_30min` | API repas (glucides ingérés sur 30 min) | 0 |
+| `carbs_last_60min` | API repas (glucides ingérés sur 60 min) | 0 |
+| `minutes_since_last_meal` | API repas | 999 |
+
+### Initialisation des poids
+
+Le LSTM global a une couche d'entrée de shape `(4×hidden, 30)`. Pour créer le modèle personnel (37 features) :
+- On copie les 30 colonnes existantes
+- Les 7 nouvelles colonnes sont initialisées à **zéro**
+- Le fine-tuning apprend progressivement à les utiliser
+
+### Conditions de déclenchement
+
+- Historique minimum : **14 jours** de données glucose
+- Déclencheur : automatique toutes les **7 jours** par patient
+- Données utilisées : les **60 derniers jours**
+- Artefacts : `artifacts/patients/{patient_id}/lstm_personal_v1.0.pt`
+
+### Script
+
+```bash
+python training/finetune_patient.py --patient-id <uuid> --django-url http://localhost:8000 --token <bearer>
+# ou depuis CSV exporté :
+python training/finetune_patient.py --patient-id <uuid> --data-csv patient_data.csv
+```
 
 ---
 

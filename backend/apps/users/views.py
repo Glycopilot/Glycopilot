@@ -26,8 +26,16 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if self._is_admin(user):
-            return User.objects.all().order_by("id_user")
+        if self._is_admin(user) or self.request.auth == "service_token":
+            qs = User.objects.all().order_by("id_user")
+            role = self.request.query_params.get("role")
+            if role:
+                qs = qs.filter(profiles__role__name__iexact=role)
+            is_active = self.request.query_params.get("is_active")
+            if is_active is not None:
+                active_bool = is_active.lower() in ("true", "1")
+                qs = qs.filter(profiles__is_active=active_bool)
+            return qs.distinct()
         return User.objects.filter(id_user=user.user.id_user).order_by("id_user")
 
     @action(detail=False, methods=["get", "patch"])

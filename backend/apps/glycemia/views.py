@@ -27,11 +27,28 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = GlycemiaHistoSerializer
 
+    def _resolve_user(self):
+        """Retourne l'utilisateur cible. Un service/admin peut passer ?user_id=<id>."""
+        user_id = self.request.query_params.get("user_id")
+        if user_id and self.request.auth == "service_token":
+            from apps.users.models import User
+            try:
+                return User.objects.get(id_user=user_id).auth_account
+            except User.DoesNotExist:
+                from rest_framework.exceptions import NotFound
+                raise NotFound(f"Utilisateur {user_id} introuvable.")
+        return self.request.user
+
     def get_queryset(self):
         """Renvoie l'historique complet (GlycemiaHisto) du user."""
-        return GlycemiaHisto.objects.filter(user=self.request.user).order_by(
-            "-measured_at"
-        )
+        qs = GlycemiaHisto.objects.filter(user=self._resolve_user()).order_by("-measured_at")
+        measured_after = self.request.query_params.get("measured_after")
+        if measured_after:
+            from django.utils.dateparse import parse_datetime
+            dt = parse_datetime(measured_after)
+            if dt:
+                qs = qs.filter(measured_at__gte=dt)
+        return qs
 
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):

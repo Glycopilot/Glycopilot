@@ -22,20 +22,20 @@ from training.utils import (
 )
 
 
-def compute_sample_weights(y: np.ndarray) -> np.ndarray:
-    """Higher weight for predictions near/in hypo or hyper zones."""
+def compute_sample_weights(y: np.ndarray, horizon: int = 15) -> np.ndarray:
+    """Higher weight for predictions near/in hypo or hyper zones.
+    Reduced critical weight for @60min (higher uncertainty at longer horizon)."""
+    critical_weight = 30.0 if horizon == 60 else 50.0
     weights = np.ones(len(y), dtype=np.float32)
-    weights[y < 70] = 50.0
+    weights[y < 70] = critical_weight
     weights[(y >= 70) & (y < 90)] = 10.0
     weights[(y > 160) & (y <= 180)] = 10.0
-    weights[y > 180] = 50.0
+    weights[y > 180] = critical_weight
     return weights
 
 
 XGB_PARAMS = dict(
     n_estimators=500,
-    max_depth=6,
-    learning_rate=0.05,
     subsample=0.8,
     colsample_bytree=0.8,
     min_child_weight=5,
@@ -45,6 +45,13 @@ XGB_PARAMS = dict(
     n_jobs=-1,
     verbosity=0,
 )
+
+# Paramètres spécifiques par horizon — horizons longs = arbres moins profonds + LR plus élevé
+HORIZON_PARAMS = {
+    15: dict(max_depth=6, learning_rate=0.05, early_stopping_rounds=20),
+    30: dict(max_depth=6, learning_rate=0.05, early_stopping_rounds=20),
+    60: dict(max_depth=6, learning_rate=0.05, early_stopping_rounds=20),
+}
 
 
 def main(data_path: str, test_participant: str, version: str) -> None:
@@ -74,10 +81,17 @@ def main(data_path: str, test_participant: str, version: str) -> None:
         y_test  = test[TARGET_COLS[idx]].values
 
         print(f"\n  [INFO] Entraînement XGBoost @{h}min...")
-        sw = compute_sample_weights(y_train)
+        sw = compute_sample_weights(y_train, horizon=h)
+        hp = HORIZON_PARAMS[h]
 
-        # Point prediction avec early stopping
-        xgb = XGBRegressor(objective="reg:squarederror", early_stopping_rounds=20, **XGB_PARAMS)
+        # Point prediction avec paramètres et early stopping par horizon
+        xgb = XGBRegressor(
+            objective="reg:squarederror",
+            max_depth=hp["max_depth"],
+            learning_rate=hp["learning_rate"],
+            early_stopping_rounds=hp["early_stopping_rounds"],
+            **XGB_PARAMS,
+        )
         xgb.fit(
             X_train, y_train,
             sample_weight=sw,

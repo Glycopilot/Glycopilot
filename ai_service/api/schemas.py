@@ -24,12 +24,28 @@ class PatientMeta(BaseModel):
     gender_is_female: Optional[int] = Field(None, ge=0, le=1)
 
 
+class ActivityInput(BaseModel):
+    start: datetime
+    end: datetime
+    calories_burned: Optional[float] = Field(None, ge=0.0)
+    sugar_used: Optional[float] = Field(None, ge=0.0)
+    intensity: Optional[str] = Field(None, pattern="^(low|medium|high)$")
+
+
+class MealInput(BaseModel):
+    taken_at: datetime
+    carbs: Optional[float] = Field(None, ge=0.0)
+    calories: Optional[float] = Field(None, ge=0.0)
+
+
 class PredictRequest(BaseModel):
     user_id: str
     for_time: datetime
     readings: list[ReadingInput] = Field(..., min_length=6, max_length=100)
     wearable: Optional[WearableInput] = None
     patient_meta: Optional[PatientMeta] = None
+    activities: Optional[list[ActivityInput]] = None
+    meals: Optional[list[MealInput]] = None
 
     @field_validator("readings")
     @classmethod
