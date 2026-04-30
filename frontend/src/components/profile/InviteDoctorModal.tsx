@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Stethoscope } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
+import { modalStyles } from './modalStyles';
 
 interface InviteDoctorModalProps {
   readonly visible: boolean;
@@ -39,24 +40,26 @@ export default function InviteDoctorModal({
       transparent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose} />
+      <Pressable style={modalStyles.overlay} onPress={onClose} />
       <View
         style={[
-          styles.modalContainer,
+          modalStyles.container,
           Platform.OS === 'ios' ? { paddingBottom: 34 } : null,
         ]}
       >
-        <View style={styles.sheetHandle} />
+        <View style={modalStyles.handle} />
 
-        <Text style={styles.modalTitle}>Inviter un médecin</Text>
-        <Text style={styles.modalSubtitle}>
+        <Text style={[modalStyles.title, styles.titleSmallMargin]}>
+          Inviter un médecin
+        </Text>
+        <Text style={styles.subtitle}>
           Invitez votre médecin traitant à rejoindre votre équipe de soins
         </Text>
 
-        <View style={styles.formSection}>
-          <Text style={styles.formLabel}>Email du médecin</Text>
+        <View style={modalStyles.formSection}>
+          <Text style={modalStyles.formLabel}>Email du médecin</Text>
           <TextInput
-            style={styles.input}
+            style={modalStyles.input}
             value={email}
             onChangeText={onEmailChange}
             placeholder="medecin@hopital.fr"
@@ -67,25 +70,25 @@ export default function InviteDoctorModal({
           />
         </View>
 
-        <View style={styles.infoCard}>
+        <View style={modalStyles.infoCard}>
           <Stethoscope size={20} color="#3B82F6" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.infoTitle}>Comment ça fonctionne ?</Text>
-            <Text style={styles.infoText}>
+            <Text style={modalStyles.infoTitle}>Comment ça fonctionne ?</Text>
+            <Text style={modalStyles.infoText}>
               Une invitation sera envoyée à votre médecin. Une fois acceptée,
               il pourra suivre vos données de santé.
             </Text>
           </View>
         </View>
 
-        <View style={styles.modalButtons}>
-          <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Annuler</Text>
+        <View style={modalStyles.buttons}>
+          <TouchableOpacity style={modalStyles.cancelButton} onPress={onClose}>
+            <Text style={modalStyles.cancelButtonText}>Annuler</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
-              styles.submitButton,
-              (!isValidEmail || loading) && styles.submitButtonDisabled,
+              modalStyles.submitButton,
+              (!isValidEmail || loading) && modalStyles.submitButtonDisabled,
             ]}
             onPress={onSubmit}
             disabled={!isValidEmail || loading}
@@ -93,7 +96,7 @@ export default function InviteDoctorModal({
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.submitButtonText}>Envoyer</Text>
+              <Text style={modalStyles.submitButtonText}>Envoyer</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -103,112 +106,13 @@ export default function InviteDoctorModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 34,
-  },
-  sheetHandle: {
-    width: 48,
-    height: 4,
-    backgroundColor: '#D1D5DB',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
+  titleSmallMargin: {
     marginBottom: 8,
   },
-  modalSubtitle: {
+  subtitle: {
     fontSize: 14,
     color: colors.textSecondary,
     marginBottom: 24,
     lineHeight: 20,
-  },
-  formSection: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 24,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#3B82F6',
-    lineHeight: 18,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  submitButton: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
   },
 });
