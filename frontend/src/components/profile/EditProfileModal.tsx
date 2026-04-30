@@ -14,6 +14,7 @@ import {
 import { User, ChevronRight } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 import AddressAutocomplete from './Addressautocomplete ';
+import { modalStyles } from './modalStyles';
 
 interface EditProfileModalProps {
   readonly visible: boolean;
@@ -68,10 +69,11 @@ export default function EditProfileModal({
       transparent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose} />
+      <Pressable style={modalStyles.overlay} onPress={onClose} />
       <View
         style={[
-          styles.modalContainer,
+          modalStyles.container,
+          modalStyles.containerScrollable,
           Platform.OS === 'ios' ? { paddingBottom: 34 } : null,
         ]}
       >
@@ -80,14 +82,14 @@ export default function EditProfileModal({
           bounces={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.sheetHandle} />
+          <View style={modalStyles.handle} />
 
-          <Text style={styles.modalTitle}>Modifier mon profil</Text>
+          <Text style={modalStyles.title}>Modifier mon profil</Text>
 
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Prénom *</Text>
+          <View style={modalStyles.formSection}>
+            <Text style={modalStyles.formLabel}>Prénom *</Text>
             <TextInput
-              style={styles.input}
+              style={modalStyles.input}
               value={firstName}
               onChangeText={onFirstNameChange}
               placeholder="Votre prénom"
@@ -95,10 +97,10 @@ export default function EditProfileModal({
             />
           </View>
 
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Nom *</Text>
+          <View style={modalStyles.formSection}>
+            <Text style={modalStyles.formLabel}>Nom *</Text>
             <TextInput
-              style={styles.input}
+              style={modalStyles.input}
               value={lastName}
               onChangeText={onLastNameChange}
               placeholder="Votre nom"
@@ -106,10 +108,10 @@ export default function EditProfileModal({
             />
           </View>
 
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Téléphone</Text>
+          <View style={modalStyles.formSection}>
+            <Text style={modalStyles.formLabel}>Téléphone</Text>
             <TextInput
-              style={styles.input}
+              style={modalStyles.input}
               value={phone}
               onChangeText={onPhoneChange}
               placeholder="+33 6 12 34 56 78"
@@ -119,7 +121,7 @@ export default function EditProfileModal({
             />
           </View>
 
-          <View style={[styles.formSection, { zIndex: 1000 }]}>
+          <View style={[modalStyles.formSection, { zIndex: 1000 }]}>
             <AddressAutocomplete
               value={address}
               onChangeText={onAddressChange}
@@ -129,8 +131,8 @@ export default function EditProfileModal({
             />
           </View>
 
-          <View style={styles.formSection}>
-            <Text style={styles.formLabel}>Type de diabète</Text>
+          <View style={modalStyles.formSection}>
+            <Text style={modalStyles.formLabel}>Type de diabète</Text>
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={onToggleDiabetesTypePicker}
@@ -189,26 +191,26 @@ export default function EditProfileModal({
             )}
           </View>
 
-          <View style={styles.infoCard}>
+          <View style={modalStyles.infoCard}>
             <User size={20} color="#3B82F6" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>Information</Text>
-              <Text style={styles.infoText}>
+              <Text style={modalStyles.infoTitle}>Information</Text>
+              <Text style={modalStyles.infoText}>
                 Ces informations vous permettent de compléter votre profil
                 médical.
               </Text>
             </View>
           </View>
 
-          <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Annuler</Text>
+          <View style={modalStyles.buttons}>
+            <TouchableOpacity style={modalStyles.cancelButton} onPress={onClose}>
+              <Text style={modalStyles.cancelButtonText}>Annuler</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
-                styles.submitButton,
+                modalStyles.submitButton,
                 (!firstName.trim() || !lastName.trim() || updating) &&
-                  styles.submitButtonDisabled,
+                  modalStyles.submitButtonDisabled,
               ]}
               onPress={onSubmit}
               disabled={!firstName.trim() || !lastName.trim() || updating}
@@ -216,7 +218,7 @@ export default function EditProfileModal({
               {updating ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.submitButtonText}>Sauvegarder</Text>
+                <Text style={modalStyles.submitButtonText}>Sauvegarder</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -227,55 +229,6 @@ export default function EditProfileModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 34,
-    maxHeight: '80%',
-  },
-  sheetHandle: {
-    width: 48,
-    height: 4,
-    backgroundColor: '#D1D5DB',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 24,
-  },
-  formSection: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
   pickerButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -317,59 +270,5 @@ const styles = StyleSheet.create({
   clearOptionText: {
     color: '#EF4444',
     fontWeight: '600',
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 20,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#3B82F6',
-    lineHeight: 18,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  submitButton: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
   },
 });
