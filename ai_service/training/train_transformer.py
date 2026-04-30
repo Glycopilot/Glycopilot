@@ -6,6 +6,7 @@ Usage :
     python training/train_transformer.py --data <chemin_csv> --test-participant 001 --version v1.0 --epochs 150 --device cpu
 """
 import argparse
+import json
 import os
 import sys
 
@@ -59,12 +60,13 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
     val_loader   = DataLoader(TensorDataset(torch.tensor(X_val),   torch.tensor(y_val)),   batch_size=BATCH_SIZE)
 
     model = TransformerNet(n_features=N_FEATURES).to(dev)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.5)
 
     best_val_loss = float("inf")
     patience_counter = 0
-    PATIENCE = 7
+    PATIENCE = 10
+    history = {"train_loss": [], "val_loss": [], "best_epoch": 1}
 
     print(f"[INFO] Entraînement Transformer ({epochs} epochs max, early stopping patience={PATIENCE})...")
     for epoch in range(1, epochs + 1):
@@ -90,7 +92,9 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
 
         train_loss /= len(train_loader)
         val_loss   /= len(val_loader)
-        scheduler.step()
+        scheduler.step(val_loss)
+        history["train_loss"].append(round(train_loss, 6))
+        history["val_loss"].append(round(val_loss, 6))
 
         improved = val_loss < best_val_loss
         marker = "✓" if improved else f"({patience_counter + 1 if not improved else 0}/{PATIENCE})"
@@ -99,6 +103,7 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
         if improved:
             best_val_loss = val_loss
             patience_counter = 0
+            history["best_epoch"] = epoch
             os.makedirs("artifacts/transformer", exist_ok=True)
             torch.save(model.state_dict(), f"artifacts/transformer/transformer_{version}.pt")
         else:
@@ -107,8 +112,12 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
                 print(f"  Early stopping à l'epoch {epoch}.", flush=True)
                 break
 
+    with open(f"artifacts/transformer/history_{version}.json", "w") as f:
+        json.dump(history, f, indent=2)
+    print(f"[OK] Historique sauvegardé : artifacts/transformer/history_{version}.json")
+
     # Evaluate on test set
-    model.load_state_dict(torch.load(f"artifacts/transformer/transformer_{version}.pt", map_location=dev))
+    model.load_state_dict(torch.load(f"artifacts/transformer/transformer_{version}.pt", map_location=dev, weights_only=True))
     model.eval()
     X_test_t = torch.tensor(X_test).to(dev)
     with torch.no_grad():
@@ -139,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument("--data", default=DATA_PATH)
     parser.add_argument("--test-participant", default="1")
     parser.add_argument("--version", default="v1.0")
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
     args = parser.parse_args()
     main(args.data, args.test_participant, args.version, args.epochs, args.device)

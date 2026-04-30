@@ -44,23 +44,12 @@ def collect_predictions(
     """Returns dict {horizon: (N, 4)} with predictions from each sub-model."""
     import torch
 
-    results = {15: [], 30: [], 60: []}
-
     print("  [INFO] Prédictions Baseline...")
-    for i in range(len(X_tab)):
-        preds = baseline.predict(X_tab[i:i+1].reshape(1, 1, -1).repeat(SEQ_LEN, axis=1))
-        for h in [15, 30, 60]:
-            results[h].append(preds[h]["y_hat"])
-
-    bl_preds = {h: np.array(results[h]) for h in [15, 30, 60]}
-    results = {15: [], 30: [], 60: []}
+    X_bl = baseline._scaler.transform(X_tab) if baseline._scaler is not None else X_tab
+    bl_preds = {h: baseline._models[h].predict(X_bl).astype(np.float32) for h in [15, 30, 60]}
 
     print("  [INFO] Prédictions XGBoost...")
-    for i in range(len(X_tab)):
-        preds = xgb.predict(X_tab[i:i+1].reshape(1, 1, -1).repeat(SEQ_LEN, axis=1))
-        for h in [15, 30, 60]:
-            results[h].append(preds[h]["y_hat"])
-    xgb_preds = {h: np.array(results[h]) for h in [15, 30, 60]}
+    xgb_preds = {h: xgb._models[h].predict(X_tab).astype(np.float32) for h in [15, 30, 60]}
 
     print("  [INFO] Prédictions LSTM...")
     X_seq_t = torch.tensor(X_seq, dtype=torch.float32)
@@ -86,18 +75,14 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
     df = load_and_engineer(data_path)
     train_df, val_df, test_df = loso_split(df, test_participant)
 
-    # Tabular features (last timestep per sequence window)
-    X_train_tab = train_df[FEATURE_COLS].values.astype(np.float32)
-    X_val_tab   = val_df[FEATURE_COLS].values.astype(np.float32)
-
     # Sequences for LSTM/Transformer
     X_train_seq, y_train = make_sequences(train_df, SEQ_LEN)
     X_val_seq,   y_val   = make_sequences(val_df,   SEQ_LEN)
     X_test_seq,  y_test  = make_sequences(test_df,  SEQ_LEN)
 
-    # Align tabular to sequence length (sequences start at index SEQ_LEN)
-    X_train_tab_aligned = X_train_tab[SEQ_LEN:]
-    X_val_tab_aligned   = X_val_tab[SEQ_LEN:]
+    # Tabular = last timestep of each sequence → perfectly aligned
+    X_train_tab_aligned = X_train_seq[:, -1, :]
+    X_val_tab_aligned   = X_val_seq[:, -1, :]
 
     print("[INFO] Chargement des sous-modèles...")
     from core.config import settings
@@ -108,6 +93,8 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
         for h in [15, 30, 60]
         if os.path.exists(f"artifacts/baseline/lr_{h}_{sub_version}.pkl")
     }
+    scaler_path = "artifacts/scalers/features_scaler_baseline.pkl"
+    baseline._scaler = joblib.load(scaler_path) if os.path.exists(scaler_path) else None
     baseline._loaded = True
 
     xgb = XGBoostModel()
@@ -124,7 +111,7 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
     if os.path.exists(lstm_path):
         from models.lstm import LSTMNet, N_FEATURES
         lstm._net = LSTMNet(n_features=N_FEATURES)
-        lstm._net.load_state_dict(torch.load(lstm_path, map_location="cpu"))
+        lstm._net.load_state_dict(torch.load(lstm_path, map_location="cpu", weights_only=True))
         lstm._net.eval()
         lstm._loaded = True
     else:
@@ -135,7 +122,7 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
     if os.path.exists(trans_path):
         from models.transformer import TransformerNet, N_FEATURES as TN
         transformer._net = TransformerNet(n_features=TN)
-        transformer._net.load_state_dict(torch.load(trans_path, map_location="cpu"))
+        transformer._net.load_state_dict(torch.load(trans_path, map_location="cpu", weights_only=True))
         transformer._net.eval()
         transformer._loaded = True
     else:
@@ -153,7 +140,7 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
         X_meta = val_preds[h]
         y_meta = y_val[:, idx]
 
-        ridge = Ridge(alpha=1.0)
+        ridge = Ridge(alpha=100.0)
         ridge.fit(X_meta, y_meta)
         meta_models[f"y_hat_{h}"] = ridge
 

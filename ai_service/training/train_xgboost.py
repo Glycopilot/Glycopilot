@@ -6,6 +6,7 @@ Usage :
     python training/train_xgboost.py --data <chemin_csv> --test-participant 001 --version v1.0
 """
 import argparse
+import json
 import os
 import sys
 
@@ -19,6 +20,16 @@ from training.utils import (
     DATA_PATH, FEATURE_COLS, TARGET_COLS,
     load_and_engineer, loso_split, save_report, compute_metrics,
 )
+
+
+def compute_sample_weights(y: np.ndarray) -> np.ndarray:
+    """Higher weight for predictions near/in hypo or hyper zones."""
+    weights = np.ones(len(y), dtype=np.float32)
+    weights[y < 70] = 50.0
+    weights[(y >= 70) & (y < 90)] = 10.0
+    weights[(y > 160) & (y <= 180)] = 10.0
+    weights[y > 180] = 50.0
+    return weights
 
 
 XGB_PARAMS = dict(
@@ -55,6 +66,7 @@ def main(data_path: str, test_participant: str, version: str) -> None:
 
     horizons = {0: 15, 1: 30, 2: 60}
     val_metrics, test_metrics = {}, {}
+    history = {}
 
     for idx, h in horizons.items():
         y_train = train[TARGET_COLS[idx]].values
@@ -62,20 +74,27 @@ def main(data_path: str, test_participant: str, version: str) -> None:
         y_test  = test[TARGET_COLS[idx]].values
 
         print(f"\n  [INFO] Entraînement XGBoost @{h}min...")
+        sw = compute_sample_weights(y_train)
 
-        # Point prediction
-        xgb = XGBRegressor(objective="reg:squarederror", **XGB_PARAMS)
+        # Point prediction avec early stopping
+        xgb = XGBRegressor(objective="reg:squarederror", early_stopping_rounds=20, **XGB_PARAMS)
         xgb.fit(
             X_train, y_train,
+            sample_weight=sw,
             eval_set=[(X_val, y_val)],
             verbose=False,
         )
+        history[f"{h}min"] = {
+            "val_rmse": xgb.evals_result_["validation_0"]["rmse"],
+            "best_iteration": xgb.best_iteration,
+        }
+        print(f"  Best iteration: {xgb.best_iteration}/{XGB_PARAMS['n_estimators']}")
 
         # Quantile regressors for p10/p90
         xgb_q10 = XGBRegressor(objective="reg:quantileerror", quantile_alpha=0.10, **XGB_PARAMS)
         xgb_q90 = XGBRegressor(objective="reg:quantileerror", quantile_alpha=0.90, **XGB_PARAMS)
-        xgb_q10.fit(X_train, y_train, verbose=False)
-        xgb_q90.fit(X_train, y_train, verbose=False)
+        xgb_q10.fit(X_train, y_train, sample_weight=sw, verbose=False)
+        xgb_q90.fit(X_train, y_train, sample_weight=sw, verbose=False)
 
         joblib.dump(xgb,     f"artifacts/xgboost/xgb_{h}_{version}.pkl")
         joblib.dump(xgb_q10, f"artifacts/xgboost/xgb_{h}_q10_{version}.pkl")
@@ -91,6 +110,10 @@ def main(data_path: str, test_participant: str, version: str) -> None:
         print(f"  Top features @{h}min :")
         for i in top_idx:
             print(f"    {FEATURE_COLS[i]:<30} {importances[i]:.4f}")
+
+    with open(f"artifacts/xgboost/history_{version}.json", "w") as f:
+        json.dump(history, f, indent=2)
+    print(f"[OK] Historique sauvegardé : artifacts/xgboost/history_{version}.json")
 
     save_report({
         "model": "xgboost",

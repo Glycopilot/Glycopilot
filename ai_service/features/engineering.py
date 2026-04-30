@@ -54,10 +54,12 @@ def build_features(request) -> tuple[np.ndarray, float]:
     df["measured_at"] = pd.to_datetime(df["measured_at"], utc=True)
 
     # Lags
-    df["lag_5"] = df["value"].shift(1).fillna(df["value"].iloc[0])
-    df["lag_15"] = df["value"].shift(3).fillna(df["value"].iloc[0])
-    df["lag_30"] = df["value"].shift(6).fillna(df["value"].iloc[0])
-    df["lag_60"] = df["value"].shift(12).fillna(df["value"].iloc[0])
+    df["lag_5"]   = df["value"].shift(1).fillna(df["value"].iloc[0])
+    df["lag_15"]  = df["value"].shift(3).fillna(df["value"].iloc[0])
+    df["lag_30"]  = df["value"].shift(6).fillna(df["value"].iloc[0])
+    df["lag_60"]  = df["value"].shift(12).fillna(df["value"].iloc[0])
+    df["lag_90"]  = df["value"].shift(18).fillna(df["value"].iloc[0])
+    df["lag_120"] = df["value"].shift(24).fillna(df["value"].iloc[0])
 
     # Rolling stats
     df["roll_mean_15"] = df["value"].rolling(3, min_periods=1).mean()
@@ -70,7 +72,7 @@ def build_features(request) -> tuple[np.ndarray, float]:
     # Derived
     df["delta"] = df["value"] - df["lag_5"]
     df["acceleration"] = df["rate"] - df["rate"].shift(1).fillna(df["rate"].iloc[0])
-    df["is_hypo_risk"] = (df["value"] < 80).astype(float)
+    df["is_hypo_risk"]  = (df["value"] < 80).astype(float)
     df["is_hyper_risk"] = (df["value"] > 160).astype(float)
 
     # Time encoding
@@ -94,7 +96,7 @@ def build_features(request) -> tuple[np.ndarray, float]:
     df["gender"] = float(patient_meta.gender_is_female or 0.0) if patient_meta else 0.0
 
     feature_cols = [
-        "value", "lag_5", "lag_15", "lag_30", "lag_60",
+        "value", "lag_5", "lag_15", "lag_30", "lag_60", "lag_90", "lag_120",
         "rate", "delta", "acceleration",
         "roll_mean_15", "roll_std_15",
         "roll_mean_30", "roll_std_30",

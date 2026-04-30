@@ -16,7 +16,7 @@ DATA_PATH = os.path.join(
 )
 
 FEATURE_COLS = [
-    "glucose", "lag_5", "lag_15", "lag_30", "lag_60",
+    "glucose", "lag_5", "lag_15", "lag_30", "lag_60", "lag_90", "lag_120",
     "rate", "delta", "acceleration",
     "roll_mean_15", "roll_std_15",
     "roll_mean_30", "roll_std_30",
@@ -47,10 +47,12 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     g = df.groupby("participant_id")
 
     # Lags
-    df["lag_5"]  = g["glucose"].shift(1)
-    df["lag_15"] = g["glucose"].shift(3)
-    df["lag_30"] = g["glucose"].shift(6)
-    df["lag_60"] = g["glucose"].shift(12)
+    df["lag_5"]   = g["glucose"].shift(1)
+    df["lag_15"]  = g["glucose"].shift(3)
+    df["lag_30"]  = g["glucose"].shift(6)
+    df["lag_60"]  = g["glucose"].shift(12)
+    df["lag_90"]  = g["glucose"].shift(18)
+    df["lag_120"] = g["glucose"].shift(24)
 
     # Rolling
     df["roll_mean_15"] = g["glucose"].transform(lambda x: x.rolling(3, min_periods=1).mean())
@@ -64,7 +66,7 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     df["rate"]         = df.get("glucose_roc", pd.Series(0.0, index=df.index)).fillna(0)
     df["delta"]        = df["glucose"] - df["lag_5"].fillna(df["glucose"])
     df["acceleration"] = g["rate"].diff().fillna(0)
-    df["is_hypo_risk"] = (df["glucose"] < 80).astype(float)
+    df["is_hypo_risk"]  = (df["glucose"] < 80).astype(float)
     df["is_hyper_risk"] = (df["glucose"] > 160).astype(float)
 
     # Time encoding
@@ -91,7 +93,7 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     df["y_60"] = g["glucose"].shift(-12)
 
     # Fill lag NaNs with current value
-    for col in ["lag_5", "lag_15", "lag_30", "lag_60"]:
+    for col in ["lag_5", "lag_15", "lag_30", "lag_60", "lag_90", "lag_120"]:
         df[col] = df[col].fillna(df["glucose"])
 
     # Drop rows with missing targets
