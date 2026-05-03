@@ -13,8 +13,8 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
-N_EXTRA_FEATURES = 7
-N_FEATURES_PERSONAL = N_FEATURES + N_EXTRA_FEATURES  # 30 + 7 = 37
+N_EXTRA_FEATURES = 12  # 5 wearables + 7 activity/meal
+N_FEATURES_PERSONAL = N_FEATURES + N_EXTRA_FEATURES  # 25 + 12 = 37
 
 
 class PersonalLSTMManager:

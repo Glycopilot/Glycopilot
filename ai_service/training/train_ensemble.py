@@ -145,9 +145,20 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
         meta_models[f"y_hat_{h}"] = ridge
 
         val_metrics[f"mae_{h}"] = compute_metrics(y_meta, ridge.predict(X_meta))["mae"]
-        print(f"  @{h}min — weights: {[round(c,3) for c in ridge.coef_]} | val MAE: {val_metrics[f'mae_{h}']:.2f}")
+        print(f"  @{h}min — weights: {[round(c,3) for c in ridge.coef_]} | val MAE in-sample: {val_metrics[f'mae_{h}']:.2f}")
 
     joblib.dump(meta_models, f"artifacts/ensemble/ensemble_{version}.pkl")
+
+    # Evaluate on test set (true holdout)
+    print("\n[INFO] Évaluation sur le test set (holdout)...")
+    X_test_tab_aligned = X_test_seq[:, -1, :]
+    test_preds = collect_predictions(baseline, xgb, lstm, transformer, X_test_tab_aligned, X_test_seq)
+    test_metrics = {}
+    for h, idx in [(15, 0), (30, 1), (60, 2)]:
+        y_test_h = y_test[:, idx]
+        X_test_meta = test_preds[h]
+        test_metrics[f"mae_{h}"] = compute_metrics(y_test_h, meta_models[f"y_hat_{h}"].predict(X_test_meta))["mae"]
+        print(f"  @{h}min — test MAE: {test_metrics[f'mae_{h}']:.2f} mg/dL")
 
     save_report({
         "model": "ensemble",
@@ -155,7 +166,8 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
         "sub_model_version": sub_version,
         "test_participant": test_participant,
         "sub_models": ["baseline", "xgboost", "lstm", "transformer"],
-        "val_metrics": val_metrics,
+        "val_metrics_insample": val_metrics,
+        "test_metrics": test_metrics,
     }, f"ensemble_{version}")
 
     print(f"\n[OK] Ensemble entraîné. Artefacts dans artifacts/ensemble/")

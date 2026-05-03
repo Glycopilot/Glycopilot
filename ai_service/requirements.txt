@@ -14,3 +14,5 @@ joblib==1.4.2
 
 # Utils
 python-dotenv==1.0.1
+requests==2.32.3
+apscheduler==3.10.4

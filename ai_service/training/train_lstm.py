@@ -68,7 +68,7 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
 
     best_val_loss = float("inf")
     patience_counter = 0
-    PATIENCE = 5
+    PATIENCE = 10
     history = {"train_loss": [], "val_loss": [], "best_epoch": 1}
 
     print(f"[INFO] Entraînement LSTM ({epochs} epochs max, early stopping patience={PATIENCE})...")
@@ -120,7 +120,7 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
     print(f"[OK] Historique sauvegardé : artifacts/lstm/history_{version}.json")
 
     # Evaluate on test set
-    model.load_state_dict(torch.load(f"artifacts/lstm/lstm_{version}.pt", map_location=dev))
+    model.load_state_dict(torch.load(f"artifacts/lstm/lstm_{version}.pt", map_location=dev, weights_only=True))
     model.eval()
     X_test_t = torch.tensor(X_test).to(dev)
     with torch.no_grad():

@@ -21,7 +21,7 @@ except ImportError:
     TORCH_AVAILABLE = False
     logger.warning("PyTorch not installed. LSTM model will not be available.")
 
-N_FEATURES = 30  # must match engineering.py feature_cols length
+N_FEATURES = 25  # must match training/utils.py FEATURE_COLS length
 
 
 class LSTMNet(nn.Module if TORCH_AVAILABLE else object):

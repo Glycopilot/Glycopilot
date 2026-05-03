@@ -1,9 +1,9 @@
 """
 Fine-tuning du modèle LSTM global sur les données d'un patient spécifique.
 
-Le modèle personnel hérite des poids globaux (30 features) et étend la couche
-d'entrée à 37 features (+ activité + repas). Les 7 nouveaux poids sont
-initialisés à zéro — le fine-tuning apprend à les utiliser.
+Le modèle personnel hérite des poids globaux (25 features) et étend la couche
+d'entrée à 37 features (+ 5 wearables + 7 activité/repas). Les 12 nouveaux poids
+sont initialisés à zéro — le fine-tuning apprend à les utiliser.
 
 Usage :
     python training/finetune_patient.py --patient-id <uuid> --django-url http://localhost:8000
@@ -28,17 +28,17 @@ from torch.utils.data import DataLoader, TensorDataset
 from models.lstm import LSTMNet, N_FEATURES
 from training.utils import TARGET_COLS, compute_metrics, save_report
 
-# 7 extra features for personal models (activity + meals)
+# 12 extra features for personal models (5 wearables + 7 activity/meal)
 PERSONAL_EXTRA_COLS = [
-    "activity_calories_60min",
-    "activity_sugar_used_60min",
-    "activity_intensity",
-    "minutes_since_last_activity",
-    "carbs_last_30min",
-    "carbs_last_60min",
-    "minutes_since_last_meal",
+    # Wearables
+    "has_wearable", "hr_mean", "hr_std", "hrv_rmssd", "temp_mean",
+    # Activity
+    "activity_calories_60min", "activity_sugar_used_60min",
+    "activity_intensity", "minutes_since_last_activity",
+    # Meals
+    "carbs_last_30min", "carbs_last_60min", "minutes_since_last_meal",
 ]
-N_FEATURES_PERSONAL = N_FEATURES + len(PERSONAL_EXTRA_COLS)  # 30 + 7 = 37
+N_FEATURES_PERSONAL = N_FEATURES + len(PERSONAL_EXTRA_COLS)  # 25 + 12 = 37
 
 SEQ_LEN      = 24
 BATCH_SIZE   = 64
@@ -193,9 +193,12 @@ def _build_dataframe(readings: list, activities: list, meals: list) -> pd.DataFr
     extra_df = pd.DataFrame(extra_rows, index=df_glucose.index)
     df = pd.concat([df_glucose, extra_df], axis=1)
 
+    # Wearable features — zero by default (not available from API)
+    for col in ["has_wearable", "hr_mean", "hr_std", "hrv_rmssd", "temp_mean"]:
+        df[col] = 0.0
+
     # Fill other required columns with defaults for load_and_engineer compatibility
-    for col in ["hr_mean_5min", "hr_std_5min", "hrv_rmssd_5min", "temp_mean_5min",
-                "hba1c", "gender_is_female", "glucose_target_30min"]:
+    for col in ["hba1c", "gender_is_female", "glucose_target_30min"]:
         if col not in df.columns:
             df[col] = np.nan
 
@@ -269,7 +272,7 @@ def finetune(
     y_train, y_val = y[:cut], y[cut:]
 
     print(f"[INFO] Patient {patient_id} — {len(X_train)} train / {len(X_val)} val sequences")
-    print(f"[INFO] Personal features: {len(personal_feature_cols)} ({N_FEATURES} global + {len(PERSONAL_EXTRA_COLS)} extra)")
+    print(f"[INFO] Personal features: {len(personal_feature_cols)} ({N_FEATURES} global + {len(PERSONAL_EXTRA_COLS)} extra = 5 wearables + 7 activity/meal)")
 
     # Load and extend global model
     global_model = LSTMNet(n_features=N_FEATURES)

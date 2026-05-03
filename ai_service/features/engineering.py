@@ -16,12 +16,20 @@ from core.config import settings
 
 INTENSITY_MAP = {"low": 1.0, "medium": 2.0, "high": 3.0}
 
-# 7 extra features added for personal fine-tuned models
+# 12 extra features for personal fine-tuned models (5 wearables + 7 activity/meal)
 PERSONAL_EXTRA_COLS = [
+    # Wearables (from smartwatch — zeroed when unavailable)
+    "has_wearable",
+    "hr_mean",
+    "hr_std",
+    "hrv_rmssd",
+    "temp_mean",
+    # Activity features
     "activity_calories_60min",
     "activity_sugar_used_60min",
     "activity_intensity",
     "minutes_since_last_activity",
+    # Meal features
     "carbs_last_30min",
     "carbs_last_60min",
     "minutes_since_last_meal",
@@ -162,9 +170,17 @@ def build_features(request) -> tuple[np.ndarray, np.ndarray, float]:
         "is_hypo_risk", "is_hyper_risk",
         "h_sin", "h_cos", "d_sin", "d_cos",
         "hba1c", "gender", "context",
-    ]
+    ]  # 25 features
 
-    # Personal extra features (activity + meals) — used only by fine-tuned models
+    # Wearable features — from request if device is connected, else zero
+    w = wearable
+    df["has_wearable"] = 1.0 if w is not None else 0.0
+    df["hr_mean"]      = float(w.hr_mean    or 0.0) if w else 0.0
+    df["hr_std"]       = float(w.hr_std     or 0.0) if w else 0.0
+    df["hrv_rmssd"]    = float(w.hrv_rmssd  or 0.0) if w else 0.0
+    df["temp_mean"]    = float(w.temp_mean  or 0.0) if w else 0.0
+
+    # Activity + meal features — used only by fine-tuned models
     for_time = pd.Timestamp(request.for_time, tz="UTC") if pd.Timestamp(request.for_time).tzinfo is None else pd.Timestamp(request.for_time)
     act_feats = _compute_activity_features(request.activities or [], for_time)
     meal_feats = _compute_meal_features(request.meals or [], for_time)

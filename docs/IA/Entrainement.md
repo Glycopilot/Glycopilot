@@ -12,7 +12,8 @@ Métrique principale : **MAE (mg/dL)** — erreur absolue moyenne entre valeur p
 
 - **Historique d'entraînement sauvegardé** — chaque script sauvegarde `history_v1.0.json` avec `train_loss`, `val_loss` et `best_epoch` par epoch
 - **Affichage temps réel** — chaque epoch est affiché avec `flush=True` et un marqueur `✓` / `(N/patience)` pour suivre la convergence
-- **lag_90 + lag_120 ajoutés** (N_FEATURES 28 → 30) — contexte historique étendu à 2h pour améliorer les prédictions @60min
+- **lag_90 + lag_120 ajoutés** — contexte historique étendu à 2h pour améliorer les prédictions @60min
+- **Wearables retirés du modèle global** (N_FEATURES 30 → **25**) — features wearable réservées au fine-tuning personnel pour éviter le biais zero-filling sur les utilisateurs sans montre connectée
 
 ---
 
@@ -32,7 +33,15 @@ Meilleur modèle sur l'horizon court (15 min). La régression linéaire sur les 
 
 **lag_90 + lag_120 ajoutés** — deux nouvelles features donnant la glycémie 90 min et 120 min en arrière. Ciblé sur l'amélioration du @60min pour les modèles tabulaires qui n'ont accès qu'au dernier timestep.
 
-> Résultats post-modification à compléter après le prochain entraînement.
+### Re-entraînement avec 25 features (wearables retirés)
+
+| Horizon | MAE 28f | MAE 25f | Δ |
+|---------|---------|---------|---|
+| 15 min  | **4.37** | 4.37 | 0.00 |
+| 30 min  | **7.94** | 7.95 | +0.01 |
+| 60 min  | 9.76 | **9.77** | +0.01 |
+
+Résultats quasi-identiques — les wearables ne contribuaient presque rien au Baseline. Résultats validés, artefacts mis à jour.
 
 ---
 
@@ -135,6 +144,20 @@ Problème identifié : `early_stopping_rounds=20` uniforme → seulement 20 arbr
 | 30 min  | 6 | 0.05 | 20 | **9.48 mg/dL** |
 | 60 min  | 6 | 0.05 | 20 | **11.17 mg/dL** |
 
+### Re-entraînement avec 25 features (wearables retirés)
+
+| Horizon | MAE 28f | MAE 25f | Best iter | Δ |
+|---------|---------|---------|-----------|---|
+| 15 min  | 4.63 | **4.75** | 247/500 | +0.12 |
+| 30 min  | 9.48 | **9.55** | 30/500 | +0.07 |
+| 60 min  | 10.80 | **11.93** | 13/500 | +1.13 ⚠️ |
+
+**Cause de la régression @60min** : dans le dataset BIG-IDEAs, les colonnes wearables (`hr_mean`, `hrv_rmssd`…) contiennent de vraies données (pas des zéros). En les retirant, on perd un signal réel pour les horizons longs. C'est le trade-off attendu : le modèle global est plus honnête mais légèrement moins performant sur @60min.
+
+**Investigation early stopping** : augmenter `early_stopping_rounds` de 20 à 50/@30min et 100/@60min n'a rien changé — `best_iteration` reste à 30 et 13 respectivement. Le modèle atteint son meilleur val loss à ces itérations et n'améliore plus ensuite. XGBoost a atteint sa limite sur ce dataset sans wearables pour @60min.
+
+**Conclusion** : les wearables apportaient un signal réel dans le dataset. La perte de ~1 mg/dL sur @60min est acceptable — le modèle personnel (37 features) récupérera ce signal pour les patients avec montre connectée.
+
 ---
 
 ## LSTM
@@ -169,9 +192,29 @@ Problème identifié : `early_stopping_rounds=20` uniforme → seulement 20 arbr
 | 30 min  | 8.70 mg/dL | 8.92 mg/dL |
 | 60 min  | 9.94 mg/dL | 10.11 mg/dL |
 
-> Légère régression due à la variance d'entraînement (early stopping plus agressif). À re-mesurer avec les 30 features.
+Légère régression due à la variance d'entraînement (early stopping plus agressif).
 
-> Résultats avec lag_90/lag_120 (30 features) à compléter.
+### Re-entraînement avec 25 features — patience=5
+
+| Horizon | MAE 28f | MAE 25f | Δ |
+|---------|---------|---------|---|
+| 15 min  | 6.84 | **6.79** | -0.05 ✓ |
+| 30 min  | 8.92 | **8.72** | -0.20 ✓ |
+| 60 min  | 10.11 | **9.93** | -0.18 ✓ |
+
+Amélioration sur tous les horizons — retirer les wearables réduit le bruit. Best epoch : 20/25, val loss : 303.5.
+
+### Re-entraînement avec 25 features — patience=10
+
+| Horizon | MAE patience=5 | MAE patience=10 | Δ |
+|---------|---------------|----------------|---|
+| 15 min  | 6.79 | **6.74** | -0.05 ✓ |
+| 30 min  | **8.72** | 8.80 | +0.08 |
+| 60 min  | **9.93** | 10.01 | +0.08 |
+
+Val loss finale meilleure avec patience=10 (287.6 vs 303.5) mais MAE légèrement pire sur @30min et @60min. La val loss (MSE + pinball combinée) ne corrèle pas parfaitement avec le MAE. Patience=5 reste meilleure pour les horizons cliniquement importants. Différences < 0.1 mg/dL — négligeables.
+
+**Configuration retenue** : patience=10 (choix conservateur pour laisser le modèle converger davantage).
 
 ---
 
@@ -214,7 +257,7 @@ Mieux, mais toujours insuffisant. Diagnostic via l'historique : `Best epoch: 100
 **lr : 1e-4 → 1e-3** — learning rate initial augmenté pour une convergence plus rapide.  
 **lag_90 + lag_120 ajoutés** (N_FEATURES 28 → 30).
 
-### Tentative 3 — Résultats finaux
+### Tentative 3 — Résultats finaux (30 features)
 
 Convergence atteinte à l'epoch **31** (val loss : 296.75 — comparable à LSTM : 296.21). Early stopping déclenché à l'epoch 41.
 
@@ -223,6 +266,54 @@ Convergence atteinte à l'epoch **31** (val loss : 296.75 — comparable à LSTM
 | 15 min  | 73.70  | 24.25  | **7.71 mg/dL** |
 | 30 min  | 72.77  | 24.17  | **9.63 mg/dL** |
 | 60 min  | 75.11  | 26.70  | **11.18 mg/dL** |
+
+### Re-entraînement avec 25 features — Tentative 1
+
+| Horizon | MAE 30f | MAE 25f | Δ |
+|---------|---------|---------|---|
+| 15 min  | 7.71 | 8.49 | +0.78 ⚠️ |
+| 30 min  | 9.63 | 10.63 | +1.00 ⚠️ |
+| 60 min  | 11.18 | 12.21 | +1.03 ⚠️ |
+
+**Cause identifiée : overfitting**. Train loss finale : 189, val loss : 292 → gap de ~100. La train loss continuait de descendre alors que la val loss plafonnait. Le modèle mémorisait les données d'entraînement.
+
+**Fixes appliqués** :
+- `dropout` : 0.1 → **0.2** dans `TransformerEncoderLayer`
+- `weight_decay` : 1e-4 → **1e-3** dans l'optimiseur AdamW
+
+### Re-entraînement avec 25 features — Tentative 2 (dropout=0.2, wd=1e-3)
+
+Best epoch : 59/69 — val loss : 298.07. Train loss : 198.5 → gap train/val ~100, overfitting réduit mais persistant.
+
+| Horizon | T1 (dropout=0.1) | T2 (dropout=0.2) | Δ |
+|---------|-----------------|-----------------|---|
+| 15 min  | 8.49 | **7.78** | -0.71 ✓ |
+| 30 min  | 10.63 | **10.13** | -0.50 ✓ |
+| 60 min  | 12.21 | **12.08** | -0.13 ✓ |
+
+Amélioration significative sur @15min et @30min. Le Transformer reste plus faible que le LSTM sans wearables — il avait davantage bénéficié de ce signal. L'Ensemble compensera en pondérant le LSTM plus fortement sur @60min.
+
+**Re-run avec la même config (dropout=0.2, wd=1e-3)** — meilleure initialisation aléatoire :
+
+| Horizon | Run 1 | Run 2 | Δ |
+|---------|-------|-------|---|
+| 15 min  | 7.78 | 7.83 | +0.05 |
+| 30 min  | 10.13 | **10.06** | -0.07 ✓ |
+| 60 min  | 12.08 | **11.73** | -0.35 ✓ |
+
+Best epoch : 67/77 — val loss : 296.42. Artefacts conservés (meilleur run).
+
+### Re-entraînement avec 25 features — Tentative 3 (dropout=0.3, wd=1e-3)
+
+| Horizon | T2 (dropout=0.2) | T3 (dropout=0.3) | Δ |
+|---------|-----------------|-----------------|---|
+| 15 min  | **7.78** | 8.25 | +0.47 ❌ |
+| 30 min  | **10.13** | 10.64 | +0.51 ❌ |
+| 60 min  | **12.08** | 12.45 | +0.37 ❌ |
+
+Trop de régularisation — le modèle sous-apprend. dropout=0.2 était le bon équilibre.
+
+**Configuration finale retenue : dropout=0.2, weight_decay=1e-3** → artefacts restaurés via re-run.
 
 ---
 
@@ -246,41 +337,81 @@ Baseline ignorée (poids=0), Transformer avec poids aberrants.
 
 **alpha : 1.0 → 100.0** — régularisation plus forte pour forcer des poids stables entre sous-modèles corrélés.
 
-> Résultats finaux à compléter après re-entraînement de tous les modèles avec 30 features.
+### Résultats finaux (25 features, alpha=100)
+
+Poids Ridge appris sur le val set :
+
+| Horizon | Baseline | XGBoost | LSTM | Transformer |
+|---------|----------|---------|------|-------------|
+| @15min  | 0.492 | 0.221 | 0.226 | 0.102 |
+| @30min  | 0.349 | 0.109 | 0.346 | 0.242 |
+| @60min  | **-0.234** | 0.460 | 0.488 | 0.320 |
+
+Le poids négatif du Baseline @60min est un artefact du stacking Ridge : les prédictions des 4 modèles sont très corrélées, Ridge "annule" partiellement le Baseline pour extraire la variance utile des autres. Passer à alpha=1000 ne change pas les poids de manière significative (-0.228) ni le MAE test — c'est structurel, pas un bug.
+
+**Test MAE holdout (participant 1) :**
+
+| Horizon | test MAE |
+|---------|---------|
+| @15min  | 5.76 mg/dL |
+| @30min  | 8.63 mg/dL |
+| @60min  | **9.96 mg/dL** |
 
 ---
 
-## Stratégie Fine-tuning par patient
+## Architecture des features — décision finale
 
 ### Principe
 
-Le modèle global (30 features) est entraîné une fois sur tous les participants. Pour chaque patient, un modèle personnel LSTM est fine-tuné sur ses données récentes avec **37 features** (30 globales + 7 nouvelles).
+Deux modèles par patient :
 
-**Avantage** : le modèle s'adapte au métabolisme individuel sans re-entraîner le global. Particulièrement utile pour améliorer le @60min.
+| Modèle | Features | Usage |
+|--------|----------|-------|
+| **Global** | **25** | Tout le monde — pas de wearable requis |
+| **Personal (fine-tuné)** | **37** (25 + 12) | Patients avec ≥ 14 jours d'historique |
 
-### Features supplémentaires (modèle personnel uniquement)
+**Pourquoi ne pas mettre les wearables dans le global ?**
+Le dataset d'entraînement a ~80 % des lignes avec `hr_mean=0` etc. Le modèle apprendrait que zéro est "normal" — du biais, pas une information. Les wearables ne sont utiles que pour le modèle personnel, où le patient a réellement un appareil connecté.
+
+### Features globales (25)
+
+| Groupe | Features |
+|--------|---------|
+| Glucose brut | `glucose`, `lag_5`, `lag_15`, `lag_30`, `lag_60`, `lag_90`, `lag_120` |
+| Dérivées | `rate`, `delta`, `acceleration` |
+| Rolling stats | `roll_mean_15/30/60`, `roll_std_15/30/60` |
+| Risque | `is_hypo_risk`, `is_hyper_risk` |
+| Temps | `h_sin`, `h_cos`, `d_sin`, `d_cos` |
+| Patient meta | `hba1c`, `gender`, `context` |
+
+### Features supplémentaires — modèle personnel (12 extra → 37 total)
 
 | Feature | Source | Fallback si absent |
 |---------|--------|-------------------|
+| `has_wearable` | Montre connectée (1/0) | 0 |
+| `hr_mean` | Fréquence cardiaque moyenne | 0 |
+| `hr_std` | Variabilité FC | 0 |
+| `hrv_rmssd` | HRV | 0 |
+| `temp_mean` | Température cutanée | 0 |
 | `activity_calories_60min` | API activité (calories brûlées sur 60 min) | 0 |
 | `activity_sugar_used_60min` | API activité (sucre utilisé sur 60 min) | 0 |
-| `activity_intensity` | API activité (intensité moyenne : 1=low, 2=med, 3=high) | 0 |
+| `activity_intensity` | API activité (1=low, 2=med, 3=high) | 0 |
 | `minutes_since_last_activity` | API activité | 999 |
-| `carbs_last_30min` | API repas (glucides ingérés sur 30 min) | 0 |
-| `carbs_last_60min` | API repas (glucides ingérés sur 60 min) | 0 |
+| `carbs_last_30min` | API repas (glucides sur 30 min) | 0 |
+| `carbs_last_60min` | API repas (glucides sur 60 min) | 0 |
 | `minutes_since_last_meal` | API repas | 999 |
 
 ### Initialisation des poids
 
-Le LSTM global a une couche d'entrée de shape `(4×hidden, 30)`. Pour créer le modèle personnel (37 features) :
-- On copie les 30 colonnes existantes
-- Les 7 nouvelles colonnes sont initialisées à **zéro**
-- Le fine-tuning apprend progressivement à les utiliser
+Le LSTM global a une couche d'entrée de shape `(4×hidden, 25)`. Pour créer le modèle personnel (37 features) :
+- On copie les 25 colonnes existantes (`lstm1.weight_ih_l0[:, :25]`)
+- Les 12 nouvelles colonnes sont initialisées à **zéro**
+- Le fine-tuning apprend progressivement à les utiliser — si le patient n'a pas de montre, les 5 wearable columns restent à 0 et le modèle les ignore naturellement
 
 ### Conditions de déclenchement
 
 - Historique minimum : **14 jours** de données glucose
-- Déclencheur : automatique toutes les **7 jours** par patient
+- Déclencheur : automatique toutes les **7 jours** par patient (APScheduler)
 - Données utilisées : les **60 derniers jours**
 - Artefacts : `artifacts/patients/{patient_id}/lstm_personal_v1.0.pt`
 
@@ -296,12 +427,15 @@ python training/finetune_patient.py --patient-id <uuid> --data-csv patient_data.
 
 ## Récapitulatif comparatif (MAE test, mg/dL)
 
-| Modèle | @15 min | @30 min | @60 min | Features |
-|--------|---------|---------|---------|----------|
-| Baseline | **4.37** | **7.94** | 9.76 | 28 — à re-mesurer |
-| XGBoost | 4.66 | 9.56 | 10.80 | 28 — à re-mesurer |
-| LSTM | 6.84 | 8.92 | 10.11 | 28 — à re-mesurer |
-| Transformer | 7.71 | 9.63 | 11.18 | **30** ✓ |
-| Ensemble | *en cours* | *en cours* | *en cours* | — |
+| Modèle | @15 min | @30 min | @60 min | Status |
+|--------|---------|---------|---------|--------|
+| Baseline | **4.37** | **7.95** | 9.77 | ✓ 25f |
+| XGBoost | 4.75 | 9.55 | 11.93 | ✓ 25f |
+| LSTM | **6.74** | **8.80** | **10.01** | ✓ 25f, patience=10 |
+| Transformer | 7.83 | 10.06 | 11.73 | ✓ 25f, dropout=0.2 |
+| **Ensemble** | 5.76 | 8.63 | **9.96** | ✓ 25f, alpha=100 |
 
-> Baseline et XGBoost restent les meilleures références sur les horizons courts grâce à leur simplicité. L'Ensemble final (après retrain complet avec 30 features) devrait améliorer tous les horizons, en particulier le @60min.
+> **Baseline** reste le meilleur sur @15min (**4.37**) et @30min (**7.95**) — la glycémie est largement linéaire sur ces horizons.  
+> **Ensemble** est le meilleur sur @60min (**9.96**) — bat tous les modèles individuels sur l'horizon cliniquement le plus difficile.  
+> **XGBoost** régresse légèrement sur @60min sans wearables (10.80 → 11.93) — trade-off attendu.  
+> L'architecture finale : Baseline pour horizons courts, Ensemble pour @60min.

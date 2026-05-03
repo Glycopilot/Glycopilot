@@ -23,10 +23,9 @@ FEATURE_COLS = [
     "roll_mean_60", "roll_std_60",
     "is_hypo_risk", "is_hyper_risk",
     "h_sin", "h_cos", "d_sin", "d_cos",
-    "has_wearable", "hr_mean", "hr_std", "hrv_rmssd", "temp_mean",
     "hba1c", "gender",
     "context",
-]
+]  # 25 features — wearables excluded from global model
 
 TARGET_COLS = ["y_15", "y_30", "y_60"]
 
