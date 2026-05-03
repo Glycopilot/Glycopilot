@@ -150,3 +150,19 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
     mard = float(np.mean(np.abs(y_true - y_pred) / (np.abs(y_true) + 1e-6)) * 100)
     return {"mae": round(mae, 3), "rmse": round(rmse, 3), "mard": round(mard, 3)}
+
+
+def pinball_loss(pred, target, alpha: float):
+    import torch
+    err = target - pred
+    return torch.mean(torch.where(err >= 0, alpha * err, (alpha - 1) * err))
+
+
+def combined_loss(o15, o30, o60, y):
+    import torch.nn.functional as F
+    loss = 0.0
+    for out, target in [(o15, y[:, 0]), (o30, y[:, 1]), (o60, y[:, 2])]:
+        loss += F.mse_loss(out[:, 0], target)
+        loss += 0.5 * pinball_loss(out[:, 1], target, 0.10)
+        loss += 0.5 * pinball_loss(out[:, 2], target, 0.90)
+    return loss / 3

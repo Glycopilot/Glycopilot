@@ -20,25 +20,12 @@ from models.transformer import TransformerNet, N_FEATURES
 from training.utils import (
     DATA_PATH,
     load_and_engineer, loso_split, make_sequences, save_report, compute_metrics,
+    pinball_loss, combined_loss,
 )
 
 SEQ_LEN = 24
 BATCH_SIZE = 256
 
-
-def pinball_loss(pred: torch.Tensor, target: torch.Tensor, alpha: float) -> torch.Tensor:
-    err = target - pred
-    return torch.mean(torch.where(err >= 0, alpha * err, (alpha - 1) * err))
-
-
-def combined_loss(out15, out30, out60, y: torch.Tensor) -> torch.Tensor:
-    y15, y30, y60 = y[:, 0], y[:, 1], y[:, 2]
-    loss = 0.0
-    for out, target in [(out15, y15), (out30, y30), (out60, y60)]:
-        loss += nn.functional.mse_loss(out[:, 0], target)
-        loss += 0.5 * pinball_loss(out[:, 1], target, 0.10)
-        loss += 0.5 * pinball_loss(out[:, 2], target, 0.90)
-    return loss / 3
 
 
 def main(data_path: str, test_participant: str, version: str, epochs: int, device: str) -> None:

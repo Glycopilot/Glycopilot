@@ -26,7 +26,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from models.lstm import LSTMNet, N_FEATURES
-from training.utils import TARGET_COLS, compute_metrics, save_report
+from training.utils import TARGET_COLS, compute_metrics, save_report, pinball_loss, combined_loss
 
 # 12 extra features for personal models (5 wearables + 7 activity/meal)
 PERSONAL_EXTRA_COLS = [
@@ -223,19 +223,6 @@ def make_personal_sequences(df: pd.DataFrame, feature_cols: list[str]) -> tuple[
 
     return np.array(X_list), np.array(y_list)
 
-
-def pinball_loss(pred: torch.Tensor, target: torch.Tensor, alpha: float) -> torch.Tensor:
-    err = target - pred
-    return torch.mean(torch.where(err >= 0, alpha * err, (alpha - 1) * err))
-
-
-def combined_loss(o15, o30, o60, y: torch.Tensor) -> torch.Tensor:
-    loss = 0.0
-    for out, target in [(o15, y[:, 0]), (o30, y[:, 1]), (o60, y[:, 2])]:
-        loss += nn.functional.mse_loss(out[:, 0], target)
-        loss += 0.5 * pinball_loss(out[:, 1], target, 0.10)
-        loss += 0.5 * pinball_loss(out[:, 2], target, 0.90)
-    return loss / 3
 
 
 def finetune(
