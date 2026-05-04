@@ -52,7 +52,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Dupont\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"PATIENT\"\n}",
+                            "raw": "{\n    \"email\": \"patient@example.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Dupont\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"PATIENT\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -107,7 +107,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\",\n    \"password\": \"StrongPass123!\"\n}",
+                            "raw": "{\n    \"email\": \"patient@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -161,7 +161,7 @@
                                 "description": "Demande de réinitialisation du mot de passe (sans token).",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\"\n}",
+                            "raw": "{\n    \"email\": \"patient@example.com\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -389,7 +389,7 @@
                                 "description": "**IMPORTANT**: Requires a PATIENT token. Do not use with a Doctor token.",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\",\n    \"role\": \"REFERENT_DOCTOR\"\n}",
+                                    "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"role\": \"REFERENT_DOCTOR\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1053,7 +1053,7 @@
                                 "description": "Registers a new doctor. The account is created with PENDING status and requires manual validation by an ADMIN.",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\",\n    \"first_name\": \"Dr.\",\n    \"last_name\": \"House\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"DOCTOR\",\n    \"license_number\": \"10001234567\",\n    \"specialty\": \"Cardiologue\",\n    \"medical_center_address\": \"123 Rue de l'Hôpital\"\n}",
+                            "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Médecin\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"DOCTOR\",\n    \"license_number\": \"00000000001\",\n    \"specialty\": \"Cardiologue\",\n    \"medical_center_address\": \"1 rue Exemple, 75000 Paris\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1108,7 +1108,7 @@
                                 "description": "Login for doctors. Requires the account to be VERIFIED by an admin.",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\",\n    \"password\": \"StrongPass123!\"\n}",
+                            "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1162,7 +1162,7 @@
                                 "description": "Demande de réinitialisation du mot de passe (sans token).",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"lysmambouanan3@gmail.com\"\n}",
+                            "raw": "{\n    \"email\": \"doctor@example.com\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1329,7 +1329,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n    \"phone_number\": \"0102030405\"\n}",
+                                    "raw": "{\n    \"phone_number\": \"0600000000\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1376,7 +1376,7 @@
                                 "description": "",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"maxiboole3@gmail.com\",\n    \"phone_number\": \"\"\n}",
+                            "raw": "{\n    \"email\": \"patient@example.com\",\n    \"phone_number\": \"\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1664,6 +1664,64 @@
                                 "description": "Fetch patient complete glycemia history (GlycemiaHisto)."
                             },
                             "response": []
+                        },
+                        {
+                            "name": "Patch Patient Medical (HbA1c)",
+                            "request": {
+                                "method": "PATCH",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/patients/{{patient_id}}/medical/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "patients",
+                                        "{{patient_id}}",
+                                        "medical",
+                                        ""
+                                    ]
+                                },
+                                "description": "Médecin avec lien care team ACTIVE (REFERENT_DOCTOR ou SPECIALIST) renseigne l'HbA1c. Body strict : seule la clé `hba1c` (nombre, 4–15, unité %). Réponse 200 : profil patient (`UserSerializer`, dont `patient_details.hba1c`). 403 si pas dans l'équipe ou pas médecin.",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"hba1c\": 7.2\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
+                                    }
+                                }
+                            },
+                            "response": [],
+                            "event": [
+                                {
+                                    "listen": "prerequest",
+                                    "script": {
+                                        "exec": [
+                                            "var patientId = pm.collectionVariables.get(\"patient_id\") || pm.environment.get(\"patient_id\");",
+                                            "if (!patientId) {",
+                                            "    throw new Error(\"patient_id manquant. Définis la variable collection patient_id (UUID id_user du patient).\");",
+                                            "}",
+                                            "pm.collectionVariables.set(\"patient_id\", patientId);"
+                                        ],
+                                        "type": "text/javascript"
+                                    }
+                                }
+                            ]
                         }
                     ]
                 }
@@ -2098,7 +2156,7 @@
         },
         {
             "key": "doctor_email",
-            "value": "lysmambouanan3@gmail.com",
+            "value": "doctor@example.com",
             "type": "string"
         }
     ]

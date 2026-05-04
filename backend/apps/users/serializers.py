@@ -13,7 +13,7 @@ class PatientProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PatientProfile
-        fields = ["diabetes_type", "diagnosis_date", "care_team"]
+        fields = ["diabetes_type", "diagnosis_date", "hba1c", "care_team"]
 
 
 class ProfileSerializer(serializers.ModelSerializer):
