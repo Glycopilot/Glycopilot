@@ -29,7 +29,7 @@ def _finetune_all_patients() -> None:
         return
 
     try:
-        headers = {"Authorization": f"Bearer {settings.django_internal_token}"}
+        headers = {"Authorization": f"ServiceToken {settings.django_internal_token}"}
         resp = requests.get(
             f"{settings.django_url}/api/users/",
             params={"role": "PATIENT", "is_active": "true"},

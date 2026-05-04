@@ -6,6 +6,7 @@ GET  /finetune/{patient_id}/status — vérifie si un modèle personnel existe
 """
 from __future__ import annotations
 
+import asyncio
 import os
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel
@@ -18,6 +19,9 @@ from models.personal_lstm import personal_lstm_manager
 logger = get_logger(__name__)
 router = APIRouter(prefix="/finetune", tags=["finetune"])
 
+# One lock per patient_id to prevent concurrent fine-tuning on the same artifact file
+_finetune_locks: dict[str, asyncio.Lock] = {}
+
 
 class FinetuneRequest(BaseModel):
     django_token: str = ""
@@ -27,6 +31,8 @@ class FinetuneRequest(BaseModel):
 
 
 class FinetuneStatus(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     patient_id: str
     has_personal_model: bool
     model_path: str | None = None
@@ -57,6 +63,10 @@ def _run_finetune(patient_id: str, django_token: str, version: str, epochs: int,
         logger.warning(f"[Fine-tune] Ignoré pour patient {patient_id}: {exc}")
     except Exception as exc:
         logger.error(f"[Fine-tune] Échec pour patient {patient_id}: {exc}")
+    finally:
+        lock = _finetune_locks.get(patient_id)
+        if lock and lock.locked():
+            lock.release()
 
 
 @router.post("/{patient_id}")
@@ -68,6 +78,12 @@ async def trigger_finetune(
 ):
     """Déclenche le fine-tuning d'un patient en arrière-plan. Répond immédiatement."""
     _verify_token(x_internal_token)
+
+    lock = _finetune_locks.setdefault(patient_id, asyncio.Lock())
+    if lock.locked():
+        raise HTTPException(status_code=409, detail=f"Fine-tuning already in progress for patient {patient_id}")
+    await lock.acquire()
+
     background_tasks.add_task(
         _run_finetune,
         patient_id,

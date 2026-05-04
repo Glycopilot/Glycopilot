@@ -91,34 +91,43 @@ def load_patient_data_from_api(patient_id: str, django_url: str, token: str) -> 
     """
     import requests
 
-    headers = {"Authorization": f"Bearer {token}"}
+    # ServiceToken header required by Django's ServiceTokenAuthentication
+    headers = {"Authorization": f"ServiceToken {token}"}
+    # user_id param required so Django returns this patient's data (not the service admin's)
+    user_param = {"user_id": patient_id}
     since = (datetime.now(timezone.utc) - timedelta(days=FINETUNE_DAYS)).isoformat()
 
-    since = (datetime.now(timezone.utc) - timedelta(days=FINETUNE_DAYS)).isoformat()
     readings = []
     url = f"{django_url}/api/glycemia/"
     while url:
-        resp = requests.get(url, params={"measured_after": since}, headers=headers, timeout=30)
+        resp = requests.get(
+            url,
+            params={"measured_after": since, **user_param},
+            headers=headers,
+            timeout=30,
+        )
         resp.raise_for_status()
         data = resp.json()
         readings.extend(data.get("results", data) if isinstance(data, dict) else data)
         url = data.get("next") if isinstance(data, dict) else None
 
-    activity_resp = requests.get(
-        f"{django_url}/api/activities/history/",
-        headers=headers,
-        timeout=30,
-    )
-    activity_resp.raise_for_status()
-    activities = activity_resp.json().get("results", activity_resp.json())
+    activities = []
+    url = f"{django_url}/api/activities/history/"
+    while url:
+        resp = requests.get(url, params=user_param, headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        activities.extend(data.get("results", data) if isinstance(data, dict) else data)
+        url = data.get("next") if isinstance(data, dict) else None
 
-    meal_resp = requests.get(
-        f"{django_url}/api/meals/log/",
-        headers=headers,
-        timeout=30,
-    )
-    meal_resp.raise_for_status()
-    meals = meal_resp.json().get("results", meal_resp.json())
+    meals = []
+    url = f"{django_url}/api/meals/log/"
+    while url:
+        resp = requests.get(url, params=user_param, headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        meals.extend(data.get("results", data) if isinstance(data, dict) else data)
+        url = data.get("next") if isinstance(data, dict) else None
 
     return _build_dataframe(readings, activities, meals)
 
@@ -154,7 +163,7 @@ def _build_dataframe(readings: list, activities: list, meals: list) -> pd.DataFr
     meal_df = pd.DataFrame([
         {
             "taken_at": pd.Timestamp(m["taken_at"], tz="UTC"),
-            "carbs": m.get("meal", {}).get("glucose", 0.0) or 0.0,
+            "carbs": m.get("meal", {}).get("carbs", 0.0) or 0.0,
         }
         for m in meals
     ]) if meals else pd.DataFrame(columns=["taken_at", "carbs"])

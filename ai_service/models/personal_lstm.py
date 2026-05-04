@@ -7,6 +7,7 @@ Recharge automatiquement si le fichier a été mis à jour (après fine-tuning).
 from __future__ import annotations
 
 import os
+from collections import OrderedDict
 import torch
 from models.lstm import LSTMNet, N_FEATURES
 from core.logger import get_logger
@@ -15,12 +16,13 @@ logger = get_logger(__name__)
 
 N_EXTRA_FEATURES = 12  # 5 wearables + 7 activity/meal
 N_FEATURES_PERSONAL = N_FEATURES + N_EXTRA_FEATURES  # 25 + 12 = 37
+MAX_CACHE_SIZE = 100
 
 
 class PersonalLSTMManager:
     def __init__(self) -> None:
-        # patient_id -> (model, file_mtime)
-        self._cache: dict[str, tuple[LSTMNet, float]] = {}
+        # patient_id -> (model, file_mtime) — OrderedDict for LRU eviction
+        self._cache: OrderedDict[str, tuple[LSTMNet, float]] = OrderedDict()
 
     def _model_path(self, patient_id: str, version: str) -> str:
         from core.config import settings
@@ -42,6 +44,8 @@ class PersonalLSTMManager:
             model = LSTMNet(n_features=N_FEATURES_PERSONAL)
             model.load_state_dict(torch.load(path, map_location="cpu", weights_only=True))
             model.eval()
+            if len(self._cache) >= MAX_CACHE_SIZE:
+                self._cache.popitem(last=False)  # evict oldest (LRU)
             self._cache[patient_id] = (model, mtime)
             logger.info(f"Modèle personnel chargé pour patient {patient_id}")
             return model

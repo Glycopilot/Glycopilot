@@ -4,6 +4,7 @@ from api.routes.predict import router as predict_router
 from api.routes.health import router as health_router
 from api.routes.finetune import router as finetune_router
 from models.ensemble import ensemble_model
+from core.config import settings
 from core.logger import get_logger
 from core.scheduler import start_scheduler
 
@@ -17,6 +18,11 @@ async def lifespan(app: FastAPI):
     logger.info("Loading models...")
     ensemble_model.load()
     logger.info("Models ready.")
+    if not settings.django_internal_token:
+        logger.warning(
+            "django_internal_token non configuré — le fine-tuning automatique et par API sera désactivé. "
+            "Définissez DJANGO_INTERNAL_TOKEN dans votre .env."
+        )
     _scheduler = start_scheduler()
     yield
     if _scheduler:

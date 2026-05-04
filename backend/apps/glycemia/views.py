@@ -50,6 +50,9 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(measured_at__gte=dt)
         return qs
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
         """
