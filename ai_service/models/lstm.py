@@ -21,14 +21,14 @@ except ImportError:
     TORCH_AVAILABLE = False
     logger.warning("PyTorch not installed. LSTM model will not be available.")
 
-N_FEATURES = 28  # must match engineering.py feature_cols length
+N_FEATURES = 25  # must match training/utils.py FEATURE_COLS length
 
 
 class LSTMNet(nn.Module if TORCH_AVAILABLE else object):
     def __init__(self, n_features: int = N_FEATURES, hidden1: int = 128, hidden2: int = 64) -> None:
         super().__init__()
-        self.lstm1 = nn.LSTM(n_features, hidden1, batch_first=True, dropout=0.2)
-        self.lstm2 = nn.LSTM(hidden1, hidden2, batch_first=True, dropout=0.2)
+        self.lstm1 = nn.LSTM(n_features, hidden1, batch_first=True)
+        self.lstm2 = nn.LSTM(hidden1, hidden2, batch_first=True)
         self.dropout = nn.Dropout(0.3)
         self.fc = nn.Sequential(nn.Linear(hidden2, 32), nn.ReLU())
         self.head_15 = nn.Linear(32, 3)

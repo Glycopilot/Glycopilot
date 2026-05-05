@@ -31,8 +31,8 @@ async def predict(
         )
 
     try:
-        features, missing_ratio = build_features(request)
-        result = ensemble_model.predict(features, request)
+        features, personal_features, missing_ratio = build_features(request)
+        result = ensemble_model.predict(features, personal_features, request)
     except Exception as exc:
         logger.exception("Prediction failed")
         return PredictResponse(

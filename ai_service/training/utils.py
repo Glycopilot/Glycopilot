@@ -16,17 +16,16 @@ DATA_PATH = os.path.join(
 )
 
 FEATURE_COLS = [
-    "glucose", "lag_5", "lag_15", "lag_30", "lag_60",
+    "glucose", "lag_5", "lag_15", "lag_30", "lag_60", "lag_90", "lag_120",
     "rate", "delta", "acceleration",
     "roll_mean_15", "roll_std_15",
     "roll_mean_30", "roll_std_30",
     "roll_mean_60", "roll_std_60",
     "is_hypo_risk", "is_hyper_risk",
     "h_sin", "h_cos", "d_sin", "d_cos",
-    "has_wearable", "hr_mean", "hr_std", "hrv_rmssd", "temp_mean",
     "hba1c", "gender",
     "context",
-]
+]  # 25 features — wearables excluded from global model
 
 TARGET_COLS = ["y_15", "y_30", "y_60"]
 
@@ -47,10 +46,12 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     g = df.groupby("participant_id")
 
     # Lags
-    df["lag_5"]  = g["glucose"].shift(1)
-    df["lag_15"] = g["glucose"].shift(3)
-    df["lag_30"] = g["glucose"].shift(6)
-    df["lag_60"] = g["glucose"].shift(12)
+    df["lag_5"]   = g["glucose"].shift(1)
+    df["lag_15"]  = g["glucose"].shift(3)
+    df["lag_30"]  = g["glucose"].shift(6)
+    df["lag_60"]  = g["glucose"].shift(12)
+    df["lag_90"]  = g["glucose"].shift(18)
+    df["lag_120"] = g["glucose"].shift(24)
 
     # Rolling
     df["roll_mean_15"] = g["glucose"].transform(lambda x: x.rolling(3, min_periods=1).mean())
@@ -64,7 +65,7 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     df["rate"]         = df.get("glucose_roc", pd.Series(0.0, index=df.index)).fillna(0)
     df["delta"]        = df["glucose"] - df["lag_5"].fillna(df["glucose"])
     df["acceleration"] = g["rate"].diff().fillna(0)
-    df["is_hypo_risk"] = (df["glucose"] < 80).astype(float)
+    df["is_hypo_risk"]  = (df["glucose"] < 80).astype(float)
     df["is_hyper_risk"] = (df["glucose"] > 160).astype(float)
 
     # Time encoding
@@ -91,7 +92,7 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     df["y_60"] = g["glucose"].shift(-12)
 
     # Fill lag NaNs with current value
-    for col in ["lag_5", "lag_15", "lag_30", "lag_60"]:
+    for col in ["lag_5", "lag_15", "lag_30", "lag_60", "lag_90", "lag_120"]:
         df[col] = df[col].fillna(df["glucose"])
 
     # Drop rows with missing targets
@@ -100,8 +101,11 @@ def load_and_engineer(path: str) -> pd.DataFrame:
     return df
 
 
-def loso_split(df: pd.DataFrame, test_participant: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def loso_split(df: pd.DataFrame, test_participant) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Leave-One-Subject-Out split. Returns train, val, test."""
+    # Cast to match the dtype of participant_id in the dataframe
+    if pd.api.types.is_integer_dtype(df["participant_id"].dtype):
+        test_participant = int(test_participant)
     test = df[df["participant_id"] == test_participant].copy()
     rest = df[df["participant_id"] != test_participant].copy()
 
@@ -146,3 +150,19 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
     mard = float(np.mean(np.abs(y_true - y_pred) / (np.abs(y_true) + 1e-6)) * 100)
     return {"mae": round(mae, 3), "rmse": round(rmse, 3), "mard": round(mard, 3)}
+
+
+def pinball_loss(pred, target, alpha: float):
+    import torch
+    err = target - pred
+    return torch.mean(torch.where(err >= 0, alpha * err, (alpha - 1) * err))
+
+
+def combined_loss(o15, o30, o60, y):
+    import torch.nn.functional as F
+    loss = 0.0
+    for out, target in [(o15, y[:, 0]), (o30, y[:, 1]), (o60, y[:, 2])]:
+        loss += F.mse_loss(out[:, 0], target)
+        loss += 0.5 * pinball_loss(out[:, 1], target, 0.10)
+        loss += 0.5 * pinball_loss(out[:, 2], target, 0.90)
+    return loss / 3
