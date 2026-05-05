@@ -79,7 +79,8 @@ class EnsembleModel:
             "ensemble": bool(self._meta_models),
         }
 
-    def predict(self, features: np.ndarray, request) -> PredictResponse:
+    def predict(self, features: np.ndarray, personal_features: np.ndarray, request) -> PredictResponse:
+        from models.personal_lstm import personal_lstm_manager
         sub_preds: dict[str, dict] = {}
 
         sub_preds["baseline"] = baseline_model.predict(features)
@@ -88,9 +89,17 @@ class EnsembleModel:
         if xgb_result:
             sub_preds["xgboost"] = xgb_result
 
-        lstm_result = lstm_model.predict(features)
-        if lstm_result:
-            sub_preds["lstm"] = lstm_result
+        # Use personal model if available, otherwise fall back to global LSTM
+        personal_result = personal_lstm_manager.predict(
+            request.user_id, settings.model_version, personal_features
+        )
+        if personal_result:
+            sub_preds["lstm"] = personal_result
+            logger.info(f"Modèle personnel utilisé pour patient {request.user_id}")
+        else:
+            lstm_result = lstm_model.predict(features)
+            if lstm_result:
+                sub_preds["lstm"] = lstm_result
 
         transformer_result = transformer_model.predict(features)
         if transformer_result:
