@@ -90,7 +90,7 @@ def main(data_path: str, test_participant: str, version: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Entraîne le modèle Baseline")
     parser.add_argument("--data", default=DATA_PATH)
-    parser.add_argument("--test-participant", default="001")
+    parser.add_argument("--test-participant", default="1")
     parser.add_argument("--version", default="v1.0")
     args = parser.parse_args()
     main(args.data, args.test_participant, args.version)

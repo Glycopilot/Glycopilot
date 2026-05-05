@@ -11,6 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+import json
 import numpy as np
 import torch
 import torch.nn as nn
@@ -20,25 +21,12 @@ from models.lstm import LSTMNet, N_FEATURES
 from training.utils import (
     DATA_PATH, TARGET_COLS,
     load_and_engineer, loso_split, make_sequences, save_report, compute_metrics,
+    pinball_loss, combined_loss,
 )
 
 SEQ_LEN = 24
-BATCH_SIZE = 64
+BATCH_SIZE = 256
 
-
-def pinball_loss(pred: torch.Tensor, target: torch.Tensor, alpha: float) -> torch.Tensor:
-    err = target - pred
-    return torch.mean(torch.where(err >= 0, alpha * err, (alpha - 1) * err))
-
-
-def combined_loss(out15, out30, out60, y: torch.Tensor) -> torch.Tensor:
-    y15, y30, y60 = y[:, 0], y[:, 1], y[:, 2]
-    loss = 0.0
-    for out, target in [(out15, y15), (out30, y30), (out60, y60)]:
-        loss += nn.functional.mse_loss(out[:, 0], target)
-        loss += 0.5 * pinball_loss(out[:, 1], target, 0.10)
-        loss += 0.5 * pinball_loss(out[:, 2], target, 0.90)
-    return loss / 3
 
 
 def main(data_path: str, test_participant: str, version: str, epochs: int, device: str) -> None:
@@ -62,12 +50,13 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
     val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE)
 
     model = LSTMNet(n_features=N_FEATURES).to(dev)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.5)
 
     best_val_loss = float("inf")
     patience_counter = 0
-    PATIENCE = 15
+    PATIENCE = 10
+    history = {"train_loss": [], "val_loss": [], "best_epoch": 1}
 
     print(f"[INFO] Entraînement LSTM ({epochs} epochs max, early stopping patience={PATIENCE})...")
     for epoch in range(1, epochs + 1):
@@ -79,6 +68,7 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
             o15, o30, o60 = model(xb)
             loss = combined_loss(o15, o30, o60, yb)
             loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             train_loss += loss.item()
 
@@ -93,23 +83,31 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
         train_loss /= len(train_loader)
         val_loss   /= len(val_loader)
         scheduler.step(val_loss)
+        history["train_loss"].append(round(train_loss, 6))
+        history["val_loss"].append(round(val_loss, 6))
 
-        if epoch % 10 == 0:
-            print(f"  Epoch {epoch:3d}/{epochs} — train: {train_loss:.4f} | val: {val_loss:.4f}")
+        improved = val_loss < best_val_loss
+        marker = "✓" if improved else f"({patience_counter + 1 if not improved else 0}/{PATIENCE})"
+        print(f"  Epoch {epoch:3d}/{epochs} — train: {train_loss:.4f} | val: {val_loss:.4f} {marker}", flush=True)
 
-        if val_loss < best_val_loss:
+        if improved:
             best_val_loss = val_loss
             patience_counter = 0
+            history["best_epoch"] = epoch
             os.makedirs("artifacts/lstm", exist_ok=True)
             torch.save(model.state_dict(), f"artifacts/lstm/lstm_{version}.pt")
         else:
             patience_counter += 1
             if patience_counter >= PATIENCE:
-                print(f"  Early stopping à l'epoch {epoch}.")
+                print(f"  Early stopping à l'epoch {epoch}.", flush=True)
                 break
 
+    with open(f"artifacts/lstm/history_{version}.json", "w") as f:
+        json.dump(history, f, indent=2)
+    print(f"[OK] Historique sauvegardé : artifacts/lstm/history_{version}.json")
+
     # Evaluate on test set
-    model.load_state_dict(torch.load(f"artifacts/lstm/lstm_{version}.pt", map_location=dev))
+    model.load_state_dict(torch.load(f"artifacts/lstm/lstm_{version}.pt", map_location=dev, weights_only=True))
     model.eval()
     X_test_t = torch.tensor(X_test).to(dev)
     with torch.no_grad():
@@ -138,9 +136,9 @@ def main(data_path: str, test_participant: str, version: str, epochs: int, devic
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Entraîne le modèle LSTM")
     parser.add_argument("--data", default=DATA_PATH)
-    parser.add_argument("--test-participant", default="001")
+    parser.add_argument("--test-participant", default="1")
     parser.add_argument("--version", default="v1.0")
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"])
     args = parser.parse_args()
     main(args.data, args.test_participant, args.version, args.epochs, args.device)

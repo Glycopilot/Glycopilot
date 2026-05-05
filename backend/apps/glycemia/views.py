@@ -8,8 +8,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Glycemia, GlycemiaHisto
+from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto
 from .serializers import (
+    GlycemiaDataIASerializer,
     GlycemiaHistoCreateSerializer,
     GlycemiaHistoSerializer,
     GlycemiaSerializer,
@@ -26,11 +27,31 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = GlycemiaHistoSerializer
 
+    def _resolve_user(self):
+        """Retourne l'utilisateur cible. Un service/admin peut passer ?user_id=<id>."""
+        user_id = self.request.query_params.get("user_id")
+        if user_id and self.request.auth == "service_token":
+            from apps.users.models import User
+            try:
+                return User.objects.get(id_user=user_id).auth_account
+            except User.DoesNotExist:
+                from rest_framework.exceptions import NotFound
+                raise NotFound(f"Utilisateur {user_id} introuvable.")
+        return self.request.user
+
     def get_queryset(self):
         """Renvoie l'historique complet (GlycemiaHisto) du user."""
-        return GlycemiaHisto.objects.filter(user=self.request.user).order_by(
-            "-measured_at"
-        )
+        qs = GlycemiaHisto.objects.filter(user=self._resolve_user()).order_by("-measured_at")
+        measured_after = self.request.query_params.get("measured_after")
+        if measured_after:
+            from django.utils.dateparse import parse_datetime
+            dt = parse_datetime(measured_after)
+            if dt:
+                qs = qs.filter(measured_at__gte=dt)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
@@ -150,3 +171,43 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
             else values[0],
             "count": len(values),
         }
+
+
+class GlycemiaDataIAViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    GET /api/glycemia/predictions/          — liste des prédictions (paginée)
+    GET /api/glycemia/predictions/{id}/     — détail d'une prédiction
+    GET /api/glycemia/predictions/latest/   — dernière prédiction disponible
+
+    Query params :
+      ?limit=N   — nombre de résultats (défaut pagination globale)
+      ?status=ok|low_confidence|error
+      ?source=baseline|lstm|transformer|ensemble
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = GlycemiaDataIASerializer
+
+    def get_queryset(self):
+        qs = GlycemiaDataIA.objects.filter(user=self.request.user).order_by("-for_time")
+
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        source_filter = self.request.query_params.get("source")
+        if source_filter:
+            qs = qs.filter(source=source_filter)
+
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="latest")
+    def latest(self, request):
+        """GET /api/glycemia/predictions/latest/ — dernière prédiction."""
+        prediction = self.get_queryset().first()
+        if not prediction:
+            return Response(
+                {"detail": "No prediction available yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(GlycemiaDataIASerializer(prediction).data)

@@ -4,9 +4,11 @@ Django signals for broadcasting glycemia updates via WebSocket.
 When a GlycemiaHisto record is created, this signal broadcasts the data
 to the user's WebSocket channel for real-time updates AND triggers
 alert rules to create AlertEvent entries in the database.
+It also fires an async AI prediction request (fire-and-forget thread).
 """
 
 import logging
+import threading
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -114,3 +116,15 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
             )
         except Exception as e:
             logger.error(f"Failed to broadcast glycemia_alert: {e}")
+
+    # ── 3. AI prediction (non-blocking) ─────────────────────────
+    try:
+        from apps.glycemia.services.ia_client import request_prediction
+
+        threading.Thread(
+            target=request_prediction,
+            args=(instance,),
+            daemon=True,
+        ).start()
+    except Exception as e:
+        logger.error(f"Failed to start AI prediction thread: {e}")
