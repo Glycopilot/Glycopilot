@@ -56,6 +56,17 @@ infra/ssh/*
 .idea/
 .vscode/
 
+# AI service — model artifacts (binaries volumineux, non versionnés)
+ai_service/.venv/
+ai_service/artifacts/baseline/
+ai_service/artifacts/lstm/
+ai_service/artifacts/transformer/
+ai_service/artifacts/ensemble/
+ai_service/artifacts/scalers/
+ai_service/artifacts/metadata/
+ai_service/*.pt
+ai_service/*.pkl
+
 # Caches & fichiers inutiles (ne pas versionner)
 *.log
 *.tmp

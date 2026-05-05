@@ -238,6 +238,7 @@ else
     echo "  • MySQL (database_local)"
     echo "  • Redis (redis_local)"
     echo "  • Backend Django + Daphne (backend_local)"
+    echo "  • AI Service FastAPI (ai_service) → http://localhost:8001/docs"
     echo "  • Frontend React Native (frontend)"
     echo "  • Frontend Web React (frontend_web)"
     echo ""

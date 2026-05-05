@@ -11,5 +11,9 @@ class Settings(BaseSettings):
     artifacts_dir: str = "artifacts"
     sequence_length: int = 24
 
+    # Django connection (for fine-tuning data fetch)
+    django_url: str = "http://localhost:8000"
+    django_internal_token: str = ""
+
 
 settings = Settings()

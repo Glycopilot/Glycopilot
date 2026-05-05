@@ -44,23 +44,12 @@ def collect_predictions(
     """Returns dict {horizon: (N, 4)} with predictions from each sub-model."""
     import torch
 
-    results = {15: [], 30: [], 60: []}
-
     print("  [INFO] Prédictions Baseline...")
-    for i in range(len(X_tab)):
-        preds = baseline.predict(X_tab[i:i+1].reshape(1, 1, -1).repeat(SEQ_LEN, axis=1))
-        for h in [15, 30, 60]:
-            results[h].append(preds[h]["y_hat"])
-
-    bl_preds = {h: np.array(results[h]) for h in [15, 30, 60]}
-    results = {15: [], 30: [], 60: []}
+    X_bl = baseline._scaler.transform(X_tab) if baseline._scaler is not None else X_tab
+    bl_preds = {h: baseline._models[h].predict(X_bl).astype(np.float32) for h in [15, 30, 60]}
 
     print("  [INFO] Prédictions XGBoost...")
-    for i in range(len(X_tab)):
-        preds = xgb.predict(X_tab[i:i+1].reshape(1, 1, -1).repeat(SEQ_LEN, axis=1))
-        for h in [15, 30, 60]:
-            results[h].append(preds[h]["y_hat"])
-    xgb_preds = {h: np.array(results[h]) for h in [15, 30, 60]}
+    xgb_preds = {h: xgb._models[h].predict(X_tab).astype(np.float32) for h in [15, 30, 60]}
 
     print("  [INFO] Prédictions LSTM...")
     X_seq_t = torch.tensor(X_seq, dtype=torch.float32)
@@ -86,18 +75,14 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
     df = load_and_engineer(data_path)
     train_df, val_df, test_df = loso_split(df, test_participant)
 
-    # Tabular features (last timestep per sequence window)
-    X_train_tab = train_df[FEATURE_COLS].values.astype(np.float32)
-    X_val_tab   = val_df[FEATURE_COLS].values.astype(np.float32)
-
     # Sequences for LSTM/Transformer
     X_train_seq, y_train = make_sequences(train_df, SEQ_LEN)
     X_val_seq,   y_val   = make_sequences(val_df,   SEQ_LEN)
     X_test_seq,  y_test  = make_sequences(test_df,  SEQ_LEN)
 
-    # Align tabular to sequence length (sequences start at index SEQ_LEN)
-    X_train_tab_aligned = X_train_tab[SEQ_LEN:]
-    X_val_tab_aligned   = X_val_tab[SEQ_LEN:]
+    # Tabular = last timestep of each sequence → perfectly aligned
+    X_train_tab_aligned = X_train_seq[:, -1, :]
+    X_val_tab_aligned   = X_val_seq[:, -1, :]
 
     print("[INFO] Chargement des sous-modèles...")
     from core.config import settings
@@ -108,6 +93,8 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
         for h in [15, 30, 60]
         if os.path.exists(f"artifacts/baseline/lr_{h}_{sub_version}.pkl")
     }
+    scaler_path = "artifacts/scalers/features_scaler_baseline.pkl"
+    baseline._scaler = joblib.load(scaler_path) if os.path.exists(scaler_path) else None
     baseline._loaded = True
 
     xgb = XGBoostModel()
@@ -124,7 +111,7 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
     if os.path.exists(lstm_path):
         from models.lstm import LSTMNet, N_FEATURES
         lstm._net = LSTMNet(n_features=N_FEATURES)
-        lstm._net.load_state_dict(torch.load(lstm_path, map_location="cpu"))
+        lstm._net.load_state_dict(torch.load(lstm_path, map_location="cpu", weights_only=True))
         lstm._net.eval()
         lstm._loaded = True
     else:
@@ -135,7 +122,7 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
     if os.path.exists(trans_path):
         from models.transformer import TransformerNet, N_FEATURES as TN
         transformer._net = TransformerNet(n_features=TN)
-        transformer._net.load_state_dict(torch.load(trans_path, map_location="cpu"))
+        transformer._net.load_state_dict(torch.load(trans_path, map_location="cpu", weights_only=True))
         transformer._net.eval()
         transformer._loaded = True
     else:
@@ -153,14 +140,25 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
         X_meta = val_preds[h]
         y_meta = y_val[:, idx]
 
-        ridge = Ridge(alpha=1.0)
+        ridge = Ridge(alpha=100.0)
         ridge.fit(X_meta, y_meta)
         meta_models[f"y_hat_{h}"] = ridge
 
         val_metrics[f"mae_{h}"] = compute_metrics(y_meta, ridge.predict(X_meta))["mae"]
-        print(f"  @{h}min — weights: {[round(c,3) for c in ridge.coef_]} | val MAE: {val_metrics[f'mae_{h}']:.2f}")
+        print(f"  @{h}min — weights: {[round(c,3) for c in ridge.coef_]} | val MAE in-sample: {val_metrics[f'mae_{h}']:.2f}")
 
     joblib.dump(meta_models, f"artifacts/ensemble/ensemble_{version}.pkl")
+
+    # Evaluate on test set (true holdout)
+    print("\n[INFO] Évaluation sur le test set (holdout)...")
+    X_test_tab_aligned = X_test_seq[:, -1, :]
+    test_preds = collect_predictions(baseline, xgb, lstm, transformer, X_test_tab_aligned, X_test_seq)
+    test_metrics = {}
+    for h, idx in [(15, 0), (30, 1), (60, 2)]:
+        y_test_h = y_test[:, idx]
+        X_test_meta = test_preds[h]
+        test_metrics[f"mae_{h}"] = compute_metrics(y_test_h, meta_models[f"y_hat_{h}"].predict(X_test_meta))["mae"]
+        print(f"  @{h}min — test MAE: {test_metrics[f'mae_{h}']:.2f} mg/dL")
 
     save_report({
         "model": "ensemble",
@@ -168,7 +166,8 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
         "sub_model_version": sub_version,
         "test_participant": test_participant,
         "sub_models": ["baseline", "xgboost", "lstm", "transformer"],
-        "val_metrics": val_metrics,
+        "val_metrics_insample": val_metrics,
+        "test_metrics": test_metrics,
     }, f"ensemble_{version}")
 
     print(f"\n[OK] Ensemble entraîné. Artefacts dans artifacts/ensemble/")
@@ -177,7 +176,7 @@ def main(data_path: str, test_participant: str, version: str, sub_version: str) 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Entraîne le modèle Ensemble (stacking)")
     parser.add_argument("--data", default=DATA_PATH)
-    parser.add_argument("--test-participant", default="001")
+    parser.add_argument("--test-participant", default="1")
     parser.add_argument("--version", default="v1.0")
     parser.add_argument("--sub-version", default="v1.0", help="Version des sous-modèles à agréger")
     args = parser.parse_args()

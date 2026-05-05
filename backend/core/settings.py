@@ -177,6 +177,7 @@ TESTING = config("TESTING", default=False, cast=bool) or "pytest" in sys.argv[0]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "utils.service_token_auth.ServiceTokenAuthentication",
         "utils.jwt_auth.JWTAuthenticationDualKey",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -386,6 +387,10 @@ STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 # --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.AuthAccount"
+
+# --- AI MICROSERVICE ---
+AI_SERVICE_URL = config("AI_SERVICE_URL", default="http://localhost:8001")
+AI_SERVICE_TOKEN = config("AI_SERVICE_TOKEN", default="dev_secret")
 
 # --- ASGI / CHANNELS ---
 ASGI_APPLICATION = "core.asgi.application"

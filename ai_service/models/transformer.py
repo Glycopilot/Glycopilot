@@ -21,7 +21,7 @@ try:
 except ImportError:
     TORCH_AVAILABLE = False
 
-N_FEATURES = 28
+N_FEATURES = 25
 D_MODEL = 64
 
 
@@ -45,8 +45,8 @@ class TransformerNet(nn.Module if TORCH_AVAILABLE else object):
         self.input_proj = nn.Linear(n_features, d_model)
         self.pos_enc = PositionalEncoding(d_model)
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model, nhead=8, dim_feedforward=256,
-            dropout=0.1, activation="gelu", batch_first=True,
+            d_model=d_model, nhead=4, dim_feedforward=256,
+            dropout=0.2, activation="gelu", batch_first=True,
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=4)
         self.head_15 = nn.Linear(d_model, 3)

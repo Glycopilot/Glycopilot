@@ -79,6 +79,24 @@ services:
     tty: true
     restart: unless-stopped
 
+  # --- AI Service FastAPI (local) ---
+  ai_service:
+    profiles: ["local"]
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: glycopilot-ai-local
+    env_file:
+      - ./ai_service/.env
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ai_service:/app
+    depends_on:
+      backend_local:
+        condition: service_started
+    restart: unless-stopped
+
   # --- Frontend Web (local) ---
   frontend_web:
     profiles: ["local"]
