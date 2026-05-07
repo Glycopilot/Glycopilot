@@ -33,6 +33,7 @@ def _build_messages(
             "body": body,
             "sound": sound,
             "priority": priority,
+            "channelId": "glycemia-alerts",
         }
         if data:
             message["data"] = data
