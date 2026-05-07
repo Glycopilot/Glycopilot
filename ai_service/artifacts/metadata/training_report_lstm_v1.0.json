@@ -1,0 +1,15 @@
+{
+  "model": "lstm",
+  "version": "v1.0",
+  "test_participant": "1",
+  "n_train": 26744,
+  "n_val": 6423,
+  "n_test": 2507,
+  "best_val_loss": 287.628,
+  "test_metrics": {
+    "mae_15": 6.74,
+    "mae_30": 8.804,
+    "mae_60": 10.011
+  },
+  "saved_at": "2026-05-02T01:54:46.820688+00:00"
+}
