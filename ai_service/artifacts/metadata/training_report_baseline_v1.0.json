@@ -1,0 +1,19 @@
+{
+  "model": "baseline",
+  "version": "v1.0",
+  "test_participant": "1",
+  "n_train": 27104,
+  "n_val": 6783,
+  "n_test": 2531,
+  "val_metrics": {
+    "mae_15": 4.743,
+    "mae_30": 9.352,
+    "mae_60": 13.564
+  },
+  "test_metrics": {
+    "mae_15": 4.371,
+    "mae_30": 7.947,
+    "mae_60": 9.772
+  },
+  "saved_at": "2026-05-01T20:43:13.046663+00:00"
+}

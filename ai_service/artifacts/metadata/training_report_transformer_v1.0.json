@@ -1,0 +1,15 @@
+{
+  "model": "transformer",
+  "version": "v1.0",
+  "test_participant": "1",
+  "n_train": 26744,
+  "n_val": 6423,
+  "n_test": 2507,
+  "best_val_loss": 296.4203,
+  "test_metrics": {
+    "mae_15": 7.829,
+    "mae_30": 10.057,
+    "mae_60": 11.732
+  },
+  "saved_at": "2026-05-03T22:58:26.319490+00:00"
+}

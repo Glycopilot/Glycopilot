@@ -59,16 +59,9 @@ infra/ssh/*
 # Claude Code local config (personnel, ne pas versionner)
 .claude/settings.local.json
 
-# AI service — model artifacts (binaries volumineux, non versionnés)
+# AI service
 ai_service/.venv/
-ai_service/artifacts/baseline/
-ai_service/artifacts/lstm/
-ai_service/artifacts/transformer/
-ai_service/artifacts/ensemble/
-ai_service/artifacts/scalers/
-ai_service/artifacts/metadata/
-ai_service/*.pt
-ai_service/*.pkl
+ai_service/artifacts/patients/
 
 # Caches & fichiers inutiles (ne pas versionner)
 *.log
