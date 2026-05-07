@@ -11,6 +11,28 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
+def _notify_django(patient_id: str, version: str, metrics: dict, settings) -> None:
+    """Notify Django that a new personal model is pending validation."""
+    if not settings.django_url or not settings.django_internal_token:
+        return
+    try:
+        import requests
+        requests.post(
+            f"{settings.django_url}/api/glycemia/personal-models/",
+            json={
+                "patient_id": patient_id,
+                "version": version,
+                "mae_15": metrics.get("mae_15"),
+                "mae_30": metrics.get("mae_30"),
+                "mae_60": metrics.get("mae_60"),
+            },
+            headers={"Authorization": f"ServiceToken {settings.django_internal_token}"},
+            timeout=10,
+        )
+    except Exception as exc:
+        logger.warning(f"[Scheduler] Impossible de notifier Django pour {patient_id}: {exc}")
+
+
 def _finetune_all_patients() -> None:
     """
     Récupère la liste des patients actifs depuis Django et
@@ -57,13 +79,14 @@ def _finetune_all_patients() -> None:
             continue
         try:
             df = load_patient_data_from_api(patient_id, settings.django_url, settings.django_internal_token)
-            finetune(
+            metrics = finetune(
                 patient_id=patient_id,
                 df=df,
                 global_model_path=global_model_path,
                 version=version,
             )
             personal_lstm_manager.invalidate(patient_id)
+            _notify_django(patient_id, version, metrics, settings)
             success += 1
         except ValueError as exc:
             logger.info(f"[Scheduler] Patient {patient_id} ignoré : {exc}")

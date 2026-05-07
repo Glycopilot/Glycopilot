@@ -354,10 +354,11 @@ def finetune(
         metrics[f"mae_{h}"] = compute_metrics(y_val[:, idx], preds)["mae"]
         print(f"  Val MAE @{h}min : {metrics[f'mae_{h}']:.2f} mg/dL")
 
-    # Save metadata
+    # Save metadata — status starts as "pending" until validated by admin
     meta = {
         "patient_id": patient_id,
         "version": version,
+        "status": "pending",
         "finetuned_at": datetime.now(timezone.utc).isoformat(),
         "n_train": len(X_train),
         "n_val": len(X_val),

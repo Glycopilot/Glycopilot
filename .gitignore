@@ -56,6 +56,9 @@ infra/ssh/*
 .idea/
 .vscode/
 
+# Claude Code local config (personnel, ne pas versionner)
+.claude/settings.local.json
+
 # AI service — model artifacts (binaries volumineux, non versionnés)
 ai_service/.venv/
 ai_service/artifacts/baseline/

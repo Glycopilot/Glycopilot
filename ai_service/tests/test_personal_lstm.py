@@ -47,14 +47,134 @@ def test_cache_eviction_respects_max_size():
     assert "patient-new" in mgr._cache
 
 
-def test_has_model_true_when_file_exists(tmp_path):
+def test_has_model_true_when_file_exists_and_approved(tmp_path):
+    import json
     from unittest.mock import patch
     patient_dir = tmp_path / "patients" / "test-patient"
     patient_dir.mkdir(parents=True)
     model_file = patient_dir / "lstm_personal_v1.0.pt"
     model_file.write_bytes(b"fake")
+    meta_file = patient_dir / "meta_v1.0.json"
+    meta_file.write_text(json.dumps({"status": "approved"}))
 
     mgr = PersonalLSTMManager()
-    with patch("models.personal_lstm.PersonalLSTMManager._model_path",
-               return_value=str(model_file)):
+    with patch.object(mgr, "_model_path", return_value=str(model_file)), \
+         patch.object(mgr, "_meta_path", return_value=str(meta_file)):
         assert mgr.has_model("test-patient", "v1.0") is True
+
+
+def test_has_model_false_when_file_exists_but_pending(tmp_path):
+    import json
+    from unittest.mock import patch
+    patient_dir = tmp_path / "patients" / "test-patient"
+    patient_dir.mkdir(parents=True)
+    model_file = patient_dir / "lstm_personal_v1.0.pt"
+    model_file.write_bytes(b"fake")
+    meta_file = patient_dir / "meta_v1.0.json"
+    meta_file.write_text(json.dumps({"status": "pending"}))
+
+    mgr = PersonalLSTMManager()
+    with patch.object(mgr, "_model_path", return_value=str(model_file)), \
+         patch.object(mgr, "_meta_path", return_value=str(meta_file)):
+        assert mgr.has_model("test-patient", "v1.0") is False
+
+
+def test_has_model_false_when_file_exists_but_rejected(tmp_path):
+    import json
+    from unittest.mock import patch
+    patient_dir = tmp_path / "patients" / "test-patient"
+    patient_dir.mkdir(parents=True)
+    model_file = patient_dir / "lstm_personal_v1.0.pt"
+    model_file.write_bytes(b"fake")
+    meta_file = patient_dir / "meta_v1.0.json"
+    meta_file.write_text(json.dumps({"status": "rejected"}))
+
+    mgr = PersonalLSTMManager()
+    with patch.object(mgr, "_model_path", return_value=str(model_file)), \
+         patch.object(mgr, "_meta_path", return_value=str(meta_file)):
+        assert mgr.has_model("test-patient", "v1.0") is False
+
+
+# --- get_status ---
+
+def test_get_status_missing_when_no_meta_file(tmp_path):
+    from unittest.mock import patch
+    mgr = PersonalLSTMManager()
+    meta_path = str(tmp_path / "meta_v1.0.json")
+    with patch.object(mgr, "_meta_path", return_value=meta_path):
+        assert mgr.get_status("p1", "v1.0") == "missing"
+
+
+def test_get_status_returns_value_from_file(tmp_path):
+    import json
+    from unittest.mock import patch
+    meta_file = tmp_path / "meta_v1.0.json"
+    meta_file.write_text(json.dumps({"status": "approved"}))
+
+    mgr = PersonalLSTMManager()
+    with patch.object(mgr, "_meta_path", return_value=str(meta_file)):
+        assert mgr.get_status("p1", "v1.0") == "approved"
+
+
+def test_get_status_returns_pending_on_corrupt_file(tmp_path):
+    from unittest.mock import patch
+    meta_file = tmp_path / "meta_v1.0.json"
+    meta_file.write_text("not valid json")
+
+    mgr = PersonalLSTMManager()
+    with patch.object(mgr, "_meta_path", return_value=str(meta_file)):
+        assert mgr.get_status("p1", "v1.0") == "pending"
+
+
+# --- set_status ---
+
+def test_set_status_updates_meta_file(tmp_path):
+    import json
+    from unittest.mock import patch
+    meta_file = tmp_path / "meta_v1.0.json"
+    meta_file.write_text(json.dumps({"status": "pending", "patient_id": "p1"}))
+
+    mgr = PersonalLSTMManager()
+    with patch.object(mgr, "_meta_path", return_value=str(meta_file)):
+        mgr.set_status("p1", "v1.0", "approved")
+
+    with open(meta_file) as f:
+        assert json.load(f)["status"] == "approved"
+
+
+def test_set_status_raises_when_meta_file_missing(tmp_path):
+    import pytest
+    from unittest.mock import patch
+    mgr = PersonalLSTMManager()
+    meta_path = str(tmp_path / "meta_v1.0.json")
+    with patch.object(mgr, "_meta_path", return_value=meta_path):
+        with pytest.raises(FileNotFoundError):
+            mgr.set_status("p1", "v1.0", "approved")
+
+
+def test_set_status_calls_invalidate_when_not_approved(tmp_path):
+    import json
+    from unittest.mock import patch, MagicMock
+    meta_file = tmp_path / "meta_v1.0.json"
+    meta_file.write_text(json.dumps({"status": "pending"}))
+
+    mgr = PersonalLSTMManager()
+    mgr.invalidate = MagicMock()
+    with patch.object(mgr, "_meta_path", return_value=str(meta_file)):
+        mgr.set_status("p1", "v1.0", "rejected")
+
+    mgr.invalidate.assert_called_once_with("p1")
+
+
+def test_set_status_does_not_invalidate_when_approved(tmp_path):
+    import json
+    from unittest.mock import patch, MagicMock
+    meta_file = tmp_path / "meta_v1.0.json"
+    meta_file.write_text(json.dumps({"status": "pending"}))
+
+    mgr = PersonalLSTMManager()
+    mgr.invalidate = MagicMock()
+    with patch.object(mgr, "_meta_path", return_value=str(meta_file)):
+        mgr.set_status("p1", "v1.0", "approved")
+
+    mgr.invalidate.assert_not_called()

@@ -95,6 +95,69 @@ async def trigger_finetune(
     return {"status": "started", "patient_id": patient_id, "message": "Fine-tuning lancé en arrière-plan."}
 
 
+@router.get("/pending")
+async def list_pending(
+    x_internal_token: str | None = Header(None, alias="X-Internal-Token"),
+):
+    """Liste tous les modèles personnels en attente de validation."""
+    _verify_token(x_internal_token)
+    from core.config import settings
+
+    pending = []
+    patients_dir = os.path.join(settings.artifacts_dir, "patients")
+    if not os.path.isdir(patients_dir):
+        return {"pending": []}
+
+    for patient_id in os.listdir(patients_dir):
+        patient_path = os.path.join(patients_dir, patient_id)
+        if not os.path.isdir(patient_path):
+            continue
+        for fname in os.listdir(patient_path):
+            if fname.startswith("meta_") and fname.endswith(".json"):
+                import json
+                try:
+                    with open(os.path.join(patient_path, fname)) as f:
+                        meta = json.load(f)
+                    if meta.get("status") == "pending":
+                        pending.append(meta)
+                except Exception:
+                    pass
+
+    return {"pending": pending}
+
+
+@router.post("/{patient_id}/approve")
+async def approve_model(
+    patient_id: str,
+    version: str = "v1.0",
+    x_internal_token: str | None = Header(None, alias="X-Internal-Token"),
+):
+    """Approuve le modèle personnel — il sera utilisé pour les prédictions."""
+    _verify_token(x_internal_token)
+    try:
+        personal_lstm_manager.set_status(patient_id, version, "approved")
+        logger.info(f"[Finetune] Modèle {patient_id} v{version} approuvé.")
+        return {"status": "approved", "patient_id": patient_id}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Aucun modèle trouvé pour patient {patient_id} v{version}")
+
+
+@router.post("/{patient_id}/reject")
+async def reject_model(
+    patient_id: str,
+    version: str = "v1.0",
+    x_internal_token: str | None = Header(None, alias="X-Internal-Token"),
+):
+    """Rejette le modèle personnel — le modèle global sera conservé."""
+    _verify_token(x_internal_token)
+    try:
+        personal_lstm_manager.set_status(patient_id, version, "rejected")
+        logger.info(f"[Finetune] Modèle {patient_id} v{version} rejeté.")
+        return {"status": "rejected", "patient_id": patient_id}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Aucun modèle trouvé pour patient {patient_id} v{version}")
+
+
 @router.get("/{patient_id}/status")
 async def finetune_status(
     patient_id: str,
