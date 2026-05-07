@@ -5,7 +5,7 @@ from .models import PatientProfile, Profile
 
 @admin.register(PatientProfile)
 class PatientProfileAdmin(admin.ModelAdmin):
-    list_display = ("get_user", "diabetes_type", "diagnosis_date")
+    list_display = ("get_user", "diabetes_type", "diagnosis_date", "hba1c")
     list_filter = ("diabetes_type",)
     search_fields = ("profile__user__email", "profile__user__last_name")
 
