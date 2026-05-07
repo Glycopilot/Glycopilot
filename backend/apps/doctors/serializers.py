@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from apps.users.models import User
@@ -112,3 +114,21 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
 class DoctorListWithPatientsSerializer(serializers.Serializer):
     doctor = DoctorSerializer()
     patients = SimpleUserSerializer(many=True)
+
+
+class PatientHbA1cMedicalUpdateSerializer(serializers.Serializer):
+    """Corps strict PATCH : uniquement la clé `hba1c` (pourcentage, 4–15)."""
+
+    hba1c = serializers.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        min_value=Decimal("4"),
+        max_value=Decimal("15"),
+    )
+
+    def validate(self, attrs):
+        if set(self.initial_data.keys()) != {"hba1c"}:
+            raise serializers.ValidationError(
+                'Request body must be exactly {"hba1c": <number>} with no extra keys.'
+            )
+        return attrs
