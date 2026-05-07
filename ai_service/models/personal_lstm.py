@@ -28,6 +28,35 @@ class PersonalLSTMManager:
         from core.config import settings
         return os.path.join(settings.artifacts_dir, "patients", patient_id, f"lstm_personal_{version}.pt")
 
+    def _meta_path(self, patient_id: str, version: str) -> str:
+        from core.config import settings
+        return os.path.join(settings.artifacts_dir, "patients", patient_id, f"meta_{version}.json")
+
+    def get_status(self, patient_id: str, version: str) -> str:
+        """Return 'pending', 'approved', 'rejected', or 'missing'."""
+        path = self._meta_path(patient_id, version)
+        if not os.path.exists(path):
+            return "missing"
+        try:
+            import json
+            with open(path) as f:
+                return json.load(f).get("status", "pending")
+        except Exception:
+            return "pending"
+
+    def set_status(self, patient_id: str, version: str, status: str) -> None:
+        import json
+        path = self._meta_path(patient_id, version)
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Meta file not found: {path}")
+        with open(path) as f:
+            meta = json.load(f)
+        meta["status"] = status
+        with open(path, "w") as f:
+            json.dump(meta, f, indent=2)
+        if status != "approved":
+            self.invalidate(patient_id)
+
     def get_model(self, patient_id: str, version: str) -> LSTMNet | None:
         """Return the personal LSTM for this patient, or None if not available."""
         path = self._model_path(patient_id, version)
@@ -54,7 +83,10 @@ class PersonalLSTMManager:
             return None
 
     def has_model(self, patient_id: str, version: str) -> bool:
-        return os.path.exists(self._model_path(patient_id, version))
+        return (
+            os.path.exists(self._model_path(patient_id, version))
+            and self.get_status(patient_id, version) == "approved"
+        )
 
     def invalidate(self, patient_id: str) -> None:
         """Remove from cache after a fine-tuning run."""
