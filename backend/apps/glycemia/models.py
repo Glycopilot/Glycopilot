@@ -313,3 +313,43 @@ class GlycemiaDataIA(models.Model):
 
     def __str__(self):
         return f"AI run {self.user.email} @ {self.for_time} ({self.model_version})"
+
+
+class PersonalModelApproval(models.Model):
+    """Tracks each personal LSTM fine-tuning result pending admin validation."""
+
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "En attente"),
+        (STATUS_APPROVED, "Approuvé"),
+        (STATUS_REJECTED, "Rejeté"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient_id = models.CharField(max_length=64, db_index=True, help_text="UUID du patient dans l'AI service")
+    version = models.CharField(max_length=20, default="v1.0")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+
+    mae_15 = models.FloatField(null=True, blank=True, help_text="MAE @15 min (mg/dL)")
+    mae_30 = models.FloatField(null=True, blank=True, help_text="MAE @30 min (mg/dL)")
+    mae_60 = models.FloatField(null=True, blank=True, help_text="MAE @60 min (mg/dL)")
+
+    trained_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_personal_models",
+    )
+
+    class Meta:
+        ordering = ["-trained_at"]
+        verbose_name = "Modèle personnel"
+        verbose_name_plural = "Modèles personnels (validation)"
+
+    def __str__(self):
+        return f"Modèle {self.patient_id} v{self.version} — {self.get_status_display()}"

@@ -1,0 +1,23 @@
+{
+  "model": "ensemble",
+  "version": "v1.0",
+  "sub_model_version": "v1.0",
+  "test_participant": "1",
+  "sub_models": [
+    "baseline",
+    "xgboost",
+    "lstm",
+    "transformer"
+  ],
+  "val_metrics_insample": {
+    "mae_15": 6.376,
+    "mae_30": 10.22,
+    "mae_60": 13.933
+  },
+  "test_metrics": {
+    "mae_15": 5.759,
+    "mae_30": 8.631,
+    "mae_60": 9.96
+  },
+  "saved_at": "2026-05-03T23:08:10.898424+00:00"
+}

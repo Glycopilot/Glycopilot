@@ -8,7 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto
+from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto, PersonalModelApproval
 from .serializers import (
     GlycemiaDataIASerializer,
     GlycemiaHistoCreateSerializer,
@@ -211,3 +211,33 @@ class GlycemiaDataIAViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(GlycemiaDataIASerializer(prediction).data)
+
+
+class PersonalModelApprovalViewSet(viewsets.ViewSet):
+    """
+    Endpoint interne — appelé par l'AI service après chaque fine-tuning.
+    Crée un enregistrement en attente de validation par l'admin.
+    """
+
+    def create(self, request):
+        if not isinstance(request.auth, str) or request.auth != "service_token":
+            return Response({"detail": "Service token required."}, status=status.HTTP_403_FORBIDDEN)
+
+        patient_id = request.data.get("patient_id")
+        version = request.data.get("version", "v1.0")
+        if not patient_id:
+            return Response({"detail": "patient_id required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        PersonalModelApproval.objects.update_or_create(
+            patient_id=patient_id,
+            version=version,
+            defaults={
+                "status": PersonalModelApproval.STATUS_PENDING,
+                "mae_15": request.data.get("mae_15"),
+                "mae_30": request.data.get("mae_30"),
+                "mae_60": request.data.get("mae_60"),
+                "approved_at": None,
+                "approved_by": None,
+            },
+        )
+        return Response({"status": "created"}, status=status.HTTP_201_CREATED)
