@@ -16,7 +16,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position."
-      }
+      },
+      "bundleIdentifier": "com.glycopilot.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,8 +25,17 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
-      "package": "com.glycopilot.app"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "package": "glycopilot.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -35,6 +45,14 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/glycopilot.png",
+          "color": "#2563EB",
+          "defaultChannel": "glycemia-alerts"
         }
       ]
     ],
