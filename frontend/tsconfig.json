@@ -31,7 +31,8 @@
       "@utils/*": ["src/utils/*"],
       "@hooks/*": ["src/hooks/*"],
       "@themes/*": ["src/themes/*"],
-      "@types/*": ["src/types/*"]
+      "@types/*": ["src/types/*"],
+      "libre2-cgm": ["modules/libre2-cgm"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],
