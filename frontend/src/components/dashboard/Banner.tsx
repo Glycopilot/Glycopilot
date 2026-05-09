@@ -154,8 +154,12 @@ export default function Banner({
     return dateStr;
   };
 
+  const advanceIndex = React.useCallback(() => {
+    setCurrentIndex(prevIndex => (prevIndex + 1) % bannerStates.length);
+  }, [bannerStates.length]);
+
   useEffect(() => {
-    const interval = setInterval(() => {
+    const tick = () => {
       Animated.sequence([
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -168,14 +172,12 @@ export default function Banner({
           useNativeDriver: true,
         }),
       ]).start();
+      setTimeout(advanceIndex, 400);
+    };
 
-      setTimeout(() => {
-        setCurrentIndex(prevIndex => (prevIndex + 1) % bannerStates.length);
-      }, 400);
-    }, 5000);
-
+    const interval = setInterval(tick, 5000);
     return () => clearInterval(interval);
-  }, [bannerStates.length]);
+  }, [fadeAnim, advanceIndex]);
 
   const currentState = bannerStates[currentIndex];
 

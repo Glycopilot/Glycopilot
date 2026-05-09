@@ -3,7 +3,6 @@ import {
   Modal,
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Pressable,
@@ -11,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Users } from 'lucide-react-native';
-import { colors } from '../../themes/colors';
+import { modalStyles as styles } from './modalStyles';
 
 interface AddContactModalProps {
   readonly visible: boolean;
@@ -43,17 +42,18 @@ export default function AddContactModal({
       transparent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose} />
+      <Pressable style={styles.overlay} onPress={onClose} />
       <View
         style={[
-          styles.modalContainer,
+          styles.container,
+          styles.containerScrollable,
           Platform.OS === 'ios' ? { paddingBottom: 34 } : null,
         ]}
       >
         <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-          <View style={styles.sheetHandle} />
+          <View style={styles.handle} />
 
-          <Text style={styles.modalTitle}>Ajouter un contact d'urgence</Text>
+          <Text style={styles.title}>Ajouter un contact d'urgence</Text>
 
           <View style={styles.formSection}>
             <Text style={styles.formLabel}>Nom complet</Text>
@@ -101,7 +101,7 @@ export default function AddContactModal({
             </View>
           </View>
 
-          <View style={styles.modalButtons}>
+          <View style={styles.buttons}>
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
               <Text style={styles.cancelButtonText}>Annuler</Text>
             </TouchableOpacity>
@@ -121,109 +121,3 @@ export default function AddContactModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 34,
-    maxHeight: '80%',
-  },
-  sheetHandle: {
-    width: 48,
-    height: 4,
-    backgroundColor: '#D1D5DB',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 24,
-  },
-  formSection: {
-    marginBottom: 20,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 20,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#3B82F6',
-    lineHeight: 18,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  submitButton: {
-    flex: 1,
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#E5E7EB',
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});

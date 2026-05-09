@@ -15,8 +15,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ENV = config("Django_ENV", default="development")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-# Hosts autorisés (séparés par des virgules)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
+# En dev/debug, on accepte tous les hosts (inutile de maintenir une IP locale)
+if DEBUG:
+    ALLOWED_HOSTS = ['*']  # NOSONAR - intentionnel en développement local uniquement
+else:
+    ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
 # --- CLÉS SECRÈTES ---
 # En CI/tests : fallback pour que pytest puisse tourner (SECRET_KEY non définie).
