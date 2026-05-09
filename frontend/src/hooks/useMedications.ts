@@ -57,12 +57,9 @@ export function useMedications(): UseMedicationsReturn {
   const addMedication = useCallback(
     async (payload: CreateUserMedicationPayload): Promise<UserMedication | null> => {
       const created = await medicationService.create(payload);
-      if (created) {
-        setMedications(prev => [created, ...prev]);
-        // Reload today's intakes so the new schedules appear
-        const today = await medicationService.getToday();
-        setTodayIntakes(today);
-      }
+      setMedications(prev => [created, ...prev]);
+      const today = await medicationService.getToday();
+      setTodayIntakes(today);
       return created;
     },
     []

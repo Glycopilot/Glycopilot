@@ -3,7 +3,8 @@ import logging
 
 from django.utils import timezone
 from rest_framework import permissions, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from .models import (
@@ -32,13 +33,14 @@ class MedicationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Medication.objects.all()
     serializer_class = MedicationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         qs = Medication.objects.all()
         q = self.request.query_params.get("q")
         if q:
             qs = qs.filter(name__icontains=q)
-        return qs.order_by("name")
+        return qs.order_by("name")[:50]
 
 
 class UserMedicationViewSet(viewsets.ModelViewSet):
@@ -79,7 +81,7 @@ class UserMedicationViewSet(viewsets.ModelViewSet):
             models_end_date_filter(today)
         )
 
-        intakes = []
+        intake_ids = []
         for user_med in active_meds:
             for schedule in user_med.schedules.all():
                 intake, _ = MedicationIntake.objects.get_or_create(
@@ -91,7 +93,19 @@ class UserMedicationViewSet(viewsets.ModelViewSet):
                         "status": IntakeStatus.PENDING,
                     },
                 )
-                intakes.append(intake)
+                intake_ids.append(intake.id)
+
+        # Re-requêter avec select_related pour garantir que
+        # user_medication.medication est chargé (évite display_name=None)
+        intakes = (
+            MedicationIntake.objects.filter(id__in=intake_ids)
+            .select_related(
+                "user_medication__medication",
+                "user_medication__user",
+                "schedule",
+            )
+            .order_by("scheduled_time")
+        )
 
         serializer = TodayIntakeSerializer(intakes, many=True)
         return Response(serializer.data)
@@ -197,5 +211,19 @@ class MedicationIntakeViewSet(viewsets.ModelViewSet):
         med_id = request.query_params.get("medication_id")
         if med_id:
             qs = qs.filter(user_medication_id=med_id)
-        serializer = MedicationIntakeSerializer(qs[:100], many=True)
+        serializer = TodayIntakeSerializer(qs[:100], many=True)
         return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def trigger_medication_reminders(request):
+    """
+    Déclenche manuellement l'envoi des rappels médicaments.
+    Réservé aux admins — utile pour tests.
+    POST /api/medications/reminders/trigger/
+    """
+    from apps.medications.services.reminders import send_due_medication_reminders
+
+    stats = send_due_medication_reminders()
+    return Response({"status": "ok", **stats})

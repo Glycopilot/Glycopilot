@@ -57,6 +57,7 @@ class UserMedicationSerializer(serializers.ModelSerializer):
         source="medication",
         write_only=True,
         required=False,
+        default=None,
         allow_null=True,
     )
     schedules = MedicationScheduleSerializer(many=True, read_only=True)
