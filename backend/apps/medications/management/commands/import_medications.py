@@ -138,8 +138,8 @@ class Command(BaseCommand):
                         medication_id=medication_id,
                         defaults={
                             "name": row["name"],
-                            "type": row.get("type"),
-                            "dosage": row.get("dosage"),
+                            "type": row.get("type") or "",
+                            "dosage": row.get("dosage") or "",
                             "interval_h": interval_h,
                             "max_duration_d": max_duration_d,
                         },

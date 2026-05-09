@@ -11,13 +11,19 @@ import type {
 
 type PaginatedResponse<T> = { results: T[] };
 
+function valToString(val: unknown, fallback: string): string {
+  if (Array.isArray(val)) return String(val[0]);
+  if (typeof val === 'string') return val;
+  return fallback;
+}
+
 function parseBackendError(data: unknown, fallback: string): string {
   if (typeof data === 'string') return data;
   if (data && typeof data === 'object') {
     const entries = Object.entries(data as Record<string, unknown>);
     if (entries.length > 0) {
       const [field, val] = entries[0];
-      const msg = Array.isArray(val) ? String(val[0]) : (typeof val === 'string' ? val : fallback);
+      const msg = valToString(val, fallback);
       return field === 'non_field_errors' ? msg : `${field}: ${msg}`;
     }
   }
@@ -26,8 +32,9 @@ function parseBackendError(data: unknown, fallback: string): string {
 
 function extractListData<T>(data: T[] | PaginatedResponse<T>): T[] {
   if (Array.isArray(data)) return data;
-  if (data && Array.isArray((data as PaginatedResponse<T>).results)) {
-    return (data as PaginatedResponse<T>).results;
+  const paginated = data as PaginatedResponse<T>;
+  if (paginated && Array.isArray(paginated.results)) {
+    return paginated.results;
   }
   return [];
 }

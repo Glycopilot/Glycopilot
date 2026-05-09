@@ -63,17 +63,13 @@ def send_due_medication_reminders() -> dict:
             )
             if result.get("success"):
                 stats["sent"] += 1
-                logger.info(
-                    f"[REMINDER] Rappel envoyé user#{user.pk} pour {med_name} @ {intake.scheduled_time}"
-                )
+                logger.info("[REMINDER] sent intake=%s at=%s", intake.id, intake.scheduled_time)
             else:
                 stats["skipped"] += 1
-                logger.info(
-                    f"[REMINDER] Skipped user#{user.pk} (no tokens): {result.get('error')}"
-                )
+                logger.info("[REMINDER] skipped intake=%s reason=%s", intake.id, result.get("error"))
         except Exception as e:
             stats["errors"] += 1
-            logger.error(f"[REMINDER] Erreur envoi rappel {intake.id}: {e}")
+            logger.error("[REMINDER] error intake=%s: %s", intake.id, e)
 
-    logger.info(f"[REMINDER] Résultat: {stats}")
+    logger.info("[REMINDER] done sent=%s skipped=%s errors=%s", stats["sent"], stats["skipped"], stats["errors"])
     return stats
