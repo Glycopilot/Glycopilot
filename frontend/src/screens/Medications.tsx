@@ -261,7 +261,7 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
           {/* List */}
           <View style={styles.list}>
             {currentTab === 'toTake' && renderToTakeTab()}
-            {currentTab === 'history' ? (
+            {currentTab === 'history' && (
               <>
                 {historyLoaded && (
                   <View style={styles.adherenceCard}>
