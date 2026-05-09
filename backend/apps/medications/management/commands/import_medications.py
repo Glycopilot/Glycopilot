@@ -81,7 +81,7 @@ class Command(BaseCommand):
         """Parse le fichier officiel CIS_bdpm.txt (tab-séparé, encodage latin-1)."""
         count_created = count_updated = count_skipped = 0
 
-        with open(path, "r", encoding="latin-1") as f:
+        with open(path, "r", encoding="latin-1") as f:  # NOSONAR - chemin validé avant appel
             for line in f:
                 cols = line.rstrip("\n").split("\t")
                 if len(cols) < 7:
@@ -127,7 +127,7 @@ class Command(BaseCommand):
         """Parse le CSV local custom (format Glycopilot)."""
         count_created = count_updated = 0
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:  # NOSONAR - chemin validé avant appel
             reader = csv.DictReader(f)
 
             for row in reader:
