@@ -38,13 +38,29 @@ const medicationService = {
     }
   },
 
-  async create(payload: CreateUserMedicationPayload): Promise<UserMedication | null> {
+  async create(payload: CreateUserMedicationPayload): Promise<UserMedication> {
     try {
       const response = await apiClient.post<UserMedication>('/medications/log/', payload);
       return response.data;
     } catch (error) {
-      console.warn('medicationService.create error:', (error as AxiosError).message);
-      return null;
+      const axiosError = error as AxiosError<Record<string, unknown>>;
+      const data = axiosError.response?.data;
+      let message = "Impossible d'ajouter le médicament";
+      if (data) {
+        if (typeof data === 'string') {
+          message = data;
+        } else if (typeof data === 'object') {
+          const entries = Object.entries(data as Record<string, unknown>);
+          if (entries.length > 0) {
+            const [field, val] = entries[0];
+            const errMsg = Array.isArray(val) ? String(val[0]) : String(val ?? message);
+            // Afficher le champ pour faciliter le debug
+            message = field === 'non_field_errors' ? errMsg : `${field}: ${errMsg}`;
+          }
+        }
+      }
+      console.warn('[medicationService.create] HTTP', axiosError.response?.status, JSON.stringify(data));
+      throw new Error(message);
     }
   },
 

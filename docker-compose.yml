@@ -59,7 +59,23 @@ services:
       redis_local:
         condition: service_healthy
     restart: unless-stopped
-    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+    command: sh -c "python manage.py migrate && python manage.py import_medications && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+
+  # --- Scheduler rappels médicaments (local) ---
+  medication_scheduler_local:
+    profiles: ["local"]
+    image: glycopilot-backend
+    container_name: glycopilot-med-scheduler
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend_local:
+        condition: service_started
+    restart: unless-stopped
+    command: >
+      sh -c "while true; do python manage.py send_medication_reminders; sleep 60; done"
 
   # --- Frontend React Native (local) ---
   frontend:
@@ -180,6 +196,24 @@ services:
       - glycopilot-network
     expose:
       - "8000"
+
+  # --- Scheduler rappels médicaments (AWS) ---
+  medication_scheduler_aws:
+    profiles: ["aws"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: glycopilot-med-scheduler-aws
+    restart: always
+    env_file:
+      - ./backend/.env.prod
+    depends_on:
+      backend_aws:
+        condition: service_started
+    networks:
+      - glycopilot-network
+    command: >
+      sh -c "while true; do python manage.py send_medication_reminders; sleep 60; done"
 
   # --- Nginx Reverse Proxy (AWS) ---
   nginx:

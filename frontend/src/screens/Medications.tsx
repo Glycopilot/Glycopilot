@@ -76,9 +76,16 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
     return total > 0 ? Math.round((taken / total) * 100) : 0;
   }, [intakeHistory, todayIntakes]);
 
-  const nextIntake = useMemo(() => {
+  // Prochain intake à venir (heure >= maintenant), null si aucun
+  const nextUpcomingIntake = useMemo(() => {
     const nowTime = new Date().toTimeString().slice(0, 5);
-    return pendingIntakes.find(i => i.scheduled_time >= nowTime) ?? pendingIntakes[0] ?? null;
+    return pendingIntakes.find(i => i.scheduled_time.slice(0, 5) >= nowTime) ?? null;
+  }, [pendingIntakes]);
+
+  // Intake en retard (heure < maintenant, toujours pending)
+  const overdueIntake = useMemo(() => {
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    return pendingIntakes.find(i => i.scheduled_time.slice(0, 5) < nowTime) ?? null;
   }, [pendingIntakes]);
 
   // ── tab ──
@@ -211,9 +218,10 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
             </TouchableOpacity>
           </View>
 
-          {nextIntake && (
+          {(nextUpcomingIntake || overdueIntake) && (
             <NextReminderCard
-              nextIntake={nextIntake}
+              nextIntake={nextUpcomingIntake ?? overdueIntake!}
+              isOverdue={!nextUpcomingIntake && !!overdueIntake}
               onViewAll={() => navigation.navigate('Notifications')}
             />
           )}
