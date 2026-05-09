@@ -24,6 +24,10 @@ expo-env.d.ts
 # Test coverage artifacts
 coverage/
 
+# Firebase / Google Services config (vrais credentials distribués hors repo)
+google-services.json
+GoogleService-Info.plist
+
 # debug
 npm-debug.*
 yarn-debug.*
