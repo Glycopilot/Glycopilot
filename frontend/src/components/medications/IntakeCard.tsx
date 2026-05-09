@@ -10,10 +10,10 @@ import {
 } from './medications.constants';
 
 interface IntakeCardProps {
-  intake: MedicationIntake;
-  onTake: () => void;
-  onSnooze: () => void;
-  onMiss: () => void;
+  readonly intake: MedicationIntake;
+  readonly onTake: () => void;
+  readonly onSnooze: () => void;
+  readonly onMiss: () => void;
 }
 
 export default function IntakeCard({ intake, onTake, onSnooze, onMiss }: IntakeCardProps) {

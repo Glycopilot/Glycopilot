@@ -76,6 +76,11 @@ class Command(BaseCommand):
         else:
             self._import_csv(file_path)
 
+    @staticmethod
+    def _is_commercialised(cols: list) -> bool:
+        status = cols[BDPM_COL_MARKETING].strip().lower()
+        return "commercialisé" in status or "autorisé" in status
+
     def _import_bdpm(self, path: Path):
         """Parse le fichier officiel CIS_bdpm.txt (tab-séparé, encodage latin-1)."""
         count_created = count_updated = count_skipped = 0
@@ -86,9 +91,7 @@ class Command(BaseCommand):
                 if len(cols) < 7:
                     continue
 
-                # Filtrer : garder seulement les médicaments commercialisés
-                marketing_status = cols[BDPM_COL_MARKETING].strip().lower()
-                if "commercialisé" not in marketing_status and "autorisé" not in marketing_status:
+                if not self._is_commercialised(cols):
                     count_skipped += 1
                     continue
 
@@ -101,13 +104,9 @@ class Command(BaseCommand):
                     if not cis_code or not name:
                         continue
 
-                    obj, created = Medication.objects.update_or_create(
+                    _, created = Medication.objects.update_or_create(
                         cis_code=cis_code,
-                        defaults={
-                            "name": name,
-                            "form": form,
-                            "route": route,
-                        },
+                        defaults={"name": name, "form": form, "route": route},
                     )
                     if created:
                         count_created += 1

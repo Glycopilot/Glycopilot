@@ -6,10 +6,10 @@ import type { UserMedication } from '../../types/medications.types';
 import { MEAL_TIMING_LABELS } from './medications.constants';
 
 interface ActiveMedListProps {
-  medications: UserMedication[];
-  onEdit: (med: UserMedication) => void;
-  onDelete: (med: UserMedication) => void;
-  onAdd: () => void;
+  readonly medications: UserMedication[];
+  readonly onEdit: (med: UserMedication) => void;
+  readonly onDelete: (med: UserMedication) => void;
+  readonly onAdd: () => void;
 }
 
 export default function ActiveMedList({ medications, onEdit, onDelete, onAdd }: ActiveMedListProps) {
