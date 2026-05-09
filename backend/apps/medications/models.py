@@ -10,8 +10,8 @@ class Medication(models.Model):
     interval_h = models.IntegerField(blank=True, null=True)
     max_duration_d = models.IntegerField(blank=True, null=True)
     cis_code = models.CharField(max_length=50, blank=True, null=True, unique=True)
-    form = models.CharField(max_length=150, blank=True, null=True)
-    route = models.CharField(max_length=200, blank=True, null=True)
+    form = models.CharField(max_length=150, blank=True, default="")
+    route = models.CharField(max_length=200, blank=True, default="")
 
     class Meta:
         db_table = "medications"
