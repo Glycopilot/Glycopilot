@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,50 +17,40 @@ type Props = {
   navigation: { navigate: (screen: string) => void };
 };
 
+const JUGGLUCO_INSTALL_URL = 'https://www.juggluco.nl/Juggluco/';
+
 export default function SensorActivationScreen({ navigation }: Props) {
   const sensor = useLibre2Sensor();
 
-  const onActivate = async () => {
-    try {
-      await sensor.activate();
-    } catch (e: any) {
-      Alert.alert('Activation échouée', e?.message ?? 'Erreur inconnue');
-    }
-  };
-
   const onStart = async () => {
     try {
-      await sensor.startStreaming();
+      const installed = await sensor.start();
+      if (!installed) {
+        Alert.alert(
+          'Juggluco non installé',
+          'Glycopilot a besoin de l\'application Juggluco pour communiquer avec le capteur Libre 2+. Voulez-vous l\'ouvrir maintenant ?',
+          [
+            { text: 'Plus tard', style: 'cancel' },
+            { text: 'Installer', onPress: () => Linking.openURL(JUGGLUCO_INSTALL_URL) },
+          ]
+        );
+      }
     } catch (e: any) {
-      Alert.alert('Connexion BLE impossible', e?.message ?? 'Erreur inconnue');
+      Alert.alert('Erreur', e?.message ?? 'Impossible de démarrer la surveillance');
     }
-  };
-
-  const onForget = () => {
-    Alert.alert(
-      'Oublier le capteur',
-      'Tu devras refaire le scan NFC pour ré-activer un capteur. Continuer ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Oublier',
-          style: 'destructive',
-          onPress: () => sensor.forget(),
-        },
-      ]
-    );
   };
 
   return (
     <Layout navigation={navigation}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Capteur Libre 2</Text>
+        <Text style={styles.title}>Surveillance temps réel</Text>
         <Text style={styles.subtitle}>
-          Approche ton téléphone du patch pour activer le capteur, puis démarre
-          la surveillance temps réel.
+          Glycopilot reçoit les valeurs du capteur Libre 2+ via l'app Juggluco
+          tournant en arrière-plan. Configurez Juggluco et LibreLink une fois,
+          puis ouvrez la surveillance ci-dessous.
         </Text>
 
-        <StatusCard status={sensor.status} bleState={sensor.bleState} />
+        <StatusCard status={sensor.status} />
 
         {sensor.error && (
           <View style={styles.errorBox}>
@@ -68,56 +58,35 @@ export default function SensorActivationScreen({ navigation }: Props) {
           </View>
         )}
 
-        {!sensor.sensor && (
-          <Pressable
-            style={[styles.primaryButton, sensor.status === 'ACTIVATING' && styles.disabled]}
-            onPress={onActivate}
-            disabled={sensor.status === 'ACTIVATING'}>
-            {sensor.status === 'ACTIVATING' ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Scanner le capteur (NFC)</Text>
-            )}
+        {sensor.current && (
+          <View style={styles.liveBox}>
+            <Text style={styles.liveLabel}>Glycémie en direct</Text>
+            <Text style={styles.liveValue}>{sensor.current.mgdl} mg/dL</Text>
+            <Text style={styles.liveTimestamp}>
+              Capteur {sensor.current.serial || '—'} · reçu à{' '}
+              {sensor.current.measuredAt.toLocaleTimeString()}
+            </Text>
+          </View>
+        )}
+
+        {sensor.status === 'IDLE' || sensor.status === 'NO_JUGGLUCO' || sensor.status === 'ERROR' ? (
+          <Pressable style={styles.primaryButton} onPress={onStart}>
+            <Text style={styles.primaryButtonText}>Activer la surveillance</Text>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.secondaryButton} onPress={() => sensor.stop()}>
+            <Text style={styles.secondaryButtonText}>Arrêter la surveillance</Text>
           </Pressable>
         )}
 
-        {sensor.sensor && (
-          <View style={styles.sensorBlock}>
-            <Field label="Numéro de série" value={sensor.sensor.serial} />
-            <Field label="Adresse BLE" value={sensor.sensor.mac} />
-            <Field
-              label="Compteur unlock"
-              value={String(sensor.sensor.unlockCount)}
-            />
-            {sensor.current && sensor.current.mgdl != null && (
-              <View style={styles.liveBox}>
-                <Text style={styles.liveLabel}>Glycémie en direct</Text>
-                <Text style={styles.liveValue}>
-                  {Math.round(sensor.current.mgdl)} mg/dL
-                </Text>
-                <Text style={styles.liveTimestamp}>
-                  Reçue à {sensor.current.measuredAt.toLocaleTimeString()}
-                </Text>
-              </View>
-            )}
-
-            {sensor.status === 'STREAMING' || sensor.status === 'CONNECTING' ? (
-              <Pressable
-                style={[styles.secondaryButton]}
-                onPress={() => sensor.stopStreaming()}>
-                <Text style={styles.secondaryButtonText}>Arrêter la surveillance</Text>
-              </Pressable>
-            ) : (
-              <Pressable style={styles.primaryButton} onPress={onStart}>
-                <Text style={styles.primaryButtonText}>Démarrer la surveillance</Text>
-              </Pressable>
-            )}
-
-            <Pressable style={styles.dangerButton} onPress={onForget}>
-              <Text style={styles.dangerButtonText}>Oublier ce capteur</Text>
-            </Pressable>
-          </View>
-        )}
+        <View style={styles.helpBox}>
+          <Text style={styles.helpTitle}>Première fois ?</Text>
+          <Text style={styles.helpText}>
+            Suivez le guide de setup pour installer LibreLink, Juggluco, poser
+            votre capteur Libre 2+ et l'activer. Vous n'avez à le faire qu'une
+            fois (puis tous les 14 jours pour un nouveau capteur).
+          </Text>
+        </View>
       </ScrollView>
     </Layout>
   );
@@ -125,25 +94,21 @@ export default function SensorActivationScreen({ navigation }: Props) {
 
 function StatusCard({
   status,
-  bleState,
 }: {
   status: ReturnType<typeof useLibre2Sensor>['status'];
-  bleState: ReturnType<typeof useLibre2Sensor>['bleState'];
 }) {
   const label = (() => {
     switch (status) {
       case 'IDLE':
-        return 'Aucun capteur activé';
-      case 'ACTIVATING':
-        return 'Approche le téléphone du patch...';
-      case 'ACTIVATED':
-        return 'Capteur activé, prêt à streamer';
-      case 'CONNECTING':
-        return `Connexion BLE en cours${bleState ? ` (${bleState})` : ''}`;
+        return 'Surveillance non démarrée';
+      case 'NO_JUGGLUCO':
+        return 'Juggluco non installée — installer l\'app pour continuer';
+      case 'WAITING':
+        return 'En attente d\'une mesure de Juggluco...';
       case 'STREAMING':
-        return 'Streaming en cours — données toutes les 60 secondes';
+        return 'Mesures reçues en direct';
       case 'ERROR':
-        return 'Erreur';
+        return 'Erreur — voir le détail ci-dessous';
     }
   })();
   return (
@@ -153,19 +118,15 @@ function StatusCard({
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <Text style={styles.fieldValue}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { padding: 20, paddingBottom: 80 },
   title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
-  subtitle: { fontSize: 14, color: colors.textSecondary, marginBottom: 24, lineHeight: 20 },
+  subtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
   statusCard: {
     backgroundColor: colors.lightBg,
     padding: 16,
@@ -180,21 +141,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: { color: '#900', fontSize: 13 },
-  sensorBlock: { marginTop: 8 },
-  field: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomColor: colors.lightBg,
-    borderBottomWidth: 1,
-  },
-  fieldLabel: { color: colors.textSecondary, fontSize: 13 },
-  fieldValue: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
   liveBox: {
     backgroundColor: colors.primary,
     padding: 20,
     borderRadius: 12,
-    marginTop: 16,
+    marginVertical: 16,
     alignItems: 'center',
   },
   liveLabel: { color: '#fff', fontSize: 12, opacity: 0.85 },
@@ -221,12 +172,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   secondaryButtonText: { color: '#fff', fontSize: 14 },
-  dangerButton: {
-    paddingVertical: 12,
+  helpBox: {
+    backgroundColor: colors.lightBg,
+    padding: 14,
     borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 12,
+    marginTop: 24,
   },
-  dangerButtonText: { color: '#900', fontSize: 13 },
-  disabled: { opacity: 0.6 },
+  helpTitle: { fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  helpText: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
 });
