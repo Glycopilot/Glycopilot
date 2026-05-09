@@ -5,7 +5,7 @@ Appelé par la management command `send_medication_reminders`
 toutes les minutes (via le scheduler Docker).
 """
 
-import logging
+import logging  # NOSONAR
 from datetime import timedelta
 
 from django.utils import timezone
