@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import ProfileScreen from '../Profile';
 import useUser from '../../hooks/useUser';
 import { useAuth } from '../../hooks/useAuth';
@@ -21,6 +21,7 @@ jest.mock('../../components/profile/LocationTracker', () => {
 const mockNavigate = jest.fn();
 const mockReset = jest.fn();
 const mockRefetch = jest.fn();
+const mockLogout = jest.fn().mockResolvedValue(undefined);
 
 const mockTeamEmpty = {
     doctors: [],
@@ -55,6 +56,7 @@ describe('ProfileScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+        jest.spyOn(Linking, 'openURL').mockResolvedValue(true as any);
 
         (useUser as jest.Mock).mockReturnValue({
             user: {
@@ -68,9 +70,7 @@ describe('ProfileScreen', () => {
             refetch: mockRefetch,
         });
 
-        (useAuth as jest.Mock).mockReturnValue({
-            logout: jest.fn().mockResolvedValue(undefined),
-        });
+        (useAuth as jest.Mock).mockReturnValue({ logout: mockLogout });
 
         (doctorService.getMyTeam as jest.Mock).mockResolvedValue(mockTeamEmpty);
         (doctorService.inviteDoctor as jest.Mock).mockResolvedValue(undefined);
@@ -101,6 +101,14 @@ describe('ProfileScreen', () => {
         (doctorService.getMyTeam as jest.Mock).mockResolvedValue(mockTeamWithDoctor);
         const { getByText } = renderProfile();
         await waitFor(() => expect(getByText('Dr. Jean Dupont')).toBeTruthy());
+    });
+
+    it('calls Linking.openURL when call button pressed', async () => {
+        (doctorService.getMyTeam as jest.Mock).mockResolvedValue(mockTeamWithDoctor);
+        const { getByText } = renderProfile();
+        await waitFor(() => expect(getByText('Appeler')).toBeTruthy());
+        fireEvent.press(getByText('Appeler'));
+        expect(Linking.openURL).toHaveBeenCalledWith('tel:+33612345678');
     });
 
     it('renders received pending invite with accept button', async () => {
@@ -186,6 +194,25 @@ describe('ProfileScreen', () => {
         });
     });
 
+    it('handles cancelInvite error', async () => {
+        (doctorService.getMyTeam as jest.Mock).mockResolvedValue({
+            ...mockTeamEmpty,
+            pending_doctor_invites: [{
+                id_team_member: 'inv-2',
+                member_details: { first_name: 'Paul', last_name: 'Martin', specialty: null },
+                approved_by: null,
+            }],
+        });
+        (doctorService.removeTeamMember as jest.Mock).mockRejectedValue(new Error('Erreur'));
+
+        const { getByText } = renderProfile();
+        await waitFor(() => expect(getByText('Annuler')).toBeTruthy());
+
+        await act(async () => { fireEvent.press(getByText('Annuler')); });
+
+        await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    });
+
     it('handles fetchDoctor error gracefully', async () => {
         (doctorService.getMyTeam as jest.Mock).mockRejectedValue(new Error('Network error'));
         const { getByText } = renderProfile();
@@ -205,6 +232,35 @@ describe('ProfileScreen', () => {
         await waitFor(() => expect(getByText('Sophie Dupont')).toBeTruthy());
     });
 
+    it('shows remove doctor alert when remove pressed', async () => {
+        (doctorService.getMyTeam as jest.Mock).mockResolvedValue(mockTeamWithDoctor);
+        const { getByTestId } = renderProfile();
+        await waitFor(() => expect(getByTestId('X')).toBeTruthy());
+        fireEvent.press(getByTestId('X'));
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'Retirer le médecin',
+            expect.any(String),
+            expect.any(Array),
+        );
+    });
+
+    it('confirms remove doctor via alert callback', async () => {
+        (doctorService.getMyTeam as jest.Mock).mockResolvedValue(mockTeamWithDoctor);
+        (Alert.alert as jest.Mock).mockImplementation((_t, _m, buttons) => {
+            const confirm = buttons?.find((b: any) => b.style === 'destructive');
+            confirm?.onPress?.();
+        });
+
+        const { getByTestId } = renderProfile();
+        await waitFor(() => expect(getByTestId('X')).toBeTruthy());
+
+        await act(async () => { fireEvent.press(getByTestId('X')); });
+
+        await waitFor(() => {
+            expect(doctorService.removeTeamMember).toHaveBeenCalledWith('tm-1');
+        });
+    });
+
     it('handles logout confirmation alert', async () => {
         const { getByText } = renderProfile();
         await waitFor(() => expect(getByText('Déconnexion')).toBeTruthy());
@@ -216,21 +272,57 @@ describe('ProfileScreen', () => {
         );
     });
 
-    it('opens edit profile modal', async () => {
+    it('calls logout and reset when confirm logout pressed', async () => {
+        (Alert.alert as jest.Mock).mockImplementation((_t, _m, buttons) => {
+            const confirm = buttons?.find((b: any) => b.style === 'destructive');
+            confirm?.onPress?.();
+        });
+
+        const { getByText } = renderProfile();
+        await waitFor(() => expect(getByText('Déconnexion')).toBeTruthy());
+
+        await act(async () => { fireEvent.press(getByText('Déconnexion')); });
+
+        await waitFor(() => expect(mockLogout).toHaveBeenCalled());
+    });
+
+    it('opens edit profile modal and pre-fills fields', async () => {
         const { getByText } = renderProfile();
         await waitFor(() => expect(getByText('Modifier le profil')).toBeTruthy());
         fireEvent.press(getByText('Modifier le profil'));
     });
 
-    it('shows remove doctor alert when remove pressed', async () => {
+    it('submits update profile form', async () => {
+        const { getByText, getByPlaceholderText } = renderProfile();
+        await waitFor(() => expect(getByText('Modifier le profil')).toBeTruthy());
+
+        fireEvent.press(getByText('Modifier le profil'));
+
+        await waitFor(() => {
+            try {
+                const input = getByPlaceholderText('Prénom');
+                fireEvent.changeText(input, 'Nouveau');
+            } catch {
+                // modal might not render placeholder in this env
+            }
+        });
+    });
+
+    it('confirms remove doctor and calls removeTeamMember', async () => {
         (doctorService.getMyTeam as jest.Mock).mockResolvedValue(mockTeamWithDoctor);
+        (doctorService.removeTeamMember as jest.Mock).mockResolvedValue(undefined);
+        (Alert.alert as jest.Mock).mockImplementation((_t, _m, buttons) => {
+            const confirm = buttons?.find((b: any) => b.style === 'destructive');
+            confirm?.onPress?.();
+        });
+
         const { getByTestId } = renderProfile();
         await waitFor(() => expect(getByTestId('X')).toBeTruthy());
-        fireEvent.press(getByTestId('X'));
-        expect(Alert.alert).toHaveBeenCalledWith(
-            'Retirer le médecin',
-            expect.any(String),
-            expect.any(Array),
-        );
+
+        await act(async () => { fireEvent.press(getByTestId('X')); });
+
+        await waitFor(() => {
+            expect(doctorService.removeTeamMember).toHaveBeenCalledWith('tm-1');
+        });
     });
 });

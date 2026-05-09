@@ -116,4 +116,87 @@ describe('useDashboard hook', () => {
 
         expect(result.current.error).toBe('Load error');
     });
+
+    it('should load alerts module data', async () => {
+        const alertsData = [{ id: '1', type: 'hypo' }];
+        (dashboardService.getAlerts as jest.Mock).mockResolvedValue(alertsData);
+
+        const { result } = renderHook(() => useDashboard({ autoLoad: false }));
+
+        await act(async () => {
+            await result.current.loadModuleData('alerts');
+        });
+
+        expect(dashboardService.getAlerts).toHaveBeenCalled();
+    });
+
+    it('should load medication module data', async () => {
+        const medicationData = { taken_count: 1, total_count: 2, nextDose: null };
+        (dashboardService.getMedicationData as jest.Mock).mockResolvedValue(medicationData);
+
+        const { result } = renderHook(() => useDashboard({ autoLoad: false }));
+
+        await act(async () => {
+            await result.current.loadModuleData('medication');
+        });
+
+        expect(dashboardService.getMedicationData).toHaveBeenCalled();
+    });
+
+    it('should load nutrition module data', async () => {
+        (dashboardService.getNutritionData as jest.Mock).mockResolvedValue({});
+
+        const { result } = renderHook(() => useDashboard({ autoLoad: false }));
+
+        await act(async () => {
+            await result.current.loadModuleData('nutrition');
+        });
+
+        expect(dashboardService.getNutritionData).toHaveBeenCalled();
+    });
+
+    it('should load activity module data', async () => {
+        (dashboardService.getActivityData as jest.Mock).mockResolvedValue({});
+
+        const { result } = renderHook(() => useDashboard({ autoLoad: false }));
+
+        await act(async () => {
+            await result.current.loadModuleData('activity');
+        });
+
+        expect(dashboardService.getActivityData).toHaveBeenCalled();
+    });
+
+    it('should handle refresh error', async () => {
+        (dashboardService.getSummary as jest.Mock).mockRejectedValue(new Error('Refresh error'));
+
+        const { result } = renderHook(() => useDashboard({ autoLoad: false }));
+
+        await act(async () => {
+            try {
+                await result.current.refresh();
+            } catch {
+                // Expected
+            }
+        });
+
+        expect(result.current.error).toBe('Refresh error');
+    });
+
+    it('should trigger auto-refresh with refreshInterval', async () => {
+        jest.useFakeTimers();
+        (dashboardService.getSummary as jest.Mock).mockResolvedValue(mockDashboardSummary);
+        (dashboardService.getWidgets as jest.Mock).mockResolvedValue(mockWidgets);
+        (dashboardService.getWidgetLayouts as jest.Mock).mockResolvedValue(mockLayouts);
+
+        renderHook(() => useDashboard({ autoLoad: false, refreshInterval: 1000 }));
+
+        act(() => { jest.advanceTimersByTime(1000); });
+
+        await waitFor(() => {
+            expect(dashboardService.getSummary).toHaveBeenCalled();
+        });
+
+        jest.useRealTimers();
+    });
 });
