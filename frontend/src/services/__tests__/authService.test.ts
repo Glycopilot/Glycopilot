@@ -214,5 +214,34 @@ describe('authService', () => {
             const result = await authService.getStoredUser();
             expect(result).toBeNull();
         });
+
+        it('getTokens should return nulls on storage error', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('Storage error'));
+            const result = await authService.getTokens();
+            expect(result).toEqual({ accessToken: null, refreshToken: null });
+        });
+
+        it('isAuthenticated should return false on storage error', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('Storage error'));
+            const result = await authService.isAuthenticated();
+            expect(result).toBe(false);
+        });
+    });
+
+    describe('logout storage error', () => {
+        it('should still complete logout if storage clear throws', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+            (AsyncStorage.removeItem as jest.Mock).mockRejectedValue(new Error('Storage error'));
+
+            const result = await authService.logout();
+            expect(result.message).toBe('Déconnexion réussie');
+        });
+    });
+
+    describe('register error formats', () => {
+        it('should handle string error response', async () => {
+            mock.onPost(/\/auth\/register/).reply(400, 'Simple error string');
+            await expect(authService.register({} as any)).rejects.toThrow('Simple error string');
+        });
     });
 });
