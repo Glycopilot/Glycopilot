@@ -5,8 +5,8 @@ from django.db import models
 class Medication(models.Model):
     medication_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=300)
-    type = models.CharField(max_length=100, blank=True, null=True)
-    dosage = models.CharField(max_length=100, blank=True, null=True)
+    type = models.CharField(max_length=100, blank=True, default="")
+    dosage = models.CharField(max_length=100, blank=True, default="")
     interval_h = models.IntegerField(blank=True, null=True)
     max_duration_d = models.IntegerField(blank=True, null=True)
     cis_code = models.CharField(max_length=50, blank=True, null=True, unique=True)
@@ -47,8 +47,8 @@ class UserMedication(models.Model):
         null=True,
     )
     # Used when medication is null (manual/prescribed)
-    custom_name = models.CharField(max_length=150, blank=True, null=True)
-    custom_dosage = models.CharField(max_length=100, blank=True, null=True)
+    custom_name = models.CharField(max_length=150, blank=True, default="")
+    custom_dosage = models.CharField(max_length=100, blank=True, default="")
 
     # Treatment configuration
     start_date = models.DateField()
