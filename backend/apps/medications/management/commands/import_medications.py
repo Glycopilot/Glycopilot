@@ -2,7 +2,7 @@
 Import medications from either:
   - Local custom CSV  (default, fichier data/import/medications.csv)
   - BDPM official file (--bdpm, fichier CIS_bdpm.txt téléchargé depuis
-    https://base-donnees-publique.medicaments.gouv.fr/telechargement.php)
+    base-donnees-publique.medicaments.gouv.fr (page Téléchargement))
 
 Usage:
   python manage.py import_medications              # CSV local (15 médicaments diabète)
@@ -19,7 +19,7 @@ from django.core.management.base import BaseCommand
 from apps.medications.models import Medication
 
 # Colonnes du fichier BDPM CIS_bdpm.txt (séparateur \t)
-# Ref: https://base-donnees-publique.medicaments.gouv.fr/docs/Contenu_et_format_des_fichiers_CIS-CIP-COMPO-HAS-CPD_v1.5.pdf
+# Ref: base-donnees-publique.medicaments.gouv.fr (doc format CIS-CIP-COMPO)
 BDPM_COL_CIS = 0         # Code CIS
 BDPM_COL_NAME = 1        # Dénomination
 BDPM_COL_FORM = 2        # Forme pharmaceutique
@@ -64,8 +64,7 @@ class Command(BaseCommand):
             if use_bdpm:
                 self.stdout.write(self.style.ERROR(
                     f"Fichier BDPM non trouvé : {file_path}\n"
-                    "Téléchargez CIS_bdpm.txt depuis :\n"
-                    "https://base-donnees-publique.medicaments.gouv.fr/telechargement.php\n"
+                    "Téléchargez CIS_bdpm.txt depuis la page Téléchargement BDPM\n"
                     f"et placez-le dans {data_dir}/"
                 ))
             else:
