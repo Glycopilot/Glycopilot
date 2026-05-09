@@ -41,7 +41,8 @@ async function fetchFdaSuggestions(query: string): Promise<FdaMedicationResult[]
   // Encode the query text but append * outside encoding (wildcard for prefix search)
   const encoded = encodeURIComponent(query.trim());
   const search = `openfda.brand_name:${encoded}*+openfda.generic_name:${encoded}*`;
-  const baseUrl = process.env.EXPO_PUBLIC_FDA_API_URL ?? 'https://api.fda.gov/drug/label.json';
+  const baseUrl = process.env.EXPO_PUBLIC_FDA_API_URL;
+  if (!baseUrl) return [];
   const url = `${baseUrl}?search=${search}&limit=10`;
   const res = await fetch(url);
   // OpenFDA returns 404 when no results — treat as empty, not an error
