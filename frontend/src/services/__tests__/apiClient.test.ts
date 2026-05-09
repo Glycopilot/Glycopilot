@@ -149,7 +149,7 @@ describe('apiClient URL detection', () => {
             },
         }));
         const { API_URL: devApiUrl, WS_URL: devWsUrl } = require('../apiClient');
-        expect(devApiUrl).toBe('http://10.0.0.1:8006/api');
+        expect(devApiUrl).toBe('http://10.0.0.1:8006/api'); // NOSONAR - URL de dev local uniquement
         expect(devWsUrl).toBe('ws://10.0.0.1:8006');
     });
 });
