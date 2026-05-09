@@ -26,13 +26,16 @@ import type { MedicationIntake } from '../types/medications.types';
 
 type SectionType = 'alerts' | 'medications';
 type AlertFilter = 'all' | 'hypo' | 'hyper';
-type IntakeFilter = 'all' | 'taken' | 'missed' | 'snoozed';
+type IntakeFilter = 'all' | 'overdue' | 'taken' | 'missed' | 'snoozed';
 
 interface NotificationsScreenProps {
   readonly navigation: any;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+
+const MED_BLUE = '#007AFF';
+const OVERDUE_COLOR = '#EF4444';
 
 function getRelativeTime(dateStr: string): string {
   const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
@@ -41,6 +44,24 @@ function getRelativeTime(dateStr: string): string {
   const diffH = Math.floor(diffMin / 60);
   if (diffH < 24) return `Il y a ${diffH}h`;
   return `Il y a ${Math.floor(diffH / 24)}j`;
+}
+
+function isOverdueIntake(intake: MedicationIntake): boolean {
+  if (intake.status !== 'pending') return false;
+  const nowTime = new Date().toTimeString().slice(0, 5);
+  const todayDate = new Date().toISOString().slice(0, 10);
+  return (
+    intake.scheduled_date === todayDate &&
+    intake.scheduled_time.slice(0, 5) < nowTime
+  );
+}
+
+function getIntakeDisplayColor(intake: MedicationIntake): string {
+  return isOverdueIntake(intake) ? OVERDUE_COLOR : getIntakeColor(intake.status);
+}
+
+function getIntakeDisplayLabel(intake: MedicationIntake): string {
+  return isOverdueIntake(intake) ? 'En retard' : getIntakeLabel(intake.status);
 }
 
 function getAlertStatusBadge(status: string): { bg: string; text: string; label: string } {
@@ -87,7 +108,7 @@ function FilterBar({ options, active, activeColor, onSelect }: FilterBarProps) {
 // ─── AlertsSection ────────────────────────────────────────────────────────────
 
 const ALERT_FILTERS: { value: AlertFilter; label: string }[] = [
-  { value: 'all', label: 'Toutes' },
+  { value: 'all',  label: 'Toutes' },
   { value: 'hypo', label: 'Hypo' },
   { value: 'hyper', label: 'Hyper' },
 ];
@@ -128,7 +149,9 @@ function AlertsSection({ alerts, refreshing, onRefresh, onAck }: AlertsSectionPr
       <ScrollView
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF9F1C" />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF9F1C" />
+        }
       >
         {displayed.length === 0 ? (
           <View style={styles.emptyState}>
@@ -193,6 +216,7 @@ function AlertsSection({ alerts, refreshing, onRefresh, onAck }: AlertsSectionPr
 
 const INTAKE_FILTERS: { value: IntakeFilter; label: string }[] = [
   { value: 'all',     label: 'Tous' },
+  { value: 'overdue', label: 'En retard' },
   { value: 'taken',   label: 'Pris' },
   { value: 'missed',  label: 'Manqué' },
   { value: 'snoozed', label: 'Reporté' },
@@ -209,6 +233,7 @@ function MedicationsSection({ intakes, loading, refreshing, onRefresh }: Medicat
   const [filter, setFilter] = useState<IntakeFilter>('all');
 
   const filtered = useMemo(() => {
+    if (filter === 'overdue') return intakes.filter(isOverdueIntake);
     if (filter === 'all') return intakes;
     return intakes.filter(i => i.status === filter);
   }, [intakes, filter]);
@@ -216,7 +241,7 @@ function MedicationsSection({ intakes, loading, refreshing, onRefresh }: Medicat
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#8B5CF6" />
+        <ActivityIndicator size="large" color={MED_BLUE} />
       </View>
     );
   }
@@ -226,27 +251,32 @@ function MedicationsSection({ intakes, loading, refreshing, onRefresh }: Medicat
       <FilterBar
         options={INTAKE_FILTERS}
         active={filter}
-        activeColor="#8B5CF6"
+        activeColor={MED_BLUE}
         onSelect={v => setFilter(v as IntakeFilter)}
       />
       <ScrollView
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8B5CF6" />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MED_BLUE} />
+        }
       >
         {filtered.length === 0 ? (
           <View style={styles.emptyState}>
             <Clock size={48} color="#C7C7CC" strokeWidth={1.5} />
             <Text style={styles.emptyTitle}>Aucun rappel</Text>
             <Text style={styles.emptySubtitle}>
-              L'historique de vos rappels médicaments apparaîtra ici
+              {filter === 'overdue'
+                ? 'Aucune prise en retard'
+                : "L'historique de vos rappels médicaments apparaîtra ici"}
             </Text>
           </View>
         ) : (
           filtered.map(intake => {
-            const color = getIntakeColor(intake.status);
+            const color = getIntakeDisplayColor(intake);
+            const label = getIntakeDisplayLabel(intake);
             return (
-              <View key={intake.id} style={styles.card}>
+              <View key={`${intake.id}-${intake.status}`} style={styles.card}>
                 <View style={styles.cardRow}>
                   <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
                     <Pill size={20} color={color} strokeWidth={2} />
@@ -261,9 +291,7 @@ function MedicationsSection({ intakes, loading, refreshing, onRefresh }: Medicat
                         {formatDate(intake.scheduled_date)} · {intake.scheduled_time.slice(0, 5)}
                       </Text>
                       <View style={[styles.statusBadge, { backgroundColor: `${color}20` }]}>
-                        <Text style={[styles.statusText, { color }]}>
-                          {getIntakeLabel(intake.status)}
-                        </Text>
+                        <Text style={[styles.statusText, { color }]}>{label}</Text>
                       </View>
                     </View>
                   </View>
@@ -299,8 +327,24 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
 
   const fetchIntakes = useCallback(async () => {
     setIntakesLoading(true);
-    const data = await medicationService.getIntakeHistory();
-    setIntakes(data);
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    const todayDate = new Date().toISOString().slice(0, 10);
+
+    const [history, today] = await Promise.all([
+      medicationService.getIntakeHistory(),
+      medicationService.getToday(),
+    ]);
+
+    // Prises en retard = pending + heure dépassée aujourd'hui
+    const overdueToday = today.filter(
+      i =>
+        i.status === 'pending' &&
+        i.scheduled_date === todayDate &&
+        i.scheduled_time.slice(0, 5) < nowTime,
+    );
+
+    // En retard en premier, puis l'historique (pris/manqué/reporté)
+    setIntakes([...overdueToday, ...history]);
     setIntakesLoaded(true);
     setIntakesLoading(false);
   }, []);
@@ -333,7 +377,7 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
   }, []);
 
   const unackedCount = alerts.filter(
-    a => a.status !== 'ACKED' && a.status !== 'RESOLVED'
+    a => a.status !== 'ACKED' && a.status !== 'RESOLVED',
   ).length;
 
   if (alertsLoading) {
@@ -379,7 +423,7 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
           style={[styles.sectionTab, section === 'medications' && styles.sectionTabMedActive]}
           onPress={() => setSection('medications')}
         >
-          <Pill size={15} color={section === 'medications' ? '#8B5CF6' : '#8E8E93'} />
+          <Pill size={15} color={section === 'medications' ? MED_BLUE : '#8E8E93'} />
           <Text style={[styles.sectionTabText, section === 'medications' && styles.sectionTabMedText]}>
             Rappels méd.
           </Text>
@@ -446,10 +490,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
   },
   sectionTabAlertActive: { backgroundColor: '#FFF4E5' },
-  sectionTabMedActive: { backgroundColor: '#F5F3FF' },
+  sectionTabMedActive: { backgroundColor: '#EBF5FF' },
   sectionTabText: { fontSize: 13, fontWeight: '600', color: '#8E8E93' },
   sectionTabAlertText: { color: '#FF9F1C' },
-  sectionTabMedText: { color: '#8B5CF6' },
+  sectionTabMedText: { color: MED_BLUE },
   sectionBadge: {
     backgroundColor: '#DC2626',
     borderRadius: 8,
@@ -462,12 +506,12 @@ const styles = StyleSheet.create({
   sectionBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   filterContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
   filterButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#F2F2F7',
   },
-  filterButtonText: { fontSize: 14, fontWeight: '600', color: '#8E8E93' },
+  filterButtonText: { fontSize: 13, fontWeight: '600', color: '#8E8E93' },
   filterButtonTextActive: { color: '#FFFFFF' },
   scrollContent: { flex: 1 },
   emptyState: {
@@ -492,7 +536,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconContainer: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardContent: { flex: 1, gap: 2 },
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1C1C1E' },
   cardSub: { fontSize: 14, fontWeight: '500', color: '#3C3C43' },
