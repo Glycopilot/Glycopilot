@@ -4,8 +4,8 @@ import { useGlycemiaWebSocket } from '../useGlycemiaWebSocket';
 type WsEventHandler = (event?: any) => void;
 
 class MockWebSocket {
-  static OPEN = 1;
-  static CLOSED = 3;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 3;
 
   readyState = MockWebSocket.OPEN;
   onopen: WsEventHandler | null = null;
@@ -37,12 +37,12 @@ beforeEach(() => {
   const MockWsConstructor = jest.fn(() => mockWsInstance);
   MockWsConstructor.OPEN = MockWebSocket.OPEN;
   MockWsConstructor.CLOSED = MockWebSocket.CLOSED;
-  (global as any).WebSocket = MockWsConstructor;
+  (globalThis as any).WebSocket = MockWsConstructor;
 });
 
 afterEach(() => {
   jest.useRealTimers();
-  delete (global as any).WebSocket;
+  delete (globalThis as any).WebSocket;
 });
 
 describe('useGlycemiaWebSocket', () => {
@@ -64,13 +64,13 @@ describe('useGlycemiaWebSocket', () => {
   it('should not connect when token is null', () => {
     renderHook(() => useGlycemiaWebSocket(null, WS_URL));
 
-    expect(global.WebSocket).not.toHaveBeenCalled();
+    expect((globalThis as any).WebSocket).not.toHaveBeenCalled();
   });
 
   it('should build correct WebSocket URL with token', () => {
     renderHook(() => useGlycemiaWebSocket(TOKEN, WS_URL));
 
-    expect(global.WebSocket).toHaveBeenCalledWith(
+    expect((globalThis as any).WebSocket).toHaveBeenCalledWith(
       `${WS_URL}/ws/glycemia/?token=${TOKEN}`
     );
   });
@@ -182,24 +182,24 @@ describe('useGlycemiaWebSocket', () => {
     renderHook(() => useGlycemiaWebSocket(TOKEN, WS_URL));
     act(() => { mockWsInstance.triggerOpen(); });
 
-    const constructorCallCount = (global.WebSocket as jest.Mock).mock.calls.length;
+    const constructorCallCount = ((globalThis as any).WebSocket as jest.Mock).mock.calls.length;
 
     act(() => { mockWsInstance.triggerClose(4001); });
     act(() => { jest.advanceTimersByTime(5000); });
 
-    expect((global.WebSocket as jest.Mock).mock.calls.length).toBe(constructorCallCount);
+    expect(((globalThis as any).WebSocket as jest.Mock).mock.calls.length).toBe(constructorCallCount);
   });
 
   it('should reconnect after 3s on unexpected close', () => {
     renderHook(() => useGlycemiaWebSocket(TOKEN, WS_URL));
     act(() => { mockWsInstance.triggerOpen(); });
 
-    const callsBefore = (global.WebSocket as jest.Mock).mock.calls.length;
+    const callsBefore = ((globalThis as any).WebSocket as jest.Mock).mock.calls.length;
 
     act(() => { mockWsInstance.triggerClose(1006); });
     act(() => { jest.advanceTimersByTime(3000); });
 
-    expect((global.WebSocket as jest.Mock).mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(((globalThis as any).WebSocket as jest.Mock).mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
   it('should close WebSocket on unmount', () => {
