@@ -6,6 +6,7 @@ from .views import (
     MedicationScheduleViewSet,
     MedicationViewSet,
     UserMedicationViewSet,
+    trigger_medication_reminders,
 )
 
 router = DefaultRouter()
@@ -16,4 +17,5 @@ router.register(r"schedules", MedicationScheduleViewSet, basename="medication-sc
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("reminders/trigger/", trigger_medication_reminders, name="medication-reminders-trigger"),
 ]

@@ -183,15 +183,24 @@ export default function MedFormModal({
     };
 
     if (editingMed) {
-      const ok = await onUpdate(editingMed.id, payload);
-      setSubmitting(false);
-      if (ok) { toastSuccess('Traitement mis à jour'); handleClose(); }
-      else toastError('Erreur', 'Impossible de mettre à jour.');
+      try {
+        const ok = await onUpdate(editingMed.id, payload);
+        setSubmitting(false);
+        if (ok) { toastSuccess('Traitement mis à jour'); handleClose(); }
+        else toastError('Erreur', 'Impossible de mettre à jour.');
+      } catch (err) {
+        setSubmitting(false);
+        toastError('Erreur', (err as Error).message || 'Impossible de mettre à jour.');
+      }
     } else {
-      const result = await onAdd(payload);
-      setSubmitting(false);
-      if (result) { toastSuccess('Médicament ajouté'); handleClose(); }
-      else toastError('Erreur', "Impossible d'ajouter le médicament.");
+      try {
+        const result = await onAdd(payload);
+        setSubmitting(false);
+        if (result) { toastSuccess('Médicament ajouté'); handleClose(); }
+      } catch (err) {
+        setSubmitting(false);
+        toastError('Erreur', (err as Error).message || "Impossible d'ajouter le médicament.");
+      }
     }
   }, [
     customName, customDosage, isPrescribed, startDate, durationDays,
