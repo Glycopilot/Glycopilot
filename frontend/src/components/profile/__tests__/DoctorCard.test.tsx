@@ -123,4 +123,48 @@ describe('DoctorCard', () => {
     expect(getByText('Dr. A')).toBeTruthy();
     expect(getByText('Dr. B')).toBeTruthy();
   });
+
+  it('shows loading indicator on accept button when acceptingId matches', () => {
+    const invite: PendingInvite = {
+      id_team_member: 'tm-loading',
+      doctorName: 'Dr. Loading',
+      specialty: null,
+      direction: 'received',
+    };
+    const { queryByText, UNSAFE_getAllByType } = render(
+      <DoctorCard {...defaultProps} pendingInvites={[invite]} acceptingId="tm-loading" />
+    );
+    const { ActivityIndicator } = require('react-native');
+    expect(UNSAFE_getAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+    expect(queryByText('Accepter')).toBeNull();
+  });
+
+  it('shows loading indicator on cancel button when cancelingId matches', () => {
+    const invite: PendingInvite = {
+      id_team_member: 'tm-canceling',
+      doctorName: 'Dr. Canceling',
+      specialty: null,
+      direction: 'sent',
+    };
+    const { queryByText, UNSAFE_getAllByType } = render(
+      <DoctorCard {...defaultProps} pendingInvites={[invite]} cancelingId="tm-canceling" />
+    );
+    const { ActivityIndicator } = require('react-native');
+    expect(UNSAFE_getAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+    expect(queryByText('Annuler')).toBeNull();
+  });
+
+  it('shows loading indicator when removing doctor', () => {
+    const { UNSAFE_getAllByType } = render(
+      <DoctorCard {...defaultProps} doctor={mockDoctor} removingDoctor />
+    );
+    const { ActivityIndicator } = require('react-native');
+    expect(UNSAFE_getAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+  });
+
+  it('does not show call button when doctor has no phone', () => {
+    const doctorNoPhone: Doctor = { ...mockDoctor, phone: null };
+    const { queryByText } = render(<DoctorCard {...defaultProps} doctor={doctorNoPhone} />);
+    expect(queryByText('Appeler')).toBeNull();
+  });
 });
