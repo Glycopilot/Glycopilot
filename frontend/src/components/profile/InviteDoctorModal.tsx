@@ -31,7 +31,7 @@ export default function InviteDoctorModal({
   onSubmit,
   loading,
 }: InviteDoctorModalProps): React.JSX.Element {
-  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidEmail = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,63}$/.test(email);
 
   return (
     <Modal

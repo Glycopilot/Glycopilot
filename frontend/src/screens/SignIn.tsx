@@ -60,7 +60,7 @@ export default function SignInScreen({ navigation }: SignInScreenProps) {
       toastError('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,63}$/.test(email)) {
       toastError('Erreur', "L'adresse email n'est pas valide");
       return;
     }

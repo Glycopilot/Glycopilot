@@ -30,14 +30,15 @@ const mockAlerts = [
     triggered_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
     value_at_trigger: 280,
   },
-  {
-    id: '3',
-    rule_name: 'Normal Alert',
-    status: 'RESOLVED',
-    triggered_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    value_at_trigger: 100,
-  },
 ];
+
+const renderScreen = () => render(<NotificationsScreen navigation={mockNavigation} />);
+
+const renderAndWaitForAlerts = async () => {
+  const queries = renderScreen();
+  await waitFor(() => expect(queries.getByText('Hypoglycemia Alert')).toBeTruthy());
+  return queries;
+};
 
 describe('NotificationsScreen', () => {
   beforeEach(() => {
@@ -47,70 +48,45 @@ describe('NotificationsScreen', () => {
   });
 
   it('renders the screen title', async () => {
-    const { getByText } = render(<NotificationsScreen navigation={mockNavigation} />);
+    const { getByText } = renderScreen();
     await waitFor(() => expect(getByText('Alertes')).toBeTruthy());
   });
 
-  it('shows loading state initially', () => {
-    render(<NotificationsScreen navigation={mockNavigation} />);
-    // During loading, alert list not shown yet
+  it('calls getHistory on mount', () => {
+    renderScreen();
     expect(alertService.getHistory).toHaveBeenCalled();
   });
 
   it('renders alerts after loading', async () => {
-    const { getByText } = render(<NotificationsScreen navigation={mockNavigation} />);
-    await waitFor(() => {
-      expect(getByText('Hypoglycemia Alert')).toBeTruthy();
-      expect(getByText('Hyperglycemia Alert')).toBeTruthy();
-    });
+    const { getByText } = await renderAndWaitForAlerts();
+    expect(getByText('Hyperglycemia Alert')).toBeTruthy();
   });
 
   it('shows empty state when no alerts', async () => {
     (alertService.getHistory as jest.Mock).mockResolvedValue([]);
-    const { getByText } = render(<NotificationsScreen navigation={mockNavigation} />);
-    await waitFor(() => {
-      expect(getByText('Aucune alerte')).toBeTruthy();
-    });
+    const { getByText } = renderScreen();
+    await waitFor(() => expect(getByText('Aucune alerte')).toBeTruthy());
   });
 
-  it('filters hypo alerts when hypo tab pressed', async () => {
-    const { getByText } = render(<NotificationsScreen navigation={mockNavigation} />);
-    await waitFor(() => expect(getByText('Hypoglycemia Alert')).toBeTruthy());
-
+  it('filters hypo alerts when Hypo tab pressed', async () => {
+    const { getByText } = await renderAndWaitForAlerts();
     fireEvent.press(getByText('Hypo'));
-
-    await waitFor(() => {
-      expect(getByText('Hypoglycemia Alert')).toBeTruthy();
-    });
-  });
-
-  it('filters hyper alerts when hyper tab pressed', async () => {
-    const { getByText } = render(<NotificationsScreen navigation={mockNavigation} />);
-    await waitFor(() => expect(getByText('Hyperglycemia Alert')).toBeTruthy());
-
-    fireEvent.press(getByText('Hyper'));
-
-    await waitFor(() => {
-      expect(getByText('Hyperglycemia Alert')).toBeTruthy();
-    });
-  });
-
-  it('shows all alerts when all tab pressed', async () => {
-    const { getByText } = render(<NotificationsScreen navigation={mockNavigation} />);
     await waitFor(() => expect(getByText('Hypoglycemia Alert')).toBeTruthy());
+  });
 
+  it('filters hyper alerts when Hyper tab pressed', async () => {
+    const { getByText } = await renderAndWaitForAlerts();
+    fireEvent.press(getByText('Hyper'));
+    await waitFor(() => expect(getByText('Hyperglycemia Alert')).toBeTruthy());
+  });
+
+  it('shows all alerts after switching back to Toutes tab', async () => {
+    const { getByText } = await renderAndWaitForAlerts();
     fireEvent.press(getByText('Hyper'));
     fireEvent.press(getByText('Toutes'));
-
     await waitFor(() => {
       expect(getByText('Hypoglycemia Alert')).toBeTruthy();
       expect(getByText('Hyperglycemia Alert')).toBeTruthy();
     });
-  });
-
-  it('renders correctly when service returns empty results', async () => {
-    (alertService.getHistory as jest.Mock).mockResolvedValue([]);
-    const { getByText } = render(<NotificationsScreen navigation={mockNavigation} />);
-    await waitFor(() => expect(getByText('Aucune alerte')).toBeTruthy());
   });
 });
