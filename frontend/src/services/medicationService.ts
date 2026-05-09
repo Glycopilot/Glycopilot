@@ -9,6 +9,29 @@ import type {
   UserMedication,
 } from '../types/medications.types';
 
+type PaginatedResponse<T> = { results: T[] };
+
+function parseBackendError(data: unknown, fallback: string): string {
+  if (typeof data === 'string') return data;
+  if (data && typeof data === 'object') {
+    const entries = Object.entries(data as Record<string, unknown>);
+    if (entries.length > 0) {
+      const [field, val] = entries[0];
+      const msg = Array.isArray(val) ? String(val[0]) : (typeof val === 'string' ? val : fallback);
+      return field === 'non_field_errors' ? msg : `${field}: ${msg}`;
+    }
+  }
+  return fallback;
+}
+
+function extractListData<T>(data: T[] | PaginatedResponse<T>): T[] {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray((data as PaginatedResponse<T>).results)) {
+    return (data as PaginatedResponse<T>).results;
+  }
+  return [];
+}
+
 const medicationService = {
   /** Search local reference DB — returns full ReferenceMedication objects */
   async search(q: string): Promise<ReferenceMedication[]> {
@@ -26,12 +49,8 @@ const medicationService = {
 
   async list(): Promise<UserMedication[]> {
     try {
-      const response = await apiClient.get<UserMedication[] | { results: UserMedication[] }>('/medications/log/');
-      if (Array.isArray(response.data)) return response.data;
-      if (response.data && Array.isArray((response.data as { results: UserMedication[] }).results)) {
-        return (response.data as { results: UserMedication[] }).results;
-      }
-      return [];
+      const response = await apiClient.get<UserMedication[] | PaginatedResponse<UserMedication>>('/medications/log/');
+      return extractListData(response.data);
     } catch (error) {
       console.warn('medicationService.list error:', (error as AxiosError).message);
       return [];
@@ -45,20 +64,7 @@ const medicationService = {
     } catch (error) {
       const axiosError = error as AxiosError<Record<string, unknown>>;
       const data = axiosError.response?.data;
-      let message = "Impossible d'ajouter le médicament";
-      if (data) {
-        if (typeof data === 'string') {
-          message = data;
-        } else if (typeof data === 'object') {
-          const entries = Object.entries(data as Record<string, unknown>);
-          if (entries.length > 0) {
-            const [field, val] = entries[0];
-            const errMsg = Array.isArray(val) ? String(val[0]) : String(val ?? message);
-            // Afficher le champ pour faciliter le debug
-            message = field === 'non_field_errors' ? errMsg : `${field}: ${errMsg}`;
-          }
-        }
-      }
+      const message = parseBackendError(data, "Impossible d'ajouter le médicament");
       console.warn('[medicationService.create] HTTP', axiosError.response?.status, JSON.stringify(data));
       throw new Error(message);
     }

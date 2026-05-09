@@ -6,7 +6,6 @@ jest.mock('../pushService', () => ({ unregisterPushToken: jest.fn() }));
 
 describe('medicationService', () => {
   let mock: MockAdapter;
-  const API = apiClient.defaults.baseURL;
 
   beforeEach(() => {
     mock = new MockAdapter(apiClient);

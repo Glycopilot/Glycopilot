@@ -25,11 +25,11 @@ import type {
 import { MEAL_TIMING_OPTIONS } from './medications.constants';
 
 interface MedFormModalProps {
-  visible: boolean;
-  editingMed: UserMedication | null;
-  onClose: () => void;
-  onAdd: (payload: CreateUserMedicationPayload) => Promise<UserMedication | null>;
-  onUpdate: (id: number, payload: Partial<CreateUserMedicationPayload>) => Promise<boolean>;
+  readonly visible: boolean;
+  readonly editingMed: UserMedication | null;
+  readonly onClose: () => void;
+  readonly onAdd: (payload: CreateUserMedicationPayload) => Promise<UserMedication | null>;
+  readonly onUpdate: (id: number, payload: Partial<CreateUserMedicationPayload>) => Promise<boolean>;
 }
 
 export default function MedFormModal({
@@ -356,7 +356,7 @@ export default function MedFormModal({
             <Text style={styles.label}>Heures de prise</Text>
             {scheduleTimes.map((t, i) => (
               <TextInput
-                key={`schedule-time-${i}`}
+                key={`schedule-time-${i}-${t}`}
                 style={[styles.input, { marginBottom: i < scheduleTimes.length - 1 ? 8 : 0 }]}
                 value={t}
                 onChangeText={v => updateScheduleTime(i, v)}
