@@ -3,9 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import { CheckCircle, Pill } from 'lucide-react-native';
 
 interface MedSummaryGridProps {
-  takenToday: number;
-  totalToday: number;
-  activeCount: number;
+  readonly takenToday: number;
+  readonly totalToday: number;
+  readonly activeCount: number;
 }
 
 export default function MedSummaryGrid({ takenToday, totalToday, activeCount }: MedSummaryGridProps) {

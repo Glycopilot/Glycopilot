@@ -4,9 +4,9 @@ import { Bell, AlertCircle } from 'lucide-react-native';
 import type { MedicationIntake } from '../../types/medications.types';
 
 interface NextReminderCardProps {
-  nextIntake: MedicationIntake;
-  isOverdue?: boolean;
-  onViewAll: () => void;
+  readonly nextIntake: MedicationIntake;
+  readonly isOverdue?: boolean;
+  readonly onViewAll: () => void;
 }
 
 export default function NextReminderCard({ nextIntake, isOverdue = false, onViewAll }: NextReminderCardProps) {
@@ -35,7 +35,7 @@ export default function NextReminderCard({ nextIntake, isOverdue = false, onView
       <Text style={[styles.text, { color: textColor }]}>
         {nextIntake.medication_name}
         {nextIntake.medication_dosage ? ` — ${nextIntake.medication_dosage}` : ''}
-        {!isOverdue ? ` à ${nextIntake.scheduled_time.slice(0, 5)}` : ''}
+        {isOverdue ? '' : ` à ${nextIntake.scheduled_time.slice(0, 5)}`}
       </Text>
       <TouchableOpacity onPress={onViewAll}>
         <Text style={[styles.link, { color: textColor }]}>Voir toutes les doses →</Text>

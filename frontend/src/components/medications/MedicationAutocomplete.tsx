@@ -16,12 +16,12 @@ import type { FdaMedicationResult } from '../../types/medications.types';
 // ─── types ────────────────────────────────────────────────────────────────────
 
 export interface MedicationAutocompleteProps {
-  value: string;
-  onChangeText: (text: string) => void;
-  onSelectMedication: (medication: FdaMedicationResult) => void;
-  placeholder?: string;
-  label?: string;
-  style?: object;
+  readonly value: string;
+  readonly onChangeText: (text: string) => void;
+  readonly onSelectMedication: (medication: FdaMedicationResult) => void;
+  readonly placeholder?: string;
+  readonly label?: string;
+  readonly style?: object;
 }
 
 // ─── OpenFDA helpers ──────────────────────────────────────────────────────────
@@ -173,16 +173,17 @@ export default function MedicationAutocomplete({
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
           >
-            {error ? (
+            {error && (
               <View style={styles.emptyRow}>
                 <Text style={styles.emptyText}>Erreur lors de la recherche</Text>
               </View>
-            ) : isEmpty ? (
+            )}
+            {!error && isEmpty && (
               <View style={styles.emptyRow}>
                 <Text style={styles.emptyText}>Aucun médicament trouvé</Text>
               </View>
-            ) : (
-              suggestions.map((item, index) => (
+            )}
+            {!error && !isEmpty && suggestions.map((item, index) => (
                 <TouchableOpacity
                   key={`${item.brandName}-${index}`}
                   style={[
@@ -206,8 +207,7 @@ export default function MedicationAutocomplete({
                     ) : null}
                   </View>
                 </TouchableOpacity>
-              ))
-            )}
+              ))}
           </ScrollView>
         </View>
       )}

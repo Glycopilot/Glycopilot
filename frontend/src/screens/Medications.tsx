@@ -27,8 +27,8 @@ import { getIntakeColor, getIntakeLabel, formatDate } from '../components/medica
 type TabType = 'toTake' | 'history';
 
 interface MedicationsScreenProps {
-  navigation: {
-    navigate: (screen: string) => void;
+  readonly navigation: {
+    readonly navigate: (screen: string) => void;
   };
 }
 
@@ -162,6 +162,28 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
     [markIntake],
   );
 
+  const renderToTakeTab = () => {
+    if (todayIntakes.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>Aucun médicament aujourd'hui</Text>
+          <Text style={styles.emptySubtitle}>
+            Ajoutez un traitement pour commencer le suivi
+          </Text>
+        </View>
+      );
+    }
+    return todayIntakes.map(intake => (
+      <IntakeCard
+        key={intake.id}
+        intake={intake}
+        onTake={() => handleTake(intake)}
+        onSnooze={() => handleSnooze(intake)}
+        onMiss={() => handleMiss(intake)}
+      />
+    ));
+  };
+
   if (loading) {
     return (
       <Layout navigation={navigation} currentRoute="Home" userName="">
@@ -238,26 +260,8 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
 
           {/* List */}
           <View style={styles.list}>
-            {currentTab === 'toTake' ? (
-              todayIntakes.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>Aucun médicament aujourd'hui</Text>
-                  <Text style={styles.emptySubtitle}>
-                    Ajoutez un traitement pour commencer le suivi
-                  </Text>
-                </View>
-              ) : (
-                todayIntakes.map(intake => (
-                  <IntakeCard
-                    key={intake.id}
-                    intake={intake}
-                    onTake={() => handleTake(intake)}
-                    onSnooze={() => handleSnooze(intake)}
-                    onMiss={() => handleMiss(intake)}
-                  />
-                ))
-              )
-            ) : (
+            {currentTab === 'toTake' && renderToTakeTab()}
+            {currentTab === 'history' ? (
               <>
                 {historyLoaded && (
                   <View style={styles.adherenceCard}>
