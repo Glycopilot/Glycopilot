@@ -110,7 +110,7 @@ export default function ProfileScreen({
         id_team_member: inv.id_team_member,
         doctorName: `Dr. ${inv.member_details.first_name} ${inv.member_details.last_name}`,
         specialty: inv.member_details.specialty ?? null,
-        direction: inv.approved_by ? ('received' as const) : ('sent' as const),
+        direction: inv.approved_by ? 'received' : 'sent',
       }));
       setPendingInvites(pending);
 
@@ -180,6 +180,11 @@ export default function ProfileScreen({
         },
       ]
     );
+  };
+
+  const handleInviteDoctorClose = (): void => {
+    setInviteDoctorModalVisible(false);
+    setInviteDoctorEmail('');
   };
 
   const handleInviteDoctor = async (): Promise<void> => {
@@ -496,10 +501,7 @@ export default function ProfileScreen({
 
       <InviteDoctorModal
         visible={inviteDoctorModalVisible}
-        onClose={() => {
-          setInviteDoctorModalVisible(false);
-          setInviteDoctorEmail('');
-        }}
+        onClose={handleInviteDoctorClose}
         email={inviteDoctorEmail}
         onEmailChange={setInviteDoctorEmail}
         onSubmit={handleInviteDoctor}

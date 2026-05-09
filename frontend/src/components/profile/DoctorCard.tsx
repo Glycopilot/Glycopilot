@@ -31,6 +31,56 @@ interface DoctorCardProps {
   readonly removingDoctor: boolean;
 }
 
+interface AcceptButtonProps {
+  readonly id: string;
+  readonly acceptingId: string | null;
+  readonly onAcceptInvite: (id: string) => void;
+}
+
+function AcceptButton({ id, acceptingId, onAcceptInvite }: AcceptButtonProps): React.JSX.Element {
+  return (
+    <TouchableOpacity
+      style={styles.acceptButton}
+      onPress={() => onAcceptInvite(id)}
+      disabled={acceptingId === id}
+    >
+      {acceptingId === id ? (
+        <ActivityIndicator size="small" color="#fff" />
+      ) : (
+        <>
+          <Check size={16} color="#fff" />
+          <Text style={styles.acceptButtonText}>Accepter</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+interface CancelButtonProps {
+  readonly id: string;
+  readonly cancelingId: string | null;
+  readonly onCancelInvite: (id: string) => void;
+}
+
+function CancelButton({ id, cancelingId, onCancelInvite }: CancelButtonProps): React.JSX.Element {
+  return (
+    <TouchableOpacity
+      style={styles.cancelButton}
+      onPress={() => onCancelInvite(id)}
+      disabled={cancelingId === id}
+    >
+      {cancelingId === id ? (
+        <ActivityIndicator size="small" color="#6B7280" />
+      ) : (
+        <>
+          <X size={16} color="#6B7280" />
+          <Text style={styles.cancelButtonText}>Annuler</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function DoctorCard({
   doctor,
   pendingInvites,
@@ -69,35 +119,17 @@ export default function DoctorCard({
             </Text>
           </View>
           {invite.direction === 'received' ? (
-            <TouchableOpacity
-              style={styles.acceptButton}
-              onPress={() => onAcceptInvite(invite.id_team_member)}
-              disabled={acceptingId === invite.id_team_member}
-            >
-              {acceptingId === invite.id_team_member ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Check size={16} color="#fff" />
-                  <Text style={styles.acceptButtonText}>Accepter</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <AcceptButton
+              id={invite.id_team_member}
+              acceptingId={acceptingId}
+              onAcceptInvite={onAcceptInvite}
+            />
           ) : (
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => onCancelInvite(invite.id_team_member)}
-              disabled={cancelingId === invite.id_team_member}
-            >
-              {cancelingId === invite.id_team_member ? (
-                <ActivityIndicator size="small" color="#6B7280" />
-              ) : (
-                <>
-                  <X size={16} color="#6B7280" />
-                  <Text style={styles.cancelButtonText}>Annuler</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <CancelButton
+              id={invite.id_team_member}
+              cancelingId={cancelingId}
+              onCancelInvite={onCancelInvite}
+            />
           )}
         </View>
       ))}

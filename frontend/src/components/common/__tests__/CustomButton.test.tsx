@@ -16,7 +16,7 @@ describe('CustomButton', () => {
   });
 
   it('shows ActivityIndicator when loading', () => {
-    const { queryByText, getByTestId, UNSAFE_queryByType } = render(
+    const { queryByText } = render(
       <CustomButton title="Charger" onPress={jest.fn()} loading />
     );
     expect(queryByText('Charger')).toBeNull();
@@ -24,9 +24,7 @@ describe('CustomButton', () => {
 
   it('does not call onPress when loading', () => {
     const onPress = jest.fn();
-    const { getByRole, UNSAFE_getByType } = render(
-      <CustomButton title="Test" onPress={onPress} loading />
-    );
+    render(<CustomButton title="Test" onPress={onPress} loading />);
     // Button is disabled when loading, onPress should not fire
     expect(onPress).not.toHaveBeenCalled();
   });
