@@ -17,7 +17,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 # En dev/debug, on accepte tous les hosts (inutile de maintenir une IP locale)
 if DEBUG:
-    ALLOWED_HOSTS = ['*']
+    ALLOWED_HOSTS = ['*']  # NOSONAR - intentionnel en développement local uniquement
 else:
     ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
