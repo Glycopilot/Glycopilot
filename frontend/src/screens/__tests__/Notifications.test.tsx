@@ -49,7 +49,7 @@ describe('NotificationsScreen', () => {
 
   it('renders the screen title', async () => {
     const { getByText } = renderScreen();
-    await waitFor(() => expect(getByText('Alertes')).toBeTruthy());
+    await waitFor(() => expect(getByText('Notifications')).toBeTruthy());
   });
 
   it('calls getHistory on mount', () => {
