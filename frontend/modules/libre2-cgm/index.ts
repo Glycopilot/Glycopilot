@@ -2,112 +2,60 @@ import { EventSubscription } from 'expo-modules-core';
 
 import Libre2CgmModule from './src/Libre2CgmModule';
 import {
-  ActivationFailure,
-  BleConnectionState,
-  BleErrorEvent,
-  BleSessionParams,
-  BleStateEvent,
-  GlucosePacket,
   GlucoseReading,
   Libre2CgmEvents,
-  SensorActivation,
+  ListeningStateEvent,
 } from './src/Libre2Cgm.types';
 
-export type {
-  ActivationFailure,
-  BleConnectionState,
-  BleErrorEvent,
-  BleSessionParams,
-  BleStateEvent,
-  GlucosePacket,
-  GlucoseReading,
-  Libre2CgmEvents,
-  SensorActivation,
-};
+export type { GlucoseReading, Libre2CgmEvents, ListeningStateEvent };
 
-/** Sanity-check used during Phase 0 smoke tests. */
+/** Sanity-check used during smoke tests. */
 export function hello(): string {
   return Libre2CgmModule.hello();
 }
 
-// ===== NFC activation ======================================================
+/**
+ * True if the Juggluco companion app (`tk.glucodata`) is installed on this
+ * device. Glycopilot relies on Juggluco for the BLE link to the Libre 2+ patch.
+ */
+export function isJugglucoInstalled(): boolean {
+  return Libre2CgmModule.isJugglucoInstalled();
+}
 
 /**
- * Begin an NFC activation. Resolves with the activation result once the user
- * has tapped a Libre 2 sensor to the back of the phone, or rejects on error
- * (timeout, transceive failure, sensor rejected, etc.).
+ * Start listening to Juggluco glucose broadcasts. Spawns the foreground
+ * service that keeps Glycopilot eligible to receive broadcasts when the screen
+ * is locked.
  *
- * Caller MUST persist the returned `unlockCount` before issuing another
- * activation call.
+ * @returns whether Juggluco is installed (so the JS side can warn the user
+ *   immediately instead of silently waiting for a broadcast that never arrives).
  */
-export function startActivation(unlockCount: number): Promise<SensorActivation> {
-  return Libre2CgmModule.startActivation(unlockCount);
+export function startListening(): Promise<boolean> {
+  return Libre2CgmModule.startListening();
 }
 
-/** Cancel a pending activation, e.g. when the user leaves the activation screen. */
-export function cancelActivation(): Promise<void> {
-  return Libre2CgmModule.cancelActivation();
-}
-
-// ===== BLE streaming =======================================================
-
-/**
- * Open a BLE session against an already-activated sensor. The sensor must
- * have been activated with [startActivation] earlier; pass the persisted
- * params (uid, patchInfo, mac, unlockCount).
- *
- * Subscribe to `onGlucoseReading` to receive one [GlucosePacket] per minute.
- */
-export function startBleSession(params: BleSessionParams): Promise<void> {
-  return Libre2CgmModule.startBleSession(params);
-}
-
-/** Stop the BLE session and tear down the foreground service. */
-export function stopBleSession(): Promise<void> {
-  return Libre2CgmModule.stopBleSession();
-}
-
-// ===== Event subscriptions =================================================
-
-export function addSensorActivatedListener(
-  listener: (event: SensorActivation) => void
-): EventSubscription {
-  return Libre2CgmModule.addListener('onSensorActivated', listener);
-}
-
-export function addActivationFailureListener(
-  listener: (event: ActivationFailure) => void
-): EventSubscription {
-  return Libre2CgmModule.addListener('onSensorActivationFailed', listener);
+/** Stop listening and tear down the foreground service. */
+export function stopListening(): Promise<void> {
+  return Libre2CgmModule.stopListening();
 }
 
 export function addGlucoseReadingListener(
-  listener: (event: GlucosePacket) => void
+  listener: (event: GlucoseReading) => void
 ): EventSubscription {
   return Libre2CgmModule.addListener('onGlucoseReading', listener);
 }
 
-export function addBleStateListener(
-  listener: (event: BleStateEvent) => void
+export function addListeningStateListener(
+  listener: (event: ListeningStateEvent) => void
 ): EventSubscription {
-  return Libre2CgmModule.addListener('onBleStateChanged', listener);
-}
-
-export function addBleErrorListener(
-  listener: (event: BleErrorEvent) => void
-): EventSubscription {
-  return Libre2CgmModule.addListener('onBleError', listener);
+  return Libre2CgmModule.addListener('onListeningStateChanged', listener);
 }
 
 export default {
   hello,
-  startActivation,
-  cancelActivation,
-  startBleSession,
-  stopBleSession,
-  addSensorActivatedListener,
-  addActivationFailureListener,
+  isJugglucoInstalled,
+  startListening,
+  stopListening,
   addGlucoseReadingListener,
-  addBleStateListener,
-  addBleErrorListener,
+  addListeningStateListener,
 };
