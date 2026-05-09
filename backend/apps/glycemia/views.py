@@ -136,6 +136,29 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
 
         return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
 
+    @action(detail=False, methods=["post"], url_path="cgm-readings")
+    def cgm_readings(self, request):
+        """
+        POST /api/v1/glucose/cgm-readings/
+        Ingère une mesure issue d'un capteur CGM (Libre 2) :
+        - même persistence que manual-readings (Glycemia + GlycemiaHisto)
+        - source forcé à "cgm" (les médecins distinguent visuellement les deux flux)
+        - le signal post_save sur Glycemia broadcast la valeur en WebSocket aux médecins
+        """
+
+        serializer = GlycemiaHistoCreateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        histo_entry = serializer.save(user=request.user, source="cgm")
+
+        self._add_to_month_history(histo_entry)
+
+        self._clean_old_entries(request.user)
+
+        return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
+
     def _add_to_month_history(self, histo_entry):
         """Ajoute une mesure dans Glycemia (historique 30 jours)."""
         Glycemia.objects.create(
