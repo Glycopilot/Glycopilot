@@ -84,6 +84,25 @@ set +a
 # Export du profil pour docker-compose
 export COMPOSE_PROFILES
 
+# Détection de l'IP LAN de la machine pour que le QR code Expo encode une IP
+# joignable depuis le téléphone (sinon Metro encode l'IP interne du container
+# Docker, qui n'est pas routable depuis le tel sur le Wi-Fi).
+EXPO_HOST_IP=""
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    EXPO_HOST_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "")
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    EXPO_HOST_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+    if [ -z "$EXPO_HOST_IP" ]; then
+        EXPO_HOST_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
+    fi
+fi
+if [ -n "$EXPO_HOST_IP" ]; then
+    export REACT_NATIVE_PACKAGER_HOSTNAME="$EXPO_HOST_IP"
+    echo "📱 IP LAN détectée pour Expo: $EXPO_HOST_IP"
+else
+    echo "⚠️  IP LAN non détectée — le QR code Expo pourrait ne pas fonctionner depuis un téléphone."
+fi
+
 # Détection de l'environnement (Supporte Django_ENV et DJANGO_ENV)
 CURRENT_ENV=""
 if [ -n "$Django_ENV" ]; then

@@ -68,9 +68,15 @@ services:
     container_name: glycopilot-front
     ports:
       - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
     volumes:
       - ./frontend:/app
     working_dir: /app
+    environment:
+      # Force Metro a encoder l'IP LAN de l'hote (et non l'IP interne du
+      # container) dans le QR code, pour que le tel puisse se connecter via Wi-Fi.
+      - REACT_NATIVE_PACKAGER_HOSTNAME=${REACT_NATIVE_PACKAGER_HOSTNAME:-}
     command: sh -c "npm install && npx expo start --lan"
     depends_on:
       backend_local:
