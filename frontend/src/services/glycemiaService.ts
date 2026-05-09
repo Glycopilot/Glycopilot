@@ -139,6 +139,33 @@ const glycemiaService = {
   },
 
   /**
+   * Pousse une mesure issue d'un capteur CGM (Libre 2) vers le backend.
+   * Backend: POST /api/glycemia/cgm-readings/
+   * Le backend met source="cgm" et le signal post_save broadcast en WebSocket aux médecins.
+   */
+  async createCgmReading(data: {
+    measured_at: string;
+    value: number;
+    unit?: string;
+    notes?: string;
+  }): Promise<GlycemiaEntry | null> {
+    try {
+      const response = await apiClient.post<GlycemiaEntry>(
+        '/glycemia/cgm-readings/',
+        data
+      );
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      console.error(
+        'glycemiaService.createCgmReading error:',
+        axiosError.message
+      );
+      return null;
+    }
+  },
+
+  /**
    * Transforme les données du backend pour le chart
    */
   transformForChart(
