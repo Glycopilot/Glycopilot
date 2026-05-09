@@ -308,6 +308,91 @@ describe('ProfileScreen', () => {
         });
     });
 
+    it('submits invite doctor form and calls inviteDoctor', async () => {
+        const { getByText, getByPlaceholderText } = renderProfile();
+        await waitFor(() => expect(getByText('Inviter un médecin')).toBeTruthy());
+
+        fireEvent.press(getByText('Inviter un médecin'));
+
+        await waitFor(() => expect(getByPlaceholderText('medecin@hopital.fr')).toBeTruthy());
+        fireEvent.changeText(getByPlaceholderText('medecin@hopital.fr'), 'doc@example.com');
+
+        await act(async () => { fireEvent.press(getByText('Envoyer')); });
+
+        await waitFor(() => {
+            expect(doctorService.inviteDoctor).toHaveBeenCalledWith('doc@example.com');
+        });
+    });
+
+
+    it('submits update profile form', async () => {
+        const { getByText, getByPlaceholderText } = renderProfile();
+        await waitFor(() => expect(getByText('Modifier le profil')).toBeTruthy());
+
+        fireEvent.press(getByText('Modifier le profil'));
+
+        await waitFor(() => expect(getByPlaceholderText('Votre prénom')).toBeTruthy());
+
+        fireEvent.changeText(getByPlaceholderText('Votre prénom'), 'Jean');
+        fireEvent.changeText(getByPlaceholderText('Votre nom'), 'Dupont');
+        fireEvent.changeText(getByPlaceholderText('+33 6 12 34 56 78'), '+33612345678');
+
+        await act(async () => { fireEvent.press(getByText('Sauvegarder')); });
+
+        await waitFor(() => {
+            expect(authService.updateProfile).toHaveBeenCalled();
+        });
+    });
+
+    it('handles update profile error', async () => {
+        (authService.updateProfile as jest.Mock).mockRejectedValue(new Error('Erreur serveur'));
+
+        const { getByText, getByPlaceholderText } = renderProfile();
+        await waitFor(() => expect(getByText('Modifier le profil')).toBeTruthy());
+
+        fireEvent.press(getByText('Modifier le profil'));
+
+        await waitFor(() => expect(getByPlaceholderText('Votre prénom')).toBeTruthy());
+        fireEvent.changeText(getByPlaceholderText('Votre prénom'), 'Jean');
+        fireEvent.changeText(getByPlaceholderText('Votre nom'), 'Dupont');
+
+        await act(async () => { fireEvent.press(getByText('Sauvegarder')); });
+
+        await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+    });
+
+
+    it('opens add contact modal via Plus button', async () => {
+        const { getByTestId, queryByText } = renderProfile();
+        await waitFor(() => expect(getByTestId('Plus')).toBeTruthy());
+
+        fireEvent.press(getByTestId('Plus'));
+
+        await waitFor(() => expect(queryByText('Ajouter un contact d\'urgence')).toBeTruthy());
+    });
+
+    it('submits add contact form', async () => {
+        const { getByTestId, getByPlaceholderText, getByText } = renderProfile();
+        await waitFor(() => expect(getByTestId('Plus')).toBeTruthy());
+
+        fireEvent.press(getByTestId('Plus'));
+
+        await waitFor(() => expect(getByPlaceholderText('Ex: Marie Dupont')).toBeTruthy());
+
+        fireEvent.changeText(getByPlaceholderText('Ex: Marie Dupont'), 'Pierre Martin');
+        fireEvent.changeText(
+            getByPlaceholderText('Ex: Mère, Conjoint, Ami...'),
+            'Frère'
+        );
+        fireEvent.changeText(getByPlaceholderText('+33 6 12 34 56 78'), '+33611223344');
+
+        await act(async () => { fireEvent.press(getByText('Ajouter')); });
+
+        await waitFor(() => {
+            expect(doctorService.addFamilyMember).toHaveBeenCalled();
+        });
+    });
+
     it('confirms remove doctor and calls removeTeamMember', async () => {
         (doctorService.getMyTeam as jest.Mock).mockResolvedValue(mockTeamWithDoctor);
         (doctorService.removeTeamMember as jest.Mock).mockResolvedValue(undefined);
