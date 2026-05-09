@@ -432,11 +432,15 @@ class CareTeamViewSet(viewsets.ViewSet):
         doctors = team.filter(
             role__in=["REFERENT_DOCTOR", "SPECIALIST"], status__label="ACTIVE"
         )
+        pending_doctor_invites = team.filter(
+            role__in=["REFERENT_DOCTOR", "SPECIALIST"], status__label="PENDING"
+        )
         family = team.filter(
             role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="ACTIVE"
         )
         data = {
             "doctors": PatientCareTeamSerializer(doctors, many=True).data,
+            "pending_doctor_invites": PatientCareTeamSerializer(pending_doctor_invites, many=True).data,
             "family": PatientCareTeamSerializer(family, many=True).data,
         }
         return Response(data)
@@ -453,6 +457,34 @@ class CareTeamViewSet(viewsets.ViewSet):
             "pending_invites": PatientCareTeamSerializer(pending, many=True).data,
         }
         return Response(data)
+
+    @action(detail=False, methods=["post"], url_path="remove-member")
+    def remove_member(self, request):
+        """
+        Le patient retire un membre (médecin actif ou invitation en attente) de son équipe de soin.
+        """
+        id_team_member = request.data.get("id_team_member")
+        if not id_team_member:
+            return Response({"error": "id_team_member requis."}, status=400)
+
+        identity = _get_identity(request.user)
+        patient_role_profile = (
+            identity.profiles.filter(role__name__iexact="PATIENT").first()
+            if identity else None
+        )
+        if not patient_role_profile or not hasattr(patient_role_profile, "patient_profile"):
+            return Response({"error": "Seuls les patients peuvent retirer un membre."}, status=403)
+
+        try:
+            entry = PatientCareTeam.objects.get(
+                id_team_member=id_team_member,
+                patient_profile=patient_role_profile.patient_profile,
+            )
+        except PatientCareTeam.DoesNotExist:
+            return Response({"error": "Membre introuvable."}, status=404)
+
+        entry.delete()
+        return Response({"message": "Membre retiré de l'équipe."}, status=200)
 
     @action(detail=False, methods=["get"], url_path="patient-dashboard")
     def get_patient_dashboard(self, request):

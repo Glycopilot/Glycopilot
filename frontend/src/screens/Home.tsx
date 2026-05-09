@@ -19,6 +19,7 @@ import { useGlycemiaWebSocket } from '../hooks/useGlycemiaWebSocket';
 import { toastError, toastInfo } from '../services/toastService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications } from '../services/pushService';
+import { WS_URL } from '../services/apiClient';
 
 interface HomeScreenProps {
   navigation: any;
@@ -51,7 +52,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   // WebSocket pour les mises à jour temps réel (only connect when token is available)
   const { lastReading, alert } = useGlycemiaWebSocket(
     wsEnabled ? accessToken : null,
-    process.env.EXPO_PUBLIC_WS_URL ?? ''
+    WS_URL
   );
 
   // Mettre à jour la glycémie avec les données WebSocket
