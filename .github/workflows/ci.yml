@@ -2,9 +2,9 @@ name: Deploy to AWS EC2
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feat/deploy-a ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, feat/deploy-a ]
   workflow_dispatch:
 
 jobs:
@@ -330,7 +330,7 @@ jobs:
     name: Deploy to EC2
     needs: [test-backend, test-frontend, sonarqube]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/deploy-a'
     
     steps:
     - name: Checkout the code
@@ -343,7 +343,7 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         # On transfère le backend, le nginx et le docker-compose
-        source: "backend/,.nginx/,docker-compose.yml"
+        source: "backend/,.nginx/,docker-compose.yml,ai_service/"
         target: "/home/ubuntu/glycopilot-app"
     
     - name: Execute deployment on EC2 via SSH
@@ -355,17 +355,16 @@ jobs:
         script: |
           cd /home/ubuntu/glycopilot-app
           
-          # 1. Création dynamique du fichier .env.prod à partir des secrets GitHub
-          # Cela évite d'avoir les secrets en clair dans le repo
+          # 1. Création dynamique des fichiers .env.prod à partir des secrets GitHub
           echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
+          echo "${{ secrets.AI_ENV_FILE }}" > ./ai_service/.env.prod
           
-          # 2. Déploiement des conteneurs AWS (avec build pour les nouveautés Django)
-          # On utilise le profil 'aws' comme défini dans ton docker-compose
+          # 2. Déploiement des conteneurs AWS
           sudo docker compose --profile aws down
-          sudo docker compose --profile aws build backend_aws
+          sudo docker compose --profile aws build backend_aws ai_service_aws
           sudo docker compose --profile aws up -d
           
-          # 3. Nettoyage des anciennes images Docker pour ne pas saturer le disque (Plan A à 20Go)
+          # 3. Nettoyage des anciennes images Docker
           sudo docker image prune -f
 
   notify:
