@@ -50,11 +50,11 @@ interface MomentOption {
 }
 
 interface MedicationsScreenProps {
-  navigation: {
-    navigate: (screen: string) => void;
-    reset?: (config: {
-      index: number;
-      routes: Array<{ name: string }>;
+  readonly navigation: {
+    readonly navigate: (screen: string) => void;
+    readonly reset?: (config: {
+      readonly index: number;
+      readonly routes: ReadonlyArray<{ readonly name: string }>;
     }) => void;
   };
 }
