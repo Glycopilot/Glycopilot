@@ -13,7 +13,7 @@ from django.utils import timezone
 from apps.medications.models import IntakeStatus, MedicationIntake
 from apps.notifications.services.push import send_push_to_user
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # NOSONAR
 
 # Fenêtre de tolérance : on envoie si l'heure est dans [now - 30s, now + 30s]
 REMINDER_WINDOW_SECONDS = 30

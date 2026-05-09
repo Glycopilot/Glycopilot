@@ -32,11 +32,8 @@ function parseBackendError(data: unknown, fallback: string): string {
 
 function extractListData<T>(data: T[] | PaginatedResponse<T>): T[] {
   if (Array.isArray(data)) return data;
-  const paginated = data as PaginatedResponse<T>;
-  if (paginated && Array.isArray(paginated.results)) {
-    return paginated.results;
-  }
-  return [];
+  const paged = data as PaginatedResponse<T>;
+  return Array.isArray(paged.results) ? paged.results : [];
 }
 
 const medicationService = {
