@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 
 import pytest
@@ -59,6 +61,51 @@ def test_ack_endpoint_sets_acked_at():
     event.refresh_from_db()
     assert event.acked_at is not None
     assert event.status == "ACKED"
+
+
+@pytest.mark.django_db
+def test_push_title_includes_app_name_and_rule():
+    """Le titre du push doit être 'Glycopilot: 🩸 <rule.name>'."""
+    user = mk_user("push_title@test.com")
+    rule = mk_rule(code="HYPO", max_g=80)
+    rule.name = "Hypoglycémie"
+    rule.save()
+    UserAlertRule.objects.create(
+        user=user, rule=rule, enabled=True, cooldown_seconds=0
+    )
+
+    with patch("apps.alerts.services.trigger.send_push") as mock_push:
+        mock_push.return_value = None
+        trigger_for_value(user=user, glycemia_value=70)
+
+    mock_push.assert_called_once()
+    call_kwargs = mock_push.call_args[1]
+    assert call_kwargs["title"] == "Glycopilot: 🩸 Hypoglycémie"
+
+
+@pytest.mark.django_db
+def test_push_title_reflects_rule_name():
+    """Le titre change selon le nom de la règle (hyper vs hypo)."""
+    user = mk_user("push_title2@test.com")
+    rule = AlertRule.objects.create(
+        code="HYPER",
+        name="Hyperglycémie",
+        min_glycemia=250,
+        max_glycemia=None,
+        severity=3,
+        is_active=True,
+    )
+    UserAlertRule.objects.create(
+        user=user, rule=rule, enabled=True, cooldown_seconds=0
+    )
+
+    with patch("apps.alerts.services.trigger.send_push") as mock_push:
+        mock_push.return_value = None
+        trigger_for_value(user=user, glycemia_value=300)
+
+    mock_push.assert_called_once()
+    call_kwargs = mock_push.call_args[1]
+    assert call_kwargs["title"] == "Glycopilot: 🩸 Hyperglycémie"
 
 
 @pytest.mark.django_db
