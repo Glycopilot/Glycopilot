@@ -203,6 +203,18 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <Text style={styles.sectionTitle}>Actions rapides</Text>
         </View>
 
+        <View style={styles.sensorRow}>
+          <ActionButton
+            type="glycemie"
+            label="Mon capteur"
+            onPress={() => {
+              if (navigation && navigation.navigate) {
+                navigation.navigate('SensorActivation');
+              }
+            }}
+          />
+        </View>
+
         <View style={styles.actionsRow}>
           <ActionButton
             type="repas"
@@ -256,6 +268,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
     gap: 4,
+  },
+  sensorRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 4,
   },
   bottomPadding: {
     height: 100,
