@@ -11,6 +11,7 @@ import {
   Switch,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Search, X, ChevronRight, Plus, Minus } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
@@ -24,12 +25,25 @@ import type {
 } from '../../types/medications.types';
 import { MEAL_TIMING_OPTIONS } from './medications.constants';
 
-const TIME_PRESETS: string[][] = [
+const ALL_TIME_SLOTS: string[][] = [
   ['06:00', '07:00', '08:00', '09:00', '10:00'],
-  ['12:00', '13:00', '14:00', '15:00'],
-  ['18:00', '19:00', '20:00', '21:00'],
-  ['21:00', '22:00', '23:00'],
+  ['10:00', '11:00', '12:00', '13:00', '14:00'],
+  ['14:00', '15:00', '16:00', '17:00', '18:00'],
+  ['18:00', '19:00', '20:00', '21:00', '22:00'],
 ];
+
+function getTimePresets(doseIndex: number): string[] {
+  const hour = new Date().getHours();
+  // Pour la première prise, afficher le créneau correspondant à l'heure actuelle
+  if (doseIndex === 0) {
+    if (hour < 10) return ALL_TIME_SLOTS[0];
+    if (hour < 14) return ALL_TIME_SLOTS[1];
+    if (hour < 18) return ALL_TIME_SLOTS[2];
+    return ALL_TIME_SLOTS[3];
+  }
+  // Pour les prises suivantes, décaler d'un créneau
+  return ALL_TIME_SLOTS[Math.min(doseIndex, ALL_TIME_SLOTS.length - 1)];
+}
 
 interface MedFormModalProps {
   readonly visible: boolean;
@@ -248,7 +262,10 @@ export default function MedFormModal({
       onRequestClose={handleClose}
     >
       <Pressable style={styles.overlay} onPress={handleClose} />
-      <View style={[styles.container, Platform.OS === 'ios' && { paddingBottom: 34 }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[styles.container, Platform.OS === 'ios' && { paddingBottom: 34 }]}
+      >
         <View style={styles.handle} />
 
         <ScrollView
@@ -397,7 +414,7 @@ export default function MedFormModal({
                   style={styles.timePresetsRow}
                   contentContainerStyle={{ gap: 8, paddingRight: 4 }}
                 >
-                  {TIME_PRESETS[Math.min(i, TIME_PRESETS.length - 1)].map(preset => (
+                  {getTimePresets(i).map(preset => (
                     <TouchableOpacity
                       key={preset}
                       style={[styles.timeChip, t === preset && styles.timeChipActive]}
@@ -470,7 +487,7 @@ export default function MedFormModal({
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
