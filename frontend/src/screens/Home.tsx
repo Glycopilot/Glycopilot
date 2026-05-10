@@ -231,6 +231,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
             label="Activité"
             onPress={() => navigation?.navigate('Activite')}
           />
+          <ActionButton
+            type="prediction"
+            label="Prédiction"
+            onPress={() => navigation?.navigate('Predictions')}
+          />
         </View>
 
         <View style={styles.bottomPadding} />

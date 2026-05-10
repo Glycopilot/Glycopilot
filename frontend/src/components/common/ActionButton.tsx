@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
-import { Gauge, Utensils, Pill, Zap } from 'lucide-react-native';
+import { Gauge, Utensils, Pill, Zap, Brain } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
 interface ActionConfig {
@@ -51,6 +51,13 @@ export default function ActionButton({
           color: '#FFB84D',
           bgColor: '#FFF4E5',
           label: label || 'Action',
+        };
+      case 'prediction':
+        return {
+          icon: Brain,
+          color: '#7C3AED',
+          bgColor: '#F5F3FF',
+          label: label || 'Prédiction',
         };
       default:
         return {
