@@ -9,7 +9,7 @@
       content="Page admin GlycoPilot pour valider ou refuser les profils medecins en attente."
     />
     <link rel="icon" href="../frontend/assets/favicon.png" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=admin-messenger-2" />
   </head>
   <body>
     <main class="admin-shell">
@@ -80,6 +80,15 @@
           </form>
         </section>
 
+        <nav class="admin-tabs hidden" id="admin-tabs" aria-label="Navigation admin">
+          <button class="admin-tab active" id="validation-tab" type="button">
+            Validation
+          </button>
+          <button class="admin-tab" id="messages-tab" type="button">
+            Messagerie
+          </button>
+        </nav>
+
         <section class="panel hidden" id="doctors-panel">
           <div class="list-header">
             <div>
@@ -102,6 +111,69 @@
           </div>
 
           <div class="doctor-list" id="doctor-list"></div>
+        </section>
+
+        <section class="messenger-panel hidden" id="messages-panel">
+          <aside class="messenger-list-panel">
+            <div class="messenger-title">
+              <div>
+                <p class="eyebrow">Medecins valides</p>
+                <h2>Messages</h2>
+              </div>
+              <button class="ghost-btn" id="refresh-doctors-btn" type="button">
+                Actualiser
+              </button>
+            </div>
+
+            <label class="messenger-search">
+              <span>⌕</span>
+              <input
+                id="doctor-search"
+                type="search"
+                placeholder="Rechercher un medecin"
+              />
+            </label>
+
+            <div class="messenger-doctor-list" id="messenger-doctor-list"></div>
+          </aside>
+
+          <section class="chat-panel">
+            <header class="chat-header">
+              <div class="chat-user">
+                <div class="chat-avatar" id="chat-avatar">DR</div>
+                <div>
+                  <h2 id="chat-doctor-name">Selectionnez un medecin</h2>
+                  <p id="chat-doctor-meta">Messagerie admin-medecin</p>
+                </div>
+              </div>
+              <div class="chat-actions">
+                <button type="button" aria-label="Appeler">☎</button>
+                <button type="button" aria-label="Video">▣</button>
+                <button type="button" aria-label="Options">•••</button>
+              </div>
+            </header>
+
+            <div class="message-thread" id="message-thread"></div>
+
+            <form class="message-composer" id="message-form">
+              <div class="composer-file hidden" id="composer-file">
+                <span id="composer-file-name"></span>
+                <button id="remove-file-btn" type="button" aria-label="Retirer le fichier">×</button>
+              </div>
+              <label class="icon-composer-btn" aria-label="Joindre un fichier">
+                📎
+                <input id="message-file" type="file" />
+              </label>
+              <input
+                id="message-input"
+                type="text"
+                placeholder="Message au medecin"
+                autocomplete="off"
+              />
+              <button class="icon-composer-btn" type="button" aria-label="Reaction">☺</button>
+              <button class="send-message-btn" type="submit" aria-label="Envoyer">➤</button>
+            </form>
+          </section>
         </section>
 
         <div class="toast hidden" id="toast"></div>
