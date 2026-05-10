@@ -328,7 +328,7 @@ class MedicationReminderServiceTest(TestCase):
         self.assertEqual(stats["errors"], 0)
         call_kwargs = mock_push.call_args[1]
         self.assertIn("Doliprane", call_kwargs["body"])
-        self.assertEqual(call_kwargs["title"], "💊 Rappel médicament")
+        self.assertEqual(call_kwargs["title"], " Glycopilot: 💊 Rappel médicament")
 
     @patch("apps.medications.services.reminders.timezone")
     @patch("apps.medications.services.reminders.send_push_to_user")

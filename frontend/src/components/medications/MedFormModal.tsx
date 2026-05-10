@@ -24,6 +24,13 @@ import type {
 } from '../../types/medications.types';
 import { MEAL_TIMING_OPTIONS } from './medications.constants';
 
+const TIME_PRESETS: string[][] = [
+  ['06:00', '07:00', '08:00', '09:00', '10:00'],
+  ['12:00', '13:00', '14:00', '15:00'],
+  ['18:00', '19:00', '20:00', '21:00'],
+  ['21:00', '22:00', '23:00'],
+];
+
 interface MedFormModalProps {
   readonly visible: boolean;
   readonly editingMed: UserMedication | null;
@@ -154,6 +161,31 @@ export default function MedFormModal({
       return next;
     });
   }, []);
+
+  const handleTimeInputChange = useCallback((index: number, newVal: string) => {
+    const prev = scheduleTimes[index];
+    if (newVal.length < prev.length) {
+      updateScheduleTime(index, newVal);
+      return;
+    }
+    const digits = newVal.replace(/\D/g, '').slice(0, 4);
+    if (!digits) { updateScheduleTime(index, ''); return; }
+    if (digits.length <= 2) {
+      const h = parseInt(digits, 10);
+      if (digits.length === 2) {
+        updateScheduleTime(index, `${String(Math.min(h, 23)).padStart(2, '0')}:`);
+      } else {
+        updateScheduleTime(index, digits);
+      }
+    } else {
+      const h = Math.min(parseInt(digits.slice(0, 2), 10), 23);
+      const mRaw = digits.slice(2);
+      const m = mRaw.length === 2
+        ? String(Math.min(parseInt(mRaw, 10), 59)).padStart(2, '0')
+        : mRaw;
+      updateScheduleTime(index, `${String(h).padStart(2, '0')}:${m}`);
+    }
+  }, [scheduleTimes, updateScheduleTime]);
 
   const handleSubmit = useCallback(async () => {
     if (!customName.trim()) {
@@ -353,16 +385,40 @@ export default function MedFormModal({
 
           {/* Heures */}
           <View style={styles.section}>
-            <Text style={styles.label}>Heures de prise</Text>
+            <View style={styles.timeLabelRow}>
+              <Text style={styles.label}>Heures de prise</Text>
+              <Text style={styles.timeHint}>format 24h</Text>
+            </View>
             {scheduleTimes.map((t, i) => (
-              <TextInput
-                key={`schedule-time-${i}-${t}`}
-                style={[styles.input, { marginBottom: i < scheduleTimes.length - 1 ? 8 : 0 }]}
-                value={t}
-                onChangeText={v => updateScheduleTime(i, v)}
-                placeholder="HH:MM"
-                placeholderTextColor="#9CA3AF"
-              />
+              <View key={`time-slot-${i}`} style={i < scheduleTimes.length - 1 ? { marginBottom: 14 } : {}}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.timePresetsRow}
+                  contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+                >
+                  {TIME_PRESETS[Math.min(i, TIME_PRESETS.length - 1)].map(preset => (
+                    <TouchableOpacity
+                      key={preset}
+                      style={[styles.timeChip, t === preset && styles.timeChipActive]}
+                      onPress={() => updateScheduleTime(i, preset)}
+                    >
+                      <Text style={[styles.timeChipText, t === preset && styles.timeChipTextActive]}>
+                        {preset}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <TextInput
+                  style={styles.input}
+                  value={t}
+                  onChangeText={v => handleTimeInputChange(i, v)}
+                  placeholder="08:30"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="number-pad"
+                  maxLength={5}
+                />
+              </View>
             ))}
           </View>
 
@@ -471,6 +527,17 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 12,
     backgroundColor: '#007AFF', alignItems: 'center', justifyContent: 'center',
   },
+  timeLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  timeHint: { fontSize: 12, fontWeight: '500', color: '#9CA3AF' },
+  timePresetsRow: { marginBottom: 8 },
+  timeChip: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1.5, borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  timeChipActive: { borderColor: '#007AFF', backgroundColor: '#EBF5FF' },
+  timeChipText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  timeChipTextActive: { color: '#007AFF' },
   momentGrid: { flexDirection: 'row', gap: 8 },
   momentBtn: {
     flex: 1, borderWidth: 2, borderColor: '#E5E7EB',
