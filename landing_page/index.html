@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GlycoPilot - Suivi intelligent du diabete</title>
+    <meta
+      name="description"
+      content="GlycoPilot centralise le suivi glycemique, les alertes, les habitudes de vie et les predictions IA pour les patients et les professionnels de sante."
+    />
+    <link rel="icon" href="../frontend/assets/favicon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header" data-elevated="false">
+      <a class="brand" href="#top" aria-label="GlycoPilot accueil">
+        <img src="../frontend/assets/glycopilot.png" alt="" />
+        <span>GlycoPilot</span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Navigation principale">
+        <a href="#solution">Solution</a>
+        <a href="#modules">Modules</a>
+        <a href="#care">Medecins</a>
+        <a href="#security">Securite</a>
+      </nav>
+
+      <a class="header-action" href="#demo">Demander une demo</a>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <canvas id="glucose-canvas" aria-hidden="true"></canvas>
+
+        <div class="hero-content">
+          <img
+            class="hero-logo"
+            src="../frontend/assets/glycopilot.png"
+            alt="GlycoPilot"
+          />
+          <p class="eyebrow">Suivi diabetique connecte</p>
+          <h1 id="hero-title">GlycoPilot</h1>
+          <p class="hero-lead">
+            Une application pour suivre la glycemie, comprendre les tendances,
+            recevoir des alertes et partager les donnees utiles avec son equipe
+            medicale.
+          </p>
+          <div class="hero-actions" aria-label="Actions principales">
+            <a class="button primary" href="#demo">Demander une demo</a>
+            <a class="button secondary" href="#solution">Voir la solution</a>
+          </div>
+        </div>
+
+        <div class="hero-snapshot" aria-label="Apercu produit">
+          <div class="snapshot-bar">
+            <span></span>
+            <strong>Glycemie actuelle</strong>
+            <em>Live</em>
+          </div>
+          <div class="glucose-value">
+            <span>112</span>
+            <small>mg/dL</small>
+          </div>
+          <div class="status-row">
+            <span class="status-dot"></span>
+            <p>Stable, dans la zone cible</p>
+          </div>
+          <div class="mini-chart" aria-hidden="true">
+            <span style="height: 38%"></span>
+            <span style="height: 56%"></span>
+            <span style="height: 44%"></span>
+            <span style="height: 70%"></span>
+            <span style="height: 61%"></span>
+            <span style="height: 52%"></span>
+            <span style="height: 48%"></span>
+          </div>
+        </div>
+
+        <div class="scroll-hint">Dashboard, alertes et predictions</div>
+      </section>
+
+      <section class="section intro" id="solution">
+        <div class="section-heading">
+          <p class="eyebrow">Pourquoi GlycoPilot</p>
+          <h2>Un suivi quotidien plus lisible, plus rapide, plus partageable.</h2>
+        </div>
+        <div class="intro-grid">
+          <article>
+            <span>01</span>
+            <h3>Centraliser</h3>
+            <p>
+              Glycemie, repas, traitements, activites et alertes sont regroupes
+              dans un meme espace, avec une lecture simple pour le patient.
+            </p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Comprendre</h3>
+            <p>
+              Les tendances glycemiques, le score de sante et les historiques
+              aident a repérer les moments qui comptent vraiment.
+            </p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Anticiper</h3>
+            <p>
+              Les predictions IA multi-horizon donnent une vision a 15, 30 et
+              60 minutes pour mieux reagir aux variations.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section product-band" id="modules">
+        <div class="product-copy">
+          <p class="eyebrow">Application patient</p>
+          <h2>Les modules essentiels du suivi diabetique.</h2>
+          <p>
+            L'interface mobile accompagne les gestes quotidiens : ajouter une
+            mesure, consulter les alertes, suivre les repas, noter les prises et
+            garder un oeil sur les tendances.
+          </p>
+        </div>
+
+        <div class="module-list">
+          <article>
+            <span class="module-icon glucose"></span>
+            <h3>Glycemie</h3>
+            <p>Derniere valeur, historique, contexte et notes de mesure.</p>
+          </article>
+          <article>
+            <span class="module-icon alert"></span>
+            <h3>Alertes</h3>
+            <p>Detection hypo/hyper et messages temps reel.</p>
+          </article>
+          <article>
+            <span class="module-icon meal"></span>
+            <h3>Nutrition</h3>
+            <p>Journal repas, calories et glucides sur la journee.</p>
+          </article>
+          <article>
+            <span class="module-icon meds"></span>
+            <h3>Traitements</h3>
+            <p>Suivi des medicaments et prochaine prise.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section care" id="care">
+        <div class="care-panel">
+          <div>
+            <p class="eyebrow">Espace medical</p>
+            <h2>Un dossier patient clair pour les medecins autorises.</h2>
+          </div>
+          <p>
+            Les professionnels valides peuvent consulter les patients associes,
+            visualiser les donnees recentes et suivre les signaux importants
+            sans perdre le contexte du quotidien.
+          </p>
+        </div>
+        <div class="care-steps">
+          <article>
+            <strong>Validation</strong>
+            <p>Un compte medecin reste bloque tant qu'il n'est pas approuve.</p>
+          </article>
+          <article>
+            <strong>Association</strong>
+            <p>L'acces aux donnees depend du lien medecin-patient.</p>
+          </article>
+          <article>
+            <strong>Consultation</strong>
+            <p>Le resume medical rassemble glycemie, alertes et habitudes.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section intelligence">
+        <div class="section-heading">
+          <p class="eyebrow">Prediction IA</p>
+          <h2>Des signaux courts pour aider a anticiper.</h2>
+        </div>
+        <div class="prediction-layout">
+          <div class="prediction-meter" aria-label="Prediction GlycoPilot">
+            <div class="meter-top">
+              <span>Prediction</span>
+              <strong>30 min</strong>
+            </div>
+            <div class="meter-value">126 <small>mg/dL</small></div>
+            <div class="risk-row">
+              <span>Risque hypo</span>
+              <strong>Faible</strong>
+            </div>
+            <div class="risk-row">
+              <span>Risque hyper</span>
+              <strong>Modere</strong>
+            </div>
+          </div>
+          <div class="prediction-copy">
+            <h3>Le service IA reste decouple du backend.</h3>
+            <p>
+              GlycoPilot envoie une fenetre de mesures recentes au microservice
+              IA, recupere les horizons 15/30/60 minutes et sauvegarde les
+              resultats pour les rendre consultables dans l'application.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section security" id="security">
+        <div>
+          <p class="eyebrow">Securite et confiance</p>
+          <h2>Des donnees sensibles traitees avec des garde-fous clairs.</h2>
+        </div>
+        <ul class="security-list">
+          <li>Authentification JWT et refresh token.</li>
+          <li>Roles patient, medecin, administrateur et service interne.</li>
+          <li>Validation obligatoire des comptes medecins.</li>
+          <li>Acces patient limite aux associations medicales autorisees.</li>
+          <li>Service IA concu pour ne pas bloquer le suivi principal.</li>
+        </ul>
+      </section>
+
+      <section class="demo" id="demo">
+        <div class="demo-inner">
+          <p class="eyebrow">Demonstration</p>
+          <h2>Construire une experience de suivi diabetique plus fluide.</h2>
+          <p>
+            GlycoPilot rassemble les donnees utiles, les rend lisibles et cree
+            un pont entre le quotidien du patient et le suivi medical.
+          </p>
+          <a class="button primary" href="mailto:contact@glycopilot.com"
+            >Contacter l'equipe</a
+          >
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="brand small">
+        <img src="../frontend/assets/glycopilot.png" alt="" />
+        <span>GlycoPilot</span>
+      </div>
+      <p>Suivi glycemique, alertes, IA et coordination medicale.</p>
+    </footer>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
