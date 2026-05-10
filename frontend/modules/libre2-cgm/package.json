@@ -1,0 +1,7 @@
+{
+  "name": "libre2-cgm",
+  "version": "0.1.0",
+  "description": "Native Libre 2 CGM integration (NFC activation + BLE streaming)",
+  "main": "index.ts",
+  "private": true
+}
