@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Libre2Cgm, { GlucoseReading } from 'libre2-cgm';
-
-import glycemiaService from '../services/glycemiaService';
 
 export type Libre2Status =
   | 'IDLE'           // not listening yet
@@ -24,28 +22,28 @@ export type UseLibre2Sensor = {
   error: string | null;
 
   /**
-   * Begin listening to Juggluco broadcasts. Returns whether Juggluco is
-   * installed; if false, the JS side should prompt the user to install it
-   * before any reading can arrive.
+   * Re-arm the native subscriber and confirm Juggluco is installed.
+   * The actual broadcast subscription is owned by libre2BackgroundService
+   * (initialised once at app boot), so this is mostly a UX shortcut for the
+   * "Activer la surveillance" button.
    */
   start: () => Promise<boolean>;
-  /** Stop listening and release the foreground service. */
+  /** Stop the native subscriber and tear down the foreground service. */
   stop: () => Promise<void>;
 };
 
 /**
- * Bridges Juggluco glucose broadcasts to Glycopilot:
- *  - exposes the latest reading for the UI
- *  - posts each reading to the backend (`/cgm-readings/`) at most once per minute
- *  - tracks listening status so the screen can render the right state
+ * Screen-level consumer for the Juggluco data stream. Subscribes to the same
+ * native `onGlucoseReading` event that [libre2BackgroundService] consumes, but
+ * only updates local UI state — it does NOT post to the backend (the
+ * background service handles persistence so we don't double-write readings).
  */
 export function useLibre2Sensor(): UseLibre2Sensor {
-  const [status, setStatus] = useState<Libre2Status>('IDLE');
+  const [status, setStatus] = useState<Libre2Status>('WAITING');
   const [current, setCurrent] = useState<LiveGlucose | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const lastPostedAtRef = useRef<number>(0);
 
-  const handleReading = useCallback(async (reading: GlucoseReading) => {
+  const handleReading = useCallback((reading: GlucoseReading) => {
     setStatus('STREAMING');
     setCurrent({
       mgdl: reading.mgdl,
@@ -53,31 +51,10 @@ export function useLibre2Sensor(): UseLibre2Sensor {
       rate: reading.rate,
       serial: reading.serial,
     });
-
-    if (reading.mgdl <= 0) return;
-
-    // Throttle: at most one POST every 55 seconds.
-    const nowMs = Date.now();
-    if (nowMs - lastPostedAtRef.current < 55_000) return;
-    lastPostedAtRef.current = nowMs;
-
-    try {
-      await glycemiaService.createCgmReading({
-        measured_at: new Date(reading.timeMs).toISOString(),
-        value: reading.mgdl,
-        unit: 'mg/dL',
-        notes: reading.serial ? `Libre serial=${reading.serial}` : undefined,
-      });
-    } catch (e) {
-      console.warn('useLibre2Sensor: backend POST failed', e);
-    }
   }, []);
 
-  // Subscribe once on mount.
   useEffect(() => {
-    const readingSub = Libre2Cgm.addGlucoseReadingListener(reading => {
-      handleReading(reading);
-    });
+    const readingSub = Libre2Cgm.addGlucoseReadingListener(handleReading);
     const stateSub = Libre2Cgm.addListeningStateListener(event => {
       if (!event.listening) {
         setStatus(prev => (prev === 'ERROR' ? prev : 'IDLE'));
@@ -93,7 +70,9 @@ export function useLibre2Sensor(): UseLibre2Sensor {
     setError(null);
     try {
       const installed = await Libre2Cgm.startListening();
-      setStatus(installed ? 'WAITING' : 'NO_JUGGLUCO');
+      setStatus(prev =>
+        installed ? (prev === 'STREAMING' ? prev : 'WAITING') : 'NO_JUGGLUCO'
+      );
       return installed;
     } catch (e: any) {
       setError(e?.message ?? 'Failed to start listening');
