@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Activity, UserActivity
+from .models import Activity, UserActivity, UserMilestonePoints, UserStepDayCheckpoint
 
 
 @admin.register(Activity)
@@ -27,3 +27,16 @@ class UserActivityAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__email", "activity__name")
     raw_id_fields = ("user", "activity")
     date_hierarchy = "start"
+
+
+@admin.register(UserStepDayCheckpoint)
+class UserStepDayCheckpointAdmin(admin.ModelAdmin):
+    list_display = ("user", "day", "last_reported_steps")
+    list_filter = ("day",)
+    raw_id_fields = ("user",)
+
+
+@admin.register(UserMilestonePoints)
+class UserMilestonePointsAdmin(admin.ModelAdmin):
+    list_display = ("user", "total_points")
+    raw_id_fields = ("user",)

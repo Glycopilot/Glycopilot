@@ -30,3 +30,35 @@ class UserActivity(models.Model):
     class Meta:
         db_table = "user_activity"
         indexes = [models.Index(fields=["user", "start"])]
+
+
+class UserStepDayCheckpoint(models.Model):
+    """Dernier total de pas rapporté pour une journée (calendrier serveur)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="step_day_checkpoints",
+    )
+    day = models.DateField()
+    last_reported_steps = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "user_step_day_checkpoint"
+        constraints = [
+            models.UniqueConstraint(fields=["user", "day"], name="uniq_user_step_day")
+        ]
+
+
+class UserMilestonePoints(models.Model):
+    """Points cumulés gagnés via les paliers de pas (hors Firebase)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="milestone_points",
+    )
+    total_points = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "user_milestone_points"
