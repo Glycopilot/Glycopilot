@@ -77,6 +77,12 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenData.data;
 
+    // Ne pas re-enregistrer si le même token est déjà sauvegardé
+    const savedToken = await AsyncStorage.getItem('push_token');
+    if (savedToken === token) {
+      return token;
+    }
+
     // Envoyer au backend
     await apiClient.post('/notifications/push-token/', {
       token,
@@ -88,12 +94,12 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
 
     console.log('[Push] Token registered:', token);
     return token;
-  } catch (error) {
-    console.error('[Push] Failed to register push token:', error);
-    console.error(
-      '[Push] If you see this in Expo Go, you need a development build. ' +
-        'Run: eas build --profile development --platform android'
-    );
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      console.warn('[Push] Token registration rate-limited (429) — will retry on next launch');
+    } else {
+      console.error('[Push] Failed to register push token:', error);
+    }
     return null;
   }
 };

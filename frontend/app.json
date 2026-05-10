@@ -1,6 +1,5 @@
 {
   "expo": {
-    "name": "frontend",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +14,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.glycopilot.app"
     },

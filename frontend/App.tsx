@@ -19,8 +19,12 @@ export default function App() {
     // Listener quand l'utilisateur tape sur une notification
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log('Notification tapped:', response);
-        navigate('Notifications');
+        const data = response.notification.request.content.data as Record<string, unknown>;
+        if (data?.type === 'medication_reminder') {
+          navigate('Traitements');
+        } else {
+          navigate('Notifications');
+        }
       });
 
     return () => {
@@ -32,7 +36,7 @@ export default function App() {
   return (
     <>
       <AppNavigator />
-      <Toast onPress={() => navigate('Notifications')} />
+      <Toast />
       <StatusBar style="auto" />
     </>
   );

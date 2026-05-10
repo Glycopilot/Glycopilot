@@ -20,7 +20,7 @@ type GlycemieStatus =
   | 'low';
 
 interface GlycemieCardProps {
-  value: number;
+  value: number | null;
   status?: GlycemieStatus;
   timestamp?: string;
   unit?: string;
@@ -46,12 +46,12 @@ export default function GlycemieCard({
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const previousValue = useRef(value);
 
-  // Calculer le status automatiquement à partir de la valeur si non fourni
   const calculatedStatus = (): GlycemieStatus => {
     if (status) return status;
-    if (value < GLYCEMIA_TARGET.MIN) return 'low'; // < 70
-    if (value > GLYCEMIA_TARGET.MAX) return 'high'; // > 180
-    return 'normal'; // 70-180
+    if (value === null) return 'normal';
+    if (value < GLYCEMIA_TARGET.MIN) return 'low';
+    if (value > GLYCEMIA_TARGET.MAX) return 'high';
+    return 'normal';
   };
 
   const actualStatus = calculatedStatus();
@@ -168,7 +168,7 @@ export default function GlycemieCard({
 
   const targetMin = GLYCEMIA_TARGET.MIN;
   const targetMax = GLYCEMIA_TARGET.MAX;
-  const progressPercentage = Math.min((value / GLYCEMIA_TARGET.MAX) * 100, 100);
+  const progressPercentage = value !== null ? Math.min((value / GLYCEMIA_TARGET.MAX) * 100, 100) : 0;
 
   return (
     <TouchableOpacity
@@ -196,10 +196,10 @@ export default function GlycemieCard({
           </View>
         </View>
         <View
-          style={[styles.badge, { backgroundColor: `${statusConfig.color}20` }]}
+          style={[styles.badge, { backgroundColor: value === null ? '#F2F2F7' : `${statusConfig.color}20` }]}
         >
-          <Text style={[styles.badgeText, { color: statusConfig.color }]}>
-            {statusConfig.label}
+          <Text style={[styles.badgeText, { color: value === null ? '#8E8E93' : statusConfig.color }]}>
+            {value === null ? 'Aucune mesure' : statusConfig.label}
           </Text>
         </View>
       </View>
@@ -213,15 +213,21 @@ export default function GlycemieCard({
           },
         ]}
       >
-        <View style={styles.valueRow}>
-          <Text style={[styles.value, { color: statusConfig.color }]}>
-            {value}
+        {value === null ? (
+          <Text style={styles.noDataText}>
+            Prenez une mesure manuelle{'\n'}ou connectez votre capteur
           </Text>
-          <Text style={[styles.unit, { color: statusConfig.color }]}>
-            {unit}
-          </Text>
-          {trend && <View style={styles.trendIcon}>{getTrendIcon()}</View>}
-        </View>
+        ) : (
+          <View style={styles.valueRow}>
+            <Text style={[styles.value, { color: statusConfig.color }]}>
+              {value}
+            </Text>
+            <Text style={[styles.unit, { color: statusConfig.color }]}>
+              {unit}
+            </Text>
+            {trend && <View style={styles.trendIcon}>{getTrendIcon()}</View>}
+          </View>
+        )}
       </Animated.View>
 
       <View style={styles.footer}>
@@ -298,6 +304,11 @@ const styles = StyleSheet.create({
   },
   valueContainer: {
     marginBottom: 16,
+  },
+  noDataText: {
+    fontSize: 15,
+    color: '#8E8E93',
+    lineHeight: 22,
   },
   valueRow: {
     flexDirection: 'row',
