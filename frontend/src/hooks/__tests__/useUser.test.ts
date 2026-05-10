@@ -1,5 +1,5 @@
 import { renderHook, waitFor, act } from '@testing-library/react-native';
-import useUser from '../useUser';
+import useUser, { clearUserCache } from '../useUser';
 import authService from '../../services/authService';
 
 // Mock authService
@@ -13,6 +13,7 @@ describe('useUser hook', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        clearUserCache();
     });
 
     it('should fetch user on mount from both storage and backend', async () => {

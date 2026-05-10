@@ -89,7 +89,12 @@ interface FilterBarProps {
 
 function FilterBar({ options, active, activeColor, onSelect }: FilterBarProps) {
   return (
-    <View style={styles.filterContainer}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.filterContainer}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 8 }}
+    >
       {options.map(opt => (
         <TouchableOpacity
           key={opt.value}
@@ -101,7 +106,7 @@ function FilterBar({ options, active, activeColor, onSelect }: FilterBarProps) {
           </Text>
         </TouchableOpacity>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -504,7 +509,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   sectionBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  filterContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  filterContainer: { flexGrow: 0 },
   filterButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,

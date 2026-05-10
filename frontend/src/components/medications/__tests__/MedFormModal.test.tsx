@@ -112,10 +112,17 @@ describe('MedFormModal — chips de temps rapides', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (medicationService.search as jest.Mock).mockResolvedValue([]);
+    // Fixer l'heure à 08:00 pour des presets déterministes (créneau matin)
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T08:00:00'));
   });
 
-  it('affiche les chips matin pour la première prise', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('affiche les chips du créneau courant pour la première prise', () => {
     const { getByText } = renderModal();
+    // À 08h00, le créneau matin est affiché (06:00–10:00)
     expect(getByText('08:00')).toBeTruthy();
     expect(getByText('07:00')).toBeTruthy();
   });
