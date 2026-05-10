@@ -4,6 +4,17 @@
   </queries>
 
   <application>
+    <!-- Statically declared so Juggluco lists Glycopilot in its
+         "Glucodata broadcast" recipient picker (which uses
+         PackageManager.queryBroadcastReceivers). -->
+    <receiver
+      android:name=".juggluco.JugglucoReceiver"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="glucodata.Minute" />
+      </intent-filter>
+    </receiver>
+
     <service
       android:name=".ble.Libre2ForegroundService"
       android:exported="false"
