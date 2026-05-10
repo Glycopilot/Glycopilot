@@ -88,6 +88,18 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
     return pendingIntakes.find(i => i.scheduled_time.slice(0, 5) < nowTime) ?? null;
   }, [pendingIntakes]);
 
+  // "C'est l'heure" : prochain intake prévu dans les 15 prochaines minutes
+  const isDueNow = useMemo(() => {
+    if (!nextUpcomingIntake) return false;
+    const toMin = (t: string) => {
+      const [h, m] = t.slice(0, 5).split(':').map(Number);
+      return h * 60 + m;
+    };
+    const nowMin = toMin(new Date().toTimeString());
+    const schedMin = toMin(nextUpcomingIntake.scheduled_time);
+    return schedMin - nowMin <= 14;
+  }, [nextUpcomingIntake]);
+
   // ── tab ──
   const handleTabSwitch = useCallback(
     (tab: TabType) => {
@@ -244,6 +256,7 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
             <NextReminderCard
               nextIntake={nextUpcomingIntake ?? overdueIntake!}
               isOverdue={!nextUpcomingIntake && !!overdueIntake}
+              isDueNow={isDueNow}
               onViewAll={() => navigation.navigate('Notifications')}
             />
           )}
