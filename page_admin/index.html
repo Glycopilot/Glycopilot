@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GlycoPilot Admin - Validation medecins</title>
+    <meta
+      name="description"
+      content="Page admin GlycoPilot pour valider ou refuser les profils medecins en attente."
+    />
+    <link rel="icon" href="../frontend/assets/favicon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <aside class="admin-aside">
+        <img src="../frontend/assets/glycopilot.png" alt="GlycoPilot" />
+        <div>
+          <p class="eyebrow">Administration</p>
+          <h1>Validation des profils medecins</h1>
+          <p>
+            Connectez-vous avec un compte admin ou superadmin, puis validez les
+            professionnels de sante en attente.
+          </p>
+        </div>
+      </aside>
+
+      <section class="admin-content">
+        <header class="topbar">
+          <div>
+            <span class="status-dot" id="api-status-dot"></span>
+            <span id="api-status-text">API non verifiee</span>
+          </div>
+          <button class="ghost-btn hidden" id="logout-btn" type="button">
+            Se deconnecter
+          </button>
+        </header>
+
+        <section class="panel" id="login-panel">
+          <div class="panel-heading">
+            <p class="eyebrow">Connexion</p>
+            <h2>Compte administrateur</h2>
+            <p>
+              Utilisez un compte admin ou superadmin. En local, le compte de
+              test peut etre <strong>superadmin@example.com</strong>.
+            </p>
+          </div>
+
+          <form class="login-form" id="login-form">
+            <label>
+              URL API
+              <input
+                id="api-url"
+                type="url"
+                value="http://localhost:8006/api"
+                autocomplete="off"
+              />
+            </label>
+            <label>
+              Email
+              <input
+                id="email"
+                type="email"
+                placeholder="superadmin@example.com"
+                autocomplete="email"
+                required
+              />
+            </label>
+            <label>
+              Mot de passe
+              <input
+                id="password"
+                type="password"
+                placeholder="StrongPass123!"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+            <button class="primary-btn" type="submit">Se connecter</button>
+          </form>
+        </section>
+
+        <section class="panel hidden" id="doctors-panel">
+          <div class="list-header">
+            <div>
+              <p class="eyebrow">Demandes en attente</p>
+              <h2>Medecins a verifier</h2>
+            </div>
+            <button class="ghost-btn" id="refresh-btn" type="button">
+              Actualiser
+            </button>
+          </div>
+
+          <div class="summary-row">
+            <div class="summary-card">
+              <span>En attente</span>
+              <strong id="pending-count">0</strong>
+            </div>
+            <div class="summary-note">
+              Les profils valides peuvent se connecter immediatement.
+            </div>
+          </div>
+
+          <div class="doctor-list" id="doctor-list"></div>
+        </section>
+
+        <div class="toast hidden" id="toast"></div>
+      </section>
+    </main>
+
+    <template id="doctor-card-template">
+      <article class="doctor-card">
+        <div class="doctor-main">
+          <div class="doctor-avatar">Dr</div>
+          <div class="doctor-copy">
+            <div class="doctor-title-row">
+              <h3 data-field="name"></h3>
+              <span data-field="status"></span>
+            </div>
+            <div class="doctor-meta">
+              <p><strong>Email</strong><span data-field="email"></span></p>
+              <p><strong>Licence</strong><span data-field="license"></span></p>
+              <p><strong>Specialite</strong><span data-field="specialty"></span></p>
+              <p><strong>Adresse</strong><span data-field="address"></span></p>
+            </div>
+          </div>
+        </div>
+        <div class="doctor-actions">
+          <button class="accept-btn" type="button">Valider</button>
+          <button class="decline-btn" type="button">Refuser</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
