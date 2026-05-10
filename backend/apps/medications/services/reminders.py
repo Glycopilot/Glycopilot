@@ -52,7 +52,7 @@ def send_due_medication_reminders() -> dict:
         try:
             result = send_push_to_user(
                 user=user,
-                title="💊 Rappel médicament",
+                title=" Glycopilot: 💊 Rappel médicament",
                 body=f"C'est l'heure de prendre votre médicament {med_name}",
                 data={
                     "type": "medication_reminder",
