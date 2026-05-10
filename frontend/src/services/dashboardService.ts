@@ -37,8 +37,7 @@ const dashboardService = {
       const response = await apiClient.get<DashboardSummary>(url);
       return response.data;
     } catch {
-      // Retourner des données de démo si l'endpoint n'existe pas (404) ou autre erreur
-      return mockDashboardSummary;
+      return { ...mockDashboardSummary, glucose: undefined };
     }
   },
 

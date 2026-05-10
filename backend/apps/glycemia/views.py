@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.dashboard.services import DashboardCache
 from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto, PersonalModelApproval
 from .serializers import (
     GlycemiaDataIASerializer,
@@ -131,8 +132,8 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         histo_entry = serializer.save(user=request.user, source="manual")
 
         self._add_to_month_history(histo_entry)
-
         self._clean_old_entries(request.user)
+        DashboardCache.invalidate_summary(request.user.pk)
 
         return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
 
@@ -154,8 +155,8 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         histo_entry = serializer.save(user=request.user, source="cgm")
 
         self._add_to_month_history(histo_entry)
-
         self._clean_old_entries(request.user)
+        DashboardCache.invalidate_summary(request.user.pk)
 
         return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
 

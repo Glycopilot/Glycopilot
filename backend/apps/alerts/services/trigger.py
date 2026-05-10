@@ -92,7 +92,7 @@ def trigger_for_value(*, user, glycemia_value: int) -> list[AlertEvent]:
             try:
                 send_push(
                     user=user,
-                    title=rule.name,
+                    title=f"Glycopilot: 🩸 {rule.name}",
                     body=f"Glycémie: {glycemia_value} mg/dL",
                     data={"rule": rule.code, "event_id": event.id},
                 )
