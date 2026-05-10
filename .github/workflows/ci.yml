@@ -2,443 +2,443 @@ name: Deploy to AWS EC2
 
 on:
   push:
-    branches: [main, develop, feat/medicines]
+    branches: [ main, develop]
   pull_request:
-    branches: [main, develop, feat/medicines]
+    branches: [ main, develop]
   workflow_dispatch:
 
 jobs:
   secret-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install gitleaks
-        run: |
-          GITLEAKS_VERSION="8.29.0"
-          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz -o gitleaks.tar.gz
-          tar -xzf gitleaks.tar.gz gitleaks
-          sudo mv gitleaks /usr/local/bin/gitleaks
-          rm gitleaks.tar.gz
-
-      - name: Run gitleaks scan
-        run: gitleaks detect --source . --redact --report-path gitleaks-report.json
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install gitleaks
+      run: |
+        GITLEAKS_VERSION="8.29.0"
+        curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz -o gitleaks.tar.gz
+        tar -xzf gitleaks.tar.gz gitleaks
+        sudo mv gitleaks /usr/local/bin/gitleaks
+        rm gitleaks.tar.gz
+    
+    - name: Run gitleaks scan
+      run: gitleaks detect --source . --redact --report-path gitleaks-report.json
 
   test-backend:
     needs: secret-scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-django
-
-      - name: Run tests with coverage
-        env:
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          SECRET_KEY_ADMIN: ${{ secrets.SECRET_KEY_ADMIN }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
-          TESTING: true
-        run: |
-          cd backend
-          pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-backend
-          path: backend/coverage.xml
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Lint with flake8
-        run: |
-          cd backend
-          pip install flake8
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-django
+    
+    - name: Run tests with coverage
+      env:
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        SECRET_KEY_ADMIN: ${{ secrets.SECRET_KEY_ADMIN }}
+        SMTP_HOST: ${{ secrets.SMTP_HOST }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+        TESTING: true
+      run: |
+        cd backend
+        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
+    
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-backend
+        path: backend/coverage.xml
+        retention-days: 1
+        if-no-files-found: error
+    
+    - name: Lint with flake8
+      run: |
+        cd backend
+        pip install flake8
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   sonarqube:
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
-    continue-on-error: true # TODO: Retirer une fois que le coverage sera suffisant
+    continue-on-error: true  # TODO: Retirer une fois que le coverage sera suffisant
     permissions:
       contents: read
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Download Backend Coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-backend
+        path: backend/
+    
+    - name: Verify Backend Coverage
+      run: |
+        if [ -f backend/coverage.xml ]; then
+          echo "Backend coverage file found"
+          ls -lh backend/coverage.xml
+        else
+          echo "Backend coverage file not found"
+        fi
+    
+    - name: Download Frontend Coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-frontend
+        path: frontend/coverage/
+      continue-on-error: true #a retirer plus tard si on configure les tests frontend
+    
+    - name: Verify Frontend Coverage
+      run: |
+        if [ -f frontend/coverage/lcov.info ]; then
+          echo "Frontend coverage file found"
+          ls -lh frontend/coverage/lcov.info
+        else
+          echo "Frontend coverage file not found"
+        fi
+      continue-on-error: true #a retirer plus tard si on configure les tests frontend
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
 
-      - name: Download Backend Coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-backend
-          path: backend/
+    - name: Install frontend dependencies (for tsconfig resolution)
+      run: cd frontend && npm install --legacy-peer-deps
 
-      - name: Verify Backend Coverage
-        run: |
-          if [ -f backend/coverage.xml ]; then
-            echo "Backend coverage file found"
-            ls -lh backend/coverage.xml
-          else
-            echo "Backend coverage file not found"
-          fi
+    - name: Cache SonarCloud packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar-${{ hashFiles('**/sonar-project.properties') }}
+        restore-keys: ${{ runner.os }}-sonar-
 
-      - name: Download Frontend Coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-frontend
-          path: frontend/coverage/
-        continue-on-error: true #a retirer plus tard si on configure les tests frontend
-
-      - name: Verify Frontend Coverage
-        run: |
-          if [ -f frontend/coverage/lcov.info ]; then
-            echo "Frontend coverage file found"
-            ls -lh frontend/coverage/lcov.info
-          else
-            echo "Frontend coverage file not found"
-          fi
-        continue-on-error: true #a retirer plus tard si on configure les tests frontend
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install frontend dependencies (for tsconfig resolution)
-        run: cd frontend && npm install --legacy-peer-deps
-
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar-${{ hashFiles('**/sonar-project.properties') }}
-          restore-keys: ${{ runner.os }}-sonar-
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-
-      - name: Wait for SonarCloud Processing
-        run: |
-          echo "Waiting for SonarCloud to process the analysis..."
-          for i in {1..6}; do
-            sleep 10
-            echo "Waiting... ($i/6)"
-          done
-
-      - name: Get SonarCloud Project Status
-        id: sonar_status
-        continue-on-error: true
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # Récupération du status du Quality Gate avec retry
-          for i in {1..3}; do
-            RESPONSE=$(curl -s -w "\n%{http_code}" -u "${SONAR_TOKEN}:" \
-              "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Glycopilot_Glycopilot&organization=glycopilot-1")
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | head -n-1)
-            
-            if [ "$HTTP_CODE" -eq 200 ]; then
-              QG_STATUS=$(echo "$BODY" | jq -r '.projectStatus.status // "UNKNOWN"')
-              echo "quality_gate=$QG_STATUS" >> $GITHUB_OUTPUT
-              echo "Quality Gate Status: $QG_STATUS"
-              exit 0
-            fi
-            
-            echo "API call failed (attempt $i/3), HTTP $HTTP_CODE"
-            [ $i -lt 3 ] && sleep 5
-          done
-
-          echo "quality_gate=UNKNOWN" >> $GITHUB_OUTPUT
-          echo "::warning::Failed to retrieve Quality Gate status from SonarCloud API"
-
-      - name: Get SonarCloud Metrics
-        id: sonar_metrics
-        continue-on-error: true
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          # Récupération des métriques principales avec gestion d'erreur
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarqube-scan-action@v6
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FAHAD }}
+        SONAR_HOST_URL: https://sonarcloud.io
+    
+    - name: Wait for SonarCloud Processing
+      run: |
+        echo "Waiting for SonarCloud to process the analysis..."
+        for i in {1..6}; do
+          sleep 10
+          echo "Waiting... ($i/6)"
+        done
+    
+    - name: Get SonarCloud Project Status
+      id: sonar_status
+      continue-on-error: true
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FAHAD }}
+      run: |
+        # Récupération du status du Quality Gate avec retry
+        for i in {1..3}; do
           RESPONSE=$(curl -s -w "\n%{http_code}" -u "${SONAR_TOKEN}:" \
-            "https://sonarcloud.io/api/measures/component?component=Glycopilot_Glycopilot&organization=glycopilot-1&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc")
-
+            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Glycopilot_Glycopilot&organization=glycopilot-1")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          METRICS=$(echo "$RESPONSE" | head -n-1)
-
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "::warning::Failed to retrieve metrics from SonarCloud API (HTTP $HTTP_CODE)"
-            # Valeurs par défaut
-            echo "bugs=N/A" >> $GITHUB_OUTPUT
-            echo "vulnerabilities=N/A" >> $GITHUB_OUTPUT
-            echo "code_smells=N/A" >> $GITHUB_OUTPUT
-            echo "coverage=N/A" >> $GITHUB_OUTPUT
-            echo "duplications=N/A" >> $GITHUB_OUTPUT
-            echo "lines=N/A" >> $GITHUB_OUTPUT
+          BODY=$(echo "$RESPONSE" | head -n-1)
+          
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            QG_STATUS=$(echo "$BODY" | jq -r '.projectStatus.status // "UNKNOWN"')
+            echo "quality_gate=$QG_STATUS" >> $GITHUB_OUTPUT
+            echo "Quality Gate Status: $QG_STATUS"
             exit 0
           fi
-
-          BUGS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="bugs") | .value // "0"')
-          VULNERABILITIES=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="vulnerabilities") | .value // "0"')
-          CODE_SMELLS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="code_smells") | .value // "0"')
-          COVERAGE=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="coverage") | .value // "0"')
-          DUPLICATIONS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="duplicated_lines_density") | .value // "0"')
-          LINES=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="ncloc") | .value // "0"')
-
-          echo "bugs=$BUGS" >> $GITHUB_OUTPUT
-          echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
-          echo "code_smells=$CODE_SMELLS" >> $GITHUB_OUTPUT
-          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
-          echo "duplications=$DUPLICATIONS" >> $GITHUB_OUTPUT
-          echo "lines=$LINES" >> $GITHUB_OUTPUT
-
-      - name: Create PR Comment Report
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const qualityGate = '${{ steps.sonar_status.outputs.quality_gate }}' || 'UNKNOWN';
-            const bugs = '${{ steps.sonar_metrics.outputs.bugs }}' || 'N/A';
-            const vulnerabilities = '${{ steps.sonar_metrics.outputs.vulnerabilities }}' || 'N/A';
-            const codeSmells = '${{ steps.sonar_metrics.outputs.code_smells }}' || 'N/A';
-            const coverage = '${{ steps.sonar_metrics.outputs.coverage }}' || 'N/A';
-            const duplications = '${{ steps.sonar_metrics.outputs.duplications }}' || 'N/A';
-            const lines = '${{ steps.sonar_metrics.outputs.lines }}' || 'N/A';
-
-            const qgText = qualityGate === 'OK' ? 'PASSED' : qualityGate === 'WARN' ? 'WARNING' : qualityGate === 'UNKNOWN' ? 'UNKNOWN' : 'FAILED';
-
-            const coverageDisplay = coverage !== 'N/A' ? `${coverage}%` : coverage;
-            const duplicationsDisplay = duplications !== 'N/A' ? `${duplications}%` : duplications;
-
-            const report = `## Rapport SonarCloud
-
-            **Quality Gate:** ${qgText}
-
-            ### Métriques du projet
-
-            | Métrique | Valeur | Détails |
-            |----------|--------|----------|
-            | Bugs | **${bugs}** | Problèmes qui représentent des erreurs de code |
-            | Vulnérabilités | **${vulnerabilities}** | Failles de sécurité potentielles |
-            | Code Smells | **${codeSmells}** | Problèmes de maintenabilité |
-            | Coverage | **${coverageDisplay}** | Couverture de code par les tests |
-            | Duplications | **${duplicationsDisplay}** | Code dupliqué |
-            | Lignes de code | **${lines}** | Nombre de lignes (sans commentaires) |
-
-            ### Liens utiles
-
-            - [Dashboard complet](https://sonarcloud.io/summary/overall?id=Glycopilot_Glycopilot)
-            - [Liste des bugs](https://sonarcloud.io/project/issues?resolved=false&types=BUG&id=Glycopilot_Glycopilot)
-            - [Vulnérabilités](https://sonarcloud.io/project/security_hotspots?id=Glycopilot_Glycopilot)
-            - [Code Coverage](https://sonarcloud.io/component_measures?metric=coverage&id=Glycopilot_Glycopilot)
-
-            ---
-
-            ${qualityGate !== 'OK' ? '**Note:** Le Quality Gate est temporairement en mode \`continue-on-error\` pendant le développement actif.' : ''}
-            `;
-
-            // Chercher si un commentaire existe déjà
-            const { data: comments } = await github.rest.issues.listComments({
+          
+          echo "API call failed (attempt $i/3), HTTP $HTTP_CODE"
+          [ $i -lt 3 ] && sleep 5
+        done
+        
+        echo "quality_gate=UNKNOWN" >> $GITHUB_OUTPUT
+        echo "::warning::Failed to retrieve Quality Gate status from SonarCloud API"
+    
+    - name: Get SonarCloud Metrics
+      id: sonar_metrics
+      continue-on-error: true
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FAHAD }}
+      run: |
+        # Récupération des métriques principales avec gestion d'erreur
+        RESPONSE=$(curl -s -w "\n%{http_code}" -u "${SONAR_TOKEN}:" \
+          "https://sonarcloud.io/api/measures/component?component=Glycopilot_Glycopilot&organization=glycopilot-1&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc")
+        
+        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+        METRICS=$(echo "$RESPONSE" | head -n-1)
+        
+        if [ "$HTTP_CODE" -ne 200 ]; then
+          echo "::warning::Failed to retrieve metrics from SonarCloud API (HTTP $HTTP_CODE)"
+          # Valeurs par défaut
+          echo "bugs=N/A" >> $GITHUB_OUTPUT
+          echo "vulnerabilities=N/A" >> $GITHUB_OUTPUT
+          echo "code_smells=N/A" >> $GITHUB_OUTPUT
+          echo "coverage=N/A" >> $GITHUB_OUTPUT
+          echo "duplications=N/A" >> $GITHUB_OUTPUT
+          echo "lines=N/A" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        BUGS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="bugs") | .value // "0"')
+        VULNERABILITIES=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="vulnerabilities") | .value // "0"')
+        CODE_SMELLS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="code_smells") | .value // "0"')
+        COVERAGE=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="coverage") | .value // "0"')
+        DUPLICATIONS=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="duplicated_lines_density") | .value // "0"')
+        LINES=$(echo "$METRICS" | jq -r '.component.measures[] | select(.metric=="ncloc") | .value // "0"')
+        
+        echo "bugs=$BUGS" >> $GITHUB_OUTPUT
+        echo "vulnerabilities=$VULNERABILITIES" >> $GITHUB_OUTPUT
+        echo "code_smells=$CODE_SMELLS" >> $GITHUB_OUTPUT
+        echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+        echo "duplications=$DUPLICATIONS" >> $GITHUB_OUTPUT
+        echo "lines=$LINES" >> $GITHUB_OUTPUT
+    
+    - name: Create PR Comment Report
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const qualityGate = '${{ steps.sonar_status.outputs.quality_gate }}' || 'UNKNOWN';
+          const bugs = '${{ steps.sonar_metrics.outputs.bugs }}' || 'N/A';
+          const vulnerabilities = '${{ steps.sonar_metrics.outputs.vulnerabilities }}' || 'N/A';
+          const codeSmells = '${{ steps.sonar_metrics.outputs.code_smells }}' || 'N/A';
+          const coverage = '${{ steps.sonar_metrics.outputs.coverage }}' || 'N/A';
+          const duplications = '${{ steps.sonar_metrics.outputs.duplications }}' || 'N/A';
+          const lines = '${{ steps.sonar_metrics.outputs.lines }}' || 'N/A';
+          
+          const qgText = qualityGate === 'OK' ? 'PASSED' : qualityGate === 'WARN' ? 'WARNING' : qualityGate === 'UNKNOWN' ? 'UNKNOWN' : 'FAILED';
+          
+          const coverageDisplay = coverage !== 'N/A' ? `${coverage}%` : coverage;
+          const duplicationsDisplay = duplications !== 'N/A' ? `${duplications}%` : duplications;
+          
+          const report = `## Rapport SonarCloud
+          
+          **Quality Gate:** ${qgText}
+          
+          ### Métriques du projet
+          
+          | Métrique | Valeur | Détails |
+          |----------|--------|----------|
+          | Bugs | **${bugs}** | Problèmes qui représentent des erreurs de code |
+          | Vulnérabilités | **${vulnerabilities}** | Failles de sécurité potentielles |
+          | Code Smells | **${codeSmells}** | Problèmes de maintenabilité |
+          | Coverage | **${coverageDisplay}** | Couverture de code par les tests |
+          | Duplications | **${duplicationsDisplay}** | Code dupliqué |
+          | Lignes de code | **${lines}** | Nombre de lignes (sans commentaires) |
+          
+          ### Liens utiles
+          
+          - [Dashboard complet](https://sonarcloud.io/summary/overall?id=Glycopilot_Glycopilot)
+          - [Liste des bugs](https://sonarcloud.io/project/issues?resolved=false&types=BUG&id=Glycopilot_Glycopilot)
+          - [Vulnérabilités](https://sonarcloud.io/project/security_hotspots?id=Glycopilot_Glycopilot)
+          - [Code Coverage](https://sonarcloud.io/component_measures?metric=coverage&id=Glycopilot_Glycopilot)
+          
+          ---
+          
+          ${qualityGate !== 'OK' ? '**Note:** Le Quality Gate est temporairement en mode \`continue-on-error\` pendant le développement actif.' : ''}
+          `;
+          
+          // Chercher si un commentaire existe déjà
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('Rapport SonarCloud')
+          );
+          
+          if (botComment) {
+            // Mettre à jour le commentaire existant
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: report
+            });
+          } else {
+            // Créer un nouveau commentaire
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
+              body: report
             });
-
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && comment.body.includes('Rapport SonarCloud')
-            );
-
-            if (botComment) {
-              // Mettre à jour le commentaire existant
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: report
-              });
-            } else {
-              // Créer un nouveau commentaire
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: report
-              });
-            }
-
-      - name: Check Quality Gate Status
-        run: |
-          echo "::warning title=SonarQube Quality Gate::Le Quality Gate peut échouer en raison d'une couverture de code insuffisante. Ceci est temporaire pendant le développement."
-          echo "SonarCloud analysis completed"
-          echo "ATTENTION: continue-on-error est activé temporairement"
-          echo "Le Quality Gate devrait passer une fois le code et les tests complétés"
+          }
+    
+    - name: Check Quality Gate Status
+      run: |
+        echo "::warning title=SonarQube Quality Gate::Le Quality Gate peut échouer en raison d'une couverture de code insuffisante. Ceci est temporaire pendant le développement."
+        echo "SonarCloud analysis completed"
+        echo "ATTENTION: continue-on-error est activé temporairement"
+        echo "Le Quality Gate devrait passer une fois le code et les tests complétés"
 
   test-frontend:
     needs: secret-scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm install --legacy-peer-deps
-
-      - name: Run tests with coverage
-        run: |
-          cd frontend
-          npm test -- --coverage --watchAll=false
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-frontend
-          path: frontend/coverage/
-          retention-days: 1
-          if-no-files-found: ignore
-        continue-on-error: true #a retirer plus tard si on configure les tests frontend
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm install --legacy-peer-deps
+    
+    - name: Run tests with coverage
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false
+    
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-frontend
+        path: frontend/coverage/
+        retention-days: 1
+        if-no-files-found: ignore
+      continue-on-error: true #a retirer plus tard si on configure les tests frontend
 
   deploy:
     name: Deploy to EC2
     needs: [test-backend, test-frontend, sonarqube]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-
+    
     steps:
-      - name: Checkout the code
-        uses: actions/checkout@v4
-
-      - name: Transfer files to EC2 via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          # On transfère le backend, le nginx et le docker-compose
-          source: "backend/,.nginx/,docker-compose.yml,ai_service/"
-          target: "/home/ubuntu/glycopilot-app"
-
-      - name: Execute deployment on EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/glycopilot-app
-
-            # 1. Création dynamique des fichiers .env.prod à partir des secrets GitHub
-            echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
-            echo "${{ secrets.AI_ENV_FILE }}" > ./ai_service/.env.prod
-
-            # 2. Déploiement des conteneurs AWS
-            sudo docker compose --profile aws down
-            sudo docker compose --profile aws build backend_aws ai_service_aws
-            sudo docker compose --profile aws up -d
-
-            # 3. Nettoyage des anciennes images Docker
-            sudo docker image prune -f
+    - name: Checkout the code
+      uses: actions/checkout@v4
+    
+    - name: Transfer files to EC2 via SCP
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        # On transfère le backend, le nginx et le docker-compose
+        source: "backend/,.nginx/,docker-compose.yml,ai_service/"
+        target: "/home/ubuntu/glycopilot-app"
+    
+    - name: Execute deployment on EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd /home/ubuntu/glycopilot-app
+          
+          # 1. Création dynamique des fichiers .env.prod à partir des secrets GitHub
+          echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
+          echo "${{ secrets.AI_ENV_FILE }}" > ./ai_service/.env.prod
+          
+          # 2. Déploiement des conteneurs AWS
+          sudo docker compose --profile aws down
+          sudo docker compose --profile aws build backend_aws ai_service_aws
+          sudo docker compose --profile aws up -d
+          
+          # 3. Nettoyage des anciennes images Docker
+          sudo docker image prune -f
 
   notify:
     needs: [secret-scan, test-backend, test-frontend, sonarqube, deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Pipeline Summary
-        run: |
-          echo "======================================"
-          echo "PIPELINE SUMMARY"
-          echo "======================================"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Triggered by: ${{ github.actor }}"
-          echo ""
-          echo "======================================"
-          echo "Job Status:"
-          echo "======================================"
-          echo "Secret Scan: ${{ needs.secret-scan.result }}"
-          echo "Backend Tests: ${{ needs.test-backend.result }}"
-          echo "Frontend Tests: ${{ needs.test-frontend.result }}"
-          echo "SonarQube: ${{ needs.sonarqube.result }}"
-          echo "Deploy: ${{ needs.deploy.result }}"
-          echo "======================================"
-          echo ""
-
-          # Résumé des résultats (informatif uniquement, ne fait pas échouer la pipeline)
-          CRITICAL_FAILED=false
-
-          # Vérifier les jobs critiques
-          if [ "${{ needs.secret-scan.result }}" != "success" ]; then
-            echo "CRITICAL: Secret scan failed"
-            CRITICAL_FAILED=true
+    - name: Pipeline Summary
+      run: |
+        echo "======================================"
+        echo "PIPELINE SUMMARY"
+        echo "======================================"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Triggered by: ${{ github.actor }}"
+        echo ""
+        echo "======================================"
+        echo "Job Status:"
+        echo "======================================"
+        echo "Secret Scan: ${{ needs.secret-scan.result }}"
+        echo "Backend Tests: ${{ needs.test-backend.result }}"
+        echo "Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "SonarQube: ${{ needs.sonarqube.result }}"
+        echo "Deploy: ${{ needs.deploy.result }}"
+        echo "======================================"
+        echo ""
+        
+        # Résumé des résultats (informatif uniquement, ne fait pas échouer la pipeline)
+        CRITICAL_FAILED=false
+        
+        # Vérifier les jobs critiques
+        if [ "${{ needs.secret-scan.result }}" != "success" ]; then
+          echo "CRITICAL: Secret scan failed"
+          CRITICAL_FAILED=true
+        fi
+        
+        if [ "${{ needs.test-backend.result }}" != "success" ]; then
+          echo "CRITICAL: Backend tests failed"
+          CRITICAL_FAILED=true
+        fi
+        
+        if [ "${{ needs.test-frontend.result }}" != "success" ]; then
+          echo "CRITICAL: Frontend tests failed"
+          CRITICAL_FAILED=true
+        fi
+        
+        # Informations sur les jobs non-critiques
+        if [ "${{ needs.sonarqube.result }}" != "success" ]; then
+          echo "INFO: SonarQube analysis completed with issues (temporarily allowed)"
+        fi
+        
+        if [ "${{ needs.deploy.result }}" == "failure" ]; then
+          echo "WARNING: Deployment failed"
+        elif [ "${{ needs.deploy.result }}" == "skipped" ]; then
+          echo "INFO: Deployment skipped (not on main branch)"
+        elif [ "${{ needs.deploy.result }}" == "success" ]; then
+          echo "SUCCESS: Deployment completed"
+        fi
+        
+        echo ""
+        echo "======================================"
+        
+        # Résumé final
+        if [ "$CRITICAL_FAILED" = true ]; then
+          echo "FINAL STATUS: FAILED - Critical quality checks did not pass"
+          echo "The pipeline is marked as failed by the failed jobs themselves"
+        else
+          echo "FINAL STATUS: SUCCESS - All critical quality checks passed"
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "Application deployed successfully"
           fi
-
-          if [ "${{ needs.test-backend.result }}" != "success" ]; then
-            echo "CRITICAL: Backend tests failed"
-            CRITICAL_FAILED=true
-          fi
-
-          if [ "${{ needs.test-frontend.result }}" != "success" ]; then
-            echo "CRITICAL: Frontend tests failed"
-            CRITICAL_FAILED=true
-          fi
-
-          # Informations sur les jobs non-critiques
-          if [ "${{ needs.sonarqube.result }}" != "success" ]; then
-            echo "INFO: SonarQube analysis completed with issues (temporarily allowed)"
-          fi
-
-          if [ "${{ needs.deploy.result }}" == "failure" ]; then
-            echo "WARNING: Deployment failed"
-          elif [ "${{ needs.deploy.result }}" == "skipped" ]; then
-            echo "INFO: Deployment skipped (not on main branch)"
-          elif [ "${{ needs.deploy.result }}" == "success" ]; then
-            echo "SUCCESS: Deployment completed"
-          fi
-
-          echo ""
-          echo "======================================"
-
-          # Résumé final
-          if [ "$CRITICAL_FAILED" = true ]; then
-            echo "FINAL STATUS: FAILED - Critical quality checks did not pass"
-            echo "The pipeline is marked as failed by the failed jobs themselves"
-          else
-            echo "FINAL STATUS: SUCCESS - All critical quality checks passed"
-            if [ "${{ needs.deploy.result }}" == "success" ]; then
-              echo "Application deployed successfully"
-            fi
-          fi
-
-          echo "======================================"
-          echo ""
-          echo "Note: This notification job does not affect the pipeline status."
-          echo "The actual pipeline status is determined by the individual jobs."
+        fi
+        
+        echo "======================================"
+        echo ""
+        echo "Note: This notification job does not affect the pipeline status."
+        echo "The actual pipeline status is determined by the individual jobs."
