@@ -198,10 +198,8 @@ def logout(request):
 
         return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
     except Exception:
-        return Response(
-            {"error": "Token invalide."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        # Token already expired/blacklisted — logout goal is achieved
+        return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

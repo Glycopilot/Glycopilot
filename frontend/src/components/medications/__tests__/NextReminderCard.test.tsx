@@ -68,4 +68,27 @@ describe('NextReminderCard', () => {
     );
     expect(getByText('Prochain rappel')).toBeTruthy();
   });
+
+  it("affiche \"C'est l'heure !\" avec isDueNow", () => {
+    const { getByText } = render(
+      <NextReminderCard nextIntake={mockIntake} isDueNow onViewAll={jest.fn()} />
+    );
+    expect(getByText("C'est l'heure !")).toBeTruthy();
+    expect(getByText('08:00')).toBeTruthy();
+  });
+
+  it("isDueNow a priorité sur isOverdue", () => {
+    const { getByText } = render(
+      <NextReminderCard nextIntake={mockIntake} isDueNow isOverdue onViewAll={jest.fn()} />
+    );
+    expect(getByText("C'est l'heure !")).toBeTruthy();
+  });
+
+  it("n'affiche pas l'heure en suffixe du nom quand isDueNow", () => {
+    const { getByText, queryByText } = render(
+      <NextReminderCard nextIntake={mockIntake} isDueNow onViewAll={jest.fn()} />
+    );
+    expect(getByText('Doliprane — 1000 mg')).toBeTruthy();
+    expect(queryByText(/à 08:00/)).toBeNull();
+  });
 });

@@ -272,6 +272,7 @@ export default function MedFormModal({
           showsVerticalScrollIndicator={false}
           bounces={false}
           keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 24 }}
         >
           <Text style={styles.title}>
             {editingMed ? 'Modifier le traitement' : 'Nouveau médicament'}
