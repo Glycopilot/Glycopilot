@@ -33,12 +33,13 @@ describe('dashboardService', () => {
             expect(result).toEqual(mockDashboardSummary);
         });
 
-        it('should return mock data on error', async () => {
+        it('should return mock data without glucose on error', async () => {
             mock.onGet('/v1/dashboard/summary').reply(500);
 
             const result = await dashboardService.getSummary();
 
-            expect(result).toEqual(mockDashboardSummary);
+            expect(result).toEqual({ ...mockDashboardSummary, glucose: undefined });
+            expect(result.glucose).toBeUndefined();
         });
     });
 

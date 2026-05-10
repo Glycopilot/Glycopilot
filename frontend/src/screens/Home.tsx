@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import {
   getGlycemiaStatus,
 } from '../constants/glycemia.constants';
 import { useGlycemiaWebSocket } from '../hooks/useGlycemiaWebSocket';
+import glycemiaService from '../services/glycemiaService';
+import type { GlycemiaEntry } from '../types/glycemia.types';
 import { toastError, toastInfo } from '../services/toastService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications } from '../services/pushService';
@@ -62,20 +64,29 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   }, [todayIntakes]);
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [realtimeGlucose, setRealtimeGlucose] = useState(glucose);
   const [wsEnabled, setWsEnabled] = useState(false);
+  const [currentGlucoseEntry, setCurrentGlucoseEntry] = useState<GlycemiaEntry | null>(null);
 
-  // Récupérer le token JWT et enregistrer les notifications push
+  const fetchCurrentGlucose = useCallback(async () => {
+    const entry = await glycemiaService.getCurrent();
+    if (entry) setCurrentGlucoseEntry(entry);
+  }, []);
+
+  // Fetch initial + enregistrement push
   useEffect(() => {
+    fetchCurrentGlucose();
     AsyncStorage.getItem('access_token').then(token => {
       if (token) {
         setAccessToken(token);
-        setWsEnabled(true); // Enable WebSocket only after token is loaded
-        // Enregistrer pour les notifications push
+        setWsEnabled(true);
         registerForPushNotifications();
       }
     });
-  }, []);
+  }, [fetchCurrentGlucose]);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([refresh(), fetchCurrentGlucose()]);
+  }, [refresh, fetchCurrentGlucose]);
 
   // WebSocket pour les mises à jour temps réel (only connect when token is available)
   const { lastReading, alert } = useGlycemiaWebSocket(
@@ -83,19 +94,30 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     WS_URL
   );
 
-  // Mettre à jour la glycémie avec les données WebSocket
-  useEffect(() => {
-    if (lastReading) {
-      setRealtimeGlucose({
+  // Priorité : WebSocket > glycemia/current (direct DB) > dashboard summary
+  const realtimeGlucose = useMemo(() => {
+    const wsTs = lastReading?.measured_at ? new Date(lastReading.measured_at).getTime() : 0;
+    const directTs = currentGlucoseEntry?.measured_at ? new Date(currentGlucoseEntry.measured_at).getTime() : 0;
+    const dashTs = glucose?.recordedAt ? new Date(glucose.recordedAt).getTime() : 0;
+
+    if (lastReading && wsTs >= Math.max(directTs, dashTs)) {
+      return {
         value: lastReading.value,
         unit: lastReading.unit || 'mg/dL',
-        trend: lastReading.trend as 'rising' | 'falling' | 'flat' | undefined,
+        trend: lastReading.trend,
         recordedAt: lastReading.measured_at,
-      });
-    } else if (glucose) {
-      setRealtimeGlucose(glucose);
+      };
     }
-  }, [lastReading, glucose]);
+    if (currentGlucoseEntry && directTs >= dashTs) {
+      return {
+        value: currentGlucoseEntry.value,
+        unit: currentGlucoseEntry.unit || 'mg/dL',
+        trend: currentGlucoseEntry.trend,
+        recordedAt: currentGlucoseEntry.measured_at,
+      };
+    }
+    return glucose ?? null;
+  }, [lastReading, currentGlucoseEntry, glucose]);
 
   // Afficher une alerte si reçue du WebSocket
   useEffect(() => {
@@ -126,7 +148,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={refresh}
+            onRefresh={handleRefresh}
             tintColor="#FF9F1C"
           />
         }
@@ -144,9 +166,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
 
         <GlycemieCard
-          value={realtimeGlucose?.value || 125}
-          status={getGlycemieStatus(realtimeGlucose?.value || 125)}
-          timestamp={realtimeGlucose?.recordedAt || new Date().toISOString()}
+          value={realtimeGlucose?.value ?? null}
+          status={realtimeGlucose ? getGlycemieStatus(realtimeGlucose.value) : undefined}
+          timestamp={realtimeGlucose?.recordedAt}
           unit={realtimeGlucose?.unit}
           trend={realtimeGlucose?.trend}
           onPress={() => navigation.navigate('Stats')}
