@@ -112,32 +112,46 @@ describe('MedFormModal — chips de temps rapides', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (medicationService.search as jest.Mock).mockResolvedValue([]);
-    // Fixer l'heure à 08:00 pour des presets déterministes (créneau matin)
-    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T08:00:00'));
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('affiche les chips du créneau courant pour la première prise', () => {
+  it('affiche créneau matin (06-10h) quand heure < 10h', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T08:00:00'));
     const { getByText } = renderModal();
-    // À 08h00, le créneau matin est affiché (06:00–10:00)
     expect(getByText('08:00')).toBeTruthy();
     expect(getByText('07:00')).toBeTruthy();
   });
 
+  it('affiche créneau midi (10-14h) quand heure entre 10h et 14h', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T12:00:00'));
+    const { getByText } = renderModal();
+    expect(getByText('12:00')).toBeTruthy();
+    expect(getByText('11:00')).toBeTruthy();
+  });
+
+  it('affiche créneau après-midi (14-18h) quand heure entre 14h et 18h', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T15:00:00'));
+    const { getByText } = renderModal();
+    expect(getByText('15:00')).toBeTruthy();
+    expect(getByText('16:00')).toBeTruthy();
+  });
+
+  it('affiche créneau soir (18-22h) quand heure >= 18h', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T19:00:00'));
+    const { getByText } = renderModal();
+    expect(getByText('19:00')).toBeTruthy();
+    expect(getByText('20:00')).toBeTruthy();
+  });
+
   it('sélectionne un chip et met à jour l\'input', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T08:00:00'));
     const { getByText, getByPlaceholderText } = renderModal();
     fireEvent.press(getByText('08:00'));
     const input = getByPlaceholderText('08:30');
     expect(input.props.value).toBe('08:00');
-  });
-
-  it('le chip sélectionné correspond à la valeur par défaut', () => {
-    const { getByText } = renderModal();
-    fireEvent.press(getByText('09:00'));
-    expect(getByText('09:00')).toBeTruthy();
   });
 });
 
