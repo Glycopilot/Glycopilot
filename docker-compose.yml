@@ -113,6 +113,22 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # --- AI Service FastAPI (AWS) ---
+  ai_service_aws:
+    profiles: ["aws"]
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: glycopilot-ai-aws
+    restart: always
+    # Crée un secret GitHub spécifique AI_ENV_FILE si elle a ses propres secrets
+    env_file:
+      - ./ai_service/.env.prod 
+    networks:
+      - glycopilot-network
+    expose:
+      - "8001" # Expose en interne uniquement, PAS de 'ports:'
+
   # --- Frontend Web (local) ---
   frontend_web:
     profiles: ["local"]
@@ -175,18 +191,18 @@ services:
   # --- Backend Django (AWS avec Daphne pour WebSocket) ---
   backend_aws:
     profiles: ["aws"]
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: glycopilot-back-aws
     restart: always
+    env_file:
+      - ./backend/.env.prod
     # Daphne au lieu de Gunicorn pour supporter WebSocket
     command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py import_medications && if [ -f data/import/CIS_bdpm.txt ]; then python manage.py import_medications --bdpm; fi && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-    env_file:
-      - ./backend/.env.prod
     depends_on:
       database_aws:
         condition: service_healthy
