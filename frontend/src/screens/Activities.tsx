@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,6 +10,7 @@ import {
   Pressable,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import {
   Activity as ActivityIcon,
@@ -20,9 +22,29 @@ import {
 } from 'lucide-react-native';
 import Layout from '../components/common/Layout';
 import { colors } from '../themes/colors';
+import { readStepsForToday } from '../services/readStepsForToday';
+import {
+  fetchDailyStepsState,
+  syncDailySteps,
+} from '../services/stepsSyncService';
+import {
+  createUserActivity,
+  fetchActivityTypes,
+  fetchUserActivityHistory,
+  type ActivityTypeDto,
+  type UserActivityDto,
+} from '../services/activitiesApiService';
+import {
+  activityVisual,
+  formatSessionTime,
+  formatWeekTrend,
+  glycemicEstimateFromSession,
+  sumPreviousCalendarWeek,
+  sumThisCalendarWeek,
+} from '../utils/activityDisplay';
+import { toastError, toastSuccess } from '../services/toastService';
 
-// Types
-interface Activity {
+interface SessionRow {
   id: number;
   type: string;
   duration: number;
@@ -31,13 +53,6 @@ interface Activity {
   time: string;
   icon: string;
   color: string;
-}
-
-interface ActivityTypeOption {
-  label: string;
-  icon: string;
-  color: string;
-  avgCalories: number;
 }
 
 interface IntensityOption {
@@ -60,82 +75,133 @@ export default function ActivityScreen({
   navigation,
 }: ActivityScreenProps): React.JSX.Element {
   const [showAddActivity, setShowAddActivity] = useState<boolean>(false);
-  const [activityType, setActivityType] = useState<string>('');
   const [duration, setDuration] = useState<string>('');
   const [intensity, setIntensity] = useState<string>('Modérée');
-  const [customActivity, setCustomActivity] = useState<string>('');
+  const [activityHistory, setActivityHistory] = useState<UserActivityDto[]>(
+    []
+  );
+  const [referenceActivities, setReferenceActivities] = useState<
+    ActivityTypeDto[]
+  >([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [submittingActivity, setSubmittingActivity] = useState(false);
+  const [selectedActivityId, setSelectedActivityId] = useState<number | null>(
+    null
+  );
+  const [stepsToday, setStepsToday] = useState<number | null>(null);
+  const [milestonePoints, setMilestonePoints] = useState<number | null>(null);
+  const [stepBlock, setStepBlock] = useState(100);
+  const [pointsPerBlock, setPointsPerBlock] = useState(5);
 
-  const activities: Activity[] = [
-    {
-      id: 1,
-      type: 'Course',
-      duration: 45,
-      calories: 380,
-      impact: -15,
-      time: '07:30',
-      icon: '🏃',
-      color: '#10B981',
-    },
-    {
-      id: 2,
-      type: 'Marche',
-      duration: 30,
-      calories: 120,
-      impact: -8,
-      time: '18:00',
-      icon: '🚶',
-      color: '#3B82F6',
-    },
-    {
-      id: 3,
-      type: 'Vélo',
-      duration: 60,
-      calories: 450,
-      impact: -20,
-      time: 'Hier, 16:00',
-      icon: '🚴',
-      color: '#A855F7',
-    },
-  ];
+  const refreshActivitiesFromServer = useCallback(async () => {
+    const [types, history] = await Promise.all([
+      fetchActivityTypes(),
+      fetchUserActivityHistory(),
+    ]);
+    setReferenceActivities(types);
+    setActivityHistory(history);
+  }, []);
 
-  const activityTypes: ActivityTypeOption[] = [
-    {
-      label: 'Course',
-      icon: '🏃',
-      color: '#10B981',
-      avgCalories: 8,
-    },
-    {
-      label: 'Marche',
-      icon: '🚶',
-      color: '#3B82F6',
-      avgCalories: 4,
-    },
-    {
-      label: 'Vélo',
-      icon: '🚴',
-      color: '#A855F7',
-      avgCalories: 7,
-    },
-    {
-      label: 'Natation',
-      icon: '🏊',
-      color: '#06B6D4',
-      avgCalories: 9,
-    },
-    {
-      label: 'Yoga',
-      icon: '🧘',
-      color: '#EC4899',
-      avgCalories: 3,
-    },
-    {
-      label: 'Musculation',
-      icon: '🏋️',
-      color: '#F97316',
-      avgCalories: 6,
-    },
-  ];
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void (async () => {
+        const stepsTask = (async () => {
+          try {
+            const state = await fetchDailyStepsState();
+            if (cancelled) {
+              return;
+            }
+            setStepsToday(state.reported_steps_today);
+            setMilestonePoints(state.total_milestone_points);
+            setStepBlock(state.step_block);
+            setPointsPerBlock(state.points_per_block);
+
+            const deviceSteps = await readStepsForToday();
+            if (deviceSteps === null || cancelled) {
+              return;
+            }
+            const sync = await syncDailySteps(deviceSteps);
+            if (cancelled) {
+              return;
+            }
+            setStepsToday(sync.steps);
+            setMilestonePoints(sync.total_milestone_points);
+            if (sync.points_earned > 0) {
+              toastSuccess(
+                'Paliers de pas',
+                `+${sync.points_earned} points (${sync.milestones_crossed} palier${sync.milestones_crossed > 1 ? 's' : ''})`
+              );
+            }
+          } catch {
+            /* hors ligne ou non connecté */
+          }
+        })();
+
+        const activitiesTask = (async () => {
+          try {
+            if (!cancelled) {
+              setActivitiesLoading(true);
+            }
+            const [types, history] = await Promise.all([
+              fetchActivityTypes(),
+              fetchUserActivityHistory(),
+            ]);
+            if (cancelled) {
+              return;
+            }
+            setReferenceActivities(types);
+            setActivityHistory(history);
+          } catch {
+            if (!cancelled) {
+              toastError('Activités', 'Impossible de charger vos séances.');
+            }
+          } finally {
+            if (!cancelled) {
+              setActivitiesLoading(false);
+            }
+          }
+        })();
+
+        await Promise.all([stepsTask, activitiesTask]);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [refreshActivitiesFromServer])
+  );
+
+  const sessionRows: SessionRow[] = useMemo(() => {
+    return activityHistory.map(h => {
+      const v = activityVisual(h.activity_details.name);
+      return {
+        id: h.id,
+        type: h.activity_details.name,
+        duration: h.duration_minutes,
+        calories: h.total_calories_burned,
+        impact: -glycemicEstimateFromSession(
+          h.total_calories_burned,
+          h.total_sugar_used
+        ),
+        time: formatSessionTime(h.start),
+        icon: v.emoji,
+        color: v.color,
+      };
+    });
+  }, [activityHistory]);
+
+  const weekStats = useMemo(
+    () => sumThisCalendarWeek(activityHistory),
+    [activityHistory]
+  );
+  const prevWeekStats = useMemo(
+    () => sumPreviousCalendarWeek(activityHistory),
+    [activityHistory]
+  );
+  const trendLabel = useMemo(
+    () => formatWeekTrend(weekStats.minutes, prevWeekStats.minutes),
+    [weekStats.minutes, prevWeekStats.minutes]
+  );
 
   const intensities: IntensityOption[] = [
     { label: 'Légère', factor: 0.7, color: 'green' },
@@ -143,22 +209,22 @@ export default function ActivityScreen({
     { label: 'Intense', factor: 1.4, color: 'red' },
   ];
 
-  const totalDuration = activities
-    .slice(0, 2)
-    .reduce((acc, a) => acc + a.duration, 0);
-  const totalCalories = activities
-    .slice(0, 2)
-    .reduce((acc, a) => acc + a.calories, 0);
-  const objectifMinutes = 150; // Recommandation OMS
+  const totalDuration = weekStats.minutes;
+  const totalCalories = weekStats.calories;
+  const objectifMinutes = 150;
 
-  const selectedActivity = activityTypes.find(a => a.label === activityType);
+  const selectedRefActivity = referenceActivities.find(
+    a => a.activity_id === selectedActivityId
+  );
   const selectedIntensity = intensities.find(i => i.label === intensity);
+  const durationMinutes = parseInt(duration || '0', 10);
+  const kcalPerHour = selectedRefActivity?.calories_burned ?? 0;
   const estimatedCalories =
-    selectedActivity && duration
+    selectedRefActivity && durationMinutes > 0 && kcalPerHour > 0
       ? Math.round(
-          selectedActivity.avgCalories *
-            parseInt(duration) *
-            (selectedIntensity?.factor || 1)
+          (kcalPerHour / 60) *
+            durationMinutes *
+            (selectedIntensity?.factor ?? 1)
         )
       : 0;
 
@@ -166,11 +232,35 @@ export default function ActivityScreen({
     estimatedCalories > 0 ? Math.round(estimatedCalories / 25) : 0;
 
   const handleSubmit = (): void => {
-    setShowAddActivity(false);
-    setActivityType('');
-    setDuration('');
-    setIntensity('Modérée');
-    setCustomActivity('');
+    if (
+      selectedActivityId == null ||
+      !duration ||
+      durationMinutes <= 0 ||
+      submittingActivity
+    ) {
+      return;
+    }
+    void (async () => {
+      try {
+        setSubmittingActivity(true);
+        await createUserActivity({
+          activity: selectedActivityId,
+          start: new Date().toISOString(),
+          duration_minutes: durationMinutes,
+          intensity,
+        });
+        await refreshActivitiesFromServer();
+        toastSuccess('Séance enregistrée');
+        setShowAddActivity(false);
+        setSelectedActivityId(null);
+        setDuration('');
+        setIntensity('Modérée');
+      } catch {
+        toastError('Activités', 'Enregistrement impossible. Réessayez.');
+      } finally {
+        setSubmittingActivity(false);
+      }
+    })();
   };
 
   const incrementDuration = (): void => {
@@ -203,9 +293,33 @@ export default function ActivityScreen({
               <Text style={styles.title}>Activité</Text>
               <Text style={styles.subtitle}>Suivi de vos efforts</Text>
             </View>
-            <TouchableOpacity style={styles.calendarButton}>
+            <View style={styles.calendarButton} accessibilityElementsHidden>
               <Calendar size={20} color="#007AFF" />
-            </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.stepsMilestoneCard}>
+            <Text style={styles.stepsMilestoneTitle}>Pas et paliers</Text>
+            <View style={styles.stepsMilestoneRow}>
+              <View>
+                <Text style={styles.stepsMilestoneLabel}>Aujourd&apos;hui</Text>
+                <Text style={styles.stepsMilestoneValue}>
+                  {stepsToday !== null ? stepsToday : '—'}
+                </Text>
+              </View>
+              <View style={styles.stepsMilestoneColRight}>
+                <Text style={styles.stepsMilestoneLabel}>Points bonus</Text>
+                <Text style={styles.stepsMilestoneValueAccent}>
+                  {milestonePoints !== null ? milestonePoints : '—'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.stepsMilestoneHint}>
+              Compteur synchronisé avec votre compte. Chaque tranche de{' '}
+              {stepBlock} pas enregistrée sur le serveur crédite {pointsPerBlock}{' '}
+              points. Les pas proviennent des données santé de l&apos;appareil
+              lorsque vous autorisez l&apos;accès.
+            </Text>
           </View>
 
           {/* Résumé hebdomadaire */}
@@ -238,9 +352,7 @@ export default function ActivityScreen({
               <View style={styles.statBox}>
                 <ActivityIcon size={16} color="#fff" strokeWidth={2} />
                 <Text style={styles.statLabel}>Séances</Text>
-                <Text style={styles.statValue}>
-                  {activities.slice(0, 2).length}
-                </Text>
+                <Text style={styles.statValue}>{weekStats.sessions}</Text>
               </View>
               <View style={styles.statBox}>
                 <Droplet size={16} color="#fff" strokeWidth={2} />
@@ -249,8 +361,14 @@ export default function ActivityScreen({
               </View>
               <View style={styles.statBox}>
                 <TrendingUp size={16} color="#fff" strokeWidth={2} />
-                <Text style={styles.statLabel}>Tendance</Text>
-                <Text style={styles.statValue}>+12%</Text>
+                <Text style={styles.statLabel}>Sem. préc.</Text>
+                <Text style={styles.statValue}>
+                  {trendLabel === '='
+                    ? 'Stable'
+                    : trendLabel === '↑'
+                      ? '↑'
+                      : trendLabel}
+                </Text>
               </View>
             </View>
           </View>
@@ -258,36 +376,43 @@ export default function ActivityScreen({
           {/* Impact sur la glycémie */}
           <View style={styles.impactCard}>
             <Text style={styles.impactTitle}>Impact sur la glycémie</Text>
-            <View style={styles.impactList}>
-              {activities.slice(0, 2).map(activity => (
-                <View key={activity.id} style={styles.impactItem}>
-                  <View style={styles.impactLeft}>
-                    <Text style={styles.activityEmoji}>{activity.icon}</Text>
-                    <View>
-                      <Text style={styles.impactActivityName}>
-                        {activity.type}
-                      </Text>
-                      <Text style={styles.impactActivityDuration}>
-                        {activity.duration}min
-                      </Text>
+            {sessionRows.length === 0 ? (
+              <Text style={styles.impactEmpty}>
+                Les séances enregistrées apparaîtront ici avec une estimation
+                d&apos;effet sur la glycémie (ordre de grandeur).
+              </Text>
+            ) : (
+              <View style={styles.impactList}>
+                {sessionRows.slice(0, 3).map(activity => (
+                  <View key={activity.id} style={styles.impactItem}>
+                    <View style={styles.impactLeft}>
+                      <Text style={styles.activityEmoji}>{activity.icon}</Text>
+                      <View>
+                        <Text style={styles.impactActivityName}>
+                          {activity.type}
+                        </Text>
+                        <Text style={styles.impactActivityDuration}>
+                          {activity.duration} min
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.impactRight}>
+                      <View style={styles.impactValueContainer}>
+                        <Text style={styles.impactValue}>
+                          {activity.impact} mg/dL
+                        </Text>
+                        <Text style={styles.impactSubtext}>estimation</Text>
+                      </View>
+                      <TrendingUp
+                        size={20}
+                        color="#10B981"
+                        style={{ transform: [{ rotate: '180deg' }] }}
+                      />
                     </View>
                   </View>
-                  <View style={styles.impactRight}>
-                    <View style={styles.impactValueContainer}>
-                      <Text style={styles.impactValue}>
-                        {activity.impact} mg/dL
-                      </Text>
-                      <Text style={styles.impactSubtext}>en moyenne</Text>
-                    </View>
-                    <TrendingUp
-                      size={20}
-                      color="#10B981"
-                      style={{ transform: [{ rotate: '180deg' }] }}
-                    />
-                  </View>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Activités récentes */}
@@ -302,37 +427,49 @@ export default function ActivityScreen({
           </View>
 
           <View style={styles.activitiesList}>
-            {activities.map(activity => (
-              <View key={activity.id} style={styles.activityCard}>
-                <View style={styles.activityContent}>
-                  <View style={styles.activityLeft}>
-                    <View
-                      style={[
-                        styles.activityIcon,
-                        { backgroundColor: activity.color },
-                      ]}
-                    >
-                      <Text style={styles.activityEmoji}>{activity.icon}</Text>
+            {activitiesLoading && sessionRows.length === 0 ? (
+              <ActivityIndicator
+                style={styles.activitiesLoader}
+                color="#007AFF"
+              />
+            ) : sessionRows.length === 0 ? (
+              <Text style={styles.emptyActivitiesText}>
+                Aucune séance enregistrée. Appuyez sur + pour ajouter une
+                activité : elle sera sauvegardée sur votre compte.
+              </Text>
+            ) : (
+              sessionRows.map(activity => (
+                <View key={activity.id} style={styles.activityCard}>
+                  <View style={styles.activityContent}>
+                    <View style={styles.activityLeft}>
+                      <View
+                        style={[
+                          styles.activityIcon,
+                          { backgroundColor: activity.color },
+                        ]}
+                      >
+                        <Text style={styles.activityEmoji}>{activity.icon}</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.activityName}>{activity.type}</Text>
+                        <Text style={styles.activityTime}>{activity.time}</Text>
+                      </View>
                     </View>
-                    <View>
-                      <Text style={styles.activityName}>{activity.type}</Text>
-                      <Text style={styles.activityTime}>{activity.time}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.activityRight}>
-                    <View style={styles.activityDurationContainer}>
-                      <Text style={styles.activityDuration}>
-                        {activity.duration}
+                    <View style={styles.activityRight}>
+                      <View style={styles.activityDurationContainer}>
+                        <Text style={styles.activityDuration}>
+                          {activity.duration}
+                        </Text>
+                        <Text style={styles.activityDurationUnit}>min</Text>
+                      </View>
+                      <Text style={styles.activityCalories}>
+                        {activity.calories} kcal
                       </Text>
-                      <Text style={styles.activityDurationUnit}>min</Text>
                     </View>
-                    <Text style={styles.activityCalories}>
-                      {activity.calories} kcal
-                    </Text>
                   </View>
                 </View>
-              </View>
-            ))}
+              ))
+            )}
           </View>
 
           {/* Conseil */}
@@ -371,50 +508,52 @@ export default function ActivityScreen({
 
             <Text style={styles.modalTitle}>Ajouter une activité</Text>
 
-            {/* Type d'activité */}
-            <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Type d'activité</Text>
-              <View style={styles.activityTypeGrid}>
-                {activityTypes.map(type => (
-                  <TouchableOpacity
-                    key={type.label}
-                    onPress={() => setActivityType(type.label)}
-                    style={[
-                      styles.activityTypeButton,
-                      activityType === type.label &&
-                        styles.activityTypeButtonActive,
-                    ]}
-                  >
-                    <Text style={styles.activityTypeIcon}>{type.icon}</Text>
-                    <Text
-                      style={[
-                        styles.activityTypeLabel,
-                        activityType === type.label &&
-                          styles.activityTypeLabelActive,
-                      ]}
-                    >
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Activité personnalisée */}
-            {activityType === 'Autre' && (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              style={styles.modalScroll}
+            >
+              {/* Type d'activité */}
               <View style={styles.formSection}>
-                <Text style={styles.formLabel}>Nom de l'activité</Text>
-                <TextInput
-                  style={styles.input}
-                  value={customActivity}
-                  onChangeText={setCustomActivity}
-                  placeholder="Ex: Danse, Jardinage..."
-                  placeholderTextColor="#9CA3AF"
-                />
+                <Text style={styles.formLabel}>Type d&apos;activité</Text>
+                {referenceActivities.length === 0 ? (
+                  <Text style={styles.modalEmptyTypes}>
+                    Chargement des types d&apos;activité…
+                  </Text>
+                ) : (
+                  <View style={styles.activityTypeGrid}>
+                    {referenceActivities.map(type => {
+                      const v = activityVisual(type.name);
+                      const active = selectedActivityId === type.activity_id;
+                      return (
+                        <TouchableOpacity
+                          key={type.activity_id}
+                          onPress={() =>
+                            setSelectedActivityId(type.activity_id)
+                          }
+                          style={[
+                            styles.activityTypeButton,
+                            active && styles.activityTypeButtonActive,
+                          ]}
+                        >
+                          <Text style={styles.activityTypeIcon}>{v.emoji}</Text>
+                          <Text
+                            style={[
+                              styles.activityTypeLabel,
+                              active && styles.activityTypeLabelActive,
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {type.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
-            )}
 
-            {/* Durée */}
+              {/* Durée */}
             <View style={styles.formSection}>
               <Text style={styles.formLabel}>Durée (minutes)</Text>
               <View style={styles.durationRow}>
@@ -504,6 +643,8 @@ export default function ActivityScreen({
               </View>
             </View>
 
+            </ScrollView>
+
             {/* Boutons */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -515,12 +656,23 @@ export default function ActivityScreen({
               <TouchableOpacity
                 style={[
                   styles.submitButton,
-                  (!activityType || !duration) && styles.submitButtonDisabled,
+                  (selectedActivityId == null ||
+                    !duration ||
+                    durationMinutes <= 0 ||
+                    submittingActivity) &&
+                    styles.submitButtonDisabled,
                 ]}
                 onPress={handleSubmit}
-                disabled={!activityType || !duration}
+                disabled={
+                  selectedActivityId == null ||
+                  !duration ||
+                  durationMinutes <= 0 ||
+                  submittingActivity
+                }
               >
-                <Text style={styles.submitButtonText}>Ajouter</Text>
+                <Text style={styles.submitButtonText}>
+                  {submittingActivity ? 'Enregistrement…' : 'Enregistrer'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -564,6 +716,50 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  stepsMilestoneCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  stepsMilestoneTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 12,
+  },
+  stepsMilestoneRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  stepsMilestoneColRight: {
+    alignItems: 'flex-end',
+  },
+  stepsMilestoneLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  stepsMilestoneValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  stepsMilestoneValueAccent: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  stepsMilestoneHint: {
+    marginTop: 12,
+    fontSize: 12,
+    color: '#166534',
+    lineHeight: 16,
   },
   summaryCard: {
     backgroundColor: '#10B981',
@@ -845,6 +1041,32 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 24,
+  },
+  modalScroll: {
+    flexGrow: 0,
+    maxHeight: 420,
+    marginBottom: 8,
+  },
+  modalEmptyTypes: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    paddingVertical: 8,
+  },
+  activitiesLoader: {
+    marginVertical: 28,
+  },
+  emptyActivitiesText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 20,
+    lineHeight: 20,
+  },
+  impactEmpty: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
   modalTitle: {
     fontSize: 24,
