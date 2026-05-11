@@ -2,7 +2,7 @@ name: Deploy Enterprise (Plan B)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feat/deploy-complete-b ]
     paths:
       - 'backend/**'
       - 'ai_service/**'
@@ -22,7 +22,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # Clés de ton compte actuel
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} 
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
