@@ -1,6 +1,5 @@
 {
   "expo": {
-    "name": "frontend",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,8 +14,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position."
-      }
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.glycopilot.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,8 +25,22 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
-      "package": "com.glycopilot.app"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "NFC",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_CONNECTED_DEVICE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "package": "glycopilot.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -35,6 +50,14 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/glycopilot.png",
+          "color": "#2563EB",
+          "defaultChannel": "glycemia-alerts"
         }
       ]
     ],

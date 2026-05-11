@@ -4,12 +4,9 @@ from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto
 
 
 class GlycemiaSerializer(serializers.ModelSerializer):
-    user_email = serializers.EmailField(source="user.email", read_only=True)
-
     class Meta:
         model = Glycemia
         fields = [
-            "user_email",
             "device",
             "measured_at",
             "value",
@@ -20,7 +17,6 @@ class GlycemiaSerializer(serializers.ModelSerializer):
             "context",
             "notes",
         ]
-        read_only_fields = ["user_email"]
 
 
 class GlycemiaHistoSerializer(serializers.ModelSerializer):

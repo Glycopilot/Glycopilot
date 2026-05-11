@@ -15,8 +15,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ENV = config("Django_ENV", default="development")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-# Hosts autorisés (séparés par des virgules)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
+# En dev/debug, on accepte tous les hosts (inutile de maintenir une IP locale)
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]  # NOSONAR - intentionnel en développement local uniquement
+else:
+    ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
 
 # --- CLÉS SECRÈTES ---
 # En CI/tests : fallback pour que pytest puisse tourner (SECRET_KEY non définie).
@@ -65,10 +68,10 @@ INSTALLED_APPS = [
 
 # --- MIDDLEWARE ---
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "middleware.request_logging.RequestLoggingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -164,13 +167,20 @@ LOGGING = {
 }
 
 # --- CORS ---
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # En dev uniquement
-if not DEBUG:
+CORS_ALLOW_ALL_ORIGINS = DEBUG or ENV == "development"
+CORS_ALLOW_CREDENTIALS = True
+if not CORS_ALLOW_ALL_ORIGINS:
     CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+    CSRF_TRUSTED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 
 # --- REST FRAMEWORK CONFIG ---
+# Throttling is disabled when running tests so the auth rate limit
+# (5/minute) does not break suites that perform many logins.
+TESTING = config("TESTING", default=False, cast=bool) or "pytest" in sys.argv[0]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "utils.service_token_auth.ServiceTokenAuthentication",
         "utils.jwt_auth.JWTAuthenticationDualKey",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -178,6 +188,19 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_THROTTLE_CLASSES": (
+        []
+        if TESTING
+        else [
+            "rest_framework.throttling.AnonRateThrottle",
+            "rest_framework.throttling.UserRateThrottle",
+        ]
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "200/hour",
+        "user": "300/minute",
+        "auth": "5/minute",
+    },
 }
 
 ACCESS_TOKEN_LIFETIME = timedelta(
@@ -285,6 +308,42 @@ DEFAULT_FROM_EMAIL = (
 FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 
 
+# --- SECURITY SETTINGS ---
+if not DEBUG:
+    SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Strict"
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SAMESITE = "Strict"
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+else:
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# --- PASSWORD VALIDATION ---
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
+
 # --- INTERNATIONALIZATION ---
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Europe/Paris"
@@ -331,6 +390,10 @@ STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 # --- AUTH USER MODEL ---
 AUTH_USER_MODEL = "users.AuthAccount"
+
+# --- AI MICROSERVICE ---
+AI_SERVICE_URL = config("AI_SERVICE_URL", default="http://localhost:8001")
+AI_SERVICE_TOKEN = config("AI_SERVICE_TOKEN", default="dev_secret")
 
 # --- ASGI / CHANNELS ---
 ASGI_APPLICATION = "core.asgi.application"

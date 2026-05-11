@@ -3,15 +3,19 @@ from django.http import JsonResponse
 from django.urls import include, path
 from django.views.decorators.http import require_GET
 
+from decouple import config
+
 
 @require_GET
 def root_view(request):
     return JsonResponse({"message": "Server is running"})
 
 
+ADMIN_URL = config("ADMIN_URL", default="admin")
+
 urlpatterns = [
     path("", root_view),
-    path("admin/", admin.site.urls),
+    path(f"{ADMIN_URL}/", admin.site.urls),
     path(
         "api/password_reset/",
         include("django_rest_passwordreset.urls", namespace="password_reset"),
@@ -26,6 +30,5 @@ urlpatterns = [
     path("api/meals/", include("apps.meals.urls")),
     path("api/medications/", include("apps.medications.urls")),
     path("api/v1/dashboard/", include("apps.dashboard.urls")),
-    path("api/devices/", include("apps.devices.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
 ]

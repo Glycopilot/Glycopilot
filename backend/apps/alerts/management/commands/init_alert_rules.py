@@ -27,10 +27,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for rule_data in RULES:
-            code = rule_data.pop("code")
+            code = rule_data["code"]
+            # Create a copy of defaults without the code
+            defaults = {k: v for k, v in rule_data.items() if k != "code"}
             obj, created = AlertRule.objects.update_or_create(
                 code=code,
-                defaults=rule_data,
+                defaults=defaults,
             )
             verb = "Created" if created else "Updated"
             self.stdout.write(self.style.SUCCESS(f"{verb} rule: {obj}"))

@@ -1,6 +1,9 @@
 from django.contrib import admin
+from django.utils import timezone
 
-from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto
+import requests
+
+from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto, PersonalModelApproval
 
 
 @admin.register(Glycemia)
@@ -116,3 +119,82 @@ class GlycemiaDataIAAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+
+def _call_ai_service(path: str, method: str = "POST") -> None:
+    from django.conf import settings as django_settings
+
+    ai_url = getattr(django_settings, "AI_SERVICE_URL", "http://localhost:8001")
+    ai_token = getattr(django_settings, "AI_SERVICE_TOKEN", "")
+    requests.request(
+        method,
+        f"{ai_url}{path}",
+        headers={"X-Internal-Token": ai_token},
+        timeout=10,
+    ).raise_for_status()
+
+
+@admin.register(PersonalModelApproval)
+class PersonalModelApprovalAdmin(admin.ModelAdmin):
+    list_display = (
+        "patient_id",
+        "version",
+        "status",
+        "mae_15",
+        "mae_30",
+        "mae_60",
+        "trained_at",
+        "approved_by",
+    )
+    list_filter = ("status", "version")
+    search_fields = ("patient_id",)
+    readonly_fields = (
+        "id",
+        "patient_id",
+        "version",
+        "mae_15",
+        "mae_30",
+        "mae_60",
+        "trained_at",
+        "approved_at",
+        "approved_by",
+    )
+    actions = ["approve_models", "reject_models"]
+
+    @admin.action(description="✅ Approuver les modèles sélectionnés")
+    def approve_models(self, request, queryset):
+        done = 0
+        for obj in queryset.filter(status=PersonalModelApproval.STATUS_PENDING):
+            try:
+                _call_ai_service(
+                    f"/finetune/{obj.patient_id}/approve?version={obj.version}"
+                )
+                obj.status = PersonalModelApproval.STATUS_APPROVED
+                obj.approved_at = timezone.now()
+                obj.approved_by = request.user
+                obj.save(update_fields=["status", "approved_at", "approved_by"])
+                done += 1
+            except Exception as exc:
+                self.message_user(
+                    request, f"Erreur patient {obj.patient_id}: {exc}", level="error"
+                )
+        if done:
+            self.message_user(request, f"{done} modèle(s) approuvé(s) et activé(s).")
+
+    @admin.action(description="❌ Rejeter les modèles sélectionnés")
+    def reject_models(self, request, queryset):
+        done = 0
+        for obj in queryset.filter(status=PersonalModelApproval.STATUS_PENDING):
+            try:
+                _call_ai_service(
+                    f"/finetune/{obj.patient_id}/reject?version={obj.version}"
+                )
+                obj.status = PersonalModelApproval.STATUS_REJECTED
+                obj.save(update_fields=["status"])
+                done += 1
+            except Exception as exc:
+                self.message_user(
+                    request, f"Erreur patient {obj.patient_id}: {exc}", level="error"
+                )
+        if done:
+            self.message_user(request, f"{done} modèle(s) rejeté(s).")

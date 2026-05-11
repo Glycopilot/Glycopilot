@@ -8,8 +8,11 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Glycemia, GlycemiaHisto
+from apps.dashboard.services import DashboardCache
+
+from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto, PersonalModelApproval
 from .serializers import (
+    GlycemiaDataIASerializer,
     GlycemiaHistoCreateSerializer,
     GlycemiaHistoSerializer,
     GlycemiaSerializer,
@@ -26,11 +29,36 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = GlycemiaHistoSerializer
 
+    def _resolve_user(self):
+        """Retourne l'utilisateur cible. Un service/admin peut passer ?user_id=<id>."""
+        user_id = self.request.query_params.get("user_id")
+        if user_id and self.request.auth == "service_token":
+            from apps.users.models import User
+
+            try:
+                return User.objects.get(id_user=user_id).auth_account
+            except User.DoesNotExist:
+                from rest_framework.exceptions import NotFound
+
+                raise NotFound(f"Utilisateur {user_id} introuvable.")
+        return self.request.user
+
     def get_queryset(self):
         """Renvoie l'historique complet (GlycemiaHisto) du user."""
-        return GlycemiaHisto.objects.filter(user=self.request.user).order_by(
+        qs = GlycemiaHisto.objects.filter(user=self._resolve_user()).order_by(
             "-measured_at"
         )
+        measured_after = self.request.query_params.get("measured_after")
+        if measured_after:
+            from django.utils.dateparse import parse_datetime
+
+            dt = parse_datetime(measured_after)
+            if dt:
+                qs = qs.filter(measured_at__gte=dt)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="current")
     def current(self, request):
@@ -66,7 +94,10 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         Utilise Glycemia (cache 30 jours avec context et notes).
         """
 
-        days = int(request.query_params.get("days", 7))
+        try:
+            days = int(request.query_params.get("days", 7))
+        except (ValueError, TypeError):
+            return Response({"error": "Days must be a valid integer"}, status=400)
 
         if days < 1 or days > 30:
             return Response({"error": "Days must be between 1 and 30"}, status=400)
@@ -105,8 +136,31 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         histo_entry = serializer.save(user=request.user, source="manual")
 
         self._add_to_month_history(histo_entry)
-
         self._clean_old_entries(request.user)
+        DashboardCache.invalidate_summary(request.user.pk)
+
+        return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
+
+    @action(detail=False, methods=["post"], url_path="cgm-readings")
+    def cgm_readings(self, request):
+        """
+        POST /api/v1/glucose/cgm-readings/
+        Ingère une mesure issue d'un capteur CGM (Libre 2) :
+        - même persistence que manual-readings (Glycemia + GlycemiaHisto)
+        - source forcé à "cgm" (les médecins distinguent visuellement les deux flux)
+        - le signal post_save sur Glycemia broadcast la valeur en WebSocket aux médecins
+        """
+
+        serializer = GlycemiaHistoCreateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        histo_entry = serializer.save(user=request.user, source="cgm")
+
+        self._add_to_month_history(histo_entry)
+        self._clean_old_entries(request.user)
+        DashboardCache.invalidate_summary(request.user.pk)
 
         return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
 
@@ -145,3 +199,77 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
             else values[0],
             "count": len(values),
         }
+
+
+class GlycemiaDataIAViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    GET /api/glycemia/predictions/          — liste des prédictions (paginée)
+    GET /api/glycemia/predictions/{id}/     — détail d'une prédiction
+    GET /api/glycemia/predictions/latest/   — dernière prédiction disponible
+
+    Query params :
+      ?limit=N   — nombre de résultats (défaut pagination globale)
+      ?status=ok|low_confidence|error
+      ?source=baseline|lstm|transformer|ensemble
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = GlycemiaDataIASerializer
+
+    def get_queryset(self):
+        qs = GlycemiaDataIA.objects.filter(user=self.request.user).order_by("-for_time")
+
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        source_filter = self.request.query_params.get("source")
+        if source_filter:
+            qs = qs.filter(source=source_filter)
+
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="latest")
+    def latest(self, request):
+        """GET /api/glycemia/predictions/latest/ — dernière prédiction."""
+        prediction = self.get_queryset().first()
+        if not prediction:
+            return Response(
+                {"detail": "No prediction available yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(GlycemiaDataIASerializer(prediction).data)
+
+
+class PersonalModelApprovalViewSet(viewsets.ViewSet):
+    """
+    Endpoint interne — appelé par l'AI service après chaque fine-tuning.
+    Crée un enregistrement en attente de validation par l'admin.
+    """
+
+    def create(self, request):
+        if not isinstance(request.auth, str) or request.auth != "service_token":
+            return Response(
+                {"detail": "Service token required."}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        patient_id = request.data.get("patient_id")
+        version = request.data.get("version", "v1.0")
+        if not patient_id:
+            return Response(
+                {"detail": "patient_id required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        PersonalModelApproval.objects.update_or_create(
+            patient_id=patient_id,
+            version=version,
+            defaults={
+                "status": PersonalModelApproval.STATUS_PENDING,
+                "mae_15": request.data.get("mae_15"),
+                "mae_30": request.data.get("mae_30"),
+                "mae_60": request.data.get("mae_60"),
+                "approved_at": None,
+                "approved_by": None,
+            },
+        )
+        return Response({"status": "created"}, status=status.HTTP_201_CREATED)

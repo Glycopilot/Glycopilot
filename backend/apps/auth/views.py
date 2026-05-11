@@ -7,6 +7,7 @@ from rest_framework.decorators import (
     api_view,
     authentication_classes,
     permission_classes,
+    throttle_classes,
 )
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -22,11 +23,13 @@ from apps.auth.serializers import (
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 from utils.permissions import allowed_roles
+from utils.throttles import AuthRateThrottle
 
 
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def register(request):
     """
     Endpoint pour l'inscription d'un nouvel utilisateur
@@ -79,6 +82,7 @@ def register(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def login(request):
     """
     Endpoint pour la connexion d'un utilisateur
@@ -193,10 +197,8 @@ def logout(request):
 
         return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
     except Exception:
-        return Response(
-            {"error": "Token invalide."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        # Token already expired/blacklisted — logout goal is achieved
+        return Response({"message": "Déconnexion réussie."}, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
