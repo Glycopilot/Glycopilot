@@ -1,5 +1,5 @@
 terraform {
-  required_version = "~> 1.14.0"
+  required_version = ">= 1.14.0"
 
   backend "s3" {
     bucket = "glycopilot-aws-s3-bucket-img-artifacts" 
