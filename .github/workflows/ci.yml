@@ -55,8 +55,8 @@ jobs:
         SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
         TESTING: true
       run: |
-        cd backend
-        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
+        pytest backend --cov=backend --cov-report=xml:backend/coverage.xml
     
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
@@ -74,9 +74,8 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   sonarqube:
-    needs: [test-backend, test-frontend]
+    needs: [test-backend, test-frontend-mobile, test-frontend-web]
     runs-on: ubuntu-latest
-    continue-on-error: true  # TODO: Retirer une fois que le coverage sera suffisant
     permissions:
       contents: read
       pull-requests: write
@@ -92,31 +91,48 @@ jobs:
         name: coverage-backend
         path: backend/
     
-    - name: Verify Backend Coverage
+    - name: Verify and Fix Backend Coverage Paths
       run: |
         if [ -f backend/coverage.xml ]; then
           echo "Backend coverage file found"
           ls -lh backend/coverage.xml
+          echo "=== Sample filenames before fix ==="
+          grep 'filename=' backend/coverage.xml | head -5
+          python3 scripts/fix_coverage_paths.py
+          echo "=== Sample filenames after fix ==="
+          grep 'filename=' backend/coverage.xml | head -5
+          grep '<source>' backend/coverage.xml
         else
           echo "Backend coverage file not found"
+          exit 1
         fi
-    
-    - name: Download Frontend Coverage
+
+    - name: Download Frontend Mobile Coverage
       uses: actions/download-artifact@v4
       with:
-        name: coverage-frontend
+        name: coverage-frontend-mobile
         path: frontend/coverage/
-      continue-on-error: true #a retirer plus tard si on configure les tests frontend
+
+    - name: Download Frontend Web Coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-frontend-web
+        path: frontend_web/coverage/
     
     - name: Verify Frontend Coverage
       run: |
         if [ -f frontend/coverage/lcov.info ]; then
-          echo "Frontend coverage file found"
+          echo "Frontend Mobile coverage file found"
           ls -lh frontend/coverage/lcov.info
-        else
-          echo "Frontend coverage file not found"
+          # Correction des chemins pour SonarCloud
+          sed -i 's|SF:src|SF:frontend/src|g' frontend/coverage/lcov.info
         fi
-      continue-on-error: true #a retirer plus tard si on configure les tests frontend
+        if [ -f frontend_web/coverage/lcov.info ]; then
+          echo "Frontend Web coverage file found"
+          ls -lh frontend_web/coverage/lcov.info
+          # Correction des chemins pour SonarCloud
+          sed -i 's|SF:src|SF:frontend_web/src|g' frontend_web/coverage/lcov.info
+        fi
     
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -150,7 +166,6 @@ jobs:
     
     - name: Get SonarCloud Project Status
       id: sonar_status
-      continue-on-error: true
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FAHAD }}
       run: |
@@ -177,7 +192,6 @@ jobs:
     
     - name: Get SonarCloud Metrics
       id: sonar_metrics
-      continue-on-error: true
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FAHAD }}
       run: |
@@ -296,7 +310,7 @@ jobs:
         echo "ATTENTION: continue-on-error est activé temporairement"
         echo "Le Quality Gate devrait passer une fois le code et les tests complétés"
 
-  test-frontend:
+  test-frontend-mobile:
     needs: secret-scan
     runs-on: ubuntu-latest
     steps:
@@ -320,15 +334,45 @@ jobs:
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-frontend
+        name: coverage-frontend-mobile
         path: frontend/coverage/
         retention-days: 1
         if-no-files-found: ignore
-      continue-on-error: true #a retirer plus tard si on configure les tests frontend
+
+  test-frontend-web:
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    
+    - name: Install dependencies
+      run: |
+        cd frontend_web
+        npm install
+    
+    - name: Run tests with coverage
+      env:
+        CI: true
+      run: |
+        cd frontend_web
+        npm test -- --coverage --watchAll=false
+    
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-frontend-web
+        path: frontend_web/coverage/
+        retention-days: 1
+        if-no-files-found: ignore
 
   deploy:
     name: Deploy to EC2
-    needs: [test-backend, test-frontend, sonarqube]
+    needs: [test-backend, test-frontend-mobile, test-frontend-web, sonarqube]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
@@ -343,7 +387,7 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         # On transfère le backend, le nginx et le docker-compose
-        source: "backend/,.nginx/,docker-compose.yml"
+        source: "backend/,.nginx/,docker-compose.yml,ai_service/"
         target: "/home/ubuntu/glycopilot-app"
     
     - name: Execute deployment on EC2 via SSH
@@ -355,21 +399,20 @@ jobs:
         script: |
           cd /home/ubuntu/glycopilot-app
           
-          # 1. Création dynamique du fichier .env.prod à partir des secrets GitHub
-          # Cela évite d'avoir les secrets en clair dans le repo
+          # 1. Création dynamique des fichiers .env.prod à partir des secrets GitHub
           echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
+          echo "${{ secrets.AI_ENV_FILE }}" > ./ai_service/.env.prod
           
-          # 2. Déploiement des conteneurs AWS (avec build pour les nouveautés Django)
-          # On utilise le profil 'aws' comme défini dans ton docker-compose
+          # 2. Déploiement des conteneurs AWS
           sudo docker compose --profile aws down
-          sudo docker compose --profile aws build backend_aws
+          sudo docker compose --profile aws build backend_aws ai_service_aws
           sudo docker compose --profile aws up -d
           
-          # 3. Nettoyage des anciennes images Docker pour ne pas saturer le disque (Plan A à 20Go)
+          # 3. Nettoyage des anciennes images Docker
           sudo docker image prune -f
 
   notify:
-    needs: [secret-scan, test-backend, test-frontend, sonarqube, deploy]
+    needs: [secret-scan, test-backend, test-frontend-mobile, test-frontend-web, sonarqube, deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -387,7 +430,8 @@ jobs:
         echo "======================================"
         echo "Secret Scan: ${{ needs.secret-scan.result }}"
         echo "Backend Tests: ${{ needs.test-backend.result }}"
-        echo "Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "Frontend Mobile Tests: ${{ needs.test-frontend-mobile.result }}"
+        echo "Frontend Web Tests: ${{ needs.test-frontend-web.result }}"
         echo "SonarQube: ${{ needs.sonarqube.result }}"
         echo "Deploy: ${{ needs.deploy.result }}"
         echo "======================================"
@@ -407,8 +451,13 @@ jobs:
           CRITICAL_FAILED=true
         fi
         
-        if [ "${{ needs.test-frontend.result }}" != "success" ]; then
-          echo "CRITICAL: Frontend tests failed"
+        if [ "${{ needs.test-frontend-mobile.result }}" != "success" ]; then
+          echo "CRITICAL: Frontend mobile tests failed"
+          CRITICAL_FAILED=true
+        fi
+        
+        if [ "${{ needs.test-frontend-web.result }}" != "success" ]; then
+          echo "CRITICAL: Frontend web tests failed"
           CRITICAL_FAILED=true
         fi
         
