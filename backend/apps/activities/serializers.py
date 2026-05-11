@@ -1,5 +1,6 @@
-from rest_framework import serializers
 import datetime
+
+from rest_framework import serializers
 
 from .models import Activity, UserActivity
 
@@ -39,7 +40,9 @@ class UserActivitySerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         duration = validated_data.pop("duration_minutes")
-        validated_data["end"] = validated_data["start"] + datetime.timedelta(minutes=duration)
+        validated_data["end"] = validated_data["start"] + datetime.timedelta(
+            minutes=duration
+        )
         return super().create(validated_data)
 
     def get_total_calories_burned(self, obj):

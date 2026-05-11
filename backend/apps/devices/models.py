@@ -35,7 +35,7 @@ class Device(models.Model):
         max_length=30, choices=Provider.choices, default=Provider.OTHER
     )
 
-    model = models.CharField(max_length=80, blank=True, null=True)        # ex: "G6"
+    model = models.CharField(max_length=80, blank=True, null=True)  # ex: "G6"
     serial_number = models.CharField(max_length=120, blank=True, null=True)
 
     # Lifecycle
@@ -44,8 +44,12 @@ class Device(models.Model):
     ended_at = models.DateTimeField(blank=True, null=True)
 
     # Paramètres utiles IA / ingestion (optionnels mais pratiques)
-    sampling_interval_sec = models.PositiveIntegerField(blank=True, null=True)  # ex: 300
-    timezone = models.CharField(max_length=64, blank=True, null=True)          # ex: "Europe/Paris" (mais readings en UTC)
+    sampling_interval_sec = models.PositiveIntegerField(
+        blank=True, null=True
+    )  # ex: 300
+    timezone = models.CharField(
+        max_length=64, blank=True, null=True
+    )  # ex: "Europe/Paris" (mais readings en UTC)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

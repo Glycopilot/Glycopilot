@@ -2,7 +2,6 @@ from django.core.management.base import BaseCommand
 
 from apps.alerts.models import AlertRule, AlertSeverity
 
-
 RULES = [
     {
         "code": "HYPO",

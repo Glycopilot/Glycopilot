@@ -45,10 +45,12 @@ def _process_ticket_errors(tokens: list[str], tickets: list[dict]) -> list[dict]
     for i, ticket in enumerate(tickets):
         if ticket.get("status") != "error":
             continue
-        errors.append({
-            "token": tokens[i] if i < len(tokens) else "unknown",
-            "error": ticket.get("message", "Unknown error"),
-        })
+        errors.append(
+            {
+                "token": tokens[i] if i < len(tokens) else "unknown",
+                "error": ticket.get("message", "Unknown error"),
+            }
+        )
         if ticket.get("details", {}).get("error") == "DeviceNotRegistered":
             PushToken.objects.filter(token=tokens[i]).update(is_active=False)
             logger.info(f"Deactivated invalid token: {tokens[i][:20]}...")
@@ -100,7 +102,11 @@ def send_push_notification(
 
         if errors:
             logger.warning(f"Push notification errors: {errors}")
-            return {"success": True, "errors": errors, "sent": len(tokens) - len(errors)}
+            return {
+                "success": True,
+                "errors": errors,
+                "sent": len(tokens) - len(errors),
+            }
 
         logger.info(f"Push notifications sent successfully to {len(tokens)} devices")
         return {"success": True, "sent": len(tokens)}
@@ -129,7 +135,9 @@ def send_push_to_user(
         dict with success status and details
     """
     tokens = list(
-        PushToken.objects.filter(user=user, is_active=True).values_list("token", flat=True)
+        PushToken.objects.filter(user=user, is_active=True).values_list(
+            "token", flat=True
+        )
     )
 
     if not tokens:

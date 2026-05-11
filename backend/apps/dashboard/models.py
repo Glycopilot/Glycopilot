@@ -15,6 +15,7 @@ class UserWidget(models.Model):
     Table: USER_WIDGETS
     """
 
+    id = models.BigAutoField(primary_key=True, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -51,6 +52,7 @@ class UserWidgetLayout(models.Model):
     Table: USER_WIDGET_LAYOUTS
     """
 
+    id = models.BigAutoField(primary_key=True, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

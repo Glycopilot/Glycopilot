@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from .models import UserWidget, UserWidgetLayout, WidgetSize
 from .services import WidgetCatalog
 
 

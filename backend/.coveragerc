@@ -1,0 +1,20 @@
+[run]
+source = .
+omit =
+    manage.py
+    reset_db.py
+    core/wsgi.py
+    core/asgi.py
+    */migrations/*
+    venv/*
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    apps/medications/management/*
+
+[report]
+show_missing = True
+skip_empty = True
+
+[html]
+directory = htmlcov

@@ -73,7 +73,8 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthPath = originalRequest.url?.includes('/auth/');
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthPath) {
       if (isRefreshing) {
         // Si un refresh est en cours, attendre son résultat
         return new Promise((resolve, reject) => {
@@ -250,6 +251,7 @@ const authService = {
    * Récupérer les infos utilisateur actuel
    */
   async getCurrentUser(): Promise<User> {
+    console.log('DEBUG: authService.getCurrentUser hit');
     try {
       const response = await apiClient.get<any>('/users/me/');
       const data = response.data;

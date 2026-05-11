@@ -66,7 +66,8 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthPath = originalRequest.url?.includes('/auth/');
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthPath) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });

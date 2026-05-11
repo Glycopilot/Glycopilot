@@ -9,10 +9,11 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 
 import os
 
-from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.security.websocket import AllowedHostsOriginValidator
 from django.conf import settings
 from django.core.asgi import get_asgi_application
+
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import AllowedHostsOriginValidator
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
@@ -31,7 +32,9 @@ websocket_application = JWTAuthMiddleware(URLRouter(websocket_urlpatterns))
 if not settings.DEBUG:
     websocket_application = AllowedHostsOriginValidator(websocket_application)
 
-application = ProtocolTypeRouter({
-    "http": django_asgi_app,
-    "websocket": websocket_application,
-})
+application = ProtocolTypeRouter(
+    {
+        "http": django_asgi_app,
+        "websocket": websocket_application,
+    }
+)

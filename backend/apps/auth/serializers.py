@@ -1,12 +1,13 @@
-import jwt
 from django.conf import settings
-from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth import get_user_model
 
-from apps.users.models import User
+import jwt
+from rest_framework import serializers
+from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from apps.profiles.models import Profile, Role
+from apps.users.models import User
 
 AuthAccount = get_user_model()
 
@@ -25,6 +26,11 @@ class RegisterSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
 
+    # Doctor specific fields
+    license_number = serializers.CharField(required=False, allow_blank=True)
+    specialty = serializers.CharField(required=False, allow_blank=True)
+    medical_center_address = serializers.CharField(required=False, allow_blank=True)
+
     class Meta:
         model = AuthAccount
         fields = [
@@ -34,6 +40,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             "role",
             "password",
             "password_confirm",
+            "license_number",
+            "specialty",
+            "medical_center_address",
         ]
 
     def validate_email(self, value):
@@ -57,6 +66,19 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"password_confirm": "Les mots de passe ne correspondent pas."}
             )
+
+        if data.get("role") == "DOCTOR":
+            if not data.get("license_number"):
+                raise serializers.ValidationError(
+                    {
+                        "license_number": "Le numéro RPPS est obligatoire pour les médecins."
+                    }
+                )
+            if not data.get("specialty"):
+                raise serializers.ValidationError(
+                    {"specialty": "La spécialité est obligatoire."}
+                )
+
         return data
 
     def create(self, validated_data):
@@ -65,7 +87,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         role_name = validated_data.pop("role", "PATIENT")
         first_name = validated_data.pop("first_name")
         last_name = validated_data.pop("last_name")
-        
+
+        # Extract doctor fields
+        license_number = validated_data.pop("license_number", None)
+        specialty_name = validated_data.pop("specialty", None)
+        medical_center_address = validated_data.pop("medical_center_address", None)
+
         email = validated_data["email"]
 
         user_identity = User.objects.create(
@@ -80,13 +107,44 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
 
         role_obj = Role.objects.get(name=role_name)
-        Profile.objects.create(user=user_identity, role=role_obj)
-        
+        # Ceci déclenche le signal qui crée DoctorProfile avec un license_number TEMP
+        profile = Profile.objects.create(user=user_identity, role=role_obj)
+
+        if role_name == "DOCTOR" and license_number:
+            try:
+                # Récupérer le profil créé par le signal
+                from apps.doctors.models import DoctorProfile
+
+                doctor_profile = DoctorProfile.objects.get(profile=profile)
+
+                # Mise à jour RPPS
+                doctor_profile.license_number = license_number
+
+                # Mise à jour Spécialité
+                if specialty_name:
+                    from apps.doctors.models import Specialty
+
+                    specialty_obj, _ = Specialty.objects.get_or_create(
+                        name=specialty_name,
+                        defaults={"description": "Auto-created during registration"},
+                    )
+                    doctor_profile.specialty = specialty_obj
+
+                if medical_center_address:
+                    doctor_profile.medical_center_address = medical_center_address
+
+                doctor_profile.save()
+
+            except DoctorProfile.DoesNotExist:
+                # Fallback manuel si le signal a échoué (peu probable)
+                pass
+
         return account
 
 
 class CreateAdminAccountSerializer(serializers.Serializer):
     """Création d'un compte ADMIN ou SUPERADMIN (réservé au superadmin)."""
+
     email = serializers.EmailField(required=True)
     first_name = serializers.CharField(required=True, max_length=150)
     last_name = serializers.CharField(required=True, max_length=150)
@@ -127,11 +185,11 @@ class LoginSerializer(serializers.Serializer):
     )
 
     def validate(self, data):
-        email = data.get("email").lower()
+        email = (data.get("email") or "").strip().lower()
         password = data.get("password")
 
         try:
-            account = AuthAccount.objects.get(email=email)
+            account = AuthAccount.objects.get(email__iexact=email)
         except AuthAccount.DoesNotExist:
             raise serializers.ValidationError({"email": "Identifiants incorrects."})
 
@@ -141,37 +199,34 @@ class LoginSerializer(serializers.Serializer):
         if not account.is_active:
             raise serializers.ValidationError({"email": "Ce compte est désactivé."})
 
+        # Vérification du statut pour les médecins
+        # Vérification du statut pour les médecins
+        # On regarde si l'utilisateur a un profil DOCTOR
+        user_profile = account.user.profiles.filter(role__name="DOCTOR").first()
+
+        if user_profile and hasattr(user_profile, "doctor_profile"):
+            doctor_profile = user_profile.doctor_profile
+            # Par défaut, si status est manquant, on bloque par sécurité
+            if (
+                not doctor_profile.verification_status
+                or doctor_profile.verification_status.label != "VERIFIED"
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "non_field_errors": "Votre compte médecin n'a pas encore été validé par un administrateur."
+                    }
+                )
+
         data["user"] = account
         return data
 
 
-from apps.profiles.models import PatientProfile
-from apps.doctors.models import DoctorProfile
+from apps.users.serializers import ProfileSerializer
 
-class TinyPatientProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PatientProfile
-        fields = ["diabetes_type", "diagnosis_date"]
-
-class TinyDoctorProfileSerializer(serializers.ModelSerializer):
-    verification_status = serializers.StringRelatedField()
-    specialty = serializers.StringRelatedField()
-    class Meta:
-        model = DoctorProfile
-        fields = ["license_number", "verification_status", "specialty", "medical_center_name"]
-
-class SimpleProfileSerializer(serializers.ModelSerializer):
-    role_name = serializers.CharField(source='role.name', read_only=True)
-    patient_details = TinyPatientProfileSerializer(source='patient_profile', read_only=True)
-    doctor_details = TinyDoctorProfileSerializer(source='doctor_profile', read_only=True)
-    
-    class Meta:
-        model = Profile
-        fields = ["id_profile", "role_name", "label", "is_active", "patient_details", "doctor_details", "created_at"]
 
 class UserIdentitySerializer(serializers.ModelSerializer):
-    profiles = SimpleProfileSerializer(many=True, read_only=True)
-    
+    profiles = ProfileSerializer(many=True, read_only=True)
+
     class Meta:
         model = User
         fields = ["id_user", "first_name", "last_name", "created_at", "profiles"]
@@ -206,13 +261,19 @@ class AuthResponseSerializer(serializers.Serializer):
         # Admin et superadmin : jetons signés avec SECRET_KEY_ADMIN (validation via JWTAuthenticationDualKey).
         # Patient et docteur : jetons signés avec SECRET_KEY.
         admin_key = getattr(settings, "SECRET_KEY_ADMIN", None)
-        if admin_key and ("ADMIN" in roles or "SUPERADMIN" in roles or auth_account.is_superuser):
+        if admin_key and (
+            "ADMIN" in roles or "SUPERADMIN" in roles or auth_account.is_superuser
+        ):
             algo = getattr(api_settings, "ALGORITHM", "HS256")
             access_str = jwt.encode(access.payload, admin_key, algorithm=algo)
             refresh_str = jwt.encode(refresh.payload, admin_key, algorithm=algo)
             return {
-                "access": access_str if isinstance(access_str, str) else access_str.decode(),
-                "refresh": refresh_str if isinstance(refresh_str, str) else refresh_str.decode(),
+                "access": access_str
+                if isinstance(access_str, str)
+                else access_str.decode(),
+                "refresh": refresh_str
+                if isinstance(refresh_str, str)
+                else refresh_str.decode(),
                 "user": AuthAccountSerializer(auth_account).data,
             }
 

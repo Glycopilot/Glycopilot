@@ -1,7 +1,10 @@
 import uuid
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
 from .profile import Profile
+
 
 class PatientProfile(models.Model):
     class DiabetesType(models.TextChoices):
@@ -21,10 +24,12 @@ class PatientProfile(models.Model):
         choices=DiabetesType.choices,
         blank=True,
         null=True,
-        verbose_name=_("Diabetes Type")
+        verbose_name=_("Diabetes Type"),
     )
-    diagnosis_date = models.DateField(null=True, blank=True, verbose_name=_("Diagnosis Date"))
-    
+    diagnosis_date = models.DateField(
+        null=True, blank=True, verbose_name=_("Diagnosis Date")
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
