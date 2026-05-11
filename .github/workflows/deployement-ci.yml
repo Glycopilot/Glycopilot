@@ -1,0 +1,154 @@
+name: Master Deployment Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_plan_a:
+        description: '1. Déployer Backend sur Plan A (EC2)'
+        type: boolean
+        default: false
+      deploy_plan_b:
+        description: '2. Déployer Backend sur Plan B (ECS/RDS)'
+        type: boolean
+        default: false
+      deploy_front_web:
+        description: '3. Déployer Frontend Web (S3)'
+        type: boolean
+        default: false
+      deploy_mobile:
+        description: '4. Compiler App Mobile (Expo EAS)'
+        type: boolean
+        default: false
+
+env:
+  AWS_REGION: eu-west-3
+  S3_BUCKET_FRONTEND: glycopilot-web-frontend-958587270787
+
+jobs:
+  deploy-plan-a:
+    name: Deploy Plan A (EC2)
+    if: ${{ github.event.inputs.deploy_plan_a == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute deployment on EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/glycopilot-app
+            git pull origin main
+            
+            # Recréation dynamique des .env pour être sûr (optionnel mais robuste)
+            echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
+            echo "${{ secrets.AI_ENV_FILE }}" > ./ai_service/.env.prod
+            
+            docker compose --profile aws down
+            docker compose --profile aws up -d --build
+            docker image prune -f
+
+  deploy-plan-b:
+    name: Deploy Plan B (Enterprise)
+    if: ${{ github.event.inputs.deploy_plan_b == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Backend
+        run: |
+          cd backend
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest
+
+      - name: Build & Push AI Service
+        run: |
+          cd ai_service
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest
+
+      - name: Setup Terraform & Apply
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ">= 1.5.0"
+      - run: |
+          cd infra/terraform-plan-b
+          terraform init
+          terraform apply -auto-approve -var="django_secret_key=${{ secrets.DJANGO_SECRET_KEY }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
+
+  deploy-front-web:
+    name: Deploy Frontend Web
+    if: ${{ github.event.inputs.deploy_front_web == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build for Production
+        run: |
+          cd frontend_web
+          npm install --legacy-peer-deps
+          npm run build
+        env:
+          # Par défaut, le web pointe sur le Plan B
+          VITE_API_URL: "http://glycopilot-alb-1175156610.eu-west-3.elb.amazonaws.com/api"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        run: aws s3 sync ./frontend_web/dist/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
+
+  deploy-mobile:
+    name: Build Mobile App (Expo EAS)
+    if: ${{ github.event.inputs.deploy_mobile == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+
+      - name: Build Android APK
+        env:
+
+          EXPO_PUBLIC_API_URL: "http://15.188.114.169/api"
+          EXPO_PUBLIC_WS_URL: "ws://15.188.114.169:8006"
+          EXPO_PUBLIC_S3_BUCKET: "glycopilot-aws-s3-bucket-img-artifacts"
+        run: |
+          cd frontend
+          # Lance le build Android sans interaction
+          eas build --platform android --profile production --non-interactive

@@ -20,11 +20,6 @@ if DEBUG:
     ALLOWED_HOSTS = ['*']  # NOSONAR - intentionnel en développement local uniquement
 else:
     ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="127.0.0.1,localhost", cast=Csv())
-    ALLOWED_HOSTS = config(
-        "ALLOWED_HOSTS",
-        default="glycopilot-alb-1175156610.eu-west-3.elb.amazonaws.com,localhost,127.0.0.1",
-        cast=Csv()
-    )
 
 # --- CLÉS SECRÈTES ---
 # En CI/tests : fallback pour que pytest puisse tourner (SECRET_KEY non définie).
@@ -174,18 +169,9 @@ LOGGING = {
 # --- CORS ---
 CORS_ALLOW_ALL_ORIGINS = DEBUG or ENV == "development"
 CORS_ALLOW_CREDENTIALS = True
-
 if not CORS_ALLOW_ALL_ORIGINS:
-    CORS_ALLOWED_ORIGINS = config(
-        "CORS_ALLOWED_ORIGINS",
-        default="http://glycopilot-alb-1175156610.eu-west-3.elb.amazonaws.com",
-        cast=Csv()
-    )
-    CSRF_TRUSTED_ORIGINS = config(
-        "CSRF_TRUSTED_ORIGINS",
-        default="http://glycopilot-alb-1175156610.eu-west-3.elb.amazonaws.com",
-        cast=Csv()
-    )
+    CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+    CSRF_TRUSTED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 
 # --- REST FRAMEWORK CONFIG ---
 # Throttling is disabled when running tests so the auth rate limit
@@ -324,11 +310,6 @@ FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 
 # --- SECURITY SETTINGS ---
 if not DEBUG:
-    # --- PROXY SECURITY ---
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    USE_X_FORWARDED_HOST = True
-    USE_X_FORWARDED_PORT = True
-
     SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
