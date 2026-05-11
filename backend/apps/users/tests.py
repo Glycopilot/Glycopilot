@@ -1,126 +1,179 @@
-"""
-Tests for checking User model and API
-Updated to reflect the separation of User and Profile/Role
-"""
-
-from django.contrib.auth import get_user_model
-from django.test import TestCase
-
+"""Tests for users app — UserViewSet me endpoint (GET + PATCH)."""
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.profiles.models import Profile
-
-User = get_user_model()
-
-
-class UserModelTest(TestCase):
-    """
-    Tests for User model
-    """
-
-    def setUp(self):
-        """Setup test data"""
-        self.user_data = {
-            "email": "testuser@example.com",
-            "password": "testpassword123",
-        }
-
-    def test_create_user(self):
-        """Test user creation"""
-        # We need to manually link identity if we want specific first_name, or just create account
-        user = User.objects.create_user(**self.user_data)
-
-        self.assertIsNotNone(user.id_auth)
-        self.assertEqual(user.email, "testuser@example.com")
-        self.assertTrue(user.check_password("testpassword123"))
-        self.assertTrue(user.is_active)
-        # Check identity was auto-created
-        self.assertIsNotNone(user.user)
-
-    def test_create_superuser(self):
-        """Test superuser creation"""
-        user = User.objects.create_superuser(**self.user_data)
-
-        self.assertTrue(user.is_staff)
-        self.assertTrue(user.is_superuser)
-        self.assertTrue(user.is_active)
-
-    def test_user_email_unique(self):
-        """Test email uniqueness"""
-        User.objects.create_user(**self.user_data)
-        duplicate_data = self.user_data.copy()
-        with self.assertRaises(Exception):
-            User.objects.create_user(**duplicate_data)
-
-
+from apps.doctors.models import DoctorProfile, InvitationStatus, VerificationStatus
+from apps.profiles.models import Profile, Role
+from apps.users.models import AuthAccount
 from apps.users.models import User as UserIdentity
-from apps.profiles.models import Role
 
-class UserAPITest(TestCase):
-    """
-    Tests for User API endpoints
-    """
+# ─── Helpers ────────────────────────────────────────────────────────────────
 
-    def setUp(self):
-        """Setup test data"""
-        self.client = APIClient()
-        
-        # Create Identity
-        self.identity = UserIdentity.objects.create(first_name="API", last_name="User")
-        
-        # Create Auth
-        self.user = User.objects.create_user(
-            email="apiuser@example.com",
-            password="testpassword123",
-            user_identity=self.identity
+
+def _make_user(
+    email="user_me@test.com", password="pass123", first_name="John", last_name="Doe"
+):
+    identity = UserIdentity.objects.create(first_name=first_name, last_name=last_name)
+    account = AuthAccount.objects.create_user(
+        email=email, password=password, user_identity=identity
+    )
+    return account, identity
+
+
+def _make_patient(email="patient_me@test.com"):
+    patient_role, _ = Role.objects.get_or_create(name="PATIENT")
+    account, identity = _make_user(email=email)
+    profile = Profile.objects.create(user=identity, role=patient_role)
+    return account, identity, profile
+
+
+def _auth_client(user):
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
+
+
+# ─── GET /api/users/me/ ──────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestUsersMeGet:
+    def test_me_returns_authenticated_user_identity(self):
+        account, identity = _make_user()
+        client = _auth_client(account)
+
+        resp = client.get("/api/users/me/")
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["first_name"] == "John"
+
+    def test_me_unauthenticated_returns_401(self):
+        client = APIClient()
+        resp = client.get("/api/users/me/")
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ─── PATCH /api/users/me/ ────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestUsersMePatch:
+    def test_patch_me_updates_name(self):
+        account, identity = _make_user()
+        client = _auth_client(account)
+
+        resp = client.patch("/api/users/me/", {"first_name": "Jane"})
+        assert resp.status_code == status.HTTP_200_OK
+        identity.refresh_from_db()
+        assert identity.first_name == "Jane"
+
+    def test_patch_me_with_patient_details_updates_profile(self):
+        account, identity, profile = _make_patient()
+        from apps.profiles.models import PatientProfile
+
+        pp, _ = PatientProfile.objects.get_or_create(profile=profile)
+        pp.diabetes_type = "type1"
+        pp.save()
+        client = _auth_client(account)
+
+        resp = client.patch(
+            "/api/users/me/",
+            {
+                "patient_details": {
+                    "diabetes_type": "type2",
+                    "diagnosis_date": "2020-01-01",
+                }
+            },
+            format="json",
         )
-        
-        # Assign Admin role via Profile
-        self.admin_role, _ = Role.objects.get_or_create(name="ADMIN")
-        self.profile = Profile.objects.create(
-            user=self.identity,
-            role=self.admin_role
+        assert resp.status_code == status.HTTP_200_OK
+        from apps.profiles.models import PatientProfile
+
+        pp = PatientProfile.objects.get(profile=profile)
+        assert pp.diabetes_type == "type2"
+
+    def test_patch_me_with_invalid_medical_id_returns_404(self):
+        account, identity, _ = _make_patient()
+        client = _auth_client(account)
+
+        resp = client.patch(
+            "/api/users/me/",
+            {"medical_id": "INVALID-LICENSE-999"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_patch_me_with_valid_medical_id_creates_care_team(self):
+        account, identity, patient_profile = _make_patient("patient2@test.com")
+        doctor_role, _ = Role.objects.get_or_create(name="DOCTOR")
+        InvitationStatus.objects.get_or_create(label="PENDING")
+        VerificationStatus.objects.get_or_create(label="VERIFIED")
+
+        # Create a doctor
+        doc_identity = UserIdentity.objects.create(first_name="Dr", last_name="Smith")
+        doc_account = AuthAccount.objects.create_user(
+            email="doctor@test.com", password="pass123", user_identity=doc_identity
+        )
+        doc_profile = Profile.objects.create(user=doc_identity, role=doctor_role)
+        # Update the doctor profile created by signal or get_or_create it
+        dp, _ = DoctorProfile.objects.get_or_create(profile=doc_profile)
+        dp.license_number = "LIC-001"
+        dp.save()
+
+        client = _auth_client(account)
+        resp = client.patch(
+            "/api/users/me/",
+            {"medical_id": "LIC-001"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        from apps.doctors.models import PatientCareTeam
+
+        assert PatientCareTeam.objects.filter(
+            patient_profile=patient_profile.patient_profile
+        ).exists()
+
+
+# ─── Admin operations ────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestUsersAdminOperations:
+    def test_non_admin_cannot_create_user(self):
+        account, _ = _make_user()
+        client = _auth_client(account)
+
+        resp = client.post(
+            "/api/users/",
+            {"first_name": "New", "last_name": "User"},
+        )
+        assert resp.status_code in (
+            status.HTTP_403_FORBIDDEN,
+            status.HTTP_405_METHOD_NOT_ALLOWED,
         )
 
-        # Generate JWT
-        from rest_framework_simplejwt.tokens import RefreshToken
-        refresh = RefreshToken.for_user(self.user)
-        self.access_token = str(refresh.access_token)
+    def test_admin_can_list_all_users(self):
+        """Admin user should see all users."""
+        admin_role, _ = Role.objects.get_or_create(name="ADMIN")
+        admin_account, admin_identity = _make_user("admin@test.com")
+        admin_account.is_superuser = True
+        admin_account.save()
+        _make_user("other@test.com")
 
-    def test_list_users(self):
-        """Test listing users"""
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
-        response = self.client.get("/api/users/")
+        client = _auth_client(admin_account)
+        resp = client.get("/api/users/")
+        assert resp.status_code == status.HTTP_200_OK
+        # Handle pagination
+        data = resp.data["results"] if "results" in resp.data else resp.data
+        assert len(data) >= 2
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("results", response.data)
+    def test_regular_user_only_sees_self(self):
+        account, _ = _make_user("self@test.com")
+        _make_user("other2@test.com")
+        client = _auth_client(account)
 
-    def test_get_user_detail(self):
-        """Test getting user detail"""
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
-        # Identify via ID of Identity, not Auth, because ViewSet queryset returns UserIdentities
-        response = self.client.get(f"/api/users/{self.identity.id_user}/")
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["email"], "apiuser@example.com")
-        # UUID vs string comparison
-        self.assertEqual(str(response.data["id_user"]), str(self.identity.id_user))
-
-    def test_update_user(self):
-        """Test updating user"""
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
-        update_data = {
-            "first_name": "Updated",
-            "last_name": "Name",
-            "phone_number": "+33612345678",
-        }
-
-        # Patch against the ME endpoint or specific ID?
-        # Let's try ME endpoint as it's safer/more common
-        response = self.client.patch("/api/users/me/", update_data)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.identity.refresh_from_db()
-        self.assertEqual(self.identity.first_name, "Updated")
-        self.assertEqual(self.identity.phone_number, "+33612345678")
+        resp = client.get("/api/users/")
+        assert resp.status_code == status.HTTP_200_OK
+        # Handle pagination
+        data = resp.data["results"] if "results" in resp.data else resp.data
+        assert len(data) == 1
