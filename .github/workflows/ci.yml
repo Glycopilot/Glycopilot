@@ -2,9 +2,9 @@ name: Deploy to AWS EC2
 
 on:
   push:
-    branches: [ main, develop]
+    branches: [ main, develop, feat/deploy-complete-b ]
   pull_request:
-    branches: [ main, develop]
+    branches: [ main, develop, feat/deploy-complete-b ]
   workflow_dispatch:
 
 jobs:
@@ -330,7 +330,7 @@ jobs:
     name: Deploy to EC2
     needs: [test-backend, test-frontend, sonarqube]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/deploy-complete-b'
     
     steps:
     - name: Checkout the code
