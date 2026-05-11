@@ -24,7 +24,8 @@ Objectif : permettre à un proche, un voisin ou une structure d'aide à la perso
 Depuis la racine du projet :
 
 ```bash
-cd frontend_web_proche
+cd frontend_proche/frontend_proche_web
+npm install
 PORT=3003 npm start
 ```
 
