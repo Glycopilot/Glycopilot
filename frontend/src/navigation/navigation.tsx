@@ -7,9 +7,11 @@ import ProfileScreen from '../screens/Profile';
 import NotificationsScreen from '../screens/Notifications';
 import JournalScreen from '../screens/Journal';
 import MealsScreen from '../screens/meals';
-import MedicationsScreen from '../screens/medicins';
+import MedicationsScreen from '../screens/Medications';
 import ActivitiesScreen from '../screens/Activities';
 import GlycemiaScreen from '@/screens/Glycemia';
+import SensorActivationScreen from '../screens/SensorActivation';
+import PredictionsScreen from '../screens/Predictions';
 import { setNavigate } from './navigationRef';
 
 type ScreenName =
@@ -24,6 +26,8 @@ type ScreenName =
   | 'Traitements'
   | 'Activite'
   | 'Glycemia'
+  | 'SensorActivation'
+  | 'Predictions'
   | 'Test';
 export default function AppNavigator() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('Login');
@@ -70,6 +74,12 @@ export default function AppNavigator() {
   }
   if (currentScreen === 'Glycemia') {
     return <GlycemiaScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'SensorActivation') {
+    return <SensorActivationScreen navigation={navigation} />;
+  }
+  if (currentScreen === 'Predictions') {
+    return <PredictionsScreen navigation={navigation} />;
   }
 
   return <LoginScreen navigation={navigation} />;

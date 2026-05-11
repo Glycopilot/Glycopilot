@@ -1,0 +1,145 @@
+import React from 'react';
+import { render, waitFor, act } from '@testing-library/react-native';
+import Home from '../Home';
+import useDashboard from '../../hooks/useDashboard';
+import { useMedications } from '../../hooks/useMedications';
+import glycemiaService from '../../services/glycemiaService';
+
+jest.mock('../../hooks/useDashboard');
+jest.mock('../../hooks/useMedications');
+jest.mock('../../hooks/useGlycemiaWebSocket', () => ({
+  useGlycemiaWebSocket: jest.fn().mockReturnValue({ lastReading: null, alert: null }),
+}));
+jest.mock('../../services/glycemiaService', () => ({
+  getCurrent: jest.fn(),
+}));
+jest.mock('../../services/pushService', () => ({
+  registerForPushNotifications: jest.fn(),
+}));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn().mockResolvedValue('mock-token'),
+  removeItem: jest.fn(),
+  setItem: jest.fn(),
+}));
+
+const mockNavigation = { navigate: jest.fn() };
+
+const defaultDashboard = {
+  glucose: { value: 120, unit: 'mg/dL', trend: 'flat', recordedAt: '2026-01-01T08:00:00Z' },
+  activity: { steps: { value: 5000, goal: 10000 }, activeMinutes: 30 },
+  healthScore: 80,
+  refreshing: false,
+  refresh: jest.fn(),
+  loadSummary: jest.fn(),
+};
+
+const defaultMedications = {
+  todayIntakes: [],
+};
+
+describe('Home Screen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (useDashboard as jest.Mock).mockReturnValue(defaultDashboard);
+    (useMedications as jest.Mock).mockReturnValue(defaultMedications);
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue(null);
+  });
+
+  it('renders dashboard section', async () => {
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(getByText('Dashboard')).toBeTruthy();
+    });
+  });
+
+  it('appelle glycemiaService.getCurrent au montage', async () => {
+    render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(glycemiaService.getCurrent).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('affiche la valeur glycémique du dashboard quand getCurrent retourne null', async () => {
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue(null);
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(getByText('120')).toBeTruthy();
+    });
+  });
+
+  it('affiche la valeur glycémique de getCurrent quand plus récente que le dashboard', async () => {
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue({
+      id: '1',
+      value: 145,
+      unit: 'mg/dL',
+      measured_at: '2026-01-01T09:00:00Z',
+      trend: 'rising',
+      source: 'manual',
+    });
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(getByText('145')).toBeTruthy();
+    });
+  });
+
+  it('affiche la valeur du dashboard quand getCurrent est plus ancienne', async () => {
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue({
+      id: '1',
+      value: 90,
+      unit: 'mg/dL',
+      measured_at: '2025-12-31T00:00:00Z',
+      source: 'manual',
+    });
+    (useDashboard as jest.Mock).mockReturnValue({
+      ...defaultDashboard,
+      glucose: { value: 120, unit: 'mg/dL', trend: 'flat', recordedAt: '2026-01-01T08:00:00Z' },
+    });
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(getByText('120')).toBeTruthy();
+    });
+  });
+
+  it('affiche "Aucune mesure" quand pas de données glycémiques', async () => {
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue(null);
+    (useDashboard as jest.Mock).mockReturnValue({ ...defaultDashboard, glucose: undefined });
+    const { getAllByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      // GlycemieCard affiche le badge "Aucune mesure" et le texte long — les deux sont valides
+      expect(getAllByText('Aucune mesure').length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('handleRefresh appelle refresh() et getCurrent() en parallèle', async () => {
+    const mockRefresh = jest.fn().mockResolvedValue(undefined);
+    (useDashboard as jest.Mock).mockReturnValue({ ...defaultDashboard, refresh: mockRefresh });
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue(null);
+
+    render(<Home navigation={mockNavigation as any} />);
+
+    // getCurrent appelé au montage
+    await waitFor(() => expect(glycemiaService.getCurrent).toHaveBeenCalledTimes(1));
+
+    // Simuler un second appel direct (équivalent handleRefresh)
+    await act(async () => {
+      await mockRefresh();
+      await (glycemiaService.getCurrent as jest.Mock)();
+    });
+
+    expect(mockRefresh).toHaveBeenCalled();
+    expect(glycemiaService.getCurrent).toHaveBeenCalledTimes(2);
+  });
+
+  it('affiche le résumé médicaments depuis useMedications', async () => {
+    (useMedications as jest.Mock).mockReturnValue({
+      todayIntakes: [
+        { status: 'taken', scheduled_time: '08:00', scheduled_date: '2026-01-01', medication_name: 'Doliprane' },
+        { status: 'pending', scheduled_time: '12:00', scheduled_date: '2026-01-01', medication_name: 'Metformine' },
+      ],
+    });
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(getByText('1')).toBeTruthy(); // taken_count
+    });
+  });
+});

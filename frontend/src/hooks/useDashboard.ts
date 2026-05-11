@@ -81,16 +81,36 @@ export const useDashboard = (
   );
   const isMountedRef = useRef(true);
 
-  /**
-   * Charge le résumé du dashboard
-   */
+  const withLoading = useCallback(
+    async <T>(fn: () => Promise<T>, onSuccess?: (data: T) => void): Promise<T> => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await fn();
+        if (isMountedRef.current && onSuccess) {
+          onSuccess(data);
+        }
+        return data;
+      } catch (err) {
+        if (isMountedRef.current) {
+          setError((err as Error).message);
+        }
+        throw err;
+      } finally {
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    []
+  );
+
   const loadSummary = useCallback(
     async (showLoading = true): Promise<DashboardSummary> => {
       if (showLoading) {
         setLoading(true);
         setError('');
       }
-
       try {
         const data = await dashboardService.getSummary(modules);
         if (isMountedRef.current) {
@@ -112,82 +132,20 @@ export const useDashboard = (
     [modules]
   );
 
-  /**
-   * Charge les widgets
-   */
-  const loadWidgets = useCallback(async (): Promise<DashboardWidget[]> => {
-    setLoading(true);
-    setError('');
+  const loadWidgets = useCallback(
+    () => withLoading(() => dashboardService.getWidgets(), data => setWidgets(data)),
+    [withLoading]
+  );
 
-    try {
-      const data = await dashboardService.getWidgets();
-      if (isMountedRef.current) {
-        setWidgets(data);
-      }
-      return data;
-    } catch (err) {
-      if (isMountedRef.current) {
-        setError((err as Error).message);
-      }
-      throw err;
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, []);
+  const loadLayouts = useCallback(
+    () => withLoading(() => dashboardService.getWidgetLayouts(), data => setLayouts(data)),
+    [withLoading]
+  );
 
-  /**
-   * Charge les layouts des widgets
-   */
-  const loadLayouts = useCallback(async (): Promise<DashboardLayout[]> => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const data = await dashboardService.getWidgetLayouts();
-      if (isMountedRef.current) {
-        setLayouts(data);
-      }
-      return data;
-    } catch (err) {
-      if (isMountedRef.current) {
-        setError((err as Error).message);
-      }
-      throw err;
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, []);
-
-  /**
-   * Met à jour le layout des widgets
-   */
   const updateLayout = useCallback(
-    async (newLayout: DashboardLayout[]): Promise<DashboardLayout[]> => {
-      setLoading(true);
-      setError('');
-
-      try {
-        const result = await dashboardService.updateWidgetLayout(newLayout);
-        if (isMountedRef.current) {
-          setLayouts(result);
-        }
-        return result;
-      } catch (err) {
-        if (isMountedRef.current) {
-          setError((err as Error).message);
-        }
-        throw err;
-      } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
-      }
-    },
-    []
+    (newLayout: DashboardLayout[]) =>
+      withLoading(() => dashboardService.updateWidgetLayout(newLayout), data => setLayouts(data)),
+    [withLoading]
   );
 
   /**
@@ -227,54 +185,24 @@ export const useDashboard = (
     }
   }, [modules]);
 
-  /**
-   * Charge les données spécifiques d'un module
-   */
-  const loadModuleData = useCallback(async (moduleName: DashboardModule) => {
-    setLoading(true);
-    setError('');
-
-    try {
-      let data;
-      switch (moduleName) {
-        case 'glucose':
-          data = await dashboardService.getGlucoseData();
-          break;
-        case 'alerts':
-          data = await dashboardService.getAlerts();
-          break;
-        case 'medication':
-          data = await dashboardService.getMedicationData();
-          break;
-        case 'nutrition':
-          data = await dashboardService.getNutritionData();
-          break;
-        case 'activity':
-          data = await dashboardService.getActivityData();
-          break;
-        default:
-          throw new Error(`Module inconnu: ${moduleName}`);
-      }
-
-      if (isMountedRef.current) {
-        setSummary(prev => ({
-          ...prev,
-          [moduleName]: data,
-        }));
-      }
-
-      return data;
-    } catch (err) {
-      if (isMountedRef.current) {
-        setError((err as Error).message);
-      }
-      throw err;
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, []);
+  const loadModuleData = useCallback(
+    (moduleName: DashboardModule) => {
+      const fetchModule = async () => {
+        switch (moduleName) {
+          case 'glucose': return dashboardService.getGlucoseData();
+          case 'alerts': return dashboardService.getAlerts();
+          case 'medication': return dashboardService.getMedicationData();
+          case 'nutrition': return dashboardService.getNutritionData();
+          case 'activity': return dashboardService.getActivityData();
+          default: throw new Error(`Module inconnu: ${moduleName}`);
+        }
+      };
+      return withLoading(fetchModule, data =>
+        setSummary(prev => ({ ...prev, [moduleName]: data }))
+      );
+    },
+    [withLoading]
+  );
 
   /**
    * Obtenir un widget spécifique par ID

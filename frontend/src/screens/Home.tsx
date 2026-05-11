@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,60 +13,111 @@ import GlycemieCard from '../components/dashboard/GlycemieCard';
 import StatCard from '../components/dashboard/StatCard';
 import ActionButton from '../components/common/ActionButton';
 import useDashboard from '../hooks/useDashboard';
+import { useMedications } from '../hooks/useMedications';
 import { Activity, Pill } from 'lucide-react-native';
-import { GLYCEMIA_TARGET, getGlycemiaStatus } from '../constants/glycemia.constants';
+import {
+  GLYCEMIA_TARGET,
+  getGlycemiaStatus,
+} from '../constants/glycemia.constants';
 import { useGlycemiaWebSocket } from '../hooks/useGlycemiaWebSocket';
+import glycemiaService from '../services/glycemiaService';
+import type { GlycemiaEntry } from '../types/glycemia.types';
 import { toastError, toastInfo } from '../services/toastService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications } from '../services/pushService';
+import { WS_URL } from '../services/apiClient';
 
 interface HomeScreenProps {
   navigation: any;
 }
 
 export default function HomeScreen({ navigation }: HomeScreenProps) {
-  const { glucose, medication, activity, healthScore, refreshing, refresh } =
+  const { glucose, activity, healthScore, refreshing, refresh } =
     useDashboard({
-      modules: ['glucose', 'alerts', 'medication', 'nutrition', 'activity'],
+      modules: ['glucose', 'alerts', 'nutrition', 'activity'],
       refreshInterval: 30000,
       autoLoad: true,
     });
 
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [realtimeGlucose, setRealtimeGlucose] = useState(glucose);
-  const [wsEnabled, setWsEnabled] = useState(false);
+  const { todayIntakes } = useMedications();
 
-  // Récupérer le token JWT et enregistrer les notifications push
+  // Calcul identique à medicins.tsx
+  const medicationSummary = useMemo(() => {
+    const taken_count = todayIntakes.filter(i => i.status === 'taken').length;
+    const total_count = todayIntakes.length;
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    const pending = todayIntakes.filter(i => i.status === 'pending');
+    const nextIntake =
+      pending.find(i => i.scheduled_time >= nowTime) ?? pending[0] ?? null;
+
+    return {
+      taken_count,
+      total_count,
+      nextDose: nextIntake
+        ? {
+            name: nextIntake.medication_name ?? '',
+            scheduledAt: `${nextIntake.scheduled_date}T${nextIntake.scheduled_time}`,
+            status: nextIntake.status,
+          }
+        : null,
+    };
+  }, [todayIntakes]);
+
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [wsEnabled, setWsEnabled] = useState(false);
+  const [currentGlucoseEntry, setCurrentGlucoseEntry] = useState<GlycemiaEntry | null>(null);
+
+  const fetchCurrentGlucose = useCallback(async () => {
+    const entry = await glycemiaService.getCurrent();
+    if (entry) setCurrentGlucoseEntry(entry);
+  }, []);
+
+  // Fetch initial + enregistrement push
   useEffect(() => {
+    fetchCurrentGlucose();
     AsyncStorage.getItem('access_token').then(token => {
       if (token) {
         setAccessToken(token);
-        setWsEnabled(true); // Enable WebSocket only after token is loaded
-        // Enregistrer pour les notifications push
+        setWsEnabled(true);
         registerForPushNotifications();
       }
     });
-  }, []);
+  }, [fetchCurrentGlucose]);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([refresh(), fetchCurrentGlucose()]);
+  }, [refresh, fetchCurrentGlucose]);
 
   // WebSocket pour les mises à jour temps réel (only connect when token is available)
   const { lastReading, alert } = useGlycemiaWebSocket(
     wsEnabled ? accessToken : null,
-    process.env.EXPO_PUBLIC_WS_URL ?? ''
+    WS_URL
   );
 
-  // Mettre à jour la glycémie avec les données WebSocket
-  useEffect(() => {
-    if (lastReading) {
-      setRealtimeGlucose({
+  // Priorité : WebSocket > glycemia/current (direct DB) > dashboard summary
+  const realtimeGlucose = useMemo(() => {
+    const wsTs = lastReading?.measured_at ? new Date(lastReading.measured_at).getTime() : 0;
+    const directTs = currentGlucoseEntry?.measured_at ? new Date(currentGlucoseEntry.measured_at).getTime() : 0;
+    const dashTs = glucose?.recordedAt ? new Date(glucose.recordedAt).getTime() : 0;
+
+    if (lastReading && wsTs >= Math.max(directTs, dashTs)) {
+      return {
         value: lastReading.value,
         unit: lastReading.unit || 'mg/dL',
-        trend: lastReading.trend as 'rising' | 'falling' | 'flat' | undefined,
+        trend: lastReading.trend,
         recordedAt: lastReading.measured_at,
-      });
-    } else if (glucose) {
-      setRealtimeGlucose(glucose);
+      };
     }
-  }, [lastReading, glucose]);
+    if (currentGlucoseEntry && directTs >= dashTs) {
+      return {
+        value: currentGlucoseEntry.value,
+        unit: currentGlucoseEntry.unit || 'mg/dL',
+        trend: currentGlucoseEntry.trend,
+        recordedAt: currentGlucoseEntry.measured_at,
+      };
+    }
+    return glucose ?? null;
+  }, [lastReading, currentGlucoseEntry, glucose]);
 
   // Afficher une alerte si reçue du WebSocket
   useEffect(() => {
@@ -90,17 +141,14 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   };
 
   return (
-    <Layout
-      navigation={navigation}
-      currentRoute="Home"
-    >
+    <Layout navigation={navigation} currentRoute="Home">
       <ScrollView
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={refresh}
+            onRefresh={handleRefresh}
             tintColor="#FF9F1C"
           />
         }
@@ -109,7 +157,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           healthScore={healthScore}
           glucoseTrend={realtimeGlucose?.trend}
           glucoseValue={realtimeGlucose?.value}
-          medication={medication}
+          medication={medicationSummary}
         />
 
         <View style={styles.sectionHeader}>
@@ -118,9 +166,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
 
         <GlycemieCard
-          value={realtimeGlucose?.value || 125}
-          status={getGlycemieStatus(realtimeGlucose?.value || 125)}
-          timestamp={realtimeGlucose?.recordedAt || new Date().toISOString()}
+          value={realtimeGlucose?.value ?? null}
+          status={realtimeGlucose ? getGlycemieStatus(realtimeGlucose.value) : undefined}
+          timestamp={realtimeGlucose?.recordedAt}
           unit={realtimeGlucose?.unit}
           trend={realtimeGlucose?.trend}
           onPress={() => navigation.navigate('Stats')}
@@ -138,18 +186,16 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               onPress={() => console.log('Navigate to Activity')}
             />
           )}
-          {medication && (
-            <StatCard
-              title="Médic"
-              icon={Pill}
-              iconColor="#AF52DE"
-              iconBgColor="#F5EBFF"
-              value={medication.taken_count || 0}
-              secondaryValue={medication.total_count || 0}
-              subtitle="Prises aujourd'hui"
-              onPress={() => console.log('Navigate to Medications')}
-            />
-          )}
+          <StatCard
+            title="Médicaments"
+            icon={Pill}
+            iconColor="#AF52DE"
+            iconBgColor="#F5EBFF"
+            value={medicationSummary.taken_count}
+            secondaryValue={medicationSummary.total_count}
+            subtitle="Prises aujourd'hui"
+            onPress={() => navigation.navigate('Traitements')}
+          />
         </View>
 
         <View style={styles.sectionHeader}>
@@ -157,33 +203,38 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <Text style={styles.sectionTitle}>Actions rapides</Text>
         </View>
 
+        <View style={styles.sensorRow}>
+          <ActionButton
+            type="glycemie"
+            label="Mon capteur"
+            onPress={() => {
+              if (navigation && navigation.navigate) {
+                navigation.navigate('SensorActivation');
+              }
+            }}
+          />
+        </View>
+
         <View style={styles.actionsRow}>
           <ActionButton
             type="repas"
             label="Repas"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Repas');
-              }
-            }}
+            onPress={() => navigation?.navigate('Repas')}
           />
           <ActionButton
             type="medic"
             label="Médic"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Traitements');
-              }
-            }}
+            onPress={() => navigation?.navigate('Traitements')}
           />
           <ActionButton
             type="action"
             label="Activité"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('Activite');
-              }
-            }}
+            onPress={() => navigation?.navigate('Activite')}
+          />
+          <ActionButton
+            type="prediction"
+            label="Prédiction"
+            onPress={() => navigation?.navigate('Predictions')}
           />
         </View>
 
@@ -222,6 +273,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
     gap: 4,
+  },
+  sensorRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 4,
   },
   bottomPadding: {
     height: 100,

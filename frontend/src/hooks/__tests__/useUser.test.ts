@@ -1,5 +1,5 @@
 import { renderHook, waitFor, act } from '@testing-library/react-native';
-import useUser from '../useUser';
+import useUser, { clearUserCache } from '../useUser';
 import authService from '../../services/authService';
 
 // Mock authService
@@ -13,6 +13,7 @@ describe('useUser hook', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        clearUserCache();
     });
 
     it('should fetch user on mount from both storage and backend', async () => {
@@ -68,5 +69,35 @@ describe('useUser hook', () => {
         });
 
         expect(result.current.user).toEqual(mockUser);
+    });
+
+    it('should use cache on second mount within TTL', async () => {
+        (authService.getStoredUser as jest.Mock).mockResolvedValue(null);
+        (authService.getCurrentUser as jest.Mock).mockResolvedValue(mockUser);
+
+        // Premier montage — remplit le cache
+        const { result: r1 } = renderHook(() => useUser());
+        await waitFor(() => expect(r1.current.loading).toBe(false));
+        expect(authService.getCurrentUser).toHaveBeenCalledTimes(1);
+
+        // Deuxième montage dans la même minute — doit utiliser le cache
+        const { result: r2 } = renderHook(() => useUser());
+        await waitFor(() => expect(r2.current.loading).toBe(false));
+        expect(r2.current.user).toEqual(mockUser);
+        // getCurrentUser ne doit pas être rappelé
+        expect(authService.getCurrentUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('refetch with force bypasses cache', async () => {
+        (authService.getStoredUser as jest.Mock).mockResolvedValue(null);
+        (authService.getCurrentUser as jest.Mock).mockResolvedValue(mockUser);
+
+        const { result } = renderHook(() => useUser());
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        expect(authService.getCurrentUser).toHaveBeenCalledTimes(1);
+
+        // refetch() force=true doit rappeler l'API malgré le cache
+        await act(async () => { await result.current.refetch(); });
+        expect(authService.getCurrentUser).toHaveBeenCalledTimes(2);
     });
 });
