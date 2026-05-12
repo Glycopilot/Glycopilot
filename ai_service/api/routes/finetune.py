@@ -8,8 +8,16 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel
+
+_PATIENT_ID_RE = re.compile(r'^[a-zA-Z0-9_\-]{1,64}$')
+
+
+def _validate_patient_id(patient_id: str) -> None:
+    if not _PATIENT_ID_RE.match(patient_id):
+        raise HTTPException(status_code=400, detail=f"Invalid patient_id format: {patient_id}")
 
 from api.routes.predict import _verify_token
 from core.config import settings
@@ -78,6 +86,7 @@ async def trigger_finetune(
 ):
     """Déclenche le fine-tuning d'un patient en arrière-plan. Répond immédiatement."""
     _verify_token(x_internal_token)
+    _validate_patient_id(patient_id)
 
     lock = _finetune_locks.setdefault(patient_id, asyncio.Lock())
     if lock.locked():
@@ -134,6 +143,7 @@ async def approve_model(
 ):
     """Approuve le modèle personnel — il sera utilisé pour les prédictions."""
     _verify_token(x_internal_token)
+    _validate_patient_id(patient_id)
     try:
         personal_lstm_manager.set_status(patient_id, version, "approved")
         logger.info(f"[Finetune] Modèle {patient_id} v{version} approuvé.")
@@ -150,6 +160,7 @@ async def reject_model(
 ):
     """Rejette le modèle personnel — le modèle global sera conservé."""
     _verify_token(x_internal_token)
+    _validate_patient_id(patient_id)
     try:
         personal_lstm_manager.set_status(patient_id, version, "rejected")
         logger.info(f"[Finetune] Modèle {patient_id} v{version} rejeté.")
@@ -166,6 +177,7 @@ async def finetune_status(
 ) -> FinetuneStatus:
     """Vérifie si un modèle personnel existe pour ce patient."""
     _verify_token(x_internal_token)
+    _validate_patient_id(patient_id)
     has_model = personal_lstm_manager.has_model(patient_id, version)
     model_path = None
     if has_model:
