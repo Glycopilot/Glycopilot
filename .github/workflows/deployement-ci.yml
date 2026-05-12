@@ -104,12 +104,10 @@ jobs:
           cd frontend_web
           npm install --legacy-peer-deps
           
-          echo "VITE_API_URL=http://15.188.114.169/api" > .env.production
+          export REACT_APP_API_URL="http://15.188.114.169/api"
+          export REACT_APP_API_TIMEOUT="10000"
 
           npm run build
-        env:
-          # Par défaut, le web pointe sur le Plan B
-          VITE_API_URL: "http://glycopilot-alb-1175156610.eu-west-3.elb.amazonaws.com/api"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -119,7 +117,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Sync to S3
-        run: aws s3 sync ./frontend_web/dist/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
+        run: aws s3 sync ./frontend_web/build/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)
