@@ -6,30 +6,72 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
-// ── Mocks ────────────────────────────────────────────────────────────────────
-const { mockGet, mockPost } = vi.hoisted(() => ({
-  mockGet:  vi.fn(),
-  mockPost: vi.fn(),
-}));
 
-vi.mock('../services/authService', () => ({
-  default: {
-    getApiClient:  () => ({ get: mockGet, post: mockPost }),
-    getStoredUser: vi.fn(() => ({ first_name: 'Jean', last_name: 'Dupont', doctor_id: 'doc-1' })),
-    logout: vi.fn(),
-  },
+
+jest.mock('../services/authService', () => {
+  const api = { get: jest.fn(), post: jest.fn() };
+  return {
+    __esModule: true,
+    default: {
+      getApiClient:  () => api,
+      getStoredUser: jest.fn(() => ({ first_name: 'Jean', last_name: 'Dupont', doctor_id: 'doc-1' })),
+      logout: jest.fn(),
+    },
+  };
+});
+jest.mock('../services/toastService', () => ({
+  toastError: jest.fn(), toastSuccess: jest.fn(),
 }));
-vi.mock('../services/toastService', () => ({
-  toastError: vi.fn(), toastSuccess: vi.fn(),
-}));
-vi.mock('../components/Sidebar', () => ({
+jest.mock('../components/Sidebar', () => ({
+  __esModule: true,
   default: ({ activePage }) => <div data-testid="sidebar" data-page={activePage} />,
 }));
-vi.mock('./css/patients.css', () => ({}));
+jest.mock('../screens/css/patients.css', () => ({}));
+
+// Mock Lucide icons
+jest.mock('lucide-react', () => ({
+  Users: () => <div />,
+  User: () => <div />,
+  UserPlus: () => <div />,
+  Heart: () => <div />,
+  Activity: () => <div />,
+  AlertTriangle: () => <div />,
+  Search: () => <div />,
+  Clock: () => <div />,
+  CheckCircle: () => <div />,
+  LogOut: () => <div />,
+  Menu: () => <div />,
+  X: () => <div />,
+  ChevronRight: () => <div />,
+  MoreVertical: () => <div />,
+  Plus: () => <div />,
+  Droplets: () => <div />,
+  Pill: () => <div />,
+  FileText: () => <div />,
+  TrendingUp: () => <div />,
+  TrendingDown: () => <div />,
+  Calendar: () => <div />,
+  Mail: () => <div />,
+  Phone: () => <div />,
+  MapPin: () => <div />,
+  ArrowLeft: () => <div />,
+  ArrowRight: () => <div />,
+  Send: () => <div />,
+  LayoutDashboard: () => <div />,
+  Filter: () => <div />,
+  CalendarDays: () => <div />,
+  ExternalLink: () => <div />,
+  Clock3: () => <div />,
+  AlertCircle: () => <div />,
+  Utensils: () => <div />,
+  Flame: () => <div />,
+  Footprints: () => <div />,
+  Pencil: () => <div />,
+  Save: () => <div />,
+}));
 
 import PatientsScreen from '../screens/PatientsScreen';
+import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -101,6 +143,16 @@ function makeGlycemia() {
   ];
 }
 
+let mockGet, mockPost;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  const api = authService.getApiClient();
+  mockGet = api.get;
+  mockPost = api.post;
+  setupDefaultMocks();
+});
+
 // Configure mockGet avec des données par défaut pour tous les endpoints
 function setupDefaultMocks({
   activePatients = [],
@@ -129,7 +181,7 @@ function setupDefaultMocks({
 }
 
 // Helpers DOM
-const navigation = { navigate: vi.fn() };
+const navigation = { navigate: jest.fn() };
 const render$ = () => render(<PatientsScreen navigation={navigation} />);
 const clickSubmit = () =>
   fireEvent.click(screen.getByRole('button', { name: /créer mon compte|ajouter un patient/i }));
@@ -137,7 +189,7 @@ const clickSubmit = () =>
 // ── Tests ─────────────────────────────────────────────────────────────────────
 describe('PatientsScreen', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     navigation.navigate.mockClear();
     mockPost.mockResolvedValue({ data: {} });
   });
@@ -177,25 +229,21 @@ describe('PatientsScreen', () => {
 
   // ─── 2. Stats et onglets ─────────────────────────────────────────────────
   describe('Stats et onglets', () => {
-    it('compteur "Patients actifs" = nombre de membres actifs', async () => {
+    it('compteur "Mes patients" = nombre de membres actifs', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1'), makeActiveMember('2')] });
       render$();
       await waitFor(() => {
-        // La stat card affiche le label
-        expect(screen.getByText('Patients actifs')).toBeInTheDocument();
+        const tab = screen.getByRole('button', { name: /mes patients/i });
+        expect(tab.querySelector('.tab-count').textContent).toBe('2');
       });
-      // La valeur 2 doit apparaître (stat-value + tab-count)
-      expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1);
     });
 
     it('compteur "Invitations envoyées" correspond aux sentInvites', async () => {
       setupDefaultMocks({ pendingInvites: [makeSentInvite()] });
       render$();
       await waitFor(() => {
-        const label = Array.from(document.querySelectorAll('.stat-label'))
-          .find(el => el.textContent.trim() === 'Invitations envoyées');
-        expect(label).toBeTruthy();
-        expect(label.previousSibling?.textContent.trim() || label.parentElement.querySelector('.stat-value')?.textContent.trim()).toBe('1');
+        const tab = screen.getByRole('button', { name: /invitations envoyées/i });
+        expect(tab.querySelector('.tab-count').textContent).toBe('1');
       });
     });
 
@@ -203,10 +251,8 @@ describe('PatientsScreen', () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite()] });
       render$();
       await waitFor(() => {
-        const label = Array.from(document.querySelectorAll('.stat-label'))
-          .find(el => el.textContent.trim() === 'Demandes reçues');
-        expect(label).toBeTruthy();
-        expect(label.parentElement.querySelector('.stat-value')?.textContent.trim()).toBe('1');
+        const tab = screen.getByRole('button', { name: /demandes reçues/i });
+        expect(tab.querySelector('.tab-count').textContent).toBe('1');
       });
     });
 
