@@ -7,35 +7,9 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-function getApiUrl(): string {
-  if (Platform.OS === 'web') return 'http://localhost:8006/api';
-  // En dev, l'IP de la machine hôte est détectée depuis le serveur Expo
-  // (Constants.expoConfig.hostUri = "10.68.x.x:8081")
-  if (__DEV__) {
-    const hostUri = Constants.expoConfig?.hostUri;
-    if (hostUri) {
-      const ip = hostUri.split(':')[0];
-      return `http://${ip}:8006/api`;
-    }
-  }
-  return process.env.EXPO_PUBLIC_API_URL ?? '';
-}
+const API_URL = process.env.EXPO_PUBLIC_API_URL || '';
+const WS_URL = process.env.EXPO_PUBLIC_WS_URL || '';
 
-const API_URL = getApiUrl();
-
-function getWsUrl(): string {
-  if (Platform.OS === 'web') return 'ws://localhost:8006';
-  if (__DEV__) {
-    const hostUri = Constants.expoConfig?.hostUri;
-    if (hostUri) {
-      const ip = hostUri.split(':')[0];
-      return `ws://${ip}:8006`;
-    }
-  }
-  return process.env.EXPO_PUBLIC_WS_URL ?? '';
-}
-
-const WS_URL = getWsUrl();
 const API_TIMEOUT = parseInt(
   process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',
   10

@@ -135,21 +135,17 @@ describe('apiClient', () => {
     });
 });
 
-describe('apiClient URL detection', () => {
+describe('apiClient URL reading', () => {
     afterEach(() => {
         jest.resetModules();
     });
 
-    it('uses hostUri to build API_URL in dev mode', () => {
+    it('uses process.env for URLs', () => {
         jest.resetModules();
-        jest.doMock('expo-constants', () => ({
-            expoConfig: {
-                hostUri: '10.0.0.1:8081',
-                extra: { eas: { projectId: 'test' } },
-            },
-        }));
+        process.env.EXPO_PUBLIC_API_URL = 'http://test.local/api';
+        process.env.EXPO_PUBLIC_WS_URL = 'ws://test.local';
         const { API_URL: devApiUrl, WS_URL: devWsUrl } = require('../apiClient');
-        expect(devApiUrl).toBe('http://10.0.0.1:8006/api'); // NOSONAR - URL de dev local uniquement
-        expect(devWsUrl).toBe('ws://10.0.0.1:8006');
+        expect(devApiUrl).toBe('http://test.local/api');
+        expect(devWsUrl).toBe('ws://test.local');
     });
 });

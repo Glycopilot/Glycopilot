@@ -27,7 +27,6 @@ env:
 jobs:
   deploy-plan-a:
     name: Deploy Plan A (EC2)
-    if: ${{ github.event.inputs.deploy_plan_a == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Execute deployment on EC2 via SSH
@@ -50,7 +49,6 @@ jobs:
 
   deploy-plan-b:
     name: Deploy Plan B (Enterprise)
-    if: ${{ github.event.inputs.deploy_plan_b == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -89,7 +87,6 @@ jobs:
 
   deploy-front-web:
     name: Deploy Frontend Web
-    if: ${{ github.event.inputs.deploy_front_web == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -120,7 +117,6 @@ jobs:
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)
-    if: ${{ github.event.inputs.deploy_mobile == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
