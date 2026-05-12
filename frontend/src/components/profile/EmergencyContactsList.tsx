@@ -26,9 +26,10 @@ export default function EmergencyContactsList({
           <Users size={20} color={colors.textPrimary} />
           <Text style={styles.sectionTitle}>Contacts d'urgence</Text>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={onAddContact}>
+        <TouchableOpacity style={styles.addButton} onPress={onAddContact} testID="add-contact-button">
           <Plus size={18} color="#fff" />
         </TouchableOpacity>
+
       </View>
 
       <View style={styles.contactsList}>
