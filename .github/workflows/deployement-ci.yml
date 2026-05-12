@@ -85,7 +85,7 @@ jobs:
       - run: |
           cd infra/terraform-plan-b
           terraform init
-          terraform apply -auto-approve -var="django_secret_key=${{ secrets.DJANGO_SECRET_KEY }}" -var="db_password=${{ secrets.DB_PASSWORD }}"
+          terraform apply -auto-approve
 
   deploy-front-web:
     name: Deploy Frontend Web
