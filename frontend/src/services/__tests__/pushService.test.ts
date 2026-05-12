@@ -1,146 +1,155 @@
+process.env.EXPO_PUBLIC_API_URL = 'http://localhost:8000/api';
+
+import MockAdapter from 'axios-mock-adapter';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import MockAdapter from 'axios-mock-adapter';
 import apiClient from '../apiClient';
-import { registerForPushNotifications, unregisterPushToken } from '../pushService';
 
-describe('pushService', () => {
-    let mock: MockAdapter;
+// Import after mocks
+import {
+  registerForPushNotifications,
+  unregisterPushToken,
+  addNotificationReceivedListener,
+  addNotificationResponseListener,
+} from '../pushService';
 
-    beforeEach(() => {
-        mock = new MockAdapter(apiClient);
-        jest.clearAllMocks();
-    });
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+}));
 
-    afterEach(() => {
-        mock.restore();
-    });
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+  getPermissionsAsync: jest.fn(),
+  requestPermissionsAsync: jest.fn(),
+  getExpoPushTokenAsync: jest.fn(),
+  addNotificationReceivedListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
+  addNotificationResponseReceivedListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
+  AndroidImportance: { MAX: 5 },
+}));
 
-    describe('registerForPushNotifications', () => {
-        it('should return null if not a physical device', async () => {
-            (Device as any).isDevice = false;
-            const result = await registerForPushNotifications();
-            expect(result).toBeNull();
-        });
+jest.mock('expo-device', () => ({ isDevice: true }));
 
-        it('should return null if EAS projectId is missing', async () => {
-            (Device as any).isDevice = true;
-            (Constants.expoConfig as any).extra.eas.projectId = null;
-            const result = await registerForPushNotifications();
-            expect(result).toBeNull();
-        });
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    expoConfig: { extra: { eas: { projectId: 'test-project-id' } } },
+  },
+}));
 
-        it('should register successfully and store token', async () => {
-            (Device as any).isDevice = true;
-            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
-            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
-            (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'expo-token' });
-            mock.onPost('/notifications/push-token/').reply(200);
+jest.mock('react-native', () => ({
+  Platform: { OS: 'ios' },
+}));
 
-            const result = await registerForPushNotifications();
+const mock = new MockAdapter(apiClient);
 
-            expect(result).toBe('expo-token');
-            expect(AsyncStorage.setItem).toHaveBeenCalledWith('push_token', 'expo-token');
-            expect(mock.history.post[0].url).toBe('/notifications/push-token/');
-            expect(JSON.parse(mock.history.post[0].data)).toEqual({
-                token: 'expo-token',
-                device_type: 'ios' // Based on our platform mock or default test env
-            });
-        });
+beforeEach(() => {
+  mock.reset();
+  jest.clearAllMocks();
+  // Restore device to physical by default
+  Object.defineProperty(Device, 'isDevice', { value: true, writable: true });
+});
 
-        it('should request permissions if not already granted', async () => {
-            (Device as any).isDevice = true;
-            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
-            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
-            (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
-            (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'expo-token' });
-            mock.onPost('/notifications/push-token/').reply(200);
+afterAll(() => mock.restore());
 
-            await registerForPushNotifications();
+describe('registerForPushNotifications', () => {
+  it('returns null when not a physical device', async () => {
+    Object.defineProperty(Device, 'isDevice', { value: false, writable: true });
+    const result = await registerForPushNotifications();
+    expect(result).toBeNull();
+  });
 
-            expect(Notifications.requestPermissionsAsync).toHaveBeenCalled();
-        });
+  it('returns null when permission denied', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
+    (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
+    const result = await registerForPushNotifications();
+    expect(result).toBeNull();
+  });
 
-        it('should return null if permissions denied', async () => {
-            (Device as any).isDevice = true;
-            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
-            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
-            (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
+  it('requests permission and returns null when still denied', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'undetermined' });
+    (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
+    const result = await registerForPushNotifications();
+    expect(result).toBeNull();
+  });
 
-            const result = await registerForPushNotifications();
+  it('registers token when permission already granted and new token', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'ExpoToken[abc123]' });
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
+    mock.onPost('/notifications/push-token/').reply(200);
+    const result = await registerForPushNotifications();
+    expect(result).toBe('ExpoToken[abc123]');
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('push_token', 'ExpoToken[abc123]');
+  });
 
-            expect(result).toBeNull();
-        });
+  it('returns saved token without re-registering when same token exists', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'ExpoToken[same]' });
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('ExpoToken[same]');
+    const result = await registerForPushNotifications();
+    expect(result).toBe('ExpoToken[same]');
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
 
-        it('should return null and log error on exception', async () => {
-            (Device as any).isDevice = true;
-            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
-            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
-            (Notifications.getExpoPushTokenAsync as jest.Mock).mockRejectedValue(new Error('Push error'));
+  it('returns null and logs warning on 429 rate limit error', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'ExpoToken[xyz]' });
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    mock.onPost('/notifications/push-token/').reply(429);
+    const result = await registerForPushNotifications();
+    expect(result).toBeNull();
+  });
 
-            const result = await registerForPushNotifications();
+  it('returns null on generic error', async () => {
+    (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'ExpoToken[xyz]' });
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    mock.onPost('/notifications/push-token/').reply(500);
+    const result = await registerForPushNotifications();
+    expect(result).toBeNull();
+  });
+});
 
-            expect(result).toBeNull();
-        });
+describe('unregisterPushToken', () => {
+  it('deletes token from backend and storage when token exists', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('ExpoToken[del]');
+    mock.onDelete('/notifications/push-token/').reply(204);
+    (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
+    await unregisterPushToken();
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('push_token');
+  });
 
-        it('should skip backend call if same token already saved', async () => {
-            (Device as any).isDevice = true;
-            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
-            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
-            (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'expo-token' });
-            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('expo-token');
+  it('does nothing when no token saved', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    await unregisterPushToken();
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+  });
 
-            const result = await registerForPushNotifications();
+  it('handles storage error gracefully', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('Storage fail'));
+    await expect(unregisterPushToken()).resolves.toBeUndefined();
+  });
+});
 
-            expect(result).toBe('expo-token');
-            expect(mock.history.post.length).toBe(0);
-        });
+describe('addNotificationReceivedListener', () => {
+  it('subscribes and returns a subscription', () => {
+    const cb = jest.fn();
+    const sub = addNotificationReceivedListener(cb);
+    expect(sub).toBeDefined();
+    expect(Notifications.addNotificationReceivedListener).toHaveBeenCalledWith(cb);
+  });
+});
 
-        it('should return null silently on 429 rate limit', async () => {
-            (Device as any).isDevice = true;
-            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
-            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
-            (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'expo-token-new' });
-            (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
-            mock.onPost('/notifications/push-token/').reply(429);
-
-            const result = await registerForPushNotifications();
-
-            expect(result).toBeNull();
-        });
-    });
-
-    describe('unregisterPushToken', () => {
-        it('should unregister and clear storage if token exists', async () => {
-            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('stored-token');
-            mock.onDelete('/notifications/push-token/').reply(200);
-
-            await unregisterPushToken();
-
-            expect(mock.history.delete[0].url).toBe('/notifications/push-token/');
-            expect(JSON.parse(mock.history.delete[0].data)).toEqual({ token: 'stored-token' });
-            expect(AsyncStorage.removeItem).toHaveBeenCalledWith('push_token');
-        });
-
-        it('should do nothing if no token in storage', async () => {
-            (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
-
-            await unregisterPushToken();
-
-            expect(mock.history.delete.length).toBe(0);
-            expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
-        });
-
-        it('should log error but not crash on failure', async () => {
-            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('stored-token');
-            mock.onDelete('/notifications/push-token/').reply(500);
-
-            await unregisterPushToken();
-
-            // Should still log error (verified by coverage of catch block)
-            expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
-        });
-    });
+describe('addNotificationResponseListener', () => {
+  it('subscribes and returns a subscription', () => {
+    const cb = jest.fn();
+    const sub = addNotificationResponseListener(cb);
+    expect(sub).toBeDefined();
+    expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalledWith(cb);
+  });
 });

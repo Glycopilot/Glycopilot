@@ -174,11 +174,11 @@ export default function ActivityScreen({
   };
 
   const incrementDuration = (): void => {
-    setDuration((parseInt(duration || '0', 10) + 5).toString());
+    setDuration(((parseInt(duration, 10) || 0) + 5).toString());
   };
 
   const decrementDuration = (): void => {
-    setDuration(Math.max(0, parseInt(duration || '0', 10) - 5).toString());
+    setDuration(Math.max(0, (parseInt(duration, 10) || 0) - 5).toString());
   };
 
   const progressPercentage = Math.min(
@@ -296,6 +296,7 @@ export default function ActivityScreen({
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => setShowAddActivity(true)}
+              testID="add-activity-button"
             >
               <Plus size={24} color="#fff" />
             </TouchableOpacity>
@@ -360,6 +361,7 @@ export default function ActivityScreen({
           <Pressable
             style={styles.modalOverlay}
             onPress={() => setShowAddActivity(false)}
+            testID="modal-overlay"
           />
           <View
             style={[
@@ -384,6 +386,7 @@ export default function ActivityScreen({
                       activityType === type.label &&
                         styles.activityTypeButtonActive,
                     ]}
+                    testID={`activity-type-${type.label.toLowerCase()}`}
                   >
                     <Text style={styles.activityTypeIcon}>{type.icon}</Text>
                     <Text
@@ -421,6 +424,7 @@ export default function ActivityScreen({
                 <TouchableOpacity
                   style={styles.durationButtonMinus}
                   onPress={decrementDuration}
+                  testID="duration-minus"
                 >
                   <Minus size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -431,10 +435,12 @@ export default function ActivityScreen({
                   placeholder="30"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
+                  testID="duration-input"
                 />
                 <TouchableOpacity
                   style={styles.durationButtonPlus}
                   onPress={incrementDuration}
+                  testID="duration-plus"
                 >
                   <Plus size={20} color="#fff" />
                 </TouchableOpacity>
@@ -519,6 +525,7 @@ export default function ActivityScreen({
                 ]}
                 onPress={handleSubmit}
                 disabled={!activityType || !duration}
+                testID="submit-activity"
               >
                 <Text style={styles.submitButtonText}>Ajouter</Text>
               </TouchableOpacity>

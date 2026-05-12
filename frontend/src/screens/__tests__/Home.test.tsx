@@ -21,6 +21,10 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn(),
   setItem: jest.fn(),
 }));
+jest.mock('../../services/toastService', () => ({
+  toastError: jest.fn(),
+  toastInfo: jest.fn(),
+}));
 
 const mockNavigation = { navigate: jest.fn() };
 
@@ -141,5 +145,43 @@ describe('Home Screen', () => {
     await waitFor(() => {
       expect(getByText('1')).toBeTruthy(); // taken_count
     });
+  });
+
+  it('affiche une alerte d\'hypoglycémie via WebSocket', async () => {
+    const { useGlycemiaWebSocket } = require('../../hooks/useGlycemiaWebSocket');
+    const { toastError } = require('../../services/toastService');
+    
+    (useGlycemiaWebSocket as jest.Mock).mockReturnValue({
+        lastReading: null,
+        alert: { data: { value: 65, unit: 'mg/dL' } }
+    });
+
+    render(<Home navigation={mockNavigation as any} />);
+    
+    await waitFor(() => {
+        expect(toastError).toHaveBeenCalledWith('Hypoglycémie', expect.stringContaining('65'));
+    });
+  });
+
+  it('navigue vers les différents écrans via les boutons d\'action', async () => {
+    const { getByTestId } = render(<Home navigation={mockNavigation as any} />);
+    
+    await act(async () => {
+        const btnRepas = getByTestId('action-repas');
+        const btnMedic = getByTestId('action-medic');
+        const btnActivite = getByTestId('action-activite');
+        const btnPrediction = getByTestId('action-prediction');
+        
+        const { fireEvent } = require('@testing-library/react-native');
+        fireEvent.press(btnRepas);
+        fireEvent.press(btnMedic);
+        fireEvent.press(btnActivite);
+        fireEvent.press(btnPrediction);
+    });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Repas');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Traitements');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Activite');
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('Predictions');
   });
 });

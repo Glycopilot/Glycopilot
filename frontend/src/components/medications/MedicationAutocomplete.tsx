@@ -159,7 +159,11 @@ export default function MedicationAutocomplete({
         <View style={styles.inputRight}>
           {loading && <ActivityIndicator size="small" color="#007AFF" />}
           {!loading && value.length > 0 && (
-            <TouchableOpacity onPress={handleClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity 
+              onPress={handleClear} 
+              testID="medication-autocomplete-clear"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <X size={16} color="#9CA3AF" />
             </TouchableOpacity>
           )}

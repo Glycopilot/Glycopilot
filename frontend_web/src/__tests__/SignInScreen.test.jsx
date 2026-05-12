@@ -6,25 +6,25 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
+
+import '@testing-library/jest-dom';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-vi.mock('../services/authService', () => ({
-  default: { register: vi.fn(), getApiClient: () => ({ post: vi.fn() }) },
+jest.mock('../services/authService', () => ({
+  default: { register: jest.fn(), getApiClient: () => ({ post: jest.fn() }) },
 }));
-vi.mock('../services/toastService', () => ({
-  toastError: vi.fn(), toastSuccess: vi.fn(),
+jest.mock('../services/toastService', () => ({
+  toastError: jest.fn(), toastSuccess: jest.fn(),
 }));
-vi.mock('../assets/glycopilot.png', () => ({ default: 'logo.png' }));
-vi.mock('./css/auth.css', () => ({}));
+jest.mock('../assets/glycopilot.png', () => ({ default: 'logo.png' }));
+jest.mock('../screens/css/auth.css', () => ({}));
 
 import SignInScreen from '../screens/SignInScreen';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const navigation = { navigate: vi.fn() };
+const navigation = { navigate: jest.fn() };
 const render$ = () => render(<SignInScreen navigation={navigation} />);
 
 /** Remplit tous les champs avec des valeurs valides */
@@ -49,9 +49,9 @@ async function fillValidForm() {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 describe('SignInScreen', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     navigation.navigate.mockClear();
-    authService.register = vi.fn().mockResolvedValue({});
+    authService.register = jest.fn().mockResolvedValue({});
   });
 
   // ─── 1. Rendu initial ─────────────────────────────────────────────────────
@@ -293,7 +293,7 @@ describe('SignInScreen', () => {
   // ─── 4. Inscription échouée ───────────────────────────────────────────────
   describe('Inscription échouée', () => {
     it('toastError("Erreur inscription", msg) si register rejette', async () => {
-      authService.register = vi.fn().mockRejectedValue({ message: 'Email déjà utilisé' });
+      authService.register = jest.fn().mockRejectedValue({ message: 'Email déjà utilisé' });
       render$();
       await fillValidForm();
       fireEvent.click(screen.getByRole('button', { name: /créer mon compte/i }));
@@ -303,7 +303,7 @@ describe('SignInScreen', () => {
     });
 
     it('reste sur le formulaire après échec (pas d\'écran de confirmation)', async () => {
-      authService.register = vi.fn().mockRejectedValue({ message: 'Erreur serveur' });
+      authService.register = jest.fn().mockRejectedValue({ message: 'Erreur serveur' });
       render$();
       await fillValidForm();
       fireEvent.click(screen.getByRole('button', { name: /créer mon compte/i }));
