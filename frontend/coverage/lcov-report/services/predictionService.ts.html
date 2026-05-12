@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>1/10</span>
+                <span class='fraction'>10/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/5</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/2</span>
+                <span class='fraction'>2/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">10% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>1/10</span>
+                <span class='fraction'>10/10</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -147,27 +147,27 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -203,26 +203,26 @@ export interface GlycemiaPrediction {
 }
 &nbsp;
 const predictionService = {
-<span class="fstat-no" title="function not covered" >  as</span>ync getLatest(): Promise&lt;GlycemiaPrediction | null&gt; {
-<span class="cstat-no" title="statement not covered" >    try {</span>
-      const response = <span class="cstat-no" title="statement not covered" >await apiClient.get&lt;GlycemiaPrediction&gt;(</span>
+  async getLatest(): Promise&lt;GlycemiaPrediction | null&gt; {
+    try {
+      const response = await apiClient.get&lt;GlycemiaPrediction&gt;(
         '/glycemia/predictions/latest/'
       );
-<span class="cstat-no" title="statement not covered" >      return response.data;</span>
+      return response.data;
     } catch {
-<span class="cstat-no" title="statement not covered" >      return null;</span>
+      return null;
     }
   },
 &nbsp;
-<span class="fstat-no" title="function not covered" >  as</span>ync getHistory(limit = <span class="branch-0 cbranch-no" title="branch not covered" >5)</span>: Promise&lt;GlycemiaPrediction[]&gt; {
-<span class="cstat-no" title="statement not covered" >    try {</span>
-      const response = <span class="cstat-no" title="statement not covered" >await apiClient.get&lt;</span>
+  async getHistory(limit = 5): Promise&lt;GlycemiaPrediction[]&gt; {
+    try {
+      const response = await apiClient.get&lt;
         { results: GlycemiaPrediction[] } | GlycemiaPrediction[]
       &gt;('/glycemia/predictions/', { params: { limit, status: 'ok' } });
-      const data = <span class="cstat-no" title="statement not covered" >response.data;</span>
-<span class="cstat-no" title="statement not covered" >      return Array.isArray(data) ? data : data.results ?? [];</span>
+      const data = response.data;
+      return Array.isArray(data) ? data : data.results ?? [];
     } catch {
-<span class="cstat-no" title="statement not covered" >      return [];</span>
+      return [];
     }
   },
 };
@@ -235,7 +235,7 @@ export default predictionService;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-11T18:15:02.811Z
+                at 2026-05-12T09:12:53.735Z
             </div>
         <script src="../prettify.js"></script>
         <script>

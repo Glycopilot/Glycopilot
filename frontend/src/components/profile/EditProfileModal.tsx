@@ -160,18 +160,21 @@ export default function EditProfileModal({
                 <TouchableOpacity
                   style={styles.pickerOption}
                   onPress={() => onDiabetesTypeChange('TYPE1')}
+                  testID="diabetes-type-1"
                 >
                   <Text style={styles.pickerOptionText}>Type 1</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.pickerOption}
                   onPress={() => onDiabetesTypeChange('TYPE2')}
+                  testID="diabetes-type-2"
                 >
                   <Text style={styles.pickerOptionText}>Type 2</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.pickerOption}
                   onPress={() => onDiabetesTypeChange('GESTATIONAL')}
+                  testID="diabetes-type-gestational"
                 >
                   <Text style={styles.pickerOptionText}>Gestationnel</Text>
                 </TouchableOpacity>

@@ -336,14 +336,7 @@
 <a name='L271'></a><a href='#L271'>271</a>
 <a name='L272'></a><a href='#L272'>272</a>
 <a name='L273'></a><a href='#L273'>273</a>
-<a name='L274'></a><a href='#L274'>274</a>
-<a name='L275'></a><a href='#L275'>275</a>
-<a name='L276'></a><a href='#L276'>276</a>
-<a name='L277'></a><a href='#L277'>277</a>
-<a name='L278'></a><a href='#L278'>278</a>
-<a name='L279'></a><a href='#L279'>279</a>
-<a name='L280'></a><a href='#L280'>280</a>
-<a name='L281'></a><a href='#L281'>281</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L274'></a><a href='#L274'>274</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -400,23 +393,21 @@
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -428,16 +419,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -446,7 +433,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -680,53 +666,46 @@ export default function SignInScreen({ navigation }: SignInScreenProps) {
     <span class="missing-if-branch" title="if path not taken" >I</span>if (!email || !password) {
 <span class="cstat-no" title="statement not covered" >      toastError('Erreur', 'Veuillez remplir tous les champs');</span>
 <span class="cstat-no" title="statement not covered" >      return;</span>
-    } else if (password.length &lt; 8) {
-      toastError(
-        'Erreur',
-        'Le mot de passe doit contenir au moins 8 caractères'
-      );
+    }
+    if (password.length &lt; 8) {
+      toastError('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
       return;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+    }
+    if (!/^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,63}$/.test(email)) {
       toastError('Erreur', "L'adresse email n'est pas valide");
       return;
-    } else if (!/\d/.test(password)) {
+    }
+    if (!/\d/.test(password)) {
       toastError('Erreur', 'Le mot de passe doit contenir au moins un chiffre');
       return;
-    } else if (!/[A-Z]/.test(password)) {
-      toastError(
-        'Erreur',
-        'Le mot de passe doit contenir au moins une lettre majuscule'
-      );
+    }
+    if (!/[A-Z]/.test(password)) {
+      toastError('Erreur', 'Le mot de passe doit contenir au moins une lettre majuscule');
       return;
-    } else {
-      try {
-        await authService.register({
-          email,
-          firstName,
-          lastName,
-          password,
-          passwordConfirm: ConfirmationPassword,
-        });
-        toastSuccess('Inscription réussie!', 'Bienvenue !');
-&nbsp;
-        // Vider le formulaire
-        setEmail('');
-        setfirstName('');
-        setlastName('');
-        setPassword('');
-        setConfirmationPassword('');
-        setConfirmationEmail('');
-&nbsp;
-        // Rediriger vers l'écran d'accueil
-        if (navigation &amp;&amp; navigation.reset) {
-          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-        } else <span class="missing-if-branch" title="else path not taken" >E</span>if (navigation &amp;&amp; navigation.navigate) {
-          navigation.navigate('Login');
-        }
-      } catch (error) {
-        const err = error as Error;
-        toastError('Erreur inscription', err.message);
+    }
+    try {
+      await authService.register({
+        email,
+        firstName,
+        lastName,
+        password,
+        passwordConfirm: ConfirmationPassword,
+      });
+      toastSuccess('Inscription réussie!', 'Bienvenue !');
+      setEmail('');
+      setfirstName('');
+      setlastName('');
+      setPassword('');
+      setConfirmationPassword('');
+      setConfirmationEmail('');
+      if (navigation &amp;&amp; navigation.reset) {
+        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      } else <span class="missing-if-branch" title="else path not taken" >E</span>if (navigation &amp;&amp; navigation.navigate) {
+        navigation.navigate('Login');
       }
+    } catch (error) {
+      const err = error as Error;
+      toastError('Erreur inscription', err.message);
     }
   };
 &nbsp;
@@ -910,7 +889,7 @@ const styles = StyleSheet.create({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-05-11T22:05:30.903Z
+                at 2026-05-12T09:12:54.093Z
             </div>
         <script src="../prettify.js"></script>
         <script>

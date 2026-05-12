@@ -150,6 +150,7 @@ export default function DoctorCard({
               style={styles.deleteButton}
               onPress={onRemoveDoctor}
               disabled={removingDoctor}
+              testID="delete-doctor-button"
             >
               {removingDoctor ? (
                 <ActivityIndicator size="small" color="#EF4444" />
