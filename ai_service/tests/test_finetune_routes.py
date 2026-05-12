@@ -137,6 +137,26 @@ def test_reject_model_not_found_returns_404(finetune_client):
     assert resp.status_code == 404
 
 
+def test_finetune_invalid_patient_id_returns_400(finetune_client):
+    for bad_id in ["../../etc/passwd", "../evil", "p1/p2", "a" * 65]:
+        resp = finetune_client.post(
+            f"/finetune/{bad_id}",
+            json={"version": "v1.0"},
+            headers=_TOKEN,
+        )
+        assert resp.status_code in (400, 404), f"Expected 400 for patient_id={bad_id!r}, got {resp.status_code}"
+
+
+def test_finetune_valid_uuid_patient_id_accepted(finetune_client):
+    with patch("api.routes.finetune._run_finetune"):
+        resp = finetune_client.post(
+            "/finetune/550e8400-e29b-41d4-a716-446655440000",
+            json={"version": "v1.0", "epochs": 5, "device": "cpu"},
+            headers=_TOKEN,
+        )
+    assert resp.status_code == 200
+
+
 def test_finetune_concurrent_same_patient_returns_409(finetune_client):
     from unittest.mock import MagicMock
     import api.routes.finetune as ft_module
