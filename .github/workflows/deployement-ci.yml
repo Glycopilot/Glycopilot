@@ -103,6 +103,9 @@ jobs:
         run: |
           cd frontend_web
           npm install --legacy-peer-deps
+          
+          echo "VITE_API_URL=http://15.188.114.169/api" > .env.production
+
           npm run build
         env:
           # Par défaut, le web pointe sur le Plan B
@@ -116,7 +119,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Sync to S3
-        run: aws s3 sync ./frontend_web/build/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
+        run: aws s3 sync ./frontend_web/dist/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)
@@ -141,6 +144,11 @@ jobs:
         run: |
           cd frontend
           npm install --legacy-peer-deps
+
+      - name: Create google-services.json
+        run: |
+          cd frontend
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > google-services.json
 
       - name: Build Android APK
         env:
