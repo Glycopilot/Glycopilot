@@ -125,6 +125,37 @@ describe('NotificationsScreen — Alertes glycémie', () => {
       expect(getByText('Hyperglycemia Alert')).toBeTruthy();
     });
   });
+
+  it('appelle alertService.ackAlert quand on clique sur le bouton d\'acquittement', async () => {
+    const { getByTestId } = await renderAndWaitForAlerts();
+    const { toastSuccess } = require('../../services/toastService');
+    
+    const ackButton = getByTestId('ack-button-1');
+    await act(async () => {
+        fireEvent.press(ackButton);
+    });
+    
+    expect(alertService.ackAlert).toHaveBeenCalledWith('1');
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Alerte acquittée'));
+  });
+
+  it('affiche le bouton "Voir plus" quand il y a plus de 10 alertes', async () => {
+    const manyAlerts = Array.from({ length: 15 }, (_, i) => ({
+        id: i + 1,
+        rule_name: `Alert ${i + 1}`,
+        status: 'TRIGGERED',
+        triggered_at: new Date().toISOString(),
+        glycemia_value: 120
+    }));
+    (alertService.getHistory as jest.Mock).mockResolvedValue(manyAlerts);
+    
+    const { getByText, queryByText } = renderScreen();
+    await waitFor(() => expect(getByText('Alert 1')).toBeTruthy());
+    
+    expect(getByText(/Voir 5 de plus/)).toBeTruthy();
+    fireEvent.press(getByText(/Voir 5 de plus/));
+    expect(getByText('Alert 15')).toBeTruthy();
+  });
 });
 
 describe('NotificationsScreen — Rappels médicaments', () => {

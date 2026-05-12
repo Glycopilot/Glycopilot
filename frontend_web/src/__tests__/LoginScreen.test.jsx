@@ -6,22 +6,27 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import '@testing-library/jest-dom';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-let mockLogin = vi.fn();
+let mockLogin = jest.fn();
 
-vi.mock('../hooks/useAuth', () => ({
-  useAuth: vi.fn(() => ({ login: mockLogin, loading: false, error: null })),
+jest.mock('../hooks/useAuth', () => ({
+  useAuth: jest.fn(() => ({ login: mockLogin, loading: false, error: null })),
 }));
-vi.mock('../services/passwordService', () => ({
-  default: { requestPasswordReset: vi.fn() },
+jest.mock('../services/passwordService', () => ({
+  __esModule: true,
+  default: { 
+    requestPasswordReset: jest.fn(),
+    confirmPasswordReset: jest.fn(),
+    validatePasswordResetToken: jest.fn()
+  },
 }));
-vi.mock('../services/toastService', () => ({
-  toastError: vi.fn(), toastSuccess: vi.fn(),
+jest.mock('../services/toastService', () => ({
+  toastError: jest.fn(), toastSuccess: jest.fn(),
 }));
-vi.mock('../assets/glycopilot.png', () => ({ default: 'logo.png' }));
-vi.mock('./css/auth.css', () => ({}));
+jest.mock('../assets/glycopilot.png', () => ({ default: 'logo.png' }));
+jest.mock('../screens/css/auth.css', () => ({}));
 
 import LoginScreen from '../screens/LoginScreen';
 import { useAuth } from '../hooks/useAuth';
@@ -29,7 +34,7 @@ import { toastError, toastSuccess } from '../services/toastService';
 import passwordService from '../services/passwordService';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const navigation = { navigate: vi.fn() };
+const navigation = { navigate: jest.fn() };
 const render$ = () => render(<LoginScreen navigation={navigation} />);
 
 async function fillAndSubmit(email = 'doc@test.com', password = 'Password1') {
@@ -41,8 +46,8 @@ async function fillAndSubmit(email = 'doc@test.com', password = 'Password1') {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 describe('LoginScreen', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockLogin = vi.fn().mockResolvedValue({});
+    jest.clearAllMocks();
+    mockLogin = jest.fn().mockResolvedValue({});
     useAuth.mockReturnValue({ login: mockLogin, loading: false, error: null });
   });
 
@@ -153,7 +158,7 @@ describe('LoginScreen', () => {
   // ─── 4. Connexion échouée ─────────────────────────────────────────────────
   describe('Connexion échouée', () => {
     it('toastError("Erreur de connexion", message) si login rejette', async () => {
-      mockLogin = vi.fn().mockRejectedValue({ message: 'Identifiants incorrects' });
+      mockLogin = jest.fn().mockRejectedValue({ message: 'Identifiants incorrects' });
       useAuth.mockReturnValue({ login: mockLogin, loading: false, error: null });
       render$();
       await fillAndSubmit();
@@ -163,7 +168,7 @@ describe('LoginScreen', () => {
     });
 
     it('ne navigue pas si erreur classique', async () => {
-      mockLogin = vi.fn().mockRejectedValue({ message: 'Erreur' });
+      mockLogin = jest.fn().mockRejectedValue({ message: 'Erreur' });
       useAuth.mockReturnValue({ login: mockLogin, loading: false, error: null });
       render$();
       await fillAndSubmit();
@@ -175,7 +180,7 @@ describe('LoginScreen', () => {
   // ─── 5. Écran ACCOUNT_PENDING ────────────────────────────────────────────
   describe('ACCOUNT_PENDING', () => {
     beforeEach(() => {
-      mockLogin = vi.fn().mockRejectedValue({ code: 'ACCOUNT_PENDING', message: '' });
+      mockLogin = jest.fn().mockRejectedValue({ code: 'ACCOUNT_PENDING', message: '' });
       useAuth.mockReturnValue({ login: mockLogin, loading: false, error: null });
     });
 

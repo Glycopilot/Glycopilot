@@ -1,244 +1,182 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useGlycemiaWebSocket } from '../useGlycemiaWebSocket';
 
-type WsEventHandler = (event?: any) => void;
-
+// Mock WebSocket
 class MockWebSocket {
-  static readonly OPEN = 1;
-  static readonly CLOSED = 3;
-
+  static OPEN = 1;
   readyState = MockWebSocket.OPEN;
-  onopen: WsEventHandler | null = null;
+  onopen: (() => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   onclose: ((event: { code: number }) => void) | null = null;
-  onerror: WsEventHandler | null = null;
-
+  onerror: (() => void) | null = null;
   send = jest.fn();
   close = jest.fn(() => {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.({ code: 1000 });
+    if (this.onclose) this.onclose({ code: 1000 });
   });
 
-  triggerOpen() { this.onopen?.(); }
-  triggerMessage(data: object) { this.onmessage?.({ data: JSON.stringify(data) }); }
-  triggerClose(code = 1000) {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.({ code });
+  constructor(public url: string) {
+    // Simulate async open
+    setTimeout(() => { if (this.onopen) this.onopen(); }, 0);
   }
-  triggerError() { this.onerror?.(); }
+
+  simulateMessage(data: object) {
+    if (this.onmessage) this.onmessage({ data: JSON.stringify(data) });
+  }
+
+  simulateClose(code = 1000) {
+    this.readyState = 3; // CLOSED
+    if (this.onclose) this.onclose({ code });
+  }
+
+  simulateError() {
+    if (this.onerror) this.onerror();
+  }
 }
 
 let mockWsInstance: MockWebSocket;
 
+(global as any).WebSocket = jest.fn().mockImplementation((url: string) => {
+  mockWsInstance = new MockWebSocket(url);
+  return mockWsInstance;
+});
+(global as any).WebSocket.OPEN = 1;
+
 beforeEach(() => {
-  jest.useFakeTimers();
   jest.clearAllMocks();
-  mockWsInstance = new MockWebSocket('');
-  const MockWsConstructor = jest.fn(() => mockWsInstance);
-  MockWsConstructor.OPEN = MockWebSocket.OPEN;
-  MockWsConstructor.CLOSED = MockWebSocket.CLOSED;
-  (globalThis as any).WebSocket = MockWsConstructor;
+  jest.useFakeTimers();
 });
 
 afterEach(() => {
   jest.useRealTimers();
-  delete (globalThis as any).WebSocket;
 });
 
 describe('useGlycemiaWebSocket', () => {
-  const TOKEN = 'test-token';
-  const WS_URL = 'ws://localhost:8006';
+  it('does not connect when accessToken is null', () => {
+    renderHook(() => useGlycemiaWebSocket(null, 'ws://localhost'));
+    expect(global.WebSocket).not.toHaveBeenCalled();
+  });
 
-  it('should start disconnected then connect on open', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
+  it('connects when accessToken is provided', async () => {
+    renderHook(() => useGlycemiaWebSocket('token123', 'ws://localhost'));
+    expect(global.WebSocket).toHaveBeenCalledWith('ws://localhost/ws/glycemia/?token=token123');
+  });
 
-    expect(result.current.isConnected).toBe(false);
+  it('sets isConnected to true on open', async () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    await waitFor(() => expect(result.current.isConnected).toBe(true));
+  });
 
-    act(() => { mockWsInstance.triggerOpen(); });
+  it('handles glycemia_update message', async () => {
+    const entry = { id: '1', value: 5.5, measured_at: '2024-01-01T10:00:00Z' };
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    act(() => { mockWsInstance.simulateMessage({ type: 'glycemia_update', data: entry }); });
+    expect(result.current.lastReading).toEqual(entry);
+  });
 
+  it('handles glycemia_alert message', async () => {
+    const entry = { id: '2', value: 2.5, measured_at: '2024-01-01T11:00:00Z' };
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    act(() => { mockWsInstance.simulateMessage({ type: 'glycemia_alert', alert_type: 'hypoglycemia', data: entry }); });
+    expect(result.current.alert).toEqual({ type: 'hypoglycemia', data: entry });
+  });
+
+  it('handles connection_established message without error', async () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    act(() => { mockWsInstance.simulateMessage({ type: 'connection_established' }); });
     expect(result.current.isConnected).toBe(true);
   });
 
-  it('should not connect when token is null', () => {
-    renderHook(() => useGlycemiaWebSocket(null, WS_URL));
-
-    expect((globalThis as any).WebSocket).not.toHaveBeenCalled();
+  it('handles pong message without error', async () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    act(() => { mockWsInstance.simulateMessage({ type: 'pong' }); });
+    expect(result.current.lastReading).toBeNull();
   });
 
-  it('should build correct WebSocket URL with token', () => {
-    renderHook(() => useGlycemiaWebSocket(TOKEN, WS_URL));
-
-    expect((globalThis as any).WebSocket).toHaveBeenCalledWith(
-      `${WS_URL}/ws/glycemia/?token=${TOKEN}`
-    );
+  it('handles unknown message type without error', async () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    act(() => { mockWsInstance.simulateMessage({ type: 'unknown_type', data: {} }); });
+    expect(result.current.lastReading).toBeNull();
   });
 
-  it('should update lastReading on glycemia_update message', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    const reading = { id: '1', value: 115, measured_at: '2024-01-01T10:00:00Z', source: 'cgm' };
-
+  it('ignores malformed messages', async () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
     act(() => {
-      mockWsInstance.triggerMessage({ type: 'glycemia_update', data: reading });
+      if (mockWsInstance.onmessage) mockWsInstance.onmessage({ data: 'not-json{{' });
     });
-
-    expect(result.current.lastReading).toEqual(reading);
+    expect(result.current.lastReading).toBeNull();
   });
 
-  it('should set alert on glycemia_alert message', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
+  it('sets isConnected false on error', async () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    act(() => { mockWsInstance.simulateError(); });
+    expect(result.current.isConnected).toBe(false);
+  });
 
-    const reading = { id: '2', value: 55, measured_at: '2024-01-01T11:00:00Z', source: 'cgm' };
+  it('does not reconnect on code 4001 (auth failure)', async () => {
+    renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    const callsBefore = (global.WebSocket as jest.Mock).mock.calls.length;
+    act(() => { mockWsInstance.simulateClose(4001); });
+    jest.advanceTimersByTime(5000);
+    expect((global.WebSocket as jest.Mock).mock.calls.length).toBe(callsBefore);
+  });
 
+  it('does not reconnect on code 1000 (normal close)', async () => {
+    renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    const callsBefore = (global.WebSocket as jest.Mock).mock.calls.length;
+    act(() => { mockWsInstance.simulateClose(1000); });
+    jest.advanceTimersByTime(5000);
+    expect((global.WebSocket as jest.Mock).mock.calls.length).toBe(callsBefore);
+  });
+
+  it('reconnects after 3s on unexpected close', async () => {
+    renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    const callsBefore = (global.WebSocket as jest.Mock).mock.calls.length;
     act(() => {
-      mockWsInstance.triggerMessage({
-        type: 'glycemia_alert',
-        alert_type: 'hypoglycemia',
-        data: reading,
-      });
+      if (mockWsInstance.onclose) mockWsInstance.onclose({ code: 1006 });
     });
-
-    expect(result.current.alert).toEqual({ type: 'hypoglycemia', data: reading });
+    act(() => { jest.advanceTimersByTime(3100); });
+    expect((global.WebSocket as jest.Mock).mock.calls.length).toBeGreaterThan(callsBefore);
   });
 
-  it('should clear alert with clearAlert()', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    act(() => {
-      mockWsInstance.triggerMessage({
-        type: 'glycemia_alert',
-        alert_type: 'hyperglycemia',
-        data: { id: '3', value: 280 },
-      });
-    });
-
-    expect(result.current.alert).not.toBeNull();
-
-    act(() => { result.current.clearAlert(); });
-
-    expect(result.current.alert).toBeNull();
-  });
-
-  it('should send ping when connected', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
-
+  it('sendPing sends message when connected', async () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
     act(() => { result.current.sendPing(); });
-
-    expect(mockWsInstance.send).toHaveBeenCalledWith(
-      JSON.stringify({ type: 'ping' })
-    );
+    expect(mockWsInstance.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
   });
 
-  it('should not send ping when disconnected', () => {
-    mockWsInstance.readyState = MockWebSocket.CLOSED;
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-
+  it('sendPing does nothing when not connected', () => {
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    mockWsInstance.readyState = 3; // CLOSED
     act(() => { result.current.sendPing(); });
-
     expect(mockWsInstance.send).not.toHaveBeenCalled();
   });
 
-  it('should set isConnected false on close', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    expect(result.current.isConnected).toBe(true);
-
-    act(() => { mockWsInstance.triggerClose(1000); });
-
-    expect(result.current.isConnected).toBe(false);
-  });
-
-  it('should set isConnected false on error', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    act(() => { mockWsInstance.triggerError(); });
-
-    expect(result.current.isConnected).toBe(false);
-  });
-
-  it('should not reconnect on auth failure (code 4001)', () => {
-    renderHook(() => useGlycemiaWebSocket(TOKEN, WS_URL));
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    const constructorCallCount = ((globalThis as any).WebSocket as jest.Mock).mock.calls.length;
-
-    act(() => { mockWsInstance.triggerClose(4001); });
-    act(() => { jest.advanceTimersByTime(5000); });
-
-    expect(((globalThis as any).WebSocket as jest.Mock).mock.calls.length).toBe(constructorCallCount);
-  });
-
-  it('should reconnect after 3s on unexpected close', () => {
-    renderHook(() => useGlycemiaWebSocket(TOKEN, WS_URL));
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    const callsBefore = ((globalThis as any).WebSocket as jest.Mock).mock.calls.length;
-
-    act(() => { mockWsInstance.triggerClose(1006); });
-    act(() => { jest.advanceTimersByTime(3000); });
-
-    expect(((globalThis as any).WebSocket as jest.Mock).mock.calls.length).toBeGreaterThan(callsBefore);
-  });
-
-  it('should close WebSocket on unmount', () => {
-    const { unmount } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-
-    unmount();
-
-    expect(mockWsInstance.close).toHaveBeenCalled();
-  });
-
-  it('should ignore malformed JSON messages without throwing', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    expect(() => {
-      act(() => {
-        mockWsInstance.onmessage?.({ data: 'not-json{{{' });
-      });
-    }).not.toThrow();
-
-    expect(result.current.lastReading).toBeNull();
-  });
-
-  it('should handle connection_established and pong messages silently', () => {
-    const { result } = renderHook(() =>
-      useGlycemiaWebSocket(TOKEN, WS_URL)
-    );
-    act(() => { mockWsInstance.triggerOpen(); });
-
-    act(() => {
-      mockWsInstance.triggerMessage({ type: 'connection_established' });
-      mockWsInstance.triggerMessage({ type: 'pong' });
-    });
-
-    expect(result.current.lastReading).toBeNull();
+  it('clearAlert sets alert to null', async () => {
+    const entry = { id: '1', value: 2.5, measured_at: '2024-01-01T10:00:00Z' };
+    const { result } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    act(() => { mockWsInstance.simulateMessage({ type: 'glycemia_alert', alert_type: 'hypoglycemia', data: entry }); });
+    expect(result.current.alert).not.toBeNull();
+    act(() => { result.current.clearAlert(); });
     expect(result.current.alert).toBeNull();
+  });
+
+  it('cleans up WebSocket on unmount', async () => {
+    const { unmount } = renderHook(() => useGlycemiaWebSocket('token', 'ws://localhost'));
+    await act(async () => { jest.runAllTimers(); });
+    unmount();
+    expect(mockWsInstance.close).toHaveBeenCalled();
   });
 });

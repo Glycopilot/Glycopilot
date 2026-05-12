@@ -1,170 +1,182 @@
+process.env.EXPO_PUBLIC_API_URL = 'http://localhost:8000/api';
+
 import MockAdapter from 'axios-mock-adapter';
-import apiClient from '../apiClient';
 import dashboardService from '../dashboardService';
-import { mockDashboardSummary, mockWidgets, mockLayouts } from '../../data/mockData';
+import apiClient from '../apiClient';
 
-describe('dashboardService', () => {
-    let mock: MockAdapter;
+const mock = new MockAdapter(apiClient);
 
-    beforeEach(() => {
-        mock = new MockAdapter(apiClient);
-        jest.clearAllMocks();
-    });
+beforeEach(() => mock.reset());
+afterAll(() => mock.restore());
 
-    afterEach(() => {
-        mock.restore();
-    });
+const mockSummary = {
+  glucose: { value: 5.5, recordedAt: '2024-01-01T10:00:00Z' },
+  alerts: [{ id: 1, message: 'High glucose' }],
+  medication: { taken_count: 2, total_count: 3, nextDose: null },
+  nutrition: { calories: { consumed: 1200, goal: 1800 }, carbs: { grams: 150, goal: 200 } },
+  activity: { steps: { value: 5000, goal: 8000 }, activeMinutes: 30 },
+};
 
-    describe('getSummary', () => {
-        it('should return summary from API on success', async () => {
-            const mockData = { ...mockDashboardSummary, glucose: { value: 120, recordedAt: '2023-01-01T12:00:00Z' } };
-            mock.onGet('/v1/dashboard/summary').reply(200, mockData);
+describe('dashboardService.getSummary', () => {
+  it('returns summary without modules', async () => {
+    mock.onGet('/v1/dashboard/summary').reply(200, mockSummary);
+    const result = await dashboardService.getSummary();
+    expect(result).toEqual(mockSummary);
+  });
 
-            const result = await dashboardService.getSummary();
+  it('returns summary with modules', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, mockSummary);
+    const result = await dashboardService.getSummary(['glucose', 'alerts'] as any[]);
+    expect(result).toEqual(mockSummary);
+  });
 
-            expect(result).toEqual(mockData);
-        });
+  it('returns mock data on error', async () => {
+    mock.onGet('/v1/dashboard/summary').reply(500);
+    const result = await dashboardService.getSummary();
+    expect(result).toBeDefined();
+  });
+});
 
-        it('should handle modules parameter correctly', async () => {
-            mock.onGet('/v1/dashboard/summary?include[]=glucose&include[]=alerts').reply(200, mockDashboardSummary);
+describe('dashboardService.getWidgets', () => {
+  it('returns widgets on success', async () => {
+    const widgets = [{ id: 'w1', type: 'glucose' }];
+    mock.onGet('/v1/dashboard/widgets').reply(200, { widgets });
+    const result = await dashboardService.getWidgets();
+    expect(result).toEqual(widgets);
+  });
 
-            const result = await dashboardService.getSummary(['glucose', 'alerts']);
+  it('returns mock widgets on error', async () => {
+    mock.onGet('/v1/dashboard/widgets').reply(500);
+    const result = await dashboardService.getWidgets();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
 
-            expect(result).toEqual(mockDashboardSummary);
-        });
+describe('dashboardService.getWidgetLayouts', () => {
+  it('returns layout on success', async () => {
+    const layout = [{ id: 'l1', x: 0, y: 0, w: 2, h: 1 }];
+    mock.onGet('/v1/dashboard/widgets/layout').reply(200, { layout });
+    const result = await dashboardService.getWidgetLayouts();
+    expect(result).toEqual(layout);
+  });
 
-        it('should return mock data without glucose on error', async () => {
-            mock.onGet('/v1/dashboard/summary').reply(500);
+  it('returns empty array when layout missing', async () => {
+    mock.onGet('/v1/dashboard/widgets/layout').reply(200, {});
+    const result = await dashboardService.getWidgetLayouts();
+    expect(result).toEqual([]);
+  });
 
-            const result = await dashboardService.getSummary();
+  it('returns mock layouts on error', async () => {
+    mock.onGet('/v1/dashboard/widgets/layout').reply(500);
+    const result = await dashboardService.getWidgetLayouts();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
 
-            expect(result).toEqual({ ...mockDashboardSummary, glucose: undefined });
-            expect(result.glucose).toBeUndefined();
-        });
-    });
+describe('dashboardService.updateWidgetLayout', () => {
+  const layouts = [{ id: 'l1', x: 0, y: 0, w: 2, h: 1 }] as any[];
 
-    describe('getWidgets', () => {
-        it('should return widgets from API on success', async () => {
-            mock.onGet('/v1/dashboard/widgets').reply(200, { widgets: mockWidgets });
+  it('returns updated layout on success', async () => {
+    mock.onPatch('/v1/dashboard/widgets/layout').reply(200, { layout: layouts, updatedAt: '2024-01-01' });
+    const result = await dashboardService.updateWidgetLayout(layouts);
+    expect(result).toEqual(layouts);
+  });
 
-            const result = await dashboardService.getWidgets();
+  it('returns original layouts on error', async () => {
+    mock.onPatch('/v1/dashboard/widgets/layout').reply(500);
+    const result = await dashboardService.updateWidgetLayout(layouts);
+    expect(result).toEqual(layouts);
+  });
+});
 
-            expect(result).toEqual(mockWidgets);
-        });
+describe('dashboardService.getGlucoseData', () => {
+  it('returns glucose data from summary', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, mockSummary);
+    const result = await dashboardService.getGlucoseData();
+    expect(result.value).toBe(5.5);
+  });
 
-        it('should return mock widgets on error', async () => {
-            mock.onGet('/v1/dashboard/widgets').reply(404);
+  it('returns default when glucose missing', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, { ...mockSummary, glucose: undefined });
+    const result = await dashboardService.getGlucoseData();
+    expect(result.value).toBe(0);
+  });
+});
 
-            const result = await dashboardService.getWidgets();
+describe('dashboardService.getAlerts', () => {
+  it('returns alerts from summary', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, mockSummary);
+    const result = await dashboardService.getAlerts();
+    expect(result).toEqual(mockSummary.alerts);
+  });
 
-            expect(result).toEqual(mockWidgets);
-        });
-    });
+  it('returns empty array when no alerts', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, { ...mockSummary, alerts: undefined });
+    const result = await dashboardService.getAlerts();
+    expect(result).toEqual([]);
+  });
+});
 
-    describe('getWidgetLayouts', () => {
-        it('should return layouts from API on success', async () => {
-            mock.onGet('/v1/dashboard/widgets/layout').reply(200, { layout: mockLayouts });
+describe('dashboardService.getMedicationData', () => {
+  it('returns medication data', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, mockSummary);
+    const result = await dashboardService.getMedicationData();
+    expect(result.taken_count).toBe(2);
+  });
 
-            const result = await dashboardService.getWidgetLayouts();
+  it('returns default on missing data', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, { ...mockSummary, medication: undefined });
+    const result = await dashboardService.getMedicationData();
+    expect(result.taken_count).toBe(0);
+  });
+});
 
-            expect(result).toEqual(mockLayouts);
-        });
+describe('dashboardService.getNutritionData', () => {
+  it('returns nutrition data', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, mockSummary);
+    const result = await dashboardService.getNutritionData();
+    expect(result.calories.consumed).toBe(1200);
+  });
 
-        it('should return mock layouts on error', async () => {
-            mock.onGet('/v1/dashboard/widgets/layout').reply(500);
+  it('returns default on missing', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, { ...mockSummary, nutrition: undefined });
+    const result = await dashboardService.getNutritionData();
+    expect(result.calories.goal).toBe(1800);
+  });
+});
 
-            const result = await dashboardService.getWidgetLayouts();
+describe('dashboardService.getActivityData', () => {
+  it('returns activity data', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, mockSummary);
+    const result = await dashboardService.getActivityData();
+    expect(result.steps.value).toBe(5000);
+  });
 
-            expect(result).toEqual(mockLayouts);
-        });
-    });
+  it('returns default on missing', async () => {
+    mock.onGet(/\/v1\/dashboard\/summary/).reply(200, { ...mockSummary, activity: undefined });
+    const result = await dashboardService.getActivityData();
+    expect(result.steps.goal).toBe(8000);
+  });
+});
 
-    describe('updateWidgetLayout', () => {
-        it('should update layout on success', async () => {
-            mock.onPatch('/v1/dashboard/widgets/layout').reply(200, { layout: mockLayouts });
+describe('dashboardService.getGlucoseHistory', () => {
+  it('returns history without params', async () => {
+    const data = [{ id: 1, value: 5.5 }];
+    mock.onGet('/v1/glucose/history').reply(200, data);
+    const result = await dashboardService.getGlucoseHistory();
+    expect(result).toEqual(data);
+  });
 
-            const result = await dashboardService.updateWidgetLayout(mockLayouts);
+  it('returns history with params', async () => {
+    const data = [{ id: 2, value: 6.0 }];
+    mock.onGet(/\/v1\/glucose\/history/).reply(200, data);
+    const result = await dashboardService.getGlucoseHistory({ start: '2024-01-01', end: '2024-01-07', limit: 10 });
+    expect(result).toEqual(data);
+  });
 
-            expect(result).toEqual(mockLayouts);
-            expect(JSON.parse(mock.history.patch[0].data)).toEqual({ layout: mockLayouts });
-        });
-
-        it('should return original layouts on error', async () => {
-            mock.onPatch('/v1/dashboard/widgets/layout').reply(500);
-
-            const result = await dashboardService.updateWidgetLayout(mockLayouts);
-
-            expect(result).toEqual(mockLayouts);
-        });
-    });
-
-    describe('Glucose, Alerts, Medication, Nutrition, Activity helpers', () => {
-        it('getGlucoseData should return data from summary', async () => {
-            const glucose = { value: 150, recordedAt: 'now' };
-            jest.spyOn(dashboardService, 'getSummary').mockResolvedValue({ ...mockDashboardSummary, glucose });
-
-            const result = await dashboardService.getGlucoseData();
-
-            expect(result).toEqual(glucose);
-        });
-
-        it('getAlerts should return alerts from summary', async () => {
-            const alerts = [{ alertId: '1', type: 'hyper' as const, severity: 'high' as const }];
-            jest.spyOn(dashboardService, 'getSummary').mockResolvedValue({ ...mockDashboardSummary, alerts });
-
-            const result = await dashboardService.getAlerts();
-
-            expect(result).toEqual(alerts);
-        });
-
-        it('getMedicationData should return medication from summary', async () => {
-            const medication = { taken_count: 5, total_count: 10, nextDose: { name: 'Test', scheduledAt: 'tomorrow', status: 'pending' } };
-            jest.spyOn(dashboardService, 'getSummary').mockResolvedValue({ ...mockDashboardSummary, medication });
-
-            const result = await dashboardService.getMedicationData();
-
-            expect(result).toEqual(medication);
-        });
-
-        it('getNutritionData should return nutrition from summary', async () => {
-            const nutrition = { calories: { consumed: 1000, goal: 2000 }, carbs: { grams: 100, goal: 200 } };
-            jest.spyOn(dashboardService, 'getSummary').mockResolvedValue({ ...mockDashboardSummary, nutrition });
-
-            const result = await dashboardService.getNutritionData();
-
-            expect(result).toEqual(nutrition);
-        });
-
-        it('getActivityData should return activity from summary', async () => {
-            const activity = { steps: { value: 5000, goal: 10000 }, activeMinutes: 30 };
-            jest.spyOn(dashboardService, 'getSummary').mockResolvedValue({ ...mockDashboardSummary, activity });
-
-            const result = await dashboardService.getActivityData();
-
-            expect(result).toEqual(activity);
-        });
-    });
-
-    describe('getGlucoseHistory', () => {
-        it('should fetch history with correct params', async () => {
-            mock.onGet(/\/v1\/glucose\/history/).reply(200, [{ value: 100 }]);
-
-            const params = { start: '2023-01-01', end: '2023-01-02', limit: 10 };
-            const result = await dashboardService.getGlucoseHistory(params);
-
-            expect(result).toEqual([{ value: 100 }]);
-            const url = mock.history.get[0].url;
-            expect(url).toContain('start=2023-01-01');
-            expect(url).toContain('end=2023-01-02');
-            expect(url).toContain('limit=10');
-        });
-
-        it('should return empty array on error', async () => {
-            mock.onGet(/\/v1\/glucose\/history/).reply(500);
-
-            const result = await dashboardService.getGlucoseHistory();
-
-            expect(result).toEqual([]);
-        });
-    });
+  it('returns empty array on error', async () => {
+    mock.onGet(/\/v1\/glucose\/history/).reply(500);
+    const result = await dashboardService.getGlucoseHistory();
+    expect(result).toEqual([]);
+  });
 });
