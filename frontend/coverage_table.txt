@@ -1,0 +1,151 @@
+
+> frontend@1.0.0 test
+> jest --coverage --coverage --watchAll=false --silent
+
+PASS src/screens/__tests__/Activities.test.tsx (13.016 s)
+PASS src/components/medications/__tests__/MedFormModal.test.tsx (13.709 s)
+PASS src/screens/__tests__/SignIn.test.tsx
+PASS src/screens/__tests__/Home.test.tsx
+PASS src/screens/__tests__/Notifications.test.tsx
+PASS src/screens/__tests__/LogIn.test.tsx
+PASS src/screens/__tests__/Stats.test.tsx
+PASS src/screens/__tests__/Profile.test.tsx (21.684 s)
+PASS src/components/profile/__tests__/DoctorCard.test.tsx
+PASS src/screens/__tests__/meals.test.tsx
+PASS src/components/profile/__tests__/AddContactModal.test.tsx
+PASS src/screens/__tests__/Glycemia.test.tsx
+PASS src/hooks/__tests__/useMedications.test.ts
+PASS src/components/common/__tests__/ActionButton.test.tsx
+PASS src/hooks/__tests__/useUser.test.ts
+PASS src/components/common/__tests__/Header.test.tsx
+PASS src/services/__tests__/apiClient.test.ts
+PASS src/hooks/__tests__/useDashboard.test.ts
+PASS src/components/dashboard/__tests__/Banner.test.tsx
+PASS src/components/glycemia/__tests__/GlycemiaChart.test.tsx
+PASS src/services/__tests__/authService.test.ts
+PASS src/services/__tests__/medicationService.test.ts
+PASS src/hooks/__tests__/useGlycemia.test.ts
+PASS src/components/medications/__tests__/NextReminderCard.test.tsx
+PASS src/components/profile/__tests__/LocationTracker.test.tsx
+PASS src/components/medications/__tests__/IntakeCard.test.tsx
+PASS src/components/common/__tests__/CustomButton.test.tsx
+PASS src/components/profile/__tests__/EmergencyContactsList.test.tsx
+PASS src/services/__tests__/passwordService.test.ts
+PASS src/services/__tests__/dashboardService.test.ts
+PASS src/hooks/__tests__/useGlycemiaWebSocket.test.ts
+PASS src/screens/__tests__/NutritionMeals.test.tsx
+PASS src/services/__tests__/pushService.test.ts
+PASS src/services/__tests__/glycemiaService.test.ts
+PASS src/services/__tests__/doctorService.test.ts
+PASS src/hooks/__tests__/useLocation.test.ts
+PASS src/components/medications/__tests__/MedSummaryGrid.test.tsx
+PASS src/services/__tests__/alertService.test.ts
+PASS src/hooks/__tests__/useAuth.test.ts
+PASS src/components/medications/__tests__/medications.constants.test.ts
+PASS src/services/__tests__/toastService.test.ts
+------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------------
+File                          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                                                                                 
+------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------------
+All files                     |    66.7 |    55.85 |   58.88 |   68.17 |                                                                                                                   
+ components/common            |   82.88 |    76.74 |   71.42 |   82.56 |                                                                                                                   
+  ActionButton.tsx            |     100 |    90.47 |     100 |     100 | 60,111                                                                                                            
+  CalendarPicker.tsx          |   75.55 |    75.55 |   53.84 |      75 | 59,65-71,111-117,136,179,247-248                                                                                  
+  CustomButton.tsx            |     100 |      100 |     100 |     100 |                                                                                                                   
+  Decorations.tsx             |     100 |      100 |     100 |     100 |                                                                                                                   
+  Header.tsx                  |   87.09 |    67.74 |      80 |   86.66 | 46,63-64,141                                                                                                      
+  InputField.tsx              |     100 |       90 |     100 |     100 | 37                                                                                                                
+  Layout.tsx                  |     100 |        0 |     100 |     100 | 18                                                                                                                
+  Navbar.tsx                  |   71.42 |    54.54 |      60 |   71.42 | 46-48,61                                                                                                          
+ components/dashboard         |   86.01 |    75.19 |   86.95 |    87.7 |                                                                                                                   
+  Banner.tsx                  |   94.11 |    91.37 |      80 |   94.28 | 107,175,180-192                                                                                                   
+  GlycemieCard.tsx            |   70.21 |    61.22 |     100 |    75.6 | 52-54,69-89,108,125,129                                                                                           
+  StatCard.tsx                |    90.9 |    63.63 |     100 |    90.9 | 48                                                                                                                
+ components/glycemia          |   75.67 |       48 |   61.53 |   77.46 |                                                                                                                   
+  GlycemiaChart.tsx           |   84.12 |    60.52 |   63.63 |   84.12 | 49-58,63-64,101,130,227-229                                                                                       
+  GlycemiaChartTooltip.tsx    |   27.27 |     8.33 |      50 |      25 | 35-43                                                                                                             
+ components/medications       |   44.94 |    45.02 |      42 |    46.5 |                                                                                                                   
+  ActiveMedList.tsx           |       0 |        0 |       0 |       0 | 16-74                                                                                                             
+  IntakeCard.tsx              |     100 |    81.25 |     100 |     100 | 32-36                                                                                                             
+  MedFormModal.tsx            |    57.5 |    54.54 |   48.27 |      60 | 45,85-103,132-142,147-152,156-158,162-167,212-214,232-239,247-248,296-398,451                                     
+  MedSummaryGrid.tsx          |     100 |      100 |     100 |     100 |                                                                                                                   
+  MedicationAutocomplete.tsx  |       0 |        0 |       0 |       0 | 42-220                                                                                                            
+  NextReminderCard.tsx        |     100 |      100 |     100 |     100 |                                                                                                                   
+  medications.constants.ts    |     100 |      100 |     100 |     100 |                                                                                                                   
+ components/profile           |   68.29 |    75.32 |   67.44 |   67.79 |                                                                                                                   
+  AddContactModal.tsx         |     100 |    85.71 |     100 |     100 | 50                                                                                                                
+  Addressautocomplete .tsx    |   24.32 |       25 |    12.5 |   24.32 | 65-89,94-103,108-112,127-150                                                                                      
+  DoctorCard.tsx              |     100 |    91.42 |     100 |     100 | 145,176-188                                                                                                       
+  EditProfileModal.tsx        |   71.42 |       84 |      50 |   72.72 | 169-184                                                                                                           
+  EmergencyContactCard.tsx    |     100 |      100 |     100 |     100 |                                                                                                                   
+  EmergencyContactsList.tsx   |      60 |      100 |      50 |      60 | 40-41                                                                                                             
+  IncompleteProfileBanner.tsx |     100 |    76.47 |     100 |     100 | 34-37                                                                                                             
+  InviteDoctorModal.tsx       |     100 |    88.88 |     100 |     100 | 47                                                                                                                
+  LocationModal.tsx           |       0 |        0 |       0 |       0 | 31-78                                                                                                             
+  LocationTracker.tsx         |     100 |    77.41 |     100 |     100 | 55,66,90,111,162-186                                                                                              
+  ProfileActions.tsx          |     100 |      100 |     100 |     100 |                                                                                                                   
+  ProfileHeader.tsx           |     100 |       75 |     100 |     100 | 20                                                                                                                
+  SettingsMenu.tsx            |   57.14 |       50 |   66.66 |   57.14 | 34-37                                                                                                             
+  modalStyles.ts              |     100 |      100 |     100 |     100 |                                                                                                                   
+ constants                    |   57.14 |       50 |      40 |   52.63 |                                                                                                                   
+  glycemia.constants.ts       |   57.14 |       50 |      40 |   52.63 | 31-38,47-61,79                                                                                                    
+ data                         |   21.05 |        0 |       0 |   22.22 |                                                                                                                   
+  mockData.ts                 |   21.05 |        0 |       0 |   22.22 | 17-69                                                                                                             
+ hooks                        |    85.2 |    67.16 |   84.94 |   85.51 |                                                                                                                   
+  useAuth.ts                  |   83.87 |      100 |     100 |   83.87 | 46-48,59-60                                                                                                       
+  useDashboard.ts             |   94.28 |    71.69 |   89.65 |   94.79 | 95-98,197,222                                                                                                     
+  useGlycemia.ts              |   86.04 |     62.5 |     100 |      85 | 49,70,115-119                                                                                                     
+  useGlycemiaWebSocket.ts     |    92.3 |       84 |     100 |    92.3 | 52,70-71,99                                                                                                       
+  useLibre2Sensor.ts          |       0 |        0 |       0 |       0 | 42-89                                                                                                             
+  useLocation.ts              |      90 |     62.5 |     100 |      90 | 76-80                                                                                                             
+  useMedications.ts           |   95.58 |       55 |      92 |     100 | 72-94,105-111                                                                                                     
+  useUser.ts                  |   94.11 |      100 |     100 |   94.11 | 58-59                                                                                                             
+ navigation                   |       0 |        0 |       0 |       0 |                                                                                                                   
+  navigation.tsx              |       0 |        0 |       0 |       0 | 33-85                                                                                                             
+  navigationRef.ts            |       0 |      100 |       0 |       0 | 5-12                                                                                                              
+ screens                      |   56.43 |       46 |   44.65 |   58.28 |                                                                                                                   
+  Activities.tsx              |   97.61 |    87.09 |   94.44 |    97.5 | 359                                                                                                               
+  Glycemia.tsx                |   40.69 |    36.14 |   23.07 |   43.03 | 123-129,150,158,171,182-185,189-190,194-195,199-234,239-247,391,407-492,556-624                                   
+  Home.tsx                    |   68.75 |    61.01 |      55 |   68.96 | 88,104,125-132,174-237                                                                                            
+  Journal.tsx                 |     100 |      100 |     100 |     100 |                                                                                                                   
+  LogIn.tsx                   |     100 |      100 |     100 |     100 |                                                                                                                   
+  Medications.tsx             |       0 |        0 |       0 |       0 | 50-341                                                                                                            
+  Notifications.tsx           |   79.66 |    82.41 |   75.67 |   82.35 | 46,70,72-74,190-201,243,368-371,375-380,414                                                                       
+  Predictions.tsx             |       0 |        0 |       0 |       0 | 32-355                                                                                                            
+  Profile.tsx                 |   86.66 |    59.49 |   68.42 |    88.6 | 175,186-187,221,277,282-286,291-299,335-336,446-474,496-498                                                       
+  SensorActivation.tsx        |       0 |        0 |       0 |       0 | 20-121                                                                                                            
+  SignIn.tsx                  |   92.59 |     87.5 |      60 |   92.59 | 56-57,184-203                                                                                                     
+  Stats.tsx                   |   28.19 |     22.3 |      25 |   29.88 | 81-82,110-126,133-153,178-179,189,193,197-200,204-205,221-242,264-412,432-441,445-446,452-456,460-499,563,679-876 
+  meals.tsx                   |   66.66 |       80 |      50 |   64.28 | 108-112,184,259-263,282-359                                                                                       
+ services                     |   82.83 |    71.02 |   78.82 |   84.87 |                                                                                                                   
+  alertService.ts             |     100 |      100 |     100 |     100 |                                                                                                                   
+  apiClient.ts                |   92.64 |     72.5 |   81.81 |   95.45 | 72,83,111                                                                                                         
+  authService.ts              |   94.79 |    78.12 |     100 |    97.8 | 72,132                                                                                                            
+  dashboardService.ts         |   90.74 |    77.77 |     100 |      90 | 102,117,133,152,170                                                                                               
+  doctorService.ts            |     100 |      100 |     100 |     100 |                                                                                                                   
+  glycemiaService.ts          |   57.83 |    68.18 |      50 |   60.52 | 64-99,152-164,210-218,224-226                                                                                     
+  index.ts                    |       0 |        0 |       0 |       0 |                                                                                                                   
+  libre2BackgroundService.ts  |       0 |        0 |       0 |       0 | 15-44                                                                                                             
+  medicationService.ts        |   92.53 |    71.42 |     100 |   93.65 | 16-17,107-108                                                                                                     
+  passwordService.ts          |     100 |       75 |     100 |     100 | 42-76                                                                                                             
+  predictionService.ts        |       0 |        0 |       0 |       0 | 30-50                                                                                                             
+  pushService.ts              |   91.48 |    93.75 |      50 |   91.48 | 10,24,131,140                                                                                                     
+  toastService.ts             |     100 |    88.23 |     100 |     100 | 26-47                                                                                                             
+ themes                       |     100 |      100 |     100 |     100 |                                                                                                                   
+  colors.ts                   |     100 |      100 |     100 |     100 |                                                                                                                   
+ types                        |       0 |        0 |       0 |       0 |                                                                                                                   
+  alert.types.ts              |       0 |        0 |       0 |       0 |                                                                                                                   
+  auth.types.ts               |       0 |        0 |       0 |       0 |                                                                                                                   
+  components.types.ts         |       0 |        0 |       0 |       0 |                                                                                                                   
+  dashboard.types.ts          |       0 |        0 |       0 |       0 |                                                                                                                   
+  glycemia.types.ts           |       0 |        0 |       0 |       0 |                                                                                                                   
+  index.ts                    |       0 |        0 |       0 |       0 |                                                                                                                   
+  medications.types.ts        |       0 |        0 |       0 |       0 |                                                                                                                   
+  toast.types.ts              |       0 |        0 |       0 |       0 |                                                                                                                   
+ utils                        |   11.76 |        0 |       0 |   14.28 |                                                                                                                   
+  pdfGenerator.ts             |   11.76 |        0 |       0 |   14.28 | 33-35,39-41,45-47,62-132                                                                                          
+------------------------------|---------|----------|---------|---------|-------------------------------------------------------------------------------------------------------------------
+
+Test Suites: 41 passed, 41 total
+Tests:       380 passed, 380 total
+Snapshots:   0 total
+Time:        33.147 s

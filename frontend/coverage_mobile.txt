@@ -1,0 +1,334 @@
+
+> frontend@1.0.0 test
+> jest --coverage --coverage --watchAll=false --silent
+
+FAIL src/components/medications/__tests__/MedicationAutocomplete.test.tsx
+  ● MedicationAutocomplete › clears input when X is pressed
+
+    Unable to find an element with testID: medication-autocomplete-clear
+
+    [36m<View>[39m
+      [36m<View>[39m
+        [36m<View />[39m
+        [36m<TextInput[39m
+          [33mplaceholder[39m=[32m"Rechercher un médicament..."[39m
+          [33mvalue[39m=[32m"Doliprane"[39m
+        [36m/>[39m
+        [36m<View>[39m
+          [36m<View[39m
+            [33maccessible[39m=[32m{true}[39m
+          [36m/>[39m
+        [36m</View>[39m
+      [36m</View>[39m
+    [36m</View>[39m
+
+      169 |     );
+      170 |
+    > 171 |     const clearButton = getByTestId('medication-autocomplete-clear');
+          |                         ^
+      172 |     fireEvent.press(clearButton);
+      173 |
+      174 |     expect(onChangeText).toHaveBeenCalledWith('');
+
+      at Object.getByTestId (src/components/medications/__tests__/MedicationAutocomplete.test.tsx:171:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+FAIL src/screens/__tests__/Home.test.tsx (7.236 s)
+  ● Home Screen › affiche une alerte d'hypoglycémie via WebSocket
+
+    expect(received).toHaveBeenCalledWith(...expected)
+
+    Matcher error: received value must be a mock or spy function
+
+    Received has type:  function
+    Received has value: [Function toastError]
+
+      155 |     render(<Home navigation={mockNavigation as any} />);
+      156 |     
+    > 157 |     await waitFor(() => {
+          |                  ^
+      158 |         expect(toastError).toHaveBeenCalledWith('Hypoglycémie', expect.stringContaining('65'));
+      159 |     });
+      160 |   });
+
+      at Object.<anonymous> (src/screens/__tests__/Home.test.tsx:157:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● Home Screen › navigue vers les différents écrans via les boutons d'action
+
+    Found multiple elements with text: Activité
+
+      166 |         const btnRepas = getByText('Repas');
+      167 |         const btnMedic = getByText('Médic');
+    > 168 |         const btnActivite = getByText('Activité');
+          |                             ^
+      169 |         const btnPrediction = getByText('Prédiction');
+      170 |         
+      171 |         const { fireEvent } = require('@testing-library/react-native');
+
+      at getByText (src/screens/__tests__/Home.test.tsx:168:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at callback (node_modules/@testing-library/react-native/src/act.ts:31:24)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:790:22)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at Object.<anonymous> (src/screens/__tests__/Home.test.tsx:165:14)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+PASS src/components/medications/__tests__/MedFormModal.test.tsx (5.411 s)
+PASS src/navigation/__tests__/navigation.test.tsx
+PASS src/screens/__tests__/SignIn.test.tsx
+PASS src/screens/__tests__/Notifications.test.tsx
+PASS src/screens/__tests__/Profile.test.tsx (13.802 s)
+PASS src/components/common/__tests__/CalendarPicker.test.tsx
+PASS src/screens/__tests__/Glycemia.test.tsx
+PASS src/screens/__tests__/LogIn.test.tsx
+PASS src/navigation/__tests__/AppNavigator.test.tsx
+PASS src/screens/__tests__/Medications.test.tsx
+PASS src/hooks/__tests__/useMedications.test.ts
+PASS src/screens/__tests__/meals.test.tsx
+PASS src/screens/__tests__/Stats.test.tsx
+PASS src/components/dashboard/__tests__/Banner.test.tsx
+PASS src/services/__tests__/dashboardService.test.ts
+PASS src/services/__tests__/medicationService.test.ts
+PASS src/screens/__tests__/Journal.test.tsx
+PASS src/hooks/__tests__/useUser.test.ts
+PASS src/components/profile/__tests__/AddContactModal.test.tsx
+PASS src/screens/__tests__/Activities.test.tsx
+PASS src/services/__tests__/apiClient.test.ts
+PASS src/components/medications/__tests__/NextReminderCard.test.tsx
+PASS src/services/__tests__/authService.test.ts
+PASS src/components/medications/__tests__/IntakeCard.test.tsx
+PASS src/components/common/__tests__/Navbar.test.tsx
+PASS src/components/profile/__tests__/DoctorCard.test.tsx
+PASS src/components/common/__tests__/CustomButton.test.tsx
+PASS src/components/dashboard/__tests__/GlycemieCard.test.tsx
+PASS src/components/glycemia/__tests__/GlycemiaChartTooltip.test.tsx
+PASS src/components/common/__tests__/Header.test.tsx
+PASS src/hooks/__tests__/useGlycemiaWebSocket.test.ts
+PASS src/components/common/__tests__/ActionButton.test.tsx
+PASS src/hooks/__tests__/useGlycemia.test.ts
+PASS src/services/__tests__/doctorService.test.ts
+PASS src/components/glycemia/__tests__/GlycemiaChart.test.tsx
+PASS src/components/dashboard/__tests__/StatCard.test.tsx
+PASS src/services/__tests__/pushService.test.ts
+PASS src/components/medications/__tests__/MedSummaryGrid.test.tsx
+PASS src/components/common/__tests__/Layout.test.tsx
+PASS src/services/__tests__/alertService.test.ts
+PASS src/components/profile/__tests__/EmergencyContactsList.test.tsx
+PASS src/components/common/__tests__/Decorations.test.tsx
+PASS src/components/profile/__tests__/LocationTracker.test.tsx
+PASS src/screens/__tests__/NutritionMeals.test.tsx
+PASS src/services/__tests__/passwordService.test.ts
+PASS src/hooks/__tests__/useDashboard.test.ts
+PASS src/components/common/__tests__/InputField.test.tsx
+PASS src/constants/__tests__/glycemia.constants.test.ts
+PASS src/services/__tests__/glycemiaService.test.ts
+PASS src/hooks/__tests__/useLocation.test.ts
+PASS src/components/medications/__tests__/medications.constants.test.ts
+PASS src/hooks/__tests__/useAuth.test.ts
+PASS src/services/__tests__/toastService.test.ts
+PASS src/utils/__tests__/pdfGenerator.test.ts
+------------------------------|---------|----------|---------|---------|----------------------------------------------------------------------------------------
+File                          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                                                      
+------------------------------|---------|----------|---------|---------|----------------------------------------------------------------------------------------
+All files                     |   79.24 |    69.43 |   70.88 |   80.52 |                                                                                        
+ components/common            |   91.89 |    84.49 |   85.71 |   91.74 |                                                                                        
+  ActionButton.tsx            |     100 |    90.47 |     100 |     100 | 60,111                                                                                 
+  CalendarPicker.tsx          |   88.88 |    75.55 |   76.92 |   88.63 | 59,65-71,179                                                                           
+  CustomButton.tsx            |     100 |      100 |     100 |     100 |                                                                                        
+  Decorations.tsx             |     100 |      100 |     100 |     100 |                                                                                        
+  Header.tsx                  |   87.09 |    80.64 |      80 |   86.66 | 46,63-64,141                                                                           
+  InputField.tsx              |     100 |      100 |     100 |     100 |                                                                                        
+  Layout.tsx                  |     100 |      100 |     100 |     100 |                                                                                        
+  Navbar.tsx                  |     100 |     90.9 |     100 |     100 | 47                                                                                     
+ components/dashboard         |    92.3 |    82.94 |   86.95 |   93.44 |                                                                                        
+  Banner.tsx                  |   94.11 |    91.37 |      80 |   94.28 | 107,175,180-192                                                                        
+  GlycemieCard.tsx            |   89.36 |    81.63 |     100 |   92.68 | 89,108,129                                                                             
+  StatCard.tsx                |    90.9 |    63.63 |     100 |    90.9 | 48                                                                                     
+ components/glycemia          |   86.48 |       70 |   69.23 |   85.91 |                                                                                        
+  GlycemiaChart.tsx           |   84.12 |    60.52 |   63.63 |   84.12 | 49-58,63-64,101,130,227-229                                                            
+  GlycemiaChartTooltip.tsx    |     100 |      100 |     100 |     100 |                                                                                        
+ components/medications       |   67.04 |    64.39 |      58 |   69.95 |                                                                                        
+  ActiveMedList.tsx           |      20 |        0 |       0 |      20 | 16-62                                                                                  
+  IntakeCard.tsx              |     100 |    81.25 |     100 |     100 | 32-36                                                                                  
+  MedFormModal.tsx            |    57.5 |    54.54 |   48.27 |      60 | 45,85-103,132-142,147-152,156-158,162-167,212-214,232-239,247-248,296-398,451          
+  MedSummaryGrid.tsx          |     100 |      100 |     100 |     100 |                                                                                        
+  MedicationAutocomplete.tsx  |   78.37 |       74 |      80 |   83.58 | 86-90,130-134,156                                                                      
+  NextReminderCard.tsx        |     100 |      100 |     100 |     100 |                                                                                        
+  medications.constants.ts    |     100 |      100 |     100 |     100 |                                                                                        
+ components/profile           |   66.66 |    73.37 |   65.11 |   66.94 |                                                                                        
+  AddContactModal.tsx         |     100 |    85.71 |     100 |     100 | 50                                                                                     
+  Addressautocomplete .tsx    |   24.32 |       25 |    12.5 |   24.32 | 65-89,94-103,108-112,127-150                                                           
+  DoctorCard.tsx              |     100 |    91.42 |     100 |     100 | 145,176-188                                                                            
+  EditProfileModal.tsx        |   57.14 |       68 |   33.33 |   63.63 | 162-184                                                                                
+  EmergencyContactCard.tsx    |     100 |      100 |     100 |     100 |                                                                                        
+  EmergencyContactsList.tsx   |      60 |      100 |      50 |      60 | 40-41                                                                                  
+  IncompleteProfileBanner.tsx |     100 |    70.58 |     100 |     100 | 34-37                                                                                  
+  InviteDoctorModal.tsx       |     100 |    88.88 |     100 |     100 | 47                                                                                     
+  LocationModal.tsx           |       0 |        0 |       0 |       0 | 31-78                                                                                  
+  LocationTracker.tsx         |     100 |    77.41 |     100 |     100 | 55,66,90,111,162-186                                                                   
+  ProfileActions.tsx          |     100 |      100 |     100 |     100 |                                                                                        
+  ProfileHeader.tsx           |     100 |      100 |     100 |     100 |                                                                                        
+  SettingsMenu.tsx            |   57.14 |       50 |   66.66 |   57.14 | 34-37                                                                                  
+  modalStyles.ts              |     100 |      100 |     100 |     100 |                                                                                        
+ constants                    |   76.19 |       70 |      80 |   73.68 |                                                                                        
+  glycemia.constants.ts       |   76.19 |       70 |      80 |   73.68 | 54-61                                                                                  
+ data                         |   21.05 |        0 |       0 |   22.22 |                                                                                        
+  mockData.ts                 |   21.05 |        0 |       0 |   22.22 | 17-69                                                                                  
+ hooks                        |   85.71 |    70.14 |   84.94 |   86.06 |                                                                                        
+  useAuth.ts                  |   83.87 |      100 |     100 |   83.87 | 46-48,59-60                                                                            
+  useDashboard.ts             |   94.28 |    71.69 |   89.65 |   94.79 | 95-98,197,222                                                                          
+  useGlycemia.ts              |   86.04 |     62.5 |     100 |      85 | 49,70,115-119                                                                          
+  useGlycemiaWebSocket.ts     |   96.15 |       88 |     100 |   96.15 | 52,140                                                                                 
+  useLibre2Sensor.ts          |       0 |        0 |       0 |       0 | 42-89                                                                                  
+  useLocation.ts              |      90 |     62.5 |     100 |      90 | 76-80                                                                                  
+  useMedications.ts           |   95.58 |       70 |      92 |     100 | 72,94,108-111                                                                          
+  useUser.ts                  |   94.11 |      100 |     100 |   94.11 | 58-59                                                                                  
+ navigation                   |   89.18 |     92.3 |   71.42 |   88.88 |                                                                                        
+  navigation.tsx              |   88.23 |     92.3 |      60 |   87.87 | 40-42,79,82                                                                            
+  navigationRef.ts            |     100 |      100 |     100 |     100 |                                                                                        
+ screens                      |   72.42 |     61.5 |   59.54 |   73.69 |                                                                                        
+  Activities.tsx              |   69.04 |    48.38 |      50 |    67.5 | 169-173,177,181,298,359-363,383,457-517                                                
+  Glycemia.tsx                |   60.46 |    56.62 |   57.69 |   60.75 | 158,184-185,189-190,194-195,199-234,391,444-492,556-624                                
+  Home.tsx                    |   76.56 |    69.49 |      55 |   77.58 | 88,104,131-132,174-237                                                                 
+  Journal.tsx                 |     100 |      100 |     100 |     100 |                                                                                        
+  LogIn.tsx                   |     100 |      100 |     100 |     100 |                                                                                        
+  Medications.tsx             |   62.35 |    77.55 |   51.42 |   63.51 | 94-100,116-117,121-122,126-127,133-143,155-156,163-165,172,192-194,237,260-295         
+  Notifications.tsx           |   79.66 |    82.41 |   75.67 |   82.35 | 46,70,72-74,190-201,243,368-371,375-380,414                                            
+  Predictions.tsx             |    14.7 |        0 |       0 |   16.66 | 47-70,114-124,192-244                                                                  
+  Profile.tsx                 |   83.63 |    56.96 |   60.52 |   85.44 | 175,186-187,199,221,277,282-286,291-299,329-330,335-336,391,446-498                    
+  SensorActivation.tsx        |      10 |        0 |       0 |      10 | 23-114                                                                                 
+  SignIn.tsx                  |   92.59 |     87.5 |      60 |   92.59 | 56-57,184-203                                                                          
+  Stats.tsx                   |   72.87 |    60.43 |   72.91 |   74.13 | 82,115,189,193,197-200,204-205,322,349-412,437-441,453,455,462-467,496-499,679,711,876 
+  meals.tsx                   |   66.66 |       80 |      50 |   64.28 | 108-112,184,259-263,282-359                                                            
+ services                     |   90.41 |    76.63 |   88.23 |    91.8 |                                                                                        
+  alertService.ts             |     100 |      100 |     100 |     100 |                                                                                        
+  apiClient.ts                |   92.64 |     72.5 |   81.81 |   95.45 | 72,83,111                                                                              
+  authService.ts              |   94.79 |    78.12 |     100 |    97.8 | 72,132                                                                                 
+  dashboardService.ts         |   90.74 |      100 |     100 |      90 | 102,117,133,152,170                                                                    
+  doctorService.ts            |     100 |      100 |     100 |     100 |                                                                                        
+  glycemiaService.ts          |     100 |    95.45 |     100 |     100 | 210                                                                                    
+  index.ts                    |       0 |        0 |       0 |       0 |                                                                                        
+  libre2BackgroundService.ts  |       0 |        0 |       0 |       0 | 15-44                                                                                  
+  medicationService.ts        |   95.52 |       75 |     100 |   96.82 | 16-17                                                                                  
+  passwordService.ts          |     100 |       75 |     100 |     100 | 42-76                                                                                  
+  predictionService.ts        |      10 |        0 |       0 |      10 | 32-50                                                                                  
+  pushService.ts              |   91.48 |     87.5 |   83.33 |   91.48 | 10,24,53-56                                                                            
+  toastService.ts             |     100 |    88.23 |     100 |     100 | 26-47                                                                                  
+ themes                       |     100 |      100 |     100 |     100 |                                                                                        
+  colors.ts                   |     100 |      100 |     100 |     100 |                                                                                        
+ types                        |       0 |        0 |       0 |       0 |                                                                                        
+  alert.types.ts              |       0 |        0 |       0 |       0 |                                                                                        
+  auth.types.ts               |       0 |        0 |       0 |       0 |                                                                                        
+  components.types.ts         |       0 |        0 |       0 |       0 |                                                                                        
+  dashboard.types.ts          |       0 |        0 |       0 |       0 |                                                                                        
+  glycemia.types.ts           |       0 |        0 |       0 |       0 |                                                                                        
+  index.ts                    |       0 |        0 |       0 |       0 |                                                                                        
+  medications.types.ts        |       0 |        0 |       0 |       0 |                                                                                        
+  toast.types.ts              |       0 |        0 |       0 |       0 |                                                                                        
+ utils                        |   79.41 |    63.63 |     100 |   92.85 |                                                                                        
+  pdfGenerator.ts             |   79.41 |    63.63 |     100 |   92.85 | 46-47                                                                                  
+------------------------------|---------|----------|---------|---------|----------------------------------------------------------------------------------------
+
+Summary of all failing tests
+FAIL src/components/medications/__tests__/MedicationAutocomplete.test.tsx
+  ● MedicationAutocomplete › clears input when X is pressed
+
+    Unable to find an element with testID: medication-autocomplete-clear
+
+    [36m<View>[39m
+      [36m<View>[39m
+        [36m<View />[39m
+        [36m<TextInput[39m
+          [33mplaceholder[39m=[32m"Rechercher un médicament..."[39m
+          [33mvalue[39m=[32m"Doliprane"[39m
+        [36m/>[39m
+        [36m<View>[39m
+          [36m<View[39m
+            [33maccessible[39m=[32m{true}[39m
+          [36m/>[39m
+        [36m</View>[39m
+      [36m</View>[39m
+    [36m</View>[39m
+
+      169 |     );
+      170 |
+    > 171 |     const clearButton = getByTestId('medication-autocomplete-clear');
+          |                         ^
+      172 |     fireEvent.press(clearButton);
+      173 |
+      174 |     expect(onChangeText).toHaveBeenCalledWith('');
+
+      at Object.getByTestId (src/components/medications/__tests__/MedicationAutocomplete.test.tsx:171:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+FAIL src/screens/__tests__/Home.test.tsx (7.236 s)
+  ● Home Screen › affiche une alerte d'hypoglycémie via WebSocket
+
+    expect(received).toHaveBeenCalledWith(...expected)
+
+    Matcher error: received value must be a mock or spy function
+
+    Received has type:  function
+    Received has value: [Function toastError]
+
+      155 |     render(<Home navigation={mockNavigation as any} />);
+      156 |     
+    > 157 |     await waitFor(() => {
+          |                  ^
+      158 |         expect(toastError).toHaveBeenCalledWith('Hypoglycémie', expect.stringContaining('65'));
+      159 |     });
+      160 |   });
+
+      at Object.<anonymous> (src/screens/__tests__/Home.test.tsx:157:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ● Home Screen › navigue vers les différents écrans via les boutons d'action
+
+    Found multiple elements with text: Activité
+
+      166 |         const btnRepas = getByText('Repas');
+      167 |         const btnMedic = getByText('Médic');
+    > 168 |         const btnActivite = getByText('Activité');
+          |                             ^
+      169 |         const btnPrediction = getByText('Prédiction');
+      170 |         
+      171 |         const { fireEvent } = require('@testing-library/react-native');
+
+      at getByText (src/screens/__tests__/Home.test.tsx:168:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at callback (node_modules/@testing-library/react-native/src/act.ts:31:24)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:790:22)
+      at actImplementation (node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at Object.<anonymous> (src/screens/__tests__/Home.test.tsx:165:14)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+
+Test Suites: 2 failed, 54 passed, 56 total
+Tests:       3 failed, 493 passed, 496 total
+Snapshots:   0 total
+Time:        26.508 s
