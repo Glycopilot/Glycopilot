@@ -116,7 +116,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Sync to S3
-        run: aws s3 sync ./frontend_web/dist/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
+        run: aws s3 sync ./frontend_web/build/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)
