@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import NotificationsScreen from '../Notifications';
 import alertService from '../../services/alertService';
 import medicationService from '../../services/medicationService';

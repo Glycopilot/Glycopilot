@@ -135,9 +135,9 @@ describe('GlucoseTrackingScreen', () => {
     expect(loadHistory).toHaveBeenCalledWith(30);
   });
 
-  it('filtre par source Capteur (CGM)', () => {
-    const { getAllByText } = render(<GlucoseTrackingScreen navigation={{ navigate: jest.fn() } as any} />);
-    const cgmButton = getAllByText('Capteur')[0];
+  it('filtre par source CGM', () => {
+    const { getAllByText, getByText } = render(<GlucoseTrackingScreen navigation={{ navigate: jest.fn() } as any} />);
+    const cgmButton = getAllByText(/CGM/i)[0];
     fireEvent.press(cgmButton);
     expect(getAllByText('150').length).toBeGreaterThan(0);
   });
@@ -151,9 +151,9 @@ describe('GlucoseTrackingScreen', () => {
       refresh,
       loadHistory: jest.fn(),
     });
-    const { getByType } = render(<GlucoseTrackingScreen navigation={{ navigate: jest.fn() } as any} />);
+    const { UNSAFE_getByType } = render(<GlucoseTrackingScreen navigation={{ navigate: jest.fn() } as any} />);
     const { RefreshControl } = require('react-native');
-    const refreshControl = getByType(RefreshControl);
+    const refreshControl = UNSAFE_getByType(RefreshControl);
     refreshControl.props.onRefresh();
     expect(refresh).toHaveBeenCalled();
   });

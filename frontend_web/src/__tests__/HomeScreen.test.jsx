@@ -37,7 +37,7 @@ describe('HomeScreen', () => {
   const mockDashboard = {
     healthScore: 85,
     activity: { steps: { value: 5000, goal: 10000 } },
-    alerts: ['hypo'],
+    alerts: [{ type: 'hypo', severity: 'critical', triggeredAt: new Date().toISOString() }],
   };
   const mockGlycemia = { results: [{ value: 65, unit: 'mg/dL', recorded_at: new Date().toISOString() }] };
 
@@ -66,16 +66,16 @@ describe('HomeScreen', () => {
   it('displays KPI cards with correct values', async () => {
     renderHome();
     await waitFor(() => {
-      expect(screen.getByText('1')).toBeTruthy();
-      expect(screen.getByText('85')).toBeTruthy();
+      expect(screen.getAllByText('1').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('85').length).toBeGreaterThan(0);
     });
   });
 
   it('displays alerts in the alerts list', async () => {
     renderHome();
     await waitFor(() => {
-      expect(screen.getByText('Alice Wonderland')).toBeTruthy();
-      expect(screen.getByText('Hypoglycémie')).toBeTruthy();
+      expect(screen.getAllByText('Alice Wonderland').length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Hypoglycémie/i).length).toBeGreaterThan(0);
     });
   });
 });

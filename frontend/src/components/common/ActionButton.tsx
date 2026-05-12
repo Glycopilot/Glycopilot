@@ -14,12 +14,14 @@ interface ActionButtonProps {
   type: 'glycemie' | 'repas' | 'medic' | 'medicament' | 'action' | string;
   label?: string;
   onPress?: () => void;
+  testID?: string;
 }
 
 export default function ActionButton({
   type,
   label,
   onPress,
+  testID,
 }: ActionButtonProps) {
   const getActionConfig = (actionType: string): ActionConfig => {
     switch (actionType.toLowerCase()) {
@@ -77,6 +79,7 @@ export default function ActionButton({
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.7}
+      testID={testID}
     >
       <View style={[styles.iconContainer, { backgroundColor: config.bgColor }]}>
         <Icon size={28} color={config.color} strokeWidth={2} />
