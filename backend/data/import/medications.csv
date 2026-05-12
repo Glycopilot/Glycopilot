@@ -1,16 +1,151 @@
 id,name,type,dosage,interval_h,max_duration_d
 1,Metformine,Comprimé,500 mg,12,365
-2,Insuline rapide,Injection,10 UI,4,365
-3,Gliclazide,Comprimé,30 mg,24,365
-4,Insuline lente,Injection,25 UI,24,365
-5,Victoza,Injection,1.2 mg,24,365
-6,Januvia,Comprimé,100 mg,24,365
-7,Insuline basale,Injection,20 UI,24,365
-8,Diamicron,Comprimé,60 mg,24,365
-9,Lantus,Injection,30 UI,24,365
-10,Novorapid,Injection,15 UI,6,365
-11,Levemir,Injection,25 UI,24,365
-12,Humalog,Injection,12 UI,4,365
-13,Glucophage,Comprimé,850 mg,12,365
-14,Amaryl,Comprimé,2 mg,24,365
-15,Toujeo,Injection,40 UI,24,365
+2,Metformine,Comprimé,850 mg,8,365
+3,Metformine,Comprimé,1000 mg,12,365
+4,Insuline Novorapid,Injection,100 UI/mL,4,365
+5,Insuline Humalog,Injection,100 UI/mL,4,365
+6,Insuline Apidra,Injection,100 UI/mL,4,365
+7,Insuline Lantus,Injection,100 UI/mL,24,365
+8,Insuline Toujeo,Injection,300 UI/mL,24,365
+9,Insuline Tresiba,Injection,100 UI/mL,24,365
+10,Insuline Levemir,Injection,100 UI/mL,24,365
+11,Insuline Insulatard,Injection,100 UI/mL,12,365
+12,Insuline Novomix 30,Injection,100 UI/mL,12,365
+13,Gliclazide,Comprimé,30 mg,24,365
+14,Gliclazide,Comprimé,60 mg,24,365
+15,Diamicron,Comprimé,80 mg,12,365
+16,Glibenclamide,Comprimé,5 mg,12,365
+17,Glipizide,Comprimé,5 mg,12,365
+18,Glimepiride,Comprimé,2 mg,24,365
+19,Glimepiride,Comprimé,4 mg,24,365
+20,Sitagliptine (Januvia),Comprimé,100 mg,24,365
+21,Vildagliptine (Galvus),Comprimé,50 mg,12,365
+22,Saxagliptine (Onglyza),Comprimé,5 mg,24,365
+23,Liraglutide (Victoza),Injection,1.2 mg,24,365
+24,Liraglutide (Victoza),Injection,1.8 mg,24,365
+25,Dulaglutide (Trulicity),Injection,1.5 mg,168,365
+26,Semaglutide (Ozempic),Injection,0.5 mg,168,365
+27,Semaglutide (Ozempic),Injection,1 mg,168,365
+28,Semaglutide (Wegovy),Injection,2.4 mg,168,365
+29,Empagliflozine (Jardiance),Comprimé,10 mg,24,365
+30,Empagliflozine (Jardiance),Comprimé,25 mg,24,365
+31,Dapagliflozine (Forxiga),Comprimé,10 mg,24,365
+32,Canagliflozine (Invokana),Comprimé,100 mg,24,365
+33,Pioglitazone,Comprimé,15 mg,24,365
+34,Pioglitazone,Comprimé,30 mg,24,365
+35,Acarbose,Comprimé,50 mg,8,365
+36,Repaglinide,Comprimé,0.5 mg,8,365
+37,Repaglinide,Comprimé,1 mg,8,365
+38,Metformine + Sitagliptine (Janumet),Comprimé,1000 mg,12,365
+39,Metformine + Vildagliptine (Eucreas),Comprimé,1000 mg,12,365
+40,Metformine + Empagliflozine (Synjardy),Comprimé,1000 mg,12,365
+41,Doliprane,Comprimé,1000 mg,6,5
+42,Doliprane,Comprimé,500 mg,6,5
+43,Efferalgan,Comprimé effervescent,1000 mg,6,5
+44,Paracétamol,Comprimé,500 mg,6,5
+45,Ibuprofène,Comprimé,200 mg,8,5
+46,Ibuprofène,Comprimé,400 mg,8,5
+47,Advil,Comprimé,200 mg,8,5
+48,Nurofen,Comprimé,200 mg,8,5
+49,Aspirine,Comprimé,500 mg,8,5
+50,Kardégic,Sachet,75 mg,24,365
+51,Kardégic,Sachet,160 mg,24,365
+52,Aspégic,Sachet,500 mg,8,5
+53,Lisinopril,Comprimé,5 mg,24,365
+54,Lisinopril,Comprimé,10 mg,24,365
+55,Lisinopril,Comprimé,20 mg,24,365
+56,Ramipril,Comprimé,5 mg,24,365
+57,Ramipril,Comprimé,10 mg,24,365
+58,Périndopril,Comprimé,5 mg,24,365
+59,Périndopril,Comprimé,10 mg,24,365
+60,Énalapril,Comprimé,10 mg,24,365
+61,Amlodipine,Comprimé,5 mg,24,365
+62,Amlodipine,Comprimé,10 mg,24,365
+63,Bisoprolol,Comprimé,5 mg,24,365
+64,Bisoprolol,Comprimé,10 mg,24,365
+65,Aténolol,Comprimé,50 mg,24,365
+66,Métoprolol,Comprimé,100 mg,24,365
+67,Nébivolol,Comprimé,5 mg,24,365
+68,Furosémide,Comprimé,40 mg,24,365
+69,Indapamide,Comprimé,1.5 mg,24,365
+70,Hydrochlorothiazide,Comprimé,25 mg,24,365
+71,Spironolactone,Comprimé,25 mg,12,365
+72,Losartan,Comprimé,50 mg,24,365
+73,Losartan,Comprimé,100 mg,24,365
+74,Valsartan,Comprimé,80 mg,24,365
+75,Irbesartan,Comprimé,150 mg,24,365
+76,Candesartan,Comprimé,8 mg,24,365
+77,Atorvastatine,Comprimé,10 mg,24,365
+78,Atorvastatine,Comprimé,20 mg,24,365
+79,Atorvastatine,Comprimé,40 mg,24,365
+80,Rosuvastatine,Comprimé,10 mg,24,365
+81,Rosuvastatine,Comprimé,20 mg,24,365
+82,Simvastatine,Comprimé,20 mg,24,365
+83,Simvastatine,Comprimé,40 mg,24,365
+84,Pravastatine,Comprimé,40 mg,24,365
+85,Ézétimibe,Comprimé,10 mg,24,365
+86,Amoxicilline,Gélule,500 mg,8,7
+87,Amoxicilline,Gélule,1000 mg,12,7
+88,Augmentin,Comprimé,875 mg,12,7
+89,Azithromycine,Comprimé,250 mg,24,5
+90,Ciprofloxacine,Comprimé,500 mg,12,7
+91,Doxycycline,Gélule,100 mg,12,14
+92,Oméprazole,Gélule,20 mg,24,28
+93,Oméprazole,Gélule,40 mg,24,28
+94,Pantoprazole,Comprimé,40 mg,24,28
+95,Inexium,Comprimé,20 mg,24,28
+96,Lansoprazole,Gélule,30 mg,24,28
+97,Motilium,Comprimé,10 mg,8,7
+98,Imodium,Gélule,2 mg,6,2
+99,Levothyrox,Comprimé,25 mcg,24,365
+100,Levothyrox,Comprimé,50 mcg,24,365
+101,Levothyrox,Comprimé,75 mcg,24,365
+102,Levothyrox,Comprimé,100 mcg,24,365
+103,Levothyrox,Comprimé,125 mcg,24,365
+104,Levothyrox,Comprimé,150 mcg,24,365
+105,Solupred,Comprimé,5 mg,24,30
+106,Solupred,Comprimé,20 mg,24,30
+107,Médrol,Comprimé,4 mg,24,30
+108,Allopurinol,Comprimé,100 mg,24,365
+109,Allopurinol,Comprimé,200 mg,24,365
+110,Allopurinol,Comprimé,300 mg,24,365
+111,Colchicine,Comprimé,1 mg,12,5
+112,Coumadine,Comprimé,2 mg,24,365
+113,Xarelto,Comprimé,10 mg,24,365
+114,Xarelto,Comprimé,20 mg,24,365
+115,Eliquis,Comprimé,2.5 mg,12,365
+116,Eliquis,Comprimé,5 mg,12,365
+117,Pradaxa,Gélule,110 mg,12,365
+118,Plavix,Comprimé,75 mg,24,365
+119,Brilique,Comprimé,90 mg,12,365
+120,Lorazepam,Comprimé,1 mg,24,30
+121,Alprazolam,Comprimé,0.25 mg,8,30
+122,Zolpidem,Comprimé,10 mg,24,28
+123,Zopiclone,Comprimé,7.5 mg,24,28
+124,Sertraline,Comprimé,50 mg,24,365
+125,Escitalopram,Comprimé,10 mg,24,365
+126,Fluoxétine,Gélule,20 mg,24,365
+127,Paroxétine,Comprimé,20 mg,24,365
+128,Venlafaxine,Gélule LP,75 mg,24,365
+129,Gabapentine,Gélule,300 mg,8,365
+130,Prégabaline,Gélule,75 mg,12,365
+131,Fénofibrate,Comprimé,145 mg,24,365
+132,Vitamine D3,Comprimé,1000 UI,24,365
+133,Uvedose,Ampoule,100000 UI,,90
+134,Vitamine B12,Injection,1000 mcg,,30
+135,Tardyferon,Comprimé,80 mg,24,90
+136,Acide folique,Comprimé,5 mg,24,365
+137,Magne B6,Comprimé,470 mg,8,30
+138,Cacit D3,Comprimé effervescent,500 mg,24,365
+139,Coveram,Comprimé,5 mg,24,365
+140,Concor,Comprimé,5 mg,24,365
+141,Crestor,Comprimé,10 mg,24,365
+142,Tahor,Comprimé,10 mg,24,365
+143,Triatec,Comprimé,5 mg,24,365
+144,Amlor,Comprimé,5 mg,24,365
+145,Pritor,Comprimé,80 mg,24,365
+146,Aprovel,Comprimé,150 mg,24,365
+147,Coaprovel,Comprimé,150 mg,24,365
+148,Atacand,Comprimé,8 mg,24,365
+149,Ixprim,Comprimé,37.5 mg,6,3
+150,Tramadol,Gélule,50 mg,6,5

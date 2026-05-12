@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.dashboard.services import DashboardCache
 from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto, PersonalModelApproval
 from .serializers import (
     GlycemiaDataIASerializer,
@@ -131,8 +132,31 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         histo_entry = serializer.save(user=request.user, source="manual")
 
         self._add_to_month_history(histo_entry)
-
         self._clean_old_entries(request.user)
+        DashboardCache.invalidate_summary(request.user.pk)
+
+        return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
+
+    @action(detail=False, methods=["post"], url_path="cgm-readings")
+    def cgm_readings(self, request):
+        """
+        POST /api/v1/glucose/cgm-readings/
+        Ingère une mesure issue d'un capteur CGM (Libre 2) :
+        - même persistence que manual-readings (Glycemia + GlycemiaHisto)
+        - source forcé à "cgm" (les médecins distinguent visuellement les deux flux)
+        - le signal post_save sur Glycemia broadcast la valeur en WebSocket aux médecins
+        """
+
+        serializer = GlycemiaHistoCreateSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        histo_entry = serializer.save(user=request.user, source="cgm")
+
+        self._add_to_month_history(histo_entry)
+        self._clean_old_entries(request.user)
+        DashboardCache.invalidate_summary(request.user.pk)
 
         return Response(GlycemiaHistoSerializer(histo_entry).data, status=201)
 

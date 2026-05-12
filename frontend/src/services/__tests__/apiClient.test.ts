@@ -89,15 +89,67 @@ describe('apiClient', () => {
     it('should logout user on refresh failure', async () => {
         (AsyncStorage.getItem as jest.Mock).mockResolvedValue('some-token');
 
-        // Mock first request failure (401)
         mock.onGet(`${API_URL}/protected`).replyOnce(401);
-
-        // Mock refresh request failure
         mock.onPost(`${API_URL}/auth/refresh`).reply(403);
 
         await expect(apiClient.get('/protected')).rejects.toThrow();
 
         expect(AsyncStorage.removeItem).toHaveBeenCalledWith('access_token');
         expect(AsyncStorage.removeItem).toHaveBeenCalledWith('refresh_token');
+    });
+
+    it('should throw when no refresh token available on 401', async () => {
+        (AsyncStorage.getItem as jest.Mock).mockImplementation(key => {
+            if (key === 'access_token') return Promise.resolve('token');
+            if (key === 'refresh_token') return Promise.resolve(null);
+            return Promise.resolve(null);
+        });
+
+        mock.onGet(`${API_URL}/protected`).replyOnce(401);
+
+        await expect(apiClient.get('/protected')).rejects.toThrow();
+
+        expect(AsyncStorage.removeItem).toHaveBeenCalledWith('access_token');
+        expect(AsyncStorage.removeItem).toHaveBeenCalledWith('refresh_token');
+    });
+
+    it('should queue concurrent 401 requests and resolve after refresh', async () => {
+        const newToken = 'new-concurrent-token';
+        (AsyncStorage.getItem as jest.Mock).mockImplementation(key => {
+            if (key === 'refresh_token') return Promise.resolve('refresh-token');
+            return Promise.resolve('old-token');
+        });
+        (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
+
+        mock.onGet(`${API_URL}/r1`).replyOnce(401).onGet(`${API_URL}/r1`).reply(200, { ok: 1 });
+        mock.onGet(`${API_URL}/r2`).replyOnce(401).onGet(`${API_URL}/r2`).reply(200, { ok: 2 });
+        authMock.onPost(`${API_URL}/auth/refresh`).reply(200, { access: newToken });
+
+        const [r1, r2] = await Promise.all([
+            apiClient.get('/r1'),
+            apiClient.get('/r2'),
+        ]);
+
+        expect(r1.data).toEqual({ ok: 1 });
+        expect(r2.data).toEqual({ ok: 2 });
+    });
+});
+
+describe('apiClient URL detection', () => {
+    afterEach(() => {
+        jest.resetModules();
+    });
+
+    it('uses hostUri to build API_URL in dev mode', () => {
+        jest.resetModules();
+        jest.doMock('expo-constants', () => ({
+            expoConfig: {
+                hostUri: '10.0.0.1:8081',
+                extra: { eas: { projectId: 'test' } },
+            },
+        }));
+        const { API_URL: devApiUrl, WS_URL: devWsUrl } = require('../apiClient');
+        expect(devApiUrl).toBe('http://10.0.0.1:8006/api'); // NOSONAR - URL de dev local uniquement
+        expect(devWsUrl).toBe('ws://10.0.0.1:8006');
     });
 });

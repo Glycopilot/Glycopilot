@@ -59,7 +59,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       return;
     }
 
-    if (!/\S+@\S+\.\S+/.test(resetEmail)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
       toastError('Email invalide', "L'adresse email n'est pas valide");
       return;
     }

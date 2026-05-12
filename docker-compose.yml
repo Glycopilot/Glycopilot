@@ -59,7 +59,23 @@ services:
       redis_local:
         condition: service_healthy
     restart: unless-stopped
-    command: sh -c "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+    command: sh -c "python manage.py migrate && python manage.py import_medications && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+
+  # --- Scheduler rappels médicaments (local) ---
+  medication_scheduler_local:
+    profiles: ["local"]
+    image: glycopilot-backend
+    container_name: glycopilot-med-scheduler
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      backend_local:
+        condition: service_started
+    restart: unless-stopped
+    command: >
+      sh -c "while true; do python manage.py send_medication_reminders; sleep 60; done"
 
   # --- Frontend React Native (local) ---
   frontend:
@@ -68,9 +84,15 @@ services:
     container_name: glycopilot-front
     ports:
       - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
     volumes:
       - ./frontend:/app
     working_dir: /app
+    environment:
+      # Force Metro a encoder l'IP LAN de l'hote (et non l'IP interne du
+      # container) dans le QR code, pour que le tel puisse se connecter via Wi-Fi.
+      - REACT_NATIVE_PACKAGER_HOSTNAME=${REACT_NATIVE_PACKAGER_HOSTNAME:-}
     command: sh -c "npm install && npx expo start --lan"
     depends_on:
       backend_local:
@@ -96,6 +118,22 @@ services:
       backend_local:
         condition: service_started
     restart: unless-stopped
+
+  # --- AI Service FastAPI (AWS) ---
+  ai_service_aws:
+    profiles: ["aws"]
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: glycopilot-ai-aws
+    restart: always
+    # Crée un secret GitHub spécifique AI_ENV_FILE si elle a ses propres secrets
+    env_file:
+      - ./ai_service/.env.prod 
+    networks:
+      - glycopilot-network
+    expose:
+      - "8001" # Expose en interne uniquement, PAS de 'ports:'
 
   # --- Frontend Web (local) ---
   frontend_web:
@@ -159,18 +197,18 @@ services:
   # --- Backend Django (AWS avec Daphne pour WebSocket) ---
   backend_aws:
     profiles: ["aws"]
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: glycopilot-back-aws
     restart: always
+    env_file:
+      - ./backend/.env.prod
     # Daphne au lieu de Gunicorn pour supporter WebSocket
-    command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+    command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py import_medications && if [ -f data/import/CIS_bdpm.txt ]; then python manage.py import_medications --bdpm; fi && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-    env_file:
-      - ./backend/.env.prod
     depends_on:
       database_aws:
         condition: service_healthy
@@ -180,6 +218,24 @@ services:
       - glycopilot-network
     expose:
       - "8000"
+
+  # --- Scheduler rappels médicaments (AWS) ---
+  medication_scheduler_aws:
+    profiles: ["aws"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: glycopilot-med-scheduler-aws
+    restart: always
+    env_file:
+      - ./backend/.env.prod
+    depends_on:
+      backend_aws:
+        condition: service_started
+    networks:
+      - glycopilot-network
+    command: >
+      sh -c "while true; do python manage.py send_medication_reminders; sleep 60; done"
 
   # --- Nginx Reverse Proxy (AWS) ---
   nginx:

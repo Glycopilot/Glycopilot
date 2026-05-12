@@ -18,6 +18,16 @@ pip install -r requirements-prod.txt
 echo "Running migrations..."
 python manage.py migrate --noinput
 
+echo "Importing reference medications (CSV)..."
+python manage.py import_medications
+
+if [ -f "data/import/CIS_bdpm.txt" ]; then
+    echo "Importing BDPM full database..."
+    python manage.py import_medications --bdpm
+else
+    echo "CIS_bdpm.txt not found — skipping BDPM import (place the file in backend/data/import/ to import ~15000 medications)"
+fi
+
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 

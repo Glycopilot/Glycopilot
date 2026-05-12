@@ -84,6 +84,32 @@ describe('pushService', () => {
 
             expect(result).toBeNull();
         });
+
+        it('should skip backend call if same token already saved', async () => {
+            (Device as any).isDevice = true;
+            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
+            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+            (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'expo-token' });
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('expo-token');
+
+            const result = await registerForPushNotifications();
+
+            expect(result).toBe('expo-token');
+            expect(mock.history.post.length).toBe(0);
+        });
+
+        it('should return null silently on 429 rate limit', async () => {
+            (Device as any).isDevice = true;
+            (Constants.expoConfig as any).extra.eas.projectId = 'test-id';
+            (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+            (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({ data: 'expo-token-new' });
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+            mock.onPost('/notifications/push-token/').reply(429);
+
+            const result = await registerForPushNotifications();
+
+            expect(result).toBeNull();
+        });
     });
 
     describe('unregisterPushToken', () => {

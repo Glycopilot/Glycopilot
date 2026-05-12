@@ -21,7 +21,7 @@ class TestAuthEndpoints:
         """
         url = reverse("register")
         data = {
-            "email": "test@gmail.com",
+            "email": "test@example.com",
             "password": "StrongPassword123!",
             "password_confirm": "StrongPassword123!",
             "first_name": "John",
@@ -35,7 +35,7 @@ class TestAuthEndpoints:
         # Verify DB
         assert AuthAccount.objects.count() == 1
         account = AuthAccount.objects.first()
-        assert account.email == "test@gmail.com"
+        assert account.email == "test@example.com"
 
         # Check Identity link
         identity = account.user
@@ -48,12 +48,12 @@ class TestAuthEndpoints:
         # Setup User
         identity = User.objects.create(first_name="Jane", last_name="Doe")
         account = AuthAccount.objects.create_user(
-            email="jane@gmail.com", password="Password123", user_identity=identity
+            email="jane@example.com", password="Password123", user_identity=identity
         )
         Profile.objects.create(user=identity, role=self.patient_role)
 
         url = reverse("login")
-        data = {"email": "jane@gmail.com", "password": "Password123"}
+        data = {"email": "jane@example.com", "password": "Password123"}
         response = client.post(url, data)
 
         assert response.status_code == status.HTTP_200_OK
@@ -74,17 +74,17 @@ class TestAuthEndpoints:
         # Setup User
         identity = User.objects.create(first_name="Forgot", last_name="User")
         AuthAccount.objects.create_user(
-            email="forgot@gmail.com", password="Password123", user_identity=identity
+            email="forgot@example.com", password="Password123", user_identity=identity
         )
 
         # django_rest_passwordreset endpoint
         url = reverse("password_reset:reset-password-request")
-        data = {"email": "forgot@gmail.com"}
+        data = {"email": "forgot@example.com"}
 
         response = client.post(url, data)
         assert response.status_code == status.HTTP_200_OK
 
         # Check email sent
         assert len(mailoutbox) == 1
-        assert mailoutbox[0].to == ["forgot@gmail.com"]
+        assert mailoutbox[0].to == ["forgot@example.com"]
         assert "reset-password?token=" in mailoutbox[0].body

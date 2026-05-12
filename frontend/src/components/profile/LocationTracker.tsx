@@ -7,10 +7,13 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
-import { MapPin, Navigation } from 'lucide-react-native';
+import { Navigation } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 import { useLocation } from '../../hooks/useLocation';
+
+const LOCATION_ENABLED_KEY = '@glycopilot:location_enabled';
 
 interface LocationTrackerProps {
   readonly onLocationUpdate?: (
@@ -31,6 +34,12 @@ export default function LocationTracker(
     address: string;
   } | null>(null);
   const { getCurrentLocation, reverseGeocode, loading, error } = useLocation();
+
+  useEffect(() => {
+    AsyncStorage.getItem(LOCATION_ENABLED_KEY).then(value => {
+      if (value === 'true') setIsEnabled(true);
+    });
+  }, []);
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval>;
@@ -76,8 +85,9 @@ export default function LocationTracker(
     };
   }, [isEnabled]);
 
-  const toggleSwitch = () => {
-    setIsEnabled(previousState => !previousState);
+  const toggleSwitch = (value: boolean) => {
+    setIsEnabled(value);
+    AsyncStorage.setItem(LOCATION_ENABLED_KEY, value ? 'true' : 'false');
   };
 
   return (

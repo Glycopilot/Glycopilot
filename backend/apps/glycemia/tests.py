@@ -179,6 +179,30 @@ class TestGlycemiaAPI:
         assert GlycemiaHisto.objects.filter(user=user).count() == 1
         assert Glycemia.objects.filter(user=user).count() == 1
 
+    def test_cgm_readings_inserts_with_source_cgm(self, client, user):
+        payload = {
+            "value": 142,
+            "unit": "mg/dL",
+            "measured_at": now().isoformat(),
+            "notes": "Libre2 wear=120min",
+        }
+        r = client.post("/api/glycemia/cgm-readings/", payload, format="json")
+        assert r.status_code == 201
+        histo = GlycemiaHisto.objects.get(user=user)
+        cache = Glycemia.objects.get(user=user)
+        assert histo.source == "cgm"
+        assert cache.source == "cgm"
+        assert histo.value == 142
+
+    def test_cgm_readings_value_validation_applies(self, client):
+        payload = {
+            "value": 700,
+            "unit": "mg/dL",
+            "measured_at": now().isoformat(),
+        }
+        r = client.post("/api/glycemia/cgm-readings/", payload, format="json")
+        assert r.status_code == 400
+
     def test_manual_readings_value_too_low(self, client):
         payload = {
             "value": 10,

@@ -10,6 +10,9 @@ backend/*.env
 # Local databases
 backend/db.sqlite3
 
+# Fichiers BDPM volumineux (télécharger manuellement depuis base-donnees-publique.medicaments.gouv.fr)
+backend/data/import/CIS_bdpm.txt
+
 # Environment files
 .env
 .env.*
