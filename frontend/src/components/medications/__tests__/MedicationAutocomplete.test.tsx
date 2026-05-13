@@ -193,13 +193,12 @@ describe('MedicationAutocomplete', () => {
   });
 
   it('does not call fetch when query is shorter than 2 characters', async () => {
-    render(
+    const { getByPlaceholderText } = render(
       <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
     );
 
-    const input = (await import('@testing-library/react-native')).screen.getByPlaceholderText('Rechercher un médicament...');
     await act(async () => {
-      fireEvent.changeText(input, 'D');
+      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'D');
       jest.advanceTimersByTime(300);
     });
 
