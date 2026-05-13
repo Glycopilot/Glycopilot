@@ -3,6 +3,10 @@ name: Master Deployment Pipeline
 on:
   workflow_dispatch:
     inputs:
+      deploy_db_migrations:
+        description: '0. Executer les migrations DB (EC2 - Plan A)'
+        type: boolean
+        default: false
       deploy_plan_a:
         description: '1. Déployer Backend sur Plan A (EC2)'
         type: boolean
@@ -25,11 +29,61 @@ env:
   S3_BUCKET_FRONTEND: glycopilot-web-frontend-958587270787
 
 jobs:
+  db-migrate-plan-a:
+    name: Run DB Migrations (EC2)
+    if: ${{ inputs.deploy_db_migrations }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute migrations on EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/glycopilot-app
+            docker compose --profile aws up -d
+            docker compose --profile aws exec backend_aws python manage.py migrate --noinput
+            docker compose --profile aws exec backend_aws python manage.py import_medications
+            if [ -f data/import/CIS_bdpm.txt ]; then
+              docker compose --profile aws exec backend_aws python manage.py import_medications --bdpm
+            fi
+
   deploy-plan-a:
     name: Deploy Plan A (EC2)
     if: ${{ inputs.deploy_plan_a }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync repository to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/glycopilot_ec2_key
+          chmod 600 ~/.ssh/glycopilot_ec2_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/glycopilot_ec2_key "$EC2_USERNAME@$EC2_HOST" "mkdir -p /home/ubuntu/glycopilot-app"
+
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'backend/.env' \
+            --exclude 'backend/.env.prod' \
+            --exclude 'ai_service/.env' \
+            --exclude 'ai_service/.env.prod' \
+            --exclude 'node_modules/' \
+            --exclude 'frontend_web/node_modules/' \
+            --exclude 'frontend/node_modules/' \
+            --exclude 'backend/db.sqlite3' \
+            --exclude 'backend/media/' \
+            -e "ssh -i ~/.ssh/glycopilot_ec2_key" \
+            ./ "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/"
+
       - name: Execute deployment on EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -38,7 +92,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/glycopilot-app
-            git pull origin main
             
             # Recréation dynamique des .env pour être sûr (optionnel mais robuste)
             echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
