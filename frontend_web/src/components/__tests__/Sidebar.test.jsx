@@ -1,17 +1,21 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Sidebar from '../Sidebar';
-import authService from '../../services/authService';
+import authServiceModule from '../../services/authService';
+const authService = authServiceModule.default || authServiceModule;
+
+const mockSidebarApiClient = { post: jest.fn().mockResolvedValue({}) };
 
 jest.mock('../../services/authService', () => ({
-  getApiClient: jest.fn(() => ({
-    post: jest.fn().mockResolvedValue({}),
-  })),
-  getStoredUser: jest.fn(() => ({
-    first_name: 'Jean',
-    last_name: 'Dupont',
-  })),
-  logout: jest.fn(),
+  __esModule: true,
+  default: {
+    getApiClient: jest.fn(() => mockSidebarApiClient),
+    getStoredUser: jest.fn(() => ({
+      first_name: 'Jean',
+      last_name: 'Dupont',
+    })),
+    logout: jest.fn(),
+  },
 }));
 
 jest.mock('lucide-react', () => ({

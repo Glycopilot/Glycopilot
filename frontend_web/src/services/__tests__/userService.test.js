@@ -1,17 +1,18 @@
 import userService from '../userService';
 import authService from '../authService';
 
+// The factory defines mockClient INSIDE so jest hoisting never causes TDZ issues.
+// getApiClient always returns the SAME object → userService captures the same ref.
 jest.mock('../authService', () => {
-  const getApiClient = jest.fn(() => ({
+  const mockClient = {
     get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
     delete: jest.fn(),
-  }));
+  };
   return {
     __esModule: true,
-    default: { getApiClient },
-    getApiClient,
+    default: { getApiClient: jest.fn(() => mockClient) },
   };
 });
 
@@ -20,6 +21,7 @@ describe('userService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Always the same object that userService captured at module load time
     mockApiClient = authService.getApiClient();
   });
 
@@ -50,7 +52,7 @@ describe('userService', () => {
     expect(result).toEqual({ id: 456 });
     expect(mockApiClient.post).toHaveBeenCalledWith('/users/', expect.objectContaining({
       email: 'p@test.com',
-      role: 'patient'
+      role: 'patient',
     }));
   });
 

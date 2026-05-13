@@ -2,13 +2,12 @@ import passwordService from '../passwordService';
 import authService from '../authService';
 
 jest.mock('../authService', () => {
-  const getApiClient = jest.fn(() => ({
+  const mockClient = {
     post: jest.fn(),
-  }));
+  };
   return {
     __esModule: true,
-    default: { getApiClient },
-    getApiClient,
+    default: { getApiClient: jest.fn(() => mockClient) },
   };
 });
 
@@ -30,7 +29,7 @@ describe('passwordService', () => {
 
     it('should throw error on failure', async () => {
       mockApiClient.post.mockRejectedValueOnce({
-        response: { data: { email: ['Invalid email'] } }
+        response: { data: { email: ['Invalid email'] } },
       });
       await expect(passwordService.requestPasswordReset('test@example.com'))
         .rejects.toThrow('Invalid email');
@@ -44,7 +43,7 @@ describe('passwordService', () => {
       expect(result).toEqual({ status: 'OK' });
       expect(mockApiClient.post).toHaveBeenCalledWith('/password_reset/confirm/', {
         token: 'token123',
-        password: 'newPass123'
+        password: 'newPass123',
       });
     });
   });
