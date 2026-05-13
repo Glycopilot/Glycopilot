@@ -25,10 +25,11 @@ describe('Activities Screen — main view', () => {
   });
 
   it('renders activity list with course and marche', () => {
-    const { getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
-    expect(getByText('Course')).toBeTruthy();
-    expect(getByText('Marche')).toBeTruthy();
-    expect(getByText('Vélo')).toBeTruthy();
+    const { getAllByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    // 'Course', 'Marche', 'Vélo' appear in both the list and the modal type grid
+    expect(getAllByText('Course').length).toBeGreaterThan(0);
+    expect(getAllByText('Marche').length).toBeGreaterThan(0);
+    expect(getAllByText('Vélo').length).toBeGreaterThan(0);
   });
 
   it('renders Activités récentes section', () => {
@@ -67,13 +68,13 @@ describe('Activities Screen — add activity modal', () => {
   });
 
   it('modal contains activity type grid with all types', async () => {
-    const { getByTestId, getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    const { getByTestId, getAllByText, getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
     await act(async () => { fireEvent.press(getByTestId('add-activity-button')); });
 
     await waitFor(() => {
-      expect(getByText('Course')).toBeTruthy();
-      expect(getByText('Marche')).toBeTruthy();
-      expect(getByText('Vélo')).toBeTruthy();
+      expect(getAllByText('Course').length).toBeGreaterThan(0);
+      expect(getAllByText('Marche').length).toBeGreaterThan(0);
+      expect(getAllByText('Vélo').length).toBeGreaterThan(0);
       expect(getByText('Natation')).toBeTruthy();
       expect(getByText('Yoga')).toBeTruthy();
       expect(getByText('Musculation')).toBeTruthy();
