@@ -344,25 +344,27 @@ describe('NotificationsScreen — Rappels médicaments', () => {
     fireEvent.press(queries.getAllByText('Pris')[0]);
   });
 
-  it('filters missed intakes when Manqué is pressed', async () => {
+  it('filters missed intakes when Manqué filter is pressed', async () => {
     (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([
       { id: 20, user_medication: 2, scheduled_date: todayISO, scheduled_time: '09:00:00', status: 'missed', medication_name: 'Aspirin' },
     ]);
     const queries = renderScreen();
     await switchToMedications(queries);
-    await waitFor(() => expect(queries.getByText('Manqué')).toBeTruthy());
-    fireEvent.press(queries.getByText('Manqué'));
+    // 'Manqué' appears as both a filter chip and a status badge — press the filter chip (first)
+    await waitFor(() => expect(queries.getAllByText('Manqué').length).toBeGreaterThan(0));
+    fireEvent.press(queries.getAllByText('Manqué')[0]);
     await waitFor(() => expect(queries.getByText('Aspirin')).toBeTruthy());
   });
 
-  it('filters snoozed intakes when Reporté is pressed', async () => {
+  it('filters snoozed intakes when Reporté filter is pressed', async () => {
     (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([
       { id: 21, user_medication: 2, scheduled_date: todayISO, scheduled_time: '10:00:00', status: 'snoozed', medication_name: 'Ibuprofène' },
     ]);
     const queries = renderScreen();
     await switchToMedications(queries);
-    await waitFor(() => expect(queries.getByText('Reporté')).toBeTruthy());
-    fireEvent.press(queries.getByText('Reporté'));
+    // 'Reporté' appears as filter chip and badge — press filter chip (first occurrence)
+    await waitFor(() => expect(queries.getAllByText('Reporté').length).toBeGreaterThan(0));
+    fireEvent.press(queries.getAllByText('Reporté')[0]);
     await waitFor(() => expect(queries.getByText('Ibuprofène')).toBeTruthy());
   });
 
