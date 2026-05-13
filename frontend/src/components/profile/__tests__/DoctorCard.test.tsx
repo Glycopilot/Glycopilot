@@ -167,4 +167,53 @@ describe('DoctorCard', () => {
     const { queryByText } = render(<DoctorCard {...defaultProps} doctor={doctorNoPhone} />);
     expect(queryByText('Appeler')).toBeNull();
   });
+
+  it('shows doctor email when provided', () => {
+    const { getByText } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
+    expect(getByText('jean.dupont@hopital.fr')).toBeTruthy();
+  });
+
+  it('shows doctor address when provided', () => {
+    const { getByText } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
+    expect(getByText('10 rue de la Paix, Lyon')).toBeTruthy();
+  });
+
+  it('does not show email section when email is null', () => {
+    const doctorNoEmail: Doctor = { ...mockDoctor, email: null };
+    const { queryByText } = render(<DoctorCard {...defaultProps} doctor={doctorNoEmail} />);
+    expect(queryByText('jean.dupont@hopital.fr')).toBeNull();
+  });
+
+  it('shows empty state with "Aucun médecin traitant" when no doctor and no invites', () => {
+    const { getByText } = render(<DoctorCard {...defaultProps} />);
+    expect(getByText('Aucun médecin traitant')).toBeTruthy();
+  });
+
+  it('shows "En attente de confirmation" for sent invites', () => {
+    const invite: PendingInvite = {
+      id_team_member: 'tm-wait',
+      doctorName: 'Dr. Wait',
+      specialty: 'Neurologie',
+      direction: 'sent',
+    };
+    const { getByText } = render(<DoctorCard {...defaultProps} pendingInvites={[invite]} />);
+    expect(getByText('En attente de confirmation')).toBeTruthy();
+    expect(getByText('Neurologie')).toBeTruthy();
+  });
+
+  it('shows "Invitation reçue" for received invites', () => {
+    const invite: PendingInvite = {
+      id_team_member: 'tm-received',
+      doctorName: 'Dr. Received',
+      specialty: null,
+      direction: 'received',
+    };
+    const { getByText } = render(<DoctorCard {...defaultProps} pendingInvites={[invite]} />);
+    expect(getByText('Invitation reçue')).toBeTruthy();
+  });
+
+  it('uses testID on delete button', () => {
+    const { getByTestId } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
+    expect(getByTestId('delete-doctor-button')).toBeTruthy();
+  });
 });
