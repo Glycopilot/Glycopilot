@@ -163,6 +163,67 @@ describe('Home Screen', () => {
     });
   });
 
+  it('affiche une alerte d\'hyperglycémie via WebSocket', async () => {
+    const { useGlycemiaWebSocket } = require('../../hooks/useGlycemiaWebSocket');
+    const { toastInfo } = require('../../services/toastService');
+
+    (useGlycemiaWebSocket as jest.Mock).mockReturnValue({
+      lastReading: null,
+      alert: { data: { value: 220, unit: 'mg/dL' } },
+    });
+
+    render(<Home navigation={mockNavigation as any} />);
+
+    await waitFor(() => {
+      expect(toastInfo).toHaveBeenCalledWith('Hyperglycémie', expect.stringContaining('220'));
+    });
+  });
+
+  it('prioritise la lecture WebSocket quand elle est plus récente', async () => {
+    const { useGlycemiaWebSocket } = require('../../hooks/useGlycemiaWebSocket');
+
+    (useGlycemiaWebSocket as jest.Mock).mockReturnValue({
+      lastReading: {
+        value: 175,
+        unit: 'mg/dL',
+        trend: 'rising',
+        measured_at: '2026-01-01T10:00:00Z',
+      },
+      alert: null,
+    });
+    (useDashboard as jest.Mock).mockReturnValue({
+      ...defaultDashboard,
+      glucose: { value: 120, unit: 'mg/dL', trend: 'flat', recordedAt: '2026-01-01T08:00:00Z' },
+    });
+
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(getByText('175')).toBeTruthy();
+    });
+  });
+
+  it('renders Activité StatCard quand activity est defini', async () => {
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => {
+      expect(getByText('Activité')).toBeTruthy();
+    });
+  });
+
+  it('ne crash pas quand activity est undefined', async () => {
+    (useDashboard as jest.Mock).mockReturnValue({ ...defaultDashboard, activity: undefined });
+    expect(() => render(<Home navigation={mockNavigation as any} />)).not.toThrow();
+  });
+
+  it('navigue vers SensorActivation via bouton capteur', async () => {
+    const { fireEvent } = require('@testing-library/react-native');
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+
+    await waitFor(() => expect(getByText('Mon capteur')).toBeTruthy());
+    fireEvent.press(getByText('Mon capteur'));
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('SensorActivation');
+  });
+
   it('navigue vers les différents écrans via les boutons d\'action', async () => {
     const { getByTestId } = render(<Home navigation={mockNavigation as any} />);
     

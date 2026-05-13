@@ -74,6 +74,93 @@ const switchToMedications = async (queries: ReturnType<typeof render>) => {
   await waitFor(() => expect(queries.getByText('Tous')).toBeTruthy());
 };
 
+describe('NotificationsScreen — helper functions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (alertService.ackAlert as jest.Mock).mockResolvedValue(true);
+    (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([]);
+    (medicationService.getToday as jest.Mock).mockResolvedValue([]);
+  });
+
+  it('renders À l\'instant for very recent alert (< 1 min)', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'recent',
+      rule_name: 'Hypo Instant',
+      status: 'TRIGGERED',
+      triggered_at: new Date(Date.now() - 30000).toISOString(), // 30s ago
+      glycemia_value: 55,
+    }]);
+    const { findByText } = renderScreen();
+    expect(await findByText("À l'instant")).toBeTruthy();
+  });
+
+  it('renders Il y a Xj for old alert (> 24h)', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'old',
+      rule_name: 'Hypo Ancien',
+      status: 'TRIGGERED',
+      triggered_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(), // 2 days ago
+      glycemia_value: 60,
+    }]);
+    const { findByText } = renderScreen();
+    expect(await findByText('Il y a 2j')).toBeTruthy();
+  });
+
+  it('renders badge Envoyée for SENT status', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'sent-1',
+      rule_name: 'Hypo Envoyée',
+      status: 'SENT',
+      triggered_at: new Date(Date.now() - 3600000).toISOString(),
+      glycemia_value: 62,
+    }]);
+    const { findByText } = renderScreen();
+    expect(await findByText('Envoyée')).toBeTruthy();
+  });
+
+  it('renders badge Résolue for RESOLVED status without ack button', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'resolved-1',
+      rule_name: 'Hyper Résolue',
+      status: 'RESOLVED',
+      triggered_at: new Date(Date.now() - 7200000).toISOString(),
+      glycemia_value: 250,
+    }]);
+    const { findByText, queryByTestId } = renderScreen();
+    expect(await findByText('Résolue')).toBeTruthy();
+    await waitFor(() => {
+      expect(queryByTestId('ack-button-resolved-1')).toBeNull();
+    });
+  });
+
+  it('renders badge Échouée for FAILED status', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'failed-1',
+      rule_name: 'Hypo Échouée',
+      status: 'FAILED',
+      triggered_at: new Date(Date.now() - 1800000).toISOString(),
+      glycemia_value: 58,
+    }]);
+    const { findByText } = renderScreen();
+    expect(await findByText('Échouée')).toBeTruthy();
+  });
+
+  it('renders badge Acquittée for ACKED status without ack button', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'acked-1',
+      rule_name: 'Hypo Acked',
+      status: 'ACKED',
+      triggered_at: new Date(Date.now() - 3600000).toISOString(),
+      glycemia_value: 65,
+    }]);
+    const { findByText, queryByTestId } = renderScreen();
+    expect(await findByText('Acquittée')).toBeTruthy();
+    await waitFor(() => {
+      expect(queryByTestId('ack-button-acked-1')).toBeNull();
+    });
+  });
+});
+
 describe('NotificationsScreen — Alertes glycémie', () => {
   beforeEach(() => {
     jest.clearAllMocks();
