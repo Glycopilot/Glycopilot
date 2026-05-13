@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # --- ENVIRONNEMENT ---
 # "production" or "development"
-ENV = config("Django_ENV", default="development")
+ENV = config("Django_ENV", default=os.getenv("DJANGO_ENV", "development")).lower()
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(',')
@@ -93,16 +93,29 @@ if "test" in sys.argv or "pytest" in sys.argv[0]:
     }
 else:
     # Choix du moteur via .env (mysql, postgresql, sqlite)
-    DB_ENGINE = config("DB_ENGINE", default="sqlite")
+    DB_ENGINE = config("DB_ENGINE", default="sqlite").lower()
+
+    if ENV == "production" and DB_ENGINE == "sqlite":
+        raise ImproperlyConfigured(
+            "DB_ENGINE must be set to postgresql or mysql in production; refusing to use SQLite."
+        )
 
     if DB_ENGINE == "postgresql":
+        db_name = config("DB_NAME", default=os.getenv("POSTGRES_DB"))
+        db_user = config("DB_USER", default=os.getenv("POSTGRES_USER"))
+        db_password = config("DB_PASSWORD", default=os.getenv("POSTGRES_PASSWORD"))
+        db_host = config("DB_HOST", default="")
+        if ENV == "production" and not all([db_name, db_user, db_password, db_host]):
+            raise ImproperlyConfigured(
+                "DB_NAME/DB_USER/DB_PASSWORD/DB_HOST (or POSTGRES_* equivalents) must be set in production."
+            )
         DATABASES = {
             "default": {
                 "ENGINE": "django.db.backends.postgresql",
-                "NAME": config("DB_NAME"),
-                "USER": config("DB_USER"),
-                "PASSWORD": config("DB_PASSWORD"),
-                "HOST": config("DB_HOST"),
+                "NAME": db_name,
+                "USER": db_user,
+                "PASSWORD": db_password,
+                "HOST": db_host,
                 "PORT": config("DB_PORT", default=5432, cast=int),
             }
         }
