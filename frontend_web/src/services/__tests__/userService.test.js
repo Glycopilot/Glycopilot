@@ -1,8 +1,6 @@
 import userService from '../userService';
 import authService from '../authService';
 
-// The factory defines mockClient INSIDE so jest hoisting never causes TDZ issues.
-// getApiClient always returns the SAME object → userService captures the same ref.
 jest.mock('../authService', () => {
   const mockClient = {
     get: jest.fn(),
@@ -10,19 +8,18 @@ jest.mock('../authService', () => {
     patch: jest.fn(),
     delete: jest.fn(),
   };
-  return {
-    __esModule: true,
-    default: { getApiClient: jest.fn(() => mockClient) },
-  };
+  return { getApiClient: jest.fn(() => mockClient) };
 });
 
-describe('userService', () => {
-  let mockApiClient;
+// Capture once at module level — same object userService captured at load time
+const mockApiClient = authService.getApiClient();
 
+describe('userService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    // Always the same object that userService captured at module load time
-    mockApiClient = authService.getApiClient();
+    mockApiClient.get.mockClear();
+    mockApiClient.post.mockClear();
+    mockApiClient.patch.mockClear();
+    mockApiClient.delete.mockClear();
   });
 
   it('getAllUsers should call GET /users/', async () => {
@@ -40,19 +37,13 @@ describe('userService', () => {
   });
 
   it('createPatient should call POST /users/', async () => {
-    const patientData = {
-      email: 'p@test.com',
-      username: 'puser',
-      firstName: 'P',
-      lastName: 'T',
-      password: 'pass',
-    };
     mockApiClient.post.mockResolvedValueOnce({ data: { id: 456 } });
-    const result = await userService.createPatient(patientData);
+    const result = await userService.createPatient({
+      email: 'p@test.com', username: 'puser', firstName: 'P', lastName: 'T', password: 'pass',
+    });
     expect(result).toEqual({ id: 456 });
     expect(mockApiClient.post).toHaveBeenCalledWith('/users/', expect.objectContaining({
-      email: 'p@test.com',
-      role: 'patient',
+      email: 'p@test.com', role: 'patient',
     }));
   });
 

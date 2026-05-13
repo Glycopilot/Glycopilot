@@ -1,22 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Sidebar from '../Sidebar';
-import authServiceModule from '../../services/authService';
-const authService = authServiceModule.default || authServiceModule;
 
-const mockSidebarApiClient = { post: jest.fn().mockResolvedValue({}) };
-
-jest.mock('../../services/authService', () => ({
-  __esModule: true,
-  default: {
-    getApiClient: jest.fn(() => mockSidebarApiClient),
-    getStoredUser: jest.fn(() => ({
-      first_name: 'Jean',
-      last_name: 'Dupont',
-    })),
+// All mock internals defined inside factory — no TDZ risk
+jest.mock('../../services/authService', () => {
+  const mockPost = jest.fn().mockResolvedValue({});
+  const mockClient = { post: mockPost };
+  return {
+    getApiClient: jest.fn(() => mockClient),
+    getStoredUser: jest.fn(() => ({ first_name: 'Jean', last_name: 'Dupont' })),
     logout: jest.fn(),
-  },
-}));
+  };
+});
 
 jest.mock('lucide-react', () => ({
   LayoutDashboard: () => <div data-testid="icon-dashboard" />,
@@ -27,11 +22,15 @@ jest.mock('lucide-react', () => ({
   X: () => <div data-testid="icon-x" />,
 }));
 
+import authService from '../../services/authService';
+
 describe('Sidebar component', () => {
   const mockNavigation = { navigate: jest.fn() };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    authService.navigate = undefined;
+    authService.logout.mockClear();
+    mockNavigation.navigate.mockClear();
   });
 
   it('should render desktop sidebar with correct initials and name', () => {
@@ -68,7 +67,6 @@ describe('Sidebar component', () => {
     render(<Sidebar activePage="home" navigation={mockNavigation} />);
     const menuBtn = screen.getByLabelText('Ouvrir le menu');
     fireEvent.click(menuBtn);
-    
     expect(document.querySelector('.sidebar-mobile')).toHaveClass('sidebar-mobile-open');
 
     const closeBtn = screen.getByLabelText('Fermer le menu');
