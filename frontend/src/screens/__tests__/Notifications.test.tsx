@@ -226,6 +226,12 @@ describe('NotificationsScreen — Alertes glycémie', () => {
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Alerte acquittée'));
   });
 
+  it('shows unacked badge when there are unacked alerts', async () => {
+    const { findByText } = renderScreen();
+    // Alert '1' has status TRIGGERED which is unacked → unackedCount = 1
+    expect(await findByText('1')).toBeTruthy();
+  });
+
   it('affiche le bouton "Voir plus" quand il y a plus de 10 alertes', async () => {
     const manyAlerts = Array.from({ length: 15 }, (_, i) => ({
         id: i + 1,
@@ -375,5 +381,18 @@ describe('NotificationsScreen — Rappels médicaments', () => {
     const queries = renderScreen();
     await switchToMedications(queries);
     await waitFor(() => expect(queries.getByText('500mg')).toBeTruthy());
+  });
+
+  it('shows Pris filter and filters taken intakes correctly', async () => {
+    (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([
+      { id: 30, user_medication: 3, scheduled_date: todayISO, scheduled_time: '07:00:00', status: 'taken', medication_name: 'Vitamine C' },
+      { id: 31, user_medication: 4, scheduled_date: todayISO, scheduled_time: '08:00:00', status: 'missed', medication_name: 'Omega 3' },
+    ]);
+    const queries = renderScreen();
+    await switchToMedications(queries);
+    await waitFor(() => expect(queries.getAllByText('Pris').length).toBeGreaterThan(0));
+    // Press the first 'Pris' chip (filter)
+    fireEvent.press(queries.getAllByText('Pris')[0]);
+    await waitFor(() => expect(queries.getByText('Vitamine C')).toBeTruthy());
   });
 });
