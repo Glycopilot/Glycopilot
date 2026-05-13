@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -9,11 +11,10 @@ User = get_user_model()
 
 class DeviceViewSetTests(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(email="dev-user@test.com", password="pass123")
-        self.other = User.objects.create_user(email="dev-other@test.com", password="pass123")
-        # Clean up any devices left by other test suites (e.g. pytest fixtures)
-        Device.objects.filter(user=self.user).delete()
-        Device.objects.filter(user=self.other).delete()
+        # Use unique emails per test run to avoid any cross-test contamination
+        uid = str(uuid.uuid4())[:8]
+        self.user = User.objects.create_user(email=f"dev-user-{uid}@test.com", password="pass123")
+        self.other = User.objects.create_user(email=f"dev-other-{uid}@test.com", password="pass123")
         self.client.force_authenticate(user=self.user)
 
     # ── list ──────────────────────────────────────────────────────────────
