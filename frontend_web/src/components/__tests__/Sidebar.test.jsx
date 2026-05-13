@@ -2,13 +2,12 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Sidebar from '../Sidebar';
 
-// All mock internals defined inside factory — no TDZ risk
+// All mock internals inside factory — no TDZ risk
 jest.mock('../../services/authService', () => {
-  const mockPost = jest.fn().mockResolvedValue({});
-  const mockClient = { post: mockPost };
+  const mockClient = { post: jest.fn() };
   return {
     getApiClient: jest.fn(() => mockClient),
-    getStoredUser: jest.fn(() => ({ first_name: 'Jean', last_name: 'Dupont' })),
+    getStoredUser: jest.fn(),
     logout: jest.fn(),
   };
 });
@@ -24,12 +23,13 @@ jest.mock('lucide-react', () => ({
 
 import authService from '../../services/authService';
 
-describe('Sidebar component', () => {
-  const mockNavigation = { navigate: jest.fn() };
+const mockNavigation = { navigate: jest.fn() };
 
+describe('Sidebar component', () => {
   beforeEach(() => {
-    authService.navigate = undefined;
-    authService.logout.mockClear();
+    // CRA sets resetMocks: true — re-set implementations on every test
+    authService.getStoredUser.mockReturnValue({ first_name: 'Jean', last_name: 'Dupont' });
+    authService.getApiClient().post.mockResolvedValue({});
     mockNavigation.navigate.mockClear();
   });
 
