@@ -1,5 +1,6 @@
 import authService from '../authService';
 
+// Axios mock: factory creates one stable instance used by authService at load time
 jest.mock('axios', () => {
   const mockInstance = {
     interceptors: {
@@ -17,29 +18,25 @@ jest.mock('axios', () => {
   };
 });
 
-// Capture the axios instance that authService created at load time
+// Capture the axios instance created by authService once at module load
 const apiClient = authService.getApiClient();
 
-const mockStorage = {};
-
-beforeAll(() => {
-  Object.defineProperty(window, 'localStorage', {
-    value: {
-      getItem: jest.fn((key) => mockStorage[key] ?? null),
-      setItem: jest.fn((key, value) => { mockStorage[key] = value; }),
-      removeItem: jest.fn((key) => { delete mockStorage[key]; }),
-      clear: jest.fn(() => { Object.keys(mockStorage).forEach(k => delete mockStorage[k]); }),
-    },
-    writable: true,
-  });
-  delete window.location;
-  window.location = { href: '' };
-});
+// Use a plain store object and spy on Storage.prototype so that
+// bare `localStorage` calls inside authService are intercepted.
+let store = {};
 
 beforeEach(() => {
-  apiClient.post.mockClear();
-  apiClient.get.mockClear();
-  Object.keys(mockStorage).forEach(k => delete mockStorage[k]);
+  // resetMocks: true (set by react-scripts) resets all implementations —
+  // re-apply localStorage spies and reset the store before each test.
+  store = {};
+  jest.spyOn(Storage.prototype, 'getItem').mockImplementation(key => store[key] ?? null);
+  jest.spyOn(Storage.prototype, 'setItem').mockImplementation((key, val) => { store[key] = String(val); });
+  jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(key => { delete store[key]; });
+  jest.spyOn(Storage.prototype, 'clear').mockImplementation(() => { store = {}; });
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 describe('authService', () => {
@@ -55,8 +52,8 @@ describe('authService', () => {
 
       await authService.login('test@example.com', 'password');
 
-      expect(window.localStorage.setItem).toHaveBeenCalledWith('access_token', 'access-token');
-      expect(window.localStorage.setItem).toHaveBeenCalledWith('refresh_token', 'refresh-token');
+      expect(store['access_token']).toBe('access-token');
+      expect(store['refresh_token']).toBe('refresh-token');
     });
 
     it('should throw error on login failure', async () => {
@@ -99,27 +96,27 @@ describe('authService', () => {
   });
 
   describe('logout', () => {
-    it('should clear storage', async () => {
-      mockStorage['access_token'] = 'tok';
+    it('should clear storage after logout', async () => {
+      store['access_token'] = 'tok';
       apiClient.post.mockResolvedValueOnce({});
 
       await authService.logout();
 
-      expect(window.localStorage.removeItem).toHaveBeenCalledWith('access_token');
-      expect(window.localStorage.removeItem).toHaveBeenCalledWith('refresh_token');
+      expect(store['access_token']).toBeUndefined();
+      expect(store['refresh_token']).toBeUndefined();
     });
   });
 
   describe('helper methods', () => {
     it('getTokens returns tokens from storage', () => {
-      mockStorage['access_token'] = 'access';
-      mockStorage['refresh_token'] = 'refresh';
+      store['access_token'] = 'access';
+      store['refresh_token'] = 'refresh';
 
       expect(authService.getTokens()).toEqual({ accessToken: 'access', refreshToken: 'refresh' });
     });
 
     it('isAuthenticated is true when token present', () => {
-      mockStorage['access_token'] = 'tok';
+      store['access_token'] = 'tok';
       expect(authService.isAuthenticated()).toBe(true);
     });
 
@@ -128,8 +125,8 @@ describe('authService', () => {
     });
 
     it('getStoredUser returns user data', () => {
-      mockStorage['user_id'] = '123';
-      mockStorage['user_email'] = 'test@example.com';
+      store['user_id'] = '123';
+      store['user_email'] = 'test@example.com';
 
       expect(authService.getStoredUser()).toEqual({ id_auth: '123', email: 'test@example.com' });
     });
