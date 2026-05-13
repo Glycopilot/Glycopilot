@@ -18,6 +18,13 @@ class PushTokenViewTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.url = reverse("push-token")
 
+    def test_requires_authentication(self):
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_get_returns_only_active_tokens_for_current_user(self):
         PushToken.objects.create(
             user=self.user,
@@ -94,4 +101,19 @@ class PushTokenViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(
             PushToken.objects.filter(token="ExponentPushToken[delete-me]").exists()
+        )
+
+    def test_post_same_token_twice_keeps_single_record(self):
+        payload = {
+            "token": "ExponentPushToken[dedupe]",
+            "device_type": "android",
+        }
+
+        first = self.client.post(self.url, payload, format="json")
+        second = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            PushToken.objects.filter(token="ExponentPushToken[dedupe]").count(), 1
         )
