@@ -55,6 +55,34 @@ describe('Activities Screen — main view', () => {
   });
 });
 
+describe('Activities Screen — stats and summary', () => {
+  it('shows total duration and calories summary', () => {
+    const { getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    // totalDuration = 45 + 30 = 75 (first 2 activities)
+    expect(getByText('75')).toBeTruthy();
+  });
+
+  it('shows min unit label', () => {
+    const { getAllByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    expect(getAllByText('min').length).toBeGreaterThan(0);
+  });
+
+  it('shows objectif badge', () => {
+    const { getAllByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    expect(getAllByText(/Objectif/).length).toBeGreaterThan(0);
+  });
+
+  it('shows +12% trend', () => {
+    const { getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    expect(getByText('+12%')).toBeTruthy();
+  });
+
+  it('shows calorie info in activity cards', () => {
+    const { getAllByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    expect(getAllByText(/kcal/).length).toBeGreaterThan(0);
+  });
+});
+
 describe('Activities Screen — add activity modal', () => {
   it('opens modal when add button is pressed', async () => {
     const { getByTestId, getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);

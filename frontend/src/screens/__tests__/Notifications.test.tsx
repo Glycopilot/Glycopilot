@@ -159,6 +159,30 @@ describe('NotificationsScreen — helper functions', () => {
       expect(queryByTestId('ack-button-acked-1')).toBeNull();
     });
   });
+
+  it('renders status itself for unknown status (default badge)', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'unknown-1',
+      rule_name: 'Hypo Unknown',
+      status: 'UNKNOWN_STATUS',
+      triggered_at: new Date(Date.now() - 60000).toISOString(),
+      glycemia_value: 68,
+    }]);
+    const { findByText } = renderScreen();
+    expect(await findByText('UNKNOWN_STATUS')).toBeTruthy();
+  });
+
+  it('renders time in hours format (Il y a Xh)', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'hours-1',
+      rule_name: 'Hyper Hours',
+      status: 'TRIGGERED',
+      triggered_at: new Date(Date.now() - 3 * 3600000).toISOString(), // 3h ago
+      glycemia_value: 200,
+    }]);
+    const { findByText } = renderScreen();
+    expect(await findByText('Il y a 3h')).toBeTruthy();
+  });
 });
 
 describe('NotificationsScreen — Alertes glycémie', () => {

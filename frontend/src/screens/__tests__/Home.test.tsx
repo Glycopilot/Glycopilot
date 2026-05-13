@@ -215,6 +215,19 @@ describe('Home Screen', () => {
     expect(() => render(<Home navigation={mockNavigation as any} />)).not.toThrow();
   });
 
+  it('ne active pas le WebSocket quand le token est null', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage');
+    AsyncStorage.getItem.mockResolvedValue(null);
+
+    const { useGlycemiaWebSocket } = require('../../hooks/useGlycemiaWebSocket');
+    render(<Home navigation={mockNavigation as any} />);
+
+    await waitFor(() => {
+      // getApiClient called with null token (wsEnabled=false)
+      expect(useGlycemiaWebSocket).toHaveBeenCalledWith(null, expect.anything());
+    });
+  });
+
   it('navigue vers SensorActivation via bouton capteur', async () => {
     const { fireEvent } = require('@testing-library/react-native');
     const { getByText } = render(<Home navigation={mockNavigation as any} />);

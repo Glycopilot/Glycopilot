@@ -216,4 +216,32 @@ describe('DoctorCard', () => {
     const { getByTestId } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
     expect(getByTestId('delete-doctor-button')).toBeTruthy();
   });
+
+  it('does not show address section when address is null', () => {
+    const doctorNoAddress: Doctor = { ...mockDoctor, address: null };
+    const { queryByText } = render(<DoctorCard {...defaultProps} doctor={doctorNoAddress} />);
+    expect(queryByText('10 rue de la Paix, Lyon')).toBeNull();
+  });
+
+  it('does not show specialty when doctor specialty is null', () => {
+    const doctorNoSpecialty: Doctor = { ...mockDoctor, specialty: null };
+    const { queryByText } = render(<DoctorCard {...defaultProps} doctor={doctorNoSpecialty} />);
+    expect(queryByText('Endocrinologie')).toBeNull();
+  });
+
+  it('renders Téléphone label when phone is set', () => {
+    const { getByText } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
+    expect(getByText('Téléphone')).toBeTruthy();
+    expect(getByText('+33612345678')).toBeTruthy();
+  });
+
+  it('renders Email label when email is set', () => {
+    const { getByText } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
+    expect(getByText('Email')).toBeTruthy();
+  });
+
+  it('renders Adresse label when address is set', () => {
+    const { getByText } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
+    expect(getByText('Adresse')).toBeTruthy();
+  });
 });
