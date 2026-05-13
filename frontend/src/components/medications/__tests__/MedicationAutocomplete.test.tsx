@@ -173,4 +173,89 @@ describe('MedicationAutocomplete', () => {
 
     expect(onChangeText).toHaveBeenCalledWith('');
   });
+
+  it('does not show clear button when value is empty', () => {
+    const { queryByTestId } = render(
+      <MedicationAutocomplete 
+        value="" 
+        onChangeText={jest.fn()} 
+        onSelectMedication={jest.fn()} 
+      />
+    );
+    expect(queryByTestId('medication-autocomplete-clear')).toBeNull();
+  });
+
+  it('renders without label when label prop is omitted', () => {
+    const { queryByText } = render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
+    );
+    expect(queryByText('Nom du médicament')).toBeNull();
+  });
+
+  it('does not call fetch when query is shorter than 2 characters', async () => {
+    render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
+    );
+
+    const input = (await import('@testing-library/react-native')).screen.getByPlaceholderText('Rechercher un médicament...');
+    await act(async () => {
+      fireEvent.changeText(input, 'D');
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('renders with custom placeholder', () => {
+    const { getByPlaceholderText } = render(
+      <MedicationAutocomplete
+        value=""
+        onChangeText={jest.fn()}
+        onSelectMedication={jest.fn()}
+        placeholder="Chercher..."
+      />
+    );
+    expect(getByPlaceholderText('Chercher...')).toBeTruthy();
+  });
+
+  it('returns empty results when EXPO_PUBLIC_FDA_API_URL is not set', async () => {
+    const originalUrl = process.env.EXPO_PUBLIC_FDA_API_URL;
+    process.env.EXPO_PUBLIC_FDA_API_URL = '';
+
+    const { getByPlaceholderText } = render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
+    );
+
+    await act(async () => {
+      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'Test');
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    process.env.EXPO_PUBLIC_FDA_API_URL = originalUrl;
+  });
+
+  it('shows suggestions with no generic name gracefully', async () => {
+    const onSelect = jest.fn();
+    const mockResults = {
+      results: [{ openfda: { brand_name: ['Doliprane'] } }],
+    };
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(mockResults),
+    });
+
+    const { getByPlaceholderText, findByText } = render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={onSelect} />
+    );
+
+    await act(async () => {
+      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'Doli');
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(await findByText('Doliprane')).toBeTruthy();
+  });
 });
