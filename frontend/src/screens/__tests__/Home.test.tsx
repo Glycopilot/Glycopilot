@@ -203,9 +203,10 @@ describe('Home Screen', () => {
   });
 
   it('renders Activité StatCard quand activity est defini', async () => {
-    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    const { getAllByText } = render(<Home navigation={mockNavigation as any} />);
     await waitFor(() => {
-      expect(getByText('Activité')).toBeTruthy();
+      // 'Activité' appears in both StatCard title and ActionButton label
+      expect(getAllByText('Activité').length).toBeGreaterThan(0);
     });
   });
 
