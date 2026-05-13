@@ -1,7 +1,24 @@
 import authService from '../authService';
 import axios from 'axios';
 
-jest.mock('axios');
+const mockApiClient = {
+  interceptors: {
+    request: { use: jest.fn(), eject: jest.fn() },
+    response: { use: jest.fn(), eject: jest.fn() },
+  },
+  post: jest.fn(),
+  get: jest.fn(),
+};
+
+jest.mock('axios', () => ({
+  __esModule: true,
+  default: {
+    create: jest.fn(() => mockApiClient),
+    post: jest.fn(),
+  },
+  create: jest.fn(() => mockApiClient),
+  post: jest.fn(),
+}));
 
 describe('authService', () => {
   const mockStorage = {};
@@ -25,14 +42,8 @@ describe('authService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     window.localStorage.clear();
-    axios.create.mockReturnValue({
-      interceptors: {
-        request: { use: jest.fn(), eject: jest.fn() },
-        response: { use: jest.fn(), eject: jest.fn() },
-      },
-      post: jest.fn(),
-      get: jest.fn(),
-    });
+    mockApiClient.post.mockReset();
+    mockApiClient.get.mockReset();
   });
 
   describe('login', () => {
