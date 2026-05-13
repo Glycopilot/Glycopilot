@@ -289,8 +289,8 @@ describe('MedicationAutocomplete', () => {
   it('skips results with no brand name', async () => {
     const mockResults = {
       results: [
-        { openfda: {} }, // no brand_name
-        { openfda: { brand_name: ['Aspirin'], generic_name: ['Aspirin'] } },
+        { openfda: {} }, // no brand_name — should be skipped
+        { openfda: { brand_name: ['Ibuprofen'], generic_name: ['Ibuprofène'] } },
       ],
     };
     (global.fetch as jest.Mock).mockResolvedValue({
@@ -298,16 +298,17 @@ describe('MedicationAutocomplete', () => {
       json: jest.fn().mockResolvedValue(mockResults),
     });
 
-    const { getByPlaceholderText, findByText, queryByText } = render(
+    const { getByPlaceholderText, findByText } = render(
       <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
     );
 
     await act(async () => {
-      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'Aspi');
+      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'Ibu');
       jest.advanceTimersByTime(300);
     });
 
-    expect(await findByText('Aspirin')).toBeTruthy();
+    // Only Ibuprofen should appear (the one without brand_name was skipped)
+    expect(await findByText('Ibuprofen')).toBeTruthy();
   });
 
   it('shows suggestions with no generic name gracefully', async () => {
