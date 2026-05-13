@@ -1,14 +1,19 @@
 import userService from '../userService';
 import authService from '../authService';
 
-jest.mock('../authService', () => ({
-  getApiClient: jest.fn(() => ({
+jest.mock('../authService', () => {
+  const getApiClient = jest.fn(() => ({
     get: jest.fn(),
     post: jest.fn(),
     patch: jest.fn(),
     delete: jest.fn(),
-  })),
-}));
+  }));
+  return {
+    __esModule: true,
+    default: { getApiClient },
+    getApiClient,
+  };
+});
 
 describe('userService', () => {
   let mockApiClient;
