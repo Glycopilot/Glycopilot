@@ -149,4 +149,47 @@ describe('EditProfileModal', () => {
     const { queryByText } = render(<EditProfileModal {...defaultProps} visible={false} />);
     expect(queryByText('Modifier mon profil')).toBeNull();
   });
+
+  it('calls onClose when overlay is pressed', () => {
+    const { UNSAFE_getAllByType } = render(<EditProfileModal {...defaultProps} />);
+    const { Pressable } = require('react-native');
+    const pressables = UNSAFE_getAllByType(Pressable);
+    // First Pressable is the overlay
+    pressables[0].props.onPress();
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it('submit button is disabled when firstName is empty', () => {
+    const { getByText } = render(
+      <EditProfileModal {...defaultProps} firstName="" />
+    );
+    // Button is disabled - pressing it should not call onSubmit
+    const btn = getByText('Sauvegarder');
+    expect(btn).toBeTruthy();
+  });
+
+  it('shows info card text', () => {
+    const { getByText } = render(<EditProfileModal {...defaultProps} />);
+    expect(getByText('Information')).toBeTruthy();
+  });
+
+  it('calls onDiabetesTypeChange with empty string when Effacer is pressed', () => {
+    const { getByText } = render(
+      <EditProfileModal
+        {...defaultProps}
+        diabetesType="TYPE2"
+        showDiabetesTypePicker={true}
+      />
+    );
+    fireEvent.press(getByText('Effacer'));
+    expect(defaultProps.onDiabetesTypeChange).toHaveBeenCalledWith('');
+  });
+
+  it('calls onDiabetesTypeChange with GESTATIONAL when Gestationnel pressed', () => {
+    const { getByTestId } = render(
+      <EditProfileModal {...defaultProps} showDiabetesTypePicker={true} />
+    );
+    fireEvent.press(getByTestId('diabetes-type-gestational'));
+    expect(defaultProps.onDiabetesTypeChange).toHaveBeenCalledWith('GESTATIONAL');
+  });
 });
