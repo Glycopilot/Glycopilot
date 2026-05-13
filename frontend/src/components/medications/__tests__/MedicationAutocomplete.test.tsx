@@ -258,6 +258,58 @@ describe('MedicationAutocomplete', () => {
     await act(async () => { jest.advanceTimersByTime(100); });
   });
 
+  it('deduplicates results with same brand + generic name', async () => {
+    const duplicateResults = {
+      results: [
+        { openfda: { brand_name: ['Doliprane'], generic_name: ['Paracetamol'] } },
+        { openfda: { brand_name: ['Doliprane'], generic_name: ['Paracetamol'] } }, // duplicate
+        { openfda: { brand_name: ['Efferalgan'], generic_name: ['Paracetamol'] } },
+      ],
+    };
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(duplicateResults),
+    });
+
+    const { getByPlaceholderText, findByText, queryAllByText } = render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
+    );
+
+    await act(async () => {
+      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'Doli');
+      jest.advanceTimersByTime(300);
+    });
+
+    // Doliprane should appear only once (deduplicated)
+    expect(await findByText('Doliprane')).toBeTruthy();
+    expect(queryAllByText('Doliprane').length).toBe(1);
+    expect(await findByText('Efferalgan')).toBeTruthy();
+  });
+
+  it('skips results with no brand name', async () => {
+    const mockResults = {
+      results: [
+        { openfda: {} }, // no brand_name
+        { openfda: { brand_name: ['Aspirin'], generic_name: ['Aspirin'] } },
+      ],
+    };
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(mockResults),
+    });
+
+    const { getByPlaceholderText, findByText, queryByText } = render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
+    );
+
+    await act(async () => {
+      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'Aspi');
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(await findByText('Aspirin')).toBeTruthy();
+  });
+
   it('shows suggestions with no generic name gracefully', async () => {
     const onSelect = jest.fn();
     const mockResults = {
