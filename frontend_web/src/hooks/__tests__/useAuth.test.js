@@ -1,8 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAuth } from '../useAuth';
-import authService from '../services/authService';
+import authService from '../../services/authService';
 
-jest.mock('../services/authService', () => ({
+jest.mock('../../services/authService', () => ({
   login: jest.fn(),
   register: jest.fn(),
   logout: jest.fn(),

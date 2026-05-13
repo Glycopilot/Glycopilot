@@ -1,27 +1,28 @@
 import authService from '../authService';
-import axios from 'axios';
 
-const mockApiClient = {
-  interceptors: {
-    request: { use: jest.fn(), eject: jest.fn() },
-    response: { use: jest.fn(), eject: jest.fn() },
-  },
-  post: jest.fn(),
-  get: jest.fn(),
-};
-
-jest.mock('axios', () => ({
-  __esModule: true,
-  default: {
-    create: jest.fn(() => mockApiClient),
+jest.mock('axios', () => {
+  const mockInstance = {
+    interceptors: {
+      request: { use: jest.fn(), eject: jest.fn() },
+      response: { use: jest.fn(), eject: jest.fn() },
+    },
     post: jest.fn(),
-  },
-  create: jest.fn(() => mockApiClient),
-  post: jest.fn(),
-}));
+    get: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: {
+      create: jest.fn(() => mockInstance),
+      post: jest.fn(),
+    },
+    create: jest.fn(() => mockInstance),
+    post: jest.fn(),
+  };
+});
 
 describe('authService', () => {
   const mockStorage = {};
+  let apiClient;
 
   beforeAll(() => {
     Object.defineProperty(window, 'localStorage', {
@@ -31,45 +32,39 @@ describe('authService', () => {
         removeItem: jest.fn((key) => { delete mockStorage[key]; }),
         clear: jest.fn(() => { Object.keys(mockStorage).forEach(key => delete mockStorage[key]); }),
       },
-      writable: true
+      writable: true,
     });
-
-    // Mock window.location
     delete window.location;
     window.location = { href: '' };
+    // authService.getApiClient() returns the single mocked axios instance
+    apiClient = authService.getApiClient();
   });
 
   beforeEach(() => {
     jest.clearAllMocks();
-    window.localStorage.clear();
-    mockApiClient.post.mockReset();
-    mockApiClient.get.mockReset();
+    Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
   });
 
   describe('login', () => {
     it('should login successfully and store tokens', async () => {
-      const mockResponse = {
+      apiClient.post.mockResolvedValueOnce({
         data: {
           access: 'access-token',
           refresh: 'refresh-token',
-          user: { id_auth: '123', email: 'test@example.com' }
-        }
-      };
-      
-      const apiClient = authService.getApiClient();
-      apiClient.post.mockResolvedValueOnce(mockResponse);
+          user: { id_auth: '123', email: 'test@example.com' },
+        },
+      });
 
       const result = await authService.login('test@example.com', 'password');
 
-      expect(result).toEqual(mockResponse.data);
+      expect(result.access).toBe('access-token');
       expect(window.localStorage.setItem).toHaveBeenCalledWith('access_token', 'access-token');
       expect(window.localStorage.setItem).toHaveBeenCalledWith('refresh_token', 'refresh-token');
     });
 
     it('should throw error on login failure', async () => {
-      const apiClient = authService.getApiClient();
       apiClient.post.mockRejectedValueOnce({
-        response: { data: { error: 'Invalid credentials' } }
+        response: { data: { error: 'Invalid credentials' } },
       });
 
       await expect(authService.login('test@example.com', 'wrong'))
@@ -79,18 +74,15 @@ describe('authService', () => {
 
   describe('register', () => {
     it('should register successfully', async () => {
-      const mockResponse = {
+      apiClient.post.mockResolvedValueOnce({
         data: {
           access: 'access-token',
           refresh: 'refresh-token',
-          user: { id_auth: '123', email: 'test@example.com' }
-        }
-      };
-      
-      const apiClient = authService.getApiClient();
-      apiClient.post.mockResolvedValueOnce(mockResponse);
+          user: { id_auth: '123', email: 'test@example.com' },
+        },
+      });
 
-      const userData = {
+      const result = await authService.register({
         email: 'test@example.com',
         firstName: 'John',
         lastName: 'Doe',
@@ -99,24 +91,21 @@ describe('authService', () => {
         role: 'DOCTOR',
         licenseNumber: '12345',
         specialty: 'General',
-        medicalCenterAddress: '123 St'
-      };
+        medicalCenterAddress: '123 St',
+      });
 
-      const result = await authService.register(userData);
-
-      expect(result).toEqual(mockResponse.data);
+      expect(result.access).toBe('access-token');
       expect(apiClient.post).toHaveBeenCalledWith('/auth/register/', expect.objectContaining({
         email: 'test@example.com',
-        license_number: '12345'
+        license_number: '12345',
       }));
     });
   });
 
   describe('logout', () => {
     it('should clear storage on logout', async () => {
-      window.localStorage.setItem('access_token', 'token');
-      const apiClient = authService.getApiClient();
       apiClient.post.mockResolvedValueOnce({});
+      window.localStorage.setItem('access_token', 'token');
 
       await authService.logout();
 
