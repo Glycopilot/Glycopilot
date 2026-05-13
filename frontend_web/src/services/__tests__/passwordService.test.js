@@ -2,21 +2,15 @@ import passwordService from '../passwordService';
 import authService from '../authService';
 
 jest.mock('../authService', () => {
-  const mockClient = {
-    post: jest.fn(),
-  };
-  return {
-    __esModule: true,
-    default: { getApiClient: jest.fn(() => mockClient) },
-  };
+  const mockClient = { post: jest.fn() };
+  return { getApiClient: jest.fn(() => mockClient) };
 });
 
-describe('passwordService', () => {
-  let mockApiClient;
+const mockApiClient = authService.getApiClient();
 
+describe('passwordService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockApiClient = authService.getApiClient();
+    mockApiClient.post.mockClear();
   });
 
   describe('requestPasswordReset', () => {
