@@ -1,11 +1,16 @@
 import passwordService from '../passwordService';
 import authService from '../authService';
 
-jest.mock('../authService', () => ({
-  getApiClient: jest.fn(() => ({
+jest.mock('../authService', () => {
+  const getApiClient = jest.fn(() => ({
     post: jest.fn(),
-  })),
-}));
+  }));
+  return {
+    __esModule: true,
+    default: { getApiClient },
+    getApiClient,
+  };
+});
 
 describe('passwordService', () => {
   let mockApiClient;
