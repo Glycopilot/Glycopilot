@@ -227,9 +227,9 @@ describe('NotificationsScreen — Alertes glycémie', () => {
   });
 
   it('shows unacked badge when there are unacked alerts', async () => {
-    const { findByText } = renderScreen();
-    // Alert '1' has status TRIGGERED which is unacked → unackedCount = 1
-    expect(await findByText('1')).toBeTruthy();
+    const { getAllByText } = renderScreen();
+    // unackedCount = 1 (only TRIGGERED alert) → badge shows '1' in header AND section tab
+    await waitFor(() => expect(getAllByText('1').length).toBeGreaterThan(0));
   });
 
   it('affiche le bouton "Voir plus" quand il y a plus de 10 alertes', async () => {
