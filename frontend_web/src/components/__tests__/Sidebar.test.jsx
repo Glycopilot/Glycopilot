@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Sidebar from '../Sidebar';
 
-// All mock internals inside factory — no TDZ risk
 jest.mock('../../services/authService', () => {
   const mockClient = { post: jest.fn() };
   return {
@@ -23,13 +22,18 @@ jest.mock('lucide-react', () => ({
 
 import authService from '../../services/authService';
 
+// Capture the mockClient once at module level (before any resetMocks runs)
+const mockClient = authService.getApiClient();
+
 const mockNavigation = { navigate: jest.fn() };
 
 describe('Sidebar component', () => {
   beforeEach(() => {
-    // CRA sets resetMocks: true — re-set implementations on every test
+    // CRA sets resetMocks: true — all implementations are wiped before each test.
+    // Restore them here.
     authService.getStoredUser.mockReturnValue({ first_name: 'Jean', last_name: 'Dupont' });
-    authService.getApiClient().post.mockResolvedValue({});
+    authService.getApiClient.mockReturnValue(mockClient);
+    mockClient.post.mockResolvedValue({});
     mockNavigation.navigate.mockClear();
   });
 
