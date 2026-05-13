@@ -11,6 +11,9 @@ class DeviceViewSetTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(email="dev-user@test.com", password="pass123")
         self.other = User.objects.create_user(email="dev-other@test.com", password="pass123")
+        # Clean up any devices left by other test suites (e.g. pytest fixtures)
+        Device.objects.filter(user=self.user).delete()
+        Device.objects.filter(user=self.other).delete()
         self.client.force_authenticate(user=self.user)
 
     # ── list ──────────────────────────────────────────────────────────────

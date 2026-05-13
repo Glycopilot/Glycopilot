@@ -58,7 +58,8 @@ class UserAlertSettingsViewSetTests(APITestCase):
         self.rule = _mk_rule(code="HYPO_SET")
 
     def test_create_user_alert_setting(self):
-        payload = {"rule_id": self.rule.id, "enabled": True, "cooldown_seconds": 300}
+        # The serializer requires both 'rule' (auto-generated FK field) and 'rule_id'
+        payload = {"rule": self.rule.id, "rule_id": self.rule.id, "enabled": True, "cooldown_seconds": 300}
         response = self.client.post("/api/alerts/settings/", payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(UserAlertRule.objects.filter(user=self.user, rule=self.rule).exists())
