@@ -235,6 +235,29 @@ describe('MedicationAutocomplete', () => {
     process.env.EXPO_PUBLIC_FDA_API_URL = originalUrl;
   });
 
+  it('shows loading indicator during search', async () => {
+    let resolveSearch: (v: any) => void;
+    (global.fetch as jest.Mock).mockReturnValue(
+      new Promise(res => { resolveSearch = res; })
+    );
+
+    const { getByPlaceholderText, UNSAFE_getAllByType } = render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
+    );
+
+    await act(async () => {
+      fireEvent.changeText(getByPlaceholderText('Rechercher un médicament...'), 'Metfo');
+      jest.advanceTimersByTime(300);
+    });
+
+    const { ActivityIndicator } = require('react-native');
+    expect(UNSAFE_getAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+
+    // Resolve to avoid open handles
+    resolveSearch!({ ok: true, json: async () => ({ results: [] }) });
+    await act(async () => { jest.advanceTimersByTime(100); });
+  });
+
   it('shows suggestions with no generic name gracefully', async () => {
     const onSelect = jest.fn();
     const mockResults = {

@@ -191,6 +191,51 @@ describe('Activities Screen — add activity modal', () => {
     });
   });
 
+  it('renders modal info card text', async () => {
+    const { getByTestId, getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    await act(async () => { fireEvent.press(getByTestId('add-activity-button')); });
+
+    await waitFor(() => {
+      expect(getByText('Conseil')).toBeTruthy();
+    });
+  });
+
+  it('renders modal Ajouter button', async () => {
+    const { getByTestId, getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    await act(async () => { fireEvent.press(getByTestId('add-activity-button')); });
+
+    await waitFor(() => {
+      expect(getByText('Ajouter')).toBeTruthy();
+    });
+  });
+
+  it('selecting Yoga type works', async () => {
+    const { getByTestId } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    await act(async () => { fireEvent.press(getByTestId('add-activity-button')); });
+
+    await waitFor(() => expect(getByTestId('activity-type-yoga')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('activity-type-yoga')); });
+  });
+
+  it('selecting Natation type works', async () => {
+    const { getByTestId } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    await act(async () => { fireEvent.press(getByTestId('add-activity-button')); });
+
+    await waitFor(() => expect(getByTestId('activity-type-natation')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('activity-type-natation')); });
+  });
+
+  it('selecting Musculation type shows estimation', async () => {
+    const { getByTestId } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    await act(async () => { fireEvent.press(getByTestId('add-activity-button')); });
+
+    await waitFor(() => expect(getByTestId('activity-type-musculation')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('activity-type-musculation')); });
+    await act(async () => { fireEvent.changeText(getByTestId('duration-input'), '60'); });
+
+    await waitFor(() => expect(getByTestId('submit-activity')).toBeTruthy());
+  });
+
   it('increment and decrement multiple times', async () => {
     const { getByTestId } = render(<ActivityScreen navigation={mockNavigation as any} />);
     await act(async () => { fireEvent.press(getByTestId('add-activity-button')); });
