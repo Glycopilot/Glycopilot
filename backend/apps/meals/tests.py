@@ -47,7 +47,7 @@ class UserMealViewSetTests(APITestCase):
 
     def test_create_user_meal(self):
         payload = {
-            "meal": self.meal.meal_id,
+            "meal_id": self.meal.meal_id,
             "taken_at": timezone.now().isoformat(),
         }
         response = self.client.post("/api/meals/log/", payload, format="json")
