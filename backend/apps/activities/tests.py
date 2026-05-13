@@ -51,7 +51,7 @@ class UserActivityViewSetTests(APITestCase):
         payload = {
             "activity": self.activity.activity_id,
             "start": self.now.isoformat(),
-            "end": (self.now + timedelta(minutes=30)).isoformat(),
+            "duration_minutes": 30,
             "intensity": "moderate",
         }
         response = self.client.post("/api/activities/history/", payload, format="json")
