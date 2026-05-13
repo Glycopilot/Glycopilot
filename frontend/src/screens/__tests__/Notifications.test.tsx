@@ -245,6 +245,32 @@ describe('NotificationsScreen — Alertes glycémie', () => {
   });
 });
 
+describe('NotificationsScreen — handleAck failure', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 99,
+      rule_name: 'Hypo Test',
+      status: 'TRIGGERED',
+      triggered_at: new Date(Date.now() - 60000).toISOString(),
+      glycemia_value: 60,
+    }]);
+    (alertService.ackAlert as jest.Mock).mockResolvedValue(false);
+    (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([]);
+    (medicationService.getToday as jest.Mock).mockResolvedValue([]);
+  });
+
+  it('affiche toastError quand ackAlert retourne false', async () => {
+    const { getByTestId } = renderScreen();
+    const { toastError } = require('../../services/toastService');
+
+    await waitFor(() => expect(getByTestId('ack-button-99')).toBeTruthy());
+    await act(async () => { fireEvent.press(getByTestId('ack-button-99')); });
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+  });
+});
+
 describe('NotificationsScreen — Rappels médicaments', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -306,5 +332,46 @@ describe('NotificationsScreen — Rappels médicaments', () => {
     const queries = renderScreen();
     await switchToMedications(queries);
     await waitFor(() => expect(queries.getByText('Aucun rappel')).toBeTruthy());
+  });
+
+  it('filters taken intakes when Pris is pressed', async () => {
+    (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([
+      { ...mockHistory[0], status: 'taken' },
+    ]);
+    const queries = renderScreen();
+    await switchToMedications(queries);
+    await waitFor(() => expect(queries.getAllByText('Pris').length).toBeGreaterThan(0));
+    fireEvent.press(queries.getAllByText('Pris')[0]);
+  });
+
+  it('filters missed intakes when Manqué is pressed', async () => {
+    (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([
+      { id: 20, user_medication: 2, scheduled_date: todayISO, scheduled_time: '09:00:00', status: 'missed', medication_name: 'Aspirin' },
+    ]);
+    const queries = renderScreen();
+    await switchToMedications(queries);
+    await waitFor(() => expect(queries.getByText('Manqué')).toBeTruthy());
+    fireEvent.press(queries.getByText('Manqué'));
+    await waitFor(() => expect(queries.getByText('Aspirin')).toBeTruthy());
+  });
+
+  it('filters snoozed intakes when Reporté is pressed', async () => {
+    (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([
+      { id: 21, user_medication: 2, scheduled_date: todayISO, scheduled_time: '10:00:00', status: 'snoozed', medication_name: 'Ibuprofène' },
+    ]);
+    const queries = renderScreen();
+    await switchToMedications(queries);
+    await waitFor(() => expect(queries.getByText('Reporté')).toBeTruthy());
+    fireEvent.press(queries.getByText('Reporté'));
+    await waitFor(() => expect(queries.getByText('Ibuprofène')).toBeTruthy());
+  });
+
+  it('shows medication dosage when set', async () => {
+    (medicationService.getIntakeHistory as jest.Mock).mockResolvedValue([
+      { id: 22, user_medication: 2, scheduled_date: todayISO, scheduled_time: '08:00:00', status: 'taken', medication_name: 'Paracétamol', medication_dosage: '500mg' },
+    ]);
+    const queries = renderScreen();
+    await switchToMedications(queries);
+    await waitFor(() => expect(queries.getByText('500mg')).toBeTruthy());
   });
 });
