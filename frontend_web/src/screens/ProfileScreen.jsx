@@ -4,36 +4,13 @@ import {
   Save, Send, CheckCircle, Pencil, X
 } from 'lucide-react';
 import authService from '../services/authService';
+import { flattenAuthMe } from '../lib/utils';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
 import './css/Profile.css';
 
 const apiClient = authService.getApiClient();
-
-function flattenAuthMe(data) {
-  const identity = data?.identity ?? {};
-  const profile  = identity?.profiles?.[0] ?? {};
-  const doctor   = profile?.doctor_details ?? {};
-  const user     = doctor?.user_details ?? {};
-
-  return {
-    // identité
-    id_auth:    data?.id_auth,
-    id_user:    identity?.id_user,
-    email:      data?.email ?? user?.email,
-    first_name: identity?.first_name ?? user?.first_name,
-    last_name:  identity?.last_name  ?? user?.last_name,
-    phone_number: user?.phone_number,
-    // profil médecin
-    doctor_id:              doctor?.doctor_id,
-    license_number:         doctor?.license_number,
-    verification_status:    doctor?.verification_status,
-    specialty:              doctor?.specialty,
-    medical_center_name:    doctor?.medical_center_name,
-    medical_center_address: doctor?.medical_center_address,
-  };
-}
 
 function Field({ label, value, icon, editable = true, onChange, type = 'text', locked = false, hint }) {
   return (

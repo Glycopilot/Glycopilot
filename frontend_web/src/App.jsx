@@ -1,47 +1,87 @@
-import React, { useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import LoginScreen    from './screens/LoginScreen';
-import SignInScreen   from './screens/SignInScreen';
-import HomeScreen     from './screens/HomeScreen';
+
+import LoginScreen from './screens/LoginScreen';
+import SignInScreen from './screens/SignInScreen';
+import HomeScreen from './screens/HomeScreen';
 import PatientsScreen from './screens/PatientsScreen';
-import ProfileScreen  from './screens/ProfileScreen';
-import authService    from './services/authService';
-// ✅ Import CSS sidebar au niveau racine pour garantir son chargement
+import ProfileScreen from './screens/ProfileScreen';
+import authService from './services/authService';
+import ErrorBoundary from './components/ErrorBoundary';
+import { registerAuthRedirect } from './lib/auth-redirect';
+import './styles/tokens.css';
+import './styles/polish.css';
 import './components/css/sidebar.css';
 import './App.css';
 
-function getInitialPage() {
-  if (!authService.isAuthenticated()) return 'login';
-  const saved = sessionStorage.getItem('currentPage');
-  const validPages = ['home', 'patients', 'profile'];
-  return validPages.includes(saved) ? saved : 'home';
+function RequireAuth({ children }) {
+  const location = useLocation();
+  if (!authService.isAuthenticated()) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+  return children;
 }
 
-function App() {
-  const [currentPage, setCurrentPage] = useState(getInitialPage);
+function AppRoutes() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navigation = useMemo(() => ({ navigate: (path) => navigate(path) }), [navigate]);
 
-  const navigation = {
-    navigate: (page) => {
-      let resolved = page;
-      if      (page === '/login'    || page === 'Login')    resolved = 'login';
-      else if (page === '/signin'   || page === 'SignIn')   resolved = 'signin';
-      else if (page === '/home'     || page === 'Home')     resolved = 'home';
-      else if (page === '/patients' || page === 'Patients') resolved = 'patients';
-      else if (page === '/profile'  || page === 'Profile')  resolved = 'profile';
-
-      if (resolved !== 'login' && resolved !== 'signin') {
-        sessionStorage.setItem('currentPage', resolved);
-      } else {
-        sessionStorage.removeItem('currentPage');
-      }
-
-      setCurrentPage(resolved);
-    }
-  };
+  useEffect(() => {
+    registerAuthRedirect(() => navigate('/login', { replace: true }));
+  }, [navigate]);
 
   return (
-    <>
+    <div key={location.pathname} className="route-shell">
+      <Routes location={location}>
+        <Route
+          path="/"
+          element={<Navigate to={authService.isAuthenticated() ? '/home' : '/login'} replace />}
+        />
+        <Route path="/login"  element={<LoginScreen  navigation={navigation} />} />
+        <Route path="/signin" element={<SignInScreen navigation={navigation} />} />
+        <Route
+          path="/home"
+          element={
+            <RequireAuth>
+              <HomeScreen navigation={navigation} />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/patients"
+          element={
+            <RequireAuth>
+              <PatientsScreen navigation={navigation} />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <ProfileScreen navigation={navigation} />
+            </RequireAuth>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -54,15 +94,11 @@ function App() {
         pauseOnHover
         theme="light"
       />
-      <div className="App">
-        {currentPage === 'login'    && <LoginScreen    navigation={navigation} />}
-        {currentPage === 'signin'   && <SignInScreen   navigation={navigation} />}
-        {currentPage === 'home'     && <HomeScreen     navigation={navigation} />}
-        {currentPage === 'patients' && <PatientsScreen navigation={navigation} />}
-        {currentPage === 'profile'  && <ProfileScreen  navigation={navigation} />}
-      </div>
-    </>
+      <BrowserRouter>
+        <div className="App">
+          <AppRoutes />
+        </div>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
-
-export default App;
