@@ -6,8 +6,12 @@ import {
   getHeaderTexts,
   buildPayloads,
   processPayloads,
+  confirmDeleteGroup,
+  confirmDeleteItem,
+  resolveItemMealId,
+  generateSessionKey,
 } from '../meals';
-import type { UserMeal, ComposedItem, MealReference, CreateUserMealPayload } from '../../types/meals.types';
+import type { UserMeal, ComposedItem, MealReference, CreateUserMealPayload, MealType } from '../../types/meals.types';
 
 jest.mock('../../services/mealService', () => ({
   __esModule: true,
@@ -51,6 +55,19 @@ function makeItem(overrides: Partial<ComposedItem> = {}): ComposedItem {
     ...overrides,
   };
 }
+
+// ─── generateSessionKey ───────────────────────────────────────────────────────
+
+describe('generateSessionKey', () => {
+  it('returns a non-empty string', () => {
+    expect(typeof generateSessionKey()).toBe('string');
+    expect(generateSessionKey().length).toBeGreaterThan(0);
+  });
+
+  it('generates unique keys', () => {
+    expect(generateSessionKey()).not.toBe(generateSessionKey());
+  });
+});
 
 // ─── groupMeals ───────────────────────────────────────────────────────────────
 
@@ -294,5 +311,161 @@ describe('processPayloads', () => {
     await processPayloads([payload], addMeals, closeAdd, setSubmitting);
     expect(toastError).toHaveBeenCalledWith('Erreur', expect.any(String));
     expect(closeAdd).not.toHaveBeenCalled();
+  });
+});
+
+// ─── resolveItemMealId ────────────────────────────────────────────────────────
+
+describe('resolveItemMealId', () => {
+  const mealService = require('../../services/mealService').default;
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('returns meal_id from selectedRef when valid', async () => {
+    const item = makeItem({
+      selectedRef: { meal_id: 7, name: 'Pain', calories: null, glucides: null, proteines: null, lipides: null, glucose: null, barcode: null, source: 'manual', link_photo: null },
+    });
+    expect(await resolveItemMealId(item)).toBe(7);
+  });
+
+  it('creates meal when selectedRef has meal_id=-1', async () => {
+    mealService.createMealFromProduct.mockResolvedValue({ meal_id: 99, name: 'Nutella' });
+    const item = makeItem({
+      selectedRef: { meal_id: -1, name: 'Nutella', calories: 539, glucides: 57.5, proteines: 6.3, lipides: 30.9, glucose: null, barcode: '3017620422003', source: 'openfood', link_photo: null },
+    });
+    expect(await resolveItemMealId(item)).toBe(99);
+  });
+
+  it('falls back to searchReference when no selectedRef', async () => {
+    mealService.searchReference.mockResolvedValue([{ meal_id: 42, name: 'Pomme' }]);
+    const item = makeItem({ selectedRef: null, name: 'Pomme' });
+    expect(await resolveItemMealId(item)).toBe(42);
+  });
+
+  it('creates manual meal when searchReference returns empty', async () => {
+    mealService.searchReference.mockResolvedValue([]);
+    mealService.createMealFromProduct.mockResolvedValue({ meal_id: 55, name: 'Banane' });
+    const item = makeItem({ selectedRef: null, name: 'Banane', glucidesRaw: '20', caloriesRaw: '89' });
+    expect(await resolveItemMealId(item)).toBe(55);
+  });
+
+  it('returns -1 when all resolution fails', async () => {
+    mealService.searchReference.mockResolvedValue([]);
+    mealService.createMealFromProduct.mockResolvedValue(null);
+    const item = makeItem({ selectedRef: null, name: 'Inconnu' });
+    expect(await resolveItemMealId(item)).toBe(-1);
+  });
+});
+
+// ─── confirmDeleteGroup ───────────────────────────────────────────────────────
+
+describe('confirmDeleteGroup', () => {
+  const { Alert } = require('react-native');
+  const deleteMeal = jest.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+
+  const makeGroup = (count: number) => ({
+    key: 'g1',
+    mealType: 'lunch' as MealType,
+    takenAt: '2026-05-14T12:00:00Z',
+    items: Array.from({ length: count }, (_, i) => ({
+      id: i + 1,
+      meal: { meal_id: i + 1, name: `Item ${i}`, glucides: null, calories: null, barcode: null, source: 'manual' as const, link_photo: null, proteines: null, lipides: null, glucose: null },
+      taken_at: '2026-05-14T12:00:00Z',
+      meal_type: 'lunch' as MealType,
+      portion_g: null,
+      notes: null,
+      input_mode: 'manual' as const,
+      session_key: 'g1',
+      glucides_consommes: null,
+      calories_consommes: null,
+    })),
+    totalGlucides: 0,
+    totalCalories: 0,
+  });
+
+  it('calls Alert.alert for single item group', () => {
+    confirmDeleteGroup(makeGroup(1), deleteMeal);
+    expect(Alert.alert).toHaveBeenCalledWith('Supprimer', expect.any(String), expect.any(Array));
+  });
+
+  it('calls Alert.alert for multi-item group', () => {
+    confirmDeleteGroup(makeGroup(3), deleteMeal);
+    expect(Alert.alert).toHaveBeenCalledWith('Supprimer le repas', expect.any(String), expect.any(Array));
+  });
+
+  it('calls deleteMeal when confirm pressed on single item', async () => {
+    confirmDeleteGroup(makeGroup(1), deleteMeal);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const confirmBtn = buttons.find((b: any) => b.style === 'destructive');
+    await confirmBtn.onPress();
+    expect(deleteMeal).toHaveBeenCalledWith(1);
+  });
+
+  it('calls deleteMeal for each item when confirm pressed on multi-item', async () => {
+    confirmDeleteGroup(makeGroup(2), deleteMeal);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const confirmBtn = buttons.find((b: any) => b.style === 'destructive');
+    await confirmBtn.onPress();
+    expect(deleteMeal).toHaveBeenCalledTimes(2);
+  });
+
+  it('calls toastError when deleteMeal throws on single item', async () => {
+    const { toastError } = require('../../services/toastService');
+    const failDelete = jest.fn().mockRejectedValue(new Error('fail'));
+    confirmDeleteGroup(makeGroup(1), failDelete);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const confirmBtn = buttons.find((b: any) => b.style === 'destructive');
+    await confirmBtn.onPress();
+    expect(toastError).toHaveBeenCalled();
+  });
+
+  it('calls toastError when deleteMeal throws on multi-item', async () => {
+    const { toastError } = require('../../services/toastService');
+    const failDelete = jest.fn().mockRejectedValue(new Error('fail'));
+    confirmDeleteGroup(makeGroup(2), failDelete);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const confirmBtn = buttons.find((b: any) => b.style === 'destructive');
+    await confirmBtn.onPress();
+    expect(toastError).toHaveBeenCalled();
+  });
+});
+
+// ─── confirmDeleteItem ────────────────────────────────────────────────────────
+
+describe('confirmDeleteItem', () => {
+  const { Alert } = require('react-native');
+  const deleteMeal = jest.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+
+  it('calls Alert.alert with item name', () => {
+    confirmDeleteItem(1, 'Pomme', deleteMeal);
+    expect(Alert.alert).toHaveBeenCalledWith('Supprimer', expect.stringContaining('Pomme'), expect.any(Array));
+  });
+
+  it('calls deleteMeal when confirm pressed', async () => {
+    confirmDeleteItem(42, 'Banane', deleteMeal);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const confirmBtn = buttons.find((b: any) => b.style === 'destructive');
+    await confirmBtn.onPress();
+    expect(deleteMeal).toHaveBeenCalledWith(42);
+  });
+
+  it('calls toastError when deleteMeal throws', async () => {
+    const { toastError } = require('../../services/toastService');
+    const failDelete = jest.fn().mockRejectedValue(new Error('fail'));
+    confirmDeleteItem(1, 'Pomme', failDelete);
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    const confirmBtn = buttons.find((b: any) => b.style === 'destructive');
+    await confirmBtn.onPress();
+    expect(toastError).toHaveBeenCalled();
   });
 });

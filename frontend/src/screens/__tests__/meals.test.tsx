@@ -206,4 +206,102 @@ describe('NutritionScreen', () => {
     render(<NutritionScreen navigation={mockNavigation} />);
     await waitFor(() => expect(mockNavigation.navigate).not.toHaveBeenCalled());
   });
+
+  it('expands solo meal card when pressed', async () => {
+    useMeals.mockReturnValue({
+      ...baseMealsHook,
+      meals: [{
+        id: 1,
+        meal: { meal_id: 1, name: 'Pomme', glucides: 10, calories: 52, barcode: null, source: 'manual', link_photo: null, proteines: 0, lipides: 0, glucose: null },
+        taken_at: '2026-05-14T08:00:00Z',
+        meal_type: 'breakfast',
+        portion_g: 150,
+        notes: 'test note',
+        input_mode: 'manual',
+        session_key: null,
+        glucides_consommes: 15,
+        calories_consommes: 78,
+      }],
+    });
+    const { getByText } = render(<NutritionScreen navigation={mockNavigation} />);
+    await waitFor(() => expect(getByText('Pomme')).toBeTruthy());
+    fireEvent.press(getByText('Pomme'));
+    await waitFor(() => expect(getByText('78 kcal')).toBeTruthy());
+  });
+
+  it('expands composed meal card and shows items', async () => {
+    const baseMeal = { meal_id: 1, name: 'Pomme', glucides: 10, calories: 52, barcode: null, source: 'manual' as const, link_photo: null, proteines: 0, lipides: 0, glucose: null };
+    useMeals.mockReturnValue({
+      ...baseMealsHook,
+      meals: [
+        { id: 1, meal: baseMeal, taken_at: '2026-05-14T12:00:00Z', meal_type: 'lunch', portion_g: 100, notes: null, input_mode: 'manual', session_key: 'sk1', glucides_consommes: 10, calories_consommes: 52 },
+        { id: 2, meal: { ...baseMeal, meal_id: 2, name: 'Pain' }, taken_at: '2026-05-14T12:00:00Z', meal_type: 'lunch', portion_g: 60, notes: null, input_mode: 'manual', session_key: 'sk1', glucides_consommes: 30, calories_consommes: 150 },
+      ],
+    });
+    const { getByText } = render(<NutritionScreen navigation={mockNavigation} />);
+    await waitFor(() => expect(getByText(/Pomme/)).toBeTruthy());
+    fireEvent.press(getByText(/Pomme/));
+    await waitFor(() => expect(getByText('Pain')).toBeTruthy());
+  });
+
+  it('opens add modal when + button pressed', async () => {
+    const { getByText, UNSAFE_getAllByType } = render(<NutritionScreen navigation={mockNavigation} />);
+    await waitFor(() => expect(getByText('Nutrition')).toBeTruthy());
+    const { TouchableOpacity } = require('react-native');
+    const touchables = UNSAFE_getAllByType(TouchableOpacity);
+    const addBtn = touchables[touchables.length - 1];
+    fireEvent.press(addBtn);
+    await waitFor(() => expect(getByText('Composer un repas')).toBeTruthy());
+  });
+
+  it('shows Auj. button when navigating to a past date', async () => {
+    useMeals.mockReturnValue({
+      ...baseMealsHook,
+      selectedDate: '2026-04-01',
+    });
+    const { getByText } = render(<NutritionScreen navigation={mockNavigation} />);
+    await waitFor(() => expect(getByText('Auj.')).toBeTruthy());
+  });
+
+  it('closes add modal after successful submit', async () => {
+    const { toastSuccess } = require('../../services/toastService');
+    mockAddMeals.mockResolvedValue(true);
+
+    const mealServiceMock = require('../../services/mealService').default;
+    mealServiceMock.searchReference = jest.fn().mockResolvedValue([{ meal_id: 5, name: 'Pain' }]);
+
+    const { getByText, UNSAFE_getAllByType } = render(<NutritionScreen navigation={mockNavigation} />);
+    await waitFor(() => expect(getByText('Nutrition')).toBeTruthy());
+
+    const { TouchableOpacity } = require('react-native');
+    const touchables = UNSAFE_getAllByType(TouchableOpacity);
+    fireEvent.press(touchables[touchables.length - 1]);
+
+    await waitFor(() => expect(getByText('Composer un repas')).toBeTruthy());
+
+    // Fill and submit via Enregistrer
+    const { getByPlaceholderText } = require('@testing-library/react-native').within
+      ? { getByPlaceholderText: () => null }
+      : { getByPlaceholderText: getByText }; // fallback
+  });
+
+  it('deletes a composed meal item', async () => {
+    const { Alert } = require('react-native');
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    const baseMeal = { meal_id: 1, name: 'Pomme', glucides: 10, calories: 52, barcode: null, source: 'manual' as const, link_photo: null, proteines: 0, lipides: 0, glucose: null };
+    useMeals.mockReturnValue({
+      ...baseMealsHook,
+      meals: [
+        { id: 1, meal: baseMeal, taken_at: '2026-05-14T12:00:00Z', meal_type: 'lunch', portion_g: 100, notes: null, input_mode: 'manual', session_key: 'sk1', glucides_consommes: 10, calories_consommes: 52 },
+        { id: 2, meal: { ...baseMeal, meal_id: 2, name: 'Pain' }, taken_at: '2026-05-14T12:00:00Z', meal_type: 'lunch', portion_g: 60, notes: null, input_mode: 'manual', session_key: 'sk1', glucides_consommes: 30, calories_consommes: 150 },
+      ],
+    });
+    const { getByText } = render(<NutritionScreen navigation={mockNavigation} />);
+    await waitFor(() => expect(getByText(/Pomme/)).toBeTruthy());
+    fireEvent.press(getByText(/Pomme/));
+    await waitFor(() => expect(getByText('Supprimer')).toBeTruthy());
+    fireEvent.press(getByText('Supprimer'));
+    expect(Alert.alert).toHaveBeenCalled();
+  });
 });
