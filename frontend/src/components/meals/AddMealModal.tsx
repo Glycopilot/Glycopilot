@@ -33,12 +33,12 @@ const MEAL_TYPES: Array<{ key: MealType; label: string }> = [
 type FormTab = 'manual' | 'search';
 
 export function calcItemGlucides(item: ComposedItem): number | null {
-  const g = parseFloat(item.glucidesRaw);
-  const p = parseFloat(item.portionG);
-  if (!isNaN(g) && !isNaN(p) && p > 0) {
-    return Math.round((g * p) / 10) / 10;
+  const g = Number.parseFloat(item.glucidesRaw);
+  const p = Number.parseFloat(item.portionG);
+  if (Number.isNaN(g) || Number.isNaN(p) || p <= 0) {
+    return null;
   }
-  return null;
+  return Math.round((g * p) / 10) / 10;
 }
 
 interface Props {
@@ -69,7 +69,7 @@ export default function AddMealModal({
   onOpenScanner,
   onClose,
   onSubmit,
-}: Props) {
+}: Readonly<Props>) {
   const [tab, setTab] = useState<FormTab>('manual');
   const [name, setName] = useState('');
   const [selectedRef, setSelectedRef] = useState<MealReference | null>(null);
@@ -85,8 +85,8 @@ export default function AddMealModal({
     if (visible && prefillRef) {
       setSelectedRef(prefillRef);
       setName(prefillRef.name);
-      setGlucidesRaw(prefillRef.glucides != null ? String(prefillRef.glucides) : '');
-      setCaloriesRaw(prefillRef.calories != null ? String(prefillRef.calories) : '');
+      setGlucidesRaw(prefillRef.glucides == null ? '' : String(prefillRef.glucides));
+      setCaloriesRaw(prefillRef.calories == null ? '' : String(prefillRef.calories));
       setPortionG('');
       setTab('manual');
       onPrefillConsumed();
@@ -129,8 +129,8 @@ export default function AddMealModal({
       link_photo: product.image_url,
     });
     setName(product.name);
-    setGlucidesRaw(product.glucides != null ? String(product.glucides) : '');
-    setCaloriesRaw(product.calories != null ? String(product.calories) : '');
+    setGlucidesRaw(product.glucides == null ? '' : String(product.glucides));
+    setCaloriesRaw(product.calories == null ? '' : String(product.calories));
     setSearchResults([]);
     setTab('manual');
     Keyboard.dismiss();
@@ -161,14 +161,14 @@ export default function AddMealModal({
 
   const totalGlucides = composedItems.reduce((sum, item) => {
     const g = calcItemGlucides(item);
-    return g != null ? sum + g : sum;
+    return g == null ? sum : sum + g;
   }, 0);
 
   const currentPreview = (() => {
     if (!glucidesRaw || !portionG) return null;
-    const g = parseFloat(glucidesRaw);
-    const p = parseFloat(portionG);
-    if (isNaN(g) || isNaN(p) || p <= 0) return null;
+    const g = Number.parseFloat(glucidesRaw);
+    const p = Number.parseFloat(portionG);
+    if (Number.isNaN(g) || Number.isNaN(p) || p <= 0) return null;
     return Math.round((g * p) / 10) / 10;
   })();
 
@@ -225,9 +225,9 @@ export default function AddMealModal({
                       <View key={item.tempId} style={styles.chip}>
                         <Text style={styles.chipText} numberOfLines={1}>
                           {item.name}
-                          {g != null ? (
+                          {g == null ? null : (
                             <Text style={styles.chipGlucides}> · {g}g</Text>
-                          ) : null}
+                          )}
                         </Text>
                         <TouchableOpacity
                           onPress={() => onRemoveItem(item.tempId)}
@@ -286,9 +286,9 @@ export default function AddMealModal({
                 </View>
                 {searchResults.length > 0 && (
                   <View style={styles.searchResults}>
-                    {searchResults.map((product, idx) => (
+                    {searchResults.map((product) => (
                       <Pressable
-                        key={idx}
+                        key={product.barcode ?? product.name}
                         style={styles.searchResultItem}
                         onPress={() => selectProduct(product)}
                       >
@@ -296,9 +296,9 @@ export default function AddMealModal({
                           {product.name}
                         </Text>
                         <Text style={styles.searchResultMeta}>
-                          {product.glucides != null ? `${product.glucides}g gluc.` : ''}
-                          {product.glucides != null && product.calories != null ? ' · ' : ''}
-                          {product.calories != null ? `${product.calories} kcal` : ''}
+                          {product.glucides == null ? '' : `${product.glucides}g gluc.`}
+                          {product.glucides == null || product.calories == null ? '' : ' · '}
+                          {product.calories == null ? '' : `${product.calories} kcal`}
                         </Text>
                       </Pressable>
                     ))}

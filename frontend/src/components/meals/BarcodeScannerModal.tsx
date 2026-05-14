@@ -20,7 +20,7 @@ interface Props {
   onAddManually?: () => void;
 }
 
-export default function BarcodeScannerModal({ visible, onClose, onProductFound, onAddManually }: Props) {
+export default function BarcodeScannerModal({ visible, onClose, onProductFound, onAddManually }: Readonly<Props>) {
   const [permission, requestPermission] = useCameraPermissions();
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);

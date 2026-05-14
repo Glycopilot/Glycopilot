@@ -90,7 +90,7 @@ const mealService = {
     try {
       const res = await apiClient.post<MealReference>('/meals/add-meal-ref/', {
         name: product.name,
-        calories: product.calories != null ? Math.round(product.calories) : null,
+        calories: product.calories == null ? null : Math.round(product.calories),
         glucides: product.glucides,
         proteines: product.proteines,
         lipides: product.lipides,
@@ -99,7 +99,7 @@ const mealService = {
       });
       return res.data;
     } catch {
-      return null;
+      return null; // produit non créable, l'appelant gère le cas null
     }
   },
 
