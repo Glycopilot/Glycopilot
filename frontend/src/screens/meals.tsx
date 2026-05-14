@@ -133,6 +133,62 @@ function getInputMode(item: ComposedItem): InputMode {
   return 'manual';
 }
 
+async function buildPayloads(
+  allItems: ComposedItem[],
+  mealType: MealType,
+  sessionKey: string | undefined,
+  takenAt: string,
+): Promise<CreateUserMealPayload[]> {
+  const payloads: CreateUserMealPayload[] = [];
+  for (const item of allItems) {
+    const mealId = await resolveItemMealId(item);
+    if (mealId === -1) continue;
+    payloads.push({
+      meal_id: mealId,
+      taken_at: takenAt,
+      meal_type: mealType,
+      portion_g: item.portionG ? Number.parseFloat(item.portionG) : undefined,
+      input_mode: getInputMode(item),
+      session_key: sessionKey,
+    });
+  }
+  return payloads;
+}
+
+type DeleteMealFn = (id: number) => Promise<void>;
+
+function confirmDeleteGroup(group: MealGroup, deleteMeal: DeleteMealFn): void {
+  if (group.items.length === 1) {
+    Alert.alert('Supprimer', 'Supprimer ce repas du journal ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try { await deleteMeal(group.items[0].id); }
+          catch { toastError('Erreur', 'Impossible de supprimer ce repas.'); }
+        },
+      },
+    ]);
+    return;
+  }
+  Alert.alert(
+    'Supprimer le repas',
+    `Supprimer les ${group.items.length} aliments de ce repas ?`,
+    [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Tout supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try { for (const item of group.items) await deleteMeal(item.id); }
+          catch { toastError('Erreur', 'Impossible de supprimer ce repas.'); }
+        },
+      },
+    ]
+  );
+}
+
 async function resolveItemMealId(item: ComposedItem): Promise<number> {
   const mealId = item.selectedRef?.meal_id ?? -1;
 
@@ -308,39 +364,19 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
 
     setSubmitting(true);
     const sessionKey = allItems.length > 1 ? generateSessionKey() : undefined;
-    const taken_at = new Date().toISOString();
-
     try {
-      const payloads: CreateUserMealPayload[] = [];
-
-      for (const item of allItems) {
-        const mealId = await resolveItemMealId(item);
-        if (mealId === -1) continue;
-
-        payloads.push({
-          meal_id: mealId,
-          taken_at,
-          meal_type: compositionMealType,
-          portion_g: item.portionG ? Number.parseFloat(item.portionG) : undefined,
-          input_mode: getInputMode(item),
-          session_key: sessionKey,
-        });
-      }
-
+      const payloads = await buildPayloads(allItems, compositionMealType, sessionKey, new Date().toISOString());
       if (payloads.length === 0) {
         toastError('Repas invalide', 'Impossible de créer ces aliments.');
         setSubmitting(false);
         return;
       }
-
       const success = await addMeals(payloads);
       setSubmitting(false);
       if (success) {
         closeAdd();
-        toastSuccess(
-          'Repas enregistré',
-          payloads.length > 1 ? `${payloads.length} aliments ajoutés` : 'Ajouté au journal'
-        );
+        const msg = payloads.length > 1 ? `${payloads.length} aliments ajoutés` : 'Ajouté au journal';
+        toastSuccess('Repas enregistré', msg);
       } else {
         toastError('Erreur', "Impossible d'enregistrer le repas.");
       }
@@ -350,43 +386,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
     }
   };
 
-  const handleDeleteGroup = (group: MealGroup) => {
-    if (group.items.length === 1) {
-      Alert.alert('Supprimer', 'Supprimer ce repas du journal ?', [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMeal(group.items[0].id);
-            } catch {
-              toastError('Erreur', 'Impossible de supprimer ce repas.');
-            }
-          },
-        },
-      ]);
-    } else {
-      Alert.alert(
-        'Supprimer le repas',
-        `Supprimer les ${group.items.length} aliments de ce repas ?`,
-        [
-          { text: 'Annuler', style: 'cancel' },
-          {
-            text: 'Tout supprimer',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                for (const item of group.items) await deleteMeal(item.id);
-              } catch {
-                toastError('Erreur', 'Impossible de supprimer ce repas.');
-              }
-            },
-          },
-        ]
-      );
-    }
-  };
+  const handleDeleteGroup = (group: MealGroup) => confirmDeleteGroup(group, deleteMeal);
 
   const handleDeleteItem = (itemId: number, itemName: string) => {
     Alert.alert(
@@ -408,6 +408,96 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
       ]
     );
   };
+
+  // Sections JSX pré-calculées pour éviter les ternaires imbriqués
+  let summarySection: React.ReactNode;
+  if (viewMode === 'day') {
+    summarySection = (
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryHeader}>
+          <View>
+            <Text style={styles.summaryLabel}>Glucides du jour</Text>
+            <Text style={styles.summaryValue}>{totalGlucides}g</Text>
+          </View>
+          <View style={styles.objectifBadge}>
+            <Text style={styles.objectifText}>Objectif : {objectifGlucides}g</Text>
+          </View>
+        </View>
+        <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBar, { width: `${progress}%` }]} />
+        </View>
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Utensils size={16} color="#fff" strokeWidth={2} />
+            <Text style={styles.statLabel}>Repas</Text>
+            <Text style={styles.statValue}>{summary?.meal_count ?? 0}</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Utensils size={16} color="#fff" strokeWidth={2} />
+            <Text style={styles.statLabel}>Calories</Text>
+            <Text style={styles.statValue}>{totalCalories} kcal</Text>
+          </View>
+        </View>
+      </View>
+    );
+  } else if (weekLoading) {
+    summarySection = (
+      <View style={styles.weekLoadingBox}>
+        <ActivityIndicator color="#007AFF" size="large" />
+        <Text style={styles.weekLoadingText}>Chargement…</Text>
+      </View>
+    );
+  } else if (weekHasNoData) {
+    summarySection = (
+      <View style={styles.weekEmptyCard}>
+        <CalendarX size={36} color="#D1D5DB" strokeWidth={1.5} />
+        <Text style={styles.weekEmptyTitle}>Aucun repas enregistré</Text>
+        <Text style={styles.weekEmptySubtext}>
+          Vous n'avez pas encore saisi de repas pour cette semaine. Le suivi hebdomadaire vous permet de visualiser l'évolution de vos glucides jour par jour.
+        </Text>
+        <Text style={styles.weekEmptySubtext}>
+          Passez en mode <Text style={styles.weekEmptyHighlight}>Jour</Text> pour ajouter vos repas, ou utilisez les flèches pour consulter une autre semaine.
+        </Text>
+      </View>
+    );
+  } else {
+    summarySection = (
+      <>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryHeader}>
+            <View>
+              <Text style={styles.summaryLabel}>Glucides de la semaine</Text>
+              <Text style={styles.summaryValue}>{Math.round(weekTotalGlucides)}g</Text>
+            </View>
+            <View style={styles.objectifBadge}>
+              <Text style={styles.objectifText}>Objectif : {objectifGlucides * 7}g</Text>
+            </View>
+          </View>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${weekProgress}%` }]} />
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Moy./jour</Text>
+              <Text style={styles.statValue}>{Math.round(weekAvg)}g</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statLabel}>Calories</Text>
+              <Text style={styles.statValue}>{Math.round(weekTotalCalories)} kcal</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.barChartCard}>
+          <WeekBarChart
+            weekData={weekData}
+            selectedDate={selectedDate}
+            objectif={objectifGlucides}
+            onSelectDay={setDate}
+          />
+        </View>
+      </>
+    );
+  }
 
   // Variables extraites pour éviter les ternaires imbriqués dans le JSX
   let headerSubtitle: string;
@@ -487,86 +577,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
           ) : (
             <>
               {/* Carte récap — jour ou semaine */}
-              {viewMode === 'day' ? (
-                <View style={styles.summaryCard}>
-                  <View style={styles.summaryHeader}>
-                    <View>
-                      <Text style={styles.summaryLabel}>Glucides du jour</Text>
-                      <Text style={styles.summaryValue}>{totalGlucides}g</Text>
-                    </View>
-                    <View style={styles.objectifBadge}>
-                      <Text style={styles.objectifText}>Objectif : {objectifGlucides}g</Text>
-                    </View>
-                  </View>
-                  <View style={styles.progressBarContainer}>
-                    <View style={[styles.progressBar, { width: `${progress}%` }]} />
-                  </View>
-                  <View style={styles.statsRow}>
-                    <View style={styles.statBox}>
-                      <Utensils size={16} color="#fff" strokeWidth={2} />
-                      <Text style={styles.statLabel}>Repas</Text>
-                      <Text style={styles.statValue}>{summary?.meal_count ?? 0}</Text>
-                    </View>
-                    <View style={styles.statBox}>
-                      <Utensils size={16} color="#fff" strokeWidth={2} />
-                      <Text style={styles.statLabel}>Calories</Text>
-                      <Text style={styles.statValue}>{totalCalories} kcal</Text>
-                    </View>
-                  </View>
-                </View>
-              ) : weekLoading ? (
-                <View style={styles.weekLoadingBox}>
-                  <ActivityIndicator color="#007AFF" size="large" />
-                  <Text style={styles.weekLoadingText}>Chargement…</Text>
-                </View>
-              ) : weekHasNoData ? (
-                <View style={styles.weekEmptyCard}>
-                  <CalendarX size={36} color="#D1D5DB" strokeWidth={1.5} />
-                  <Text style={styles.weekEmptyTitle}>Aucun repas enregistré</Text>
-                  <Text style={styles.weekEmptySubtext}>
-                    Vous n'avez pas encore saisi de repas pour cette semaine. Le suivi hebdomadaire vous permet de visualiser l'évolution de vos glucides jour par jour.
-                  </Text>
-                  <Text style={styles.weekEmptySubtext}>
-                    Passez en mode <Text style={styles.weekEmptyHighlight}>Jour</Text> pour ajouter vos repas, ou utilisez les flèches pour consulter une autre semaine.
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  <View style={styles.summaryCard}>
-                    <View style={styles.summaryHeader}>
-                      <View>
-                        <Text style={styles.summaryLabel}>Glucides de la semaine</Text>
-                        <Text style={styles.summaryValue}>{Math.round(weekTotalGlucides)}g</Text>
-                      </View>
-                      <View style={styles.objectifBadge}>
-                        <Text style={styles.objectifText}>Objectif : {objectifGlucides * 7}g</Text>
-                      </View>
-                    </View>
-                    <View style={styles.progressBarContainer}>
-                      <View style={[styles.progressBar, { width: `${weekProgress}%` }]} />
-                    </View>
-                    <View style={styles.statsRow}>
-                      <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>Moy./jour</Text>
-                        <Text style={styles.statValue}>{Math.round(weekAvg)}g</Text>
-                      </View>
-                      <View style={styles.statBox}>
-                        <Text style={styles.statLabel}>Calories</Text>
-                        <Text style={styles.statValue}>{Math.round(weekTotalCalories)} kcal</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.barChartCard}>
-                    <WeekBarChart
-                      weekData={weekData}
-                      selectedDate={selectedDate}
-                      objectif={objectifGlucides}
-                      onSelectDay={setDate}
-                    />
-                  </View>
-                </>
-              )}
+              {summarySection}
 
               {/* Liste des repas */}
               <View style={styles.mealsHeader}>
