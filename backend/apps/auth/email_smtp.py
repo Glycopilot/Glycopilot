@@ -45,6 +45,43 @@ L'équipe Glycopilot."""
         logger.exception("Verification email delivery failed.")
 
 
+def send_doctor_validation_email(user_email: str, doctor_name: str) -> None:
+    """
+    Notifie un médecin que son compte vient d'être validé par l'équipe Glycopilot.
+    En cas d'échec, log sans PII et sans propager.
+    """
+    subject = "Glycopilot — Votre compte médecin a été validé"
+    message = f"""Bonjour {doctor_name},
+
+Bonne nouvelle ! Votre compte médecin sur Glycopilot vient d'être validé par notre équipe.
+
+Vous pouvez désormais vous connecter à l'application et accéder à toutes les fonctionnalités réservées aux professionnels de santé :
+- Suivi de vos patients
+- Accès aux données de glycémie en temps réel
+- Gestion de votre équipe de soins
+
+Connectez-vous dès maintenant sur l'application Glycopilot.
+
+Si vous avez des questions, contactez-nous à assistance@glycopilot.fr.
+
+Cordialement,
+L'équipe Glycopilot."""
+    from_email = settings.DEFAULT_FROM_EMAIL or "noreply@glycopilot.com"
+
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=[user_email],
+            fail_silently=False,
+        )
+        if settings.DEBUG:
+            logger.debug("Doctor validation email sent.")
+    except Exception:
+        logger.exception("Doctor validation email delivery failed.")
+
+
 def send_reset_password_email(user_email: str, reset_link: str) -> None:
     """
     Envoie l'email de réinitialisation de mot de passe.
