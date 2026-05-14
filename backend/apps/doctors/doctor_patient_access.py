@@ -1,4 +1,4 @@
-"""Vérification : médecin vérifié + patient dans l'équipe de soins (ACTIVE, rôle médecin)."""
+"""Vérification d'accès : médecin ou proche vérifié + patient dans l'équipe de soins (ACTIVE)."""
 
 from django.core.exceptions import ValidationError
 
@@ -66,4 +66,57 @@ def verify_doctor_can_access_patient(request, patient_user_id=None):
     except (AuthAccount.DoesNotExist, ValidationError):
         return None, Response(
             {"error": "Patient user or account_auth not found"}, status=404
+        )
+
+
+_PROCHE_ROLES = {"FAMILY", "CAREGIVER", "NURSE"}
+
+
+def verify_proche_can_access_patient(request):
+    """
+    Retourne (patient_auth_account, care_team_entry, None) si le proche connecté
+    a un lien ACTIVE vers un patient, sinon (None, None, Response d'erreur).
+
+    Le proche n'a pas besoin de passer de patient_user_id : son patient est dérivé
+    automatiquement depuis PatientCareTeam.
+    """
+    proche_user = _get_identity(request.user)
+    if not proche_user:
+        return None, None, Response({"error": "Authentification requise."}, status=401)
+
+    has_proche_role = proche_user.profiles.filter(
+        role__name__in=_PROCHE_ROLES
+    ).exists()
+    if not has_proche_role:
+        return None, None, Response(
+            {"error": "Accès réservé aux proches (FAMILY, CAREGIVER, NURSE)."},
+            status=403,
+        )
+
+    entry = (
+        PatientCareTeam.objects.select_related(
+            "patient_profile__profile__user",
+            "patient_profile__profile",
+        )
+        .filter(
+            member_profile__user=proche_user,
+            role__in=_PROCHE_ROLES,
+            status__label="ACTIVE",
+        )
+        .first()
+    )
+    if not entry:
+        return None, None, Response(
+            {"error": "Aucun patient lié et actif trouvé pour ce proche."},
+            status=403,
+        )
+
+    try:
+        patient_auth = AuthAccount.objects.get(
+            user=entry.patient_profile.profile.user
+        )
+        return patient_auth, entry, None
+    except AuthAccount.DoesNotExist:
+        return None, None, Response(
+            {"error": "Compte patient introuvable."}, status=404
         )
