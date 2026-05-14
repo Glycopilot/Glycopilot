@@ -38,7 +38,8 @@
         "FOREGROUND_SERVICE_CONNECTED_DEVICE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA"
       ],
       "package": "glycopilot.app"
     },
@@ -58,6 +59,12 @@
           "icon": "./assets/glycopilot.png",
           "color": "#2563EB",
           "defaultChannel": "glycemia-alerts"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "GlycoPilot utilise la caméra pour scanner les codes-barres de vos aliments."
         }
       ]
     ],
