@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import PredictionsScreen from '../Predictions';
 import predictionService from '../../services/predictionService';
 
@@ -7,6 +7,12 @@ jest.mock('../../services/predictionService', () => ({
   __esModule: true,
   default: { getLatest: jest.fn() },
 }));
+jest.mock('../../components/common/Layout', () => {
+  const { View } = require('react-native');
+  return function MockLayout({ children }: any) {
+    return <View>{children}</View>;
+  };
+});
 
 const mockNavigation = { navigate: jest.fn() };
 
@@ -114,5 +120,15 @@ describe('Predictions Screen', () => {
     await waitFor(() => {
       expect(getByText('12 lectures utilisées')).toBeTruthy();
     });
+  });
+
+  it('rafraîchit les prédictions depuis le bouton d\'en-tête', async () => {
+    (predictionService.getLatest as jest.Mock).mockResolvedValue(mockPrediction);
+    const { getByTestId } = render(<PredictionsScreen navigation={mockNavigation as any} />);
+
+    await waitFor(() => expect(predictionService.getLatest).toHaveBeenCalledTimes(1));
+    fireEvent.press(getByTestId('RefreshCw').parent as any);
+
+    await waitFor(() => expect(predictionService.getLatest).toHaveBeenCalledTimes(2));
   });
 });
