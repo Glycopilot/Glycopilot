@@ -1,8 +1,12 @@
 import axios from 'axios';
+import { devError } from '../lib/logger';
+import { triggerAuthRedirect } from '../lib/auth-redirect';
+import { flattenAuthMe } from '../lib/utils';
 
-// Configuration de l'API
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8006/api';
-const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '10000');
+const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '10000', 10);
+
+const STORAGE_KEYS = ['access_token', 'refresh_token', 'user_id', 'user_email', 'user'];
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -10,21 +14,19 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Intercepteur request — ajout du token
 apiClient.interceptors.request.use(
   (config) => {
     try {
       const token = localStorage.getItem('access_token');
       if (token) config.headers.Authorization = `Bearer ${token}`;
     } catch (error) {
-      console.error('Erreur lors de la récupération du token:', error);
+      devError('Erreur lors de la récupération du token:', error);
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Refresh concurrent
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -36,60 +38,68 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Intercepteur response — refresh automatique
+function clearSession() {
+  STORAGE_KEYS.forEach((k) => localStorage.removeItem(k));
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return apiClient(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) throw new Error('No refresh token available');
-
-        const response = await axios.post(`${API_URL}/auth/refresh/`, { refresh: refreshToken });
-        const { access } = response.data;
-        localStorage.setItem('access_token', access);
-
-        originalRequest.headers.Authorization = `Bearer ${access}`;
-        processQueue(null, access);
-        isRefreshing = false;
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_id');
-        localStorage.removeItem('user_email');
-        localStorage.removeItem('user');
-        processQueue(refreshError, null);
-        isRefreshing = false;
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      clearSession();
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return apiClient(originalRequest);
+        })
+        .catch((err) => Promise.reject(err));
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const response = await axios.post(`${API_URL}/auth/refresh/`, { refresh: refreshToken });
+      const { access } = response.data;
+      localStorage.setItem('access_token', access);
+      originalRequest.headers.Authorization = `Bearer ${access}`;
+      processQueue(null, access);
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      clearSession();
+      processQueue(refreshError, null);
+      triggerAuthRedirect();
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
+function persistUser(user) {
+  if (!user) return;
+  if (user.id_auth) localStorage.setItem('user_id', user.id_auth);
+  if (user.email) localStorage.setItem('user_email', user.email);
+  try {
+    localStorage.setItem('user', JSON.stringify(user));
+  } catch (err) {
+    devError('Impossible de sérialiser le user dans le storage:', err);
+  }
+}
+
 const authService = {
-  /**
-   * Connexion utilisateur
-   */
   async login(email, password) {
     try {
       const response = await apiClient.post('/auth/login/', { email, password });
@@ -97,28 +107,22 @@ const authService = {
 
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
-      localStorage.setItem('user_id', user.id_auth);
-      localStorage.setItem('user_email', user.email);
+      persistUser(user);
 
       return response.data;
     } catch (error) {
       const data = error.response?.data;
-
       const nonFieldErr = data?.non_field_errors?.[0];
       if (nonFieldErr) {
         const err = new Error(nonFieldErr);
         err.code = 'ACCOUNT_PENDING';
         throw err;
       }
-
       const message = data?.error || data?.detail || 'Erreur de connexion';
       throw new Error(message);
     }
   },
 
-  /**
-   * Inscription utilisateur
-   */
   async register(userData) {
     try {
       const payload = {
@@ -141,10 +145,7 @@ const authService = {
 
       if (access) localStorage.setItem('access_token', access);
       if (refresh) localStorage.setItem('refresh_token', refresh);
-      if (user) {
-        localStorage.setItem('user_id', user.id_auth);
-        localStorage.setItem('user_email', user.email);
-      }
+      persistUser(user);
 
       return response.data;
     } catch (error) {
@@ -161,42 +162,30 @@ const authService = {
     }
   },
 
-  /**
-   * Déconnexion utilisateur
-   * POST /auth/logout/ — token lu depuis Authorization header
-   */
   async logout() {
     try {
       const token = localStorage.getItem('access_token');
       if (token) await apiClient.post('/auth/logout/');
     } catch (_error) {
-      // Logout API failure is non-critical — tokens are cleared client-side regardless
+      // Logout côté serveur best-effort — on purge dans tous les cas
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_id');
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user');
+      clearSession();
     }
     return { message: 'Déconnexion réussie' };
   },
 
-  /**
-   * Récupérer les infos utilisateur actuel
-   */
   async getCurrentUser() {
     try {
       const response = await apiClient.get('/auth/me/');
-      return response.data;
+      const flat = flattenAuthMe(response.data);
+      persistUser(flat);
+      return flat;
     } catch (error) {
       const message = error.response?.data?.detail || "Erreur lors de la récupération de l'utilisateur";
       throw new Error(message);
     }
   },
 
-  /**
-   * Rafraîchir le token d'accès
-   */
   async refreshToken() {
     try {
       const refreshToken = localStorage.getItem('refresh_token');
@@ -205,14 +194,9 @@ const authService = {
       const response = await axios.post(`${API_URL}/auth/refresh/`, { refresh: refreshToken });
       const { access } = response.data;
       localStorage.setItem('access_token', access);
-
       return response.data;
     } catch (error) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_id');
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user');
+      clearSession();
       const message = error.response?.data?.error || error.message || 'Erreur lors du rafraîchissement du token';
       throw new Error(message);
     }
@@ -224,18 +208,23 @@ const authService = {
         accessToken: localStorage.getItem('access_token'),
         refreshToken: localStorage.getItem('refresh_token'),
       };
-    } catch (error) {
+    } catch (_error) {
       return { accessToken: null, refreshToken: null };
     }
   },
 
   getStoredUser() {
     try {
+      const raw = localStorage.getItem('user');
+      if (raw) {
+        try { return JSON.parse(raw); }
+        catch (_e) { /* fallback ci-dessous */ }
+      }
       const userId = localStorage.getItem('user_id');
       const userEmail = localStorage.getItem('user_email');
       if (!userId) return null;
       return { id_auth: userId, email: userEmail };
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   },
@@ -243,7 +232,7 @@ const authService = {
   isAuthenticated() {
     try {
       return !!localStorage.getItem('access_token');
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   },

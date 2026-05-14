@@ -7,13 +7,10 @@ import {
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
+import { getInitials, toArr } from '../lib/utils';
 import './css/HomeScreen.css';
 
 const apiClient = authService.getApiClient();
-
-function getInitials(firstName, lastName) {
-  return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
-}
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -144,12 +141,6 @@ export default function HomeScreen({ navigation }) {
       const start = new Date(now); start.setDate(now.getDate() - 6);
       return { start_date: fmt(start), end_date: fmt(now) };
     };
-    const toArr = (data) => {
-      if (Array.isArray(data)) return data;
-      for (const k of ['results', 'glycemia', 'data']) if (Array.isArray(data?.[k])) return data[k];
-      return [];
-    };
-
     const load = async () => {
       try {
         const teamRes  = await apiClient.get('/doctors/care-team/my-team/');
@@ -167,7 +158,7 @@ export default function HomeScreen({ navigation }) {
               apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${pid}`),
               apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`),
             ]);
-            return [pid, dashRes.data, toArr(glycRes.data)];
+            return [pid, dashRes.data, toArr(glycRes.data, ['results', 'glycemia', 'data'])];
           })
         );
 
