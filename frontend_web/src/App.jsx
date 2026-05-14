@@ -17,8 +17,6 @@ import PatientsScreen from './screens/PatientsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import authService from './services/authService';
 import ErrorBoundary from './components/ErrorBoundary';
-import { TourProvider } from './components/tour/TourProvider';
-import Tour from './components/tour/Tour';
 import { registerAuthRedirect } from './lib/auth-redirect';
 import './styles/tokens.css';
 import './styles/polish.css';
@@ -97,12 +95,9 @@ export default function App() {
         theme="light"
       />
       <BrowserRouter>
-        <TourProvider>
-          <div className="App">
-            <AppRoutes />
-          </div>
-          <Tour />
-        </TourProvider>
+        <div className="App">
+          <AppRoutes />
+        </div>
       </BrowserRouter>
     </ErrorBoundary>
   );
