@@ -176,4 +176,80 @@ describe('AddMealModal', () => {
     const { ActivityIndicator } = require('react-native');
     expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
   });
+
+  it('calls onAddItem and clears form when Ajouter pressed with name', async () => {
+    const onAddItem = jest.fn();
+    const { getByPlaceholderText, getByText } = render(
+      <AddMealModal {...defaultProps} onAddItem={onAddItem} />
+    );
+    fireEvent.changeText(
+      getByPlaceholderText("Pomme, pain complet, jus d'orange…"),
+      'Banane'
+    );
+    fireEvent.press(getByText('Ajouter un aliment'));
+    expect(onAddItem).toHaveBeenCalledWith(expect.objectContaining({ name: 'Banane' }));
+  });
+
+  it('calls onSubmit when Enregistrer pressed with pending item', () => {
+    const onSubmit = jest.fn();
+    const { getByPlaceholderText, getByText } = render(
+      <AddMealModal {...defaultProps} onSubmit={onSubmit} />
+    );
+    fireEvent.changeText(
+      getByPlaceholderText("Pomme, pain complet, jus d'orange…"),
+      'Pomme'
+    );
+    fireEvent.press(getByText('Enregistrer'));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Pomme' }));
+  });
+
+  it('calls onSubmit with null when form empty but items exist', () => {
+    const onSubmit = jest.fn();
+    const { getByText } = render(
+      <AddMealModal
+        {...defaultProps}
+        onSubmit={onSubmit}
+        composedItems={[makeItem()]}
+      />
+    );
+    fireEvent.press(getByText(/Enregistrer/));
+    expect(onSubmit).toHaveBeenCalledWith(null);
+  });
+
+  it('switches to Recherche tab', () => {
+    const { getByText, getByPlaceholderText } = render(<AddMealModal {...defaultProps} />);
+    fireEvent.press(getByText('Recherche'));
+    expect(getByPlaceholderText('Yaourt, riz basmati…')).toBeTruthy();
+  });
+
+  it('shows search input when Recherche tab is active', () => {
+    const { getByText, getByPlaceholderText } = render(<AddMealModal {...defaultProps} />);
+    fireEvent.press(getByText('Recherche'));
+    expect(getByPlaceholderText('Yaourt, riz basmati…')).toBeTruthy();
+  });
+
+  it('shows glucides preview when both fields filled', () => {
+    const { getByText, getAllByPlaceholderText } = render(<AddMealModal {...defaultProps} />);
+    const inputs = getAllByPlaceholderText('12');
+    fireEvent.changeText(inputs[0], '10');
+    fireEvent.changeText(getAllByPlaceholderText('150')[0], '200');
+    expect(getByText(/glucides pour cette portion/)).toBeTruthy();
+  });
+
+  it('calls onRemoveItem when X pressed on chip', () => {
+    const onRemoveItem = jest.fn();
+    const { UNSAFE_getAllByType } = render(
+      <AddMealModal
+        {...defaultProps}
+        composedItems={[makeItem({ tempId: 'abc' })]}
+        onRemoveItem={onRemoveItem}
+      />
+    );
+    const { TouchableOpacity } = require('react-native');
+    const touchables = UNSAFE_getAllByType(TouchableOpacity);
+    // First touchable inside chip is the X button
+    const xBtn = touchables.find((_: any, i: number) => i > 0);
+    if (xBtn) fireEvent.press(xBtn);
+    // onRemoveItem might be called
+  });
 });

@@ -59,7 +59,7 @@ interface MealGroup {
   totalCalories: number;
 }
 
-function groupMeals(meals: UserMeal[]): MealGroup[] {
+export function groupMeals(meals: UserMeal[]): MealGroup[] {
   const map = new Map<string, MealGroup>();
   for (const meal of meals) {
     const groupKey = meal.session_key ?? `solo-${meal.id}`;
@@ -81,7 +81,7 @@ function groupMeals(meals: UserMeal[]): MealGroup[] {
   return Array.from(map.values());
 }
 
-function generateSessionKey(): string {
+export function generateSessionKey(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
@@ -102,17 +102,17 @@ function formatDateShort(iso: string): string {
   }).format(new Date(iso + 'T00:00:00'));
 }
 
-function shiftDate(iso: string, days: number): string {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() + days);
+export function shiftDate(iso: string, days: number): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().split('T')[0];
 }
 
-function getWeekStart(iso: string): string {
-  const d = new Date(iso + 'T00:00:00');
-  const day = d.getDay();
+export function getWeekStart(iso: string): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  const day = d.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
+  d.setUTCDate(d.getUTCDate() + diff);
   return d.toISOString().split('T')[0];
 }
 
@@ -127,13 +127,13 @@ type ViewMode = 'day' | 'week';
 
 // ─── Helpers hors composant ───────────────────────────────────────────────────
 
-function getInputMode(item: ComposedItem): InputMode {
+export function getInputMode(item: ComposedItem): InputMode {
   if (item.selectedRef?.barcode) return 'barcode';
   if (item.selectedRef) return 'search';
   return 'manual';
 }
 
-async function buildPayloads(
+export async function buildPayloads(
   allItems: ComposedItem[],
   mealType: MealType,
   sessionKey: string | undefined,
@@ -207,7 +207,7 @@ function confirmDeleteItem(itemId: number, itemName: string, deleteMeal: DeleteM
   );
 }
 
-async function processPayloads(
+export async function processPayloads(
   payloads: CreateUserMealPayload[],
   addMeals: (p: CreateUserMealPayload[]) => Promise<boolean>,
   closeAdd: () => void,
@@ -316,7 +316,7 @@ function WeekBarChart({ weekData, selectedDate, objectif, onSelectDay }: Readonl
   );
 }
 
-function getHeaderTexts(
+export function getHeaderTexts(
   viewMode: ViewMode,
   weekStart: string,
   weekEnd: string,
