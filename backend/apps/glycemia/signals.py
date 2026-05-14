@@ -40,6 +40,7 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
         return
 
     # ── 1. Trigger alert rules (DB) ──────────────────────────────
+    events = []
     try:
         from apps.alerts.services.trigger import trigger_for_value
 
@@ -54,6 +55,19 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
             )
     except Exception as e:
         logger.error(f"Failed to trigger alert rules: {e}")
+
+    # ── 1b. Notifier les proches (non-bloquant) ───────────────────
+    if events:
+        try:
+            from apps.alerts.services.notify_proches import notify_proches_of_alert
+
+            threading.Thread(
+                target=notify_proches_of_alert,
+                args=(instance.user, events),
+                daemon=True,
+            ).start()
+        except Exception as e:
+            logger.error(f"Failed to start proche alert notification thread: {e}")
 
     # ── 2. WebSocket broadcast ───────────────────────────────────
     channel_layer = get_channel_layer()
