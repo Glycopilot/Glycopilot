@@ -14,45 +14,6 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
-/* Cache local HbA1c — workaround tant que le backend patient-dashboard
-   ne renvoie pas le champ. Clé par patient. Le frontend hydrate avec
-   cette valeur si l'API n'en fournit pas, et y écrit après chaque PATCH. */
-const HBA1C_CACHE_PREFIX = 'gp_hba1c_';
-
-function readHba1cCache(patientId) {
-  if (!patientId) return null;
-  try {
-    const raw = localStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return Number.isFinite(parsed?.value) ? parsed : null;
-  } catch (_e) {
-    return null;
-  }
-}
-
-function writeHba1cCache(patientId, value, measuredAt) {
-  if (!patientId || !Number.isFinite(value)) return;
-  try {
-    localStorage.setItem(
-      `${HBA1C_CACHE_PREFIX}${patientId}`,
-      JSON.stringify({ value, unit: '%', measuredAt: measuredAt ?? new Date().toISOString() })
-    );
-  } catch (_e) { /* quota / safari privé : on ignore */ }
-}
-
-function formatNextDose(nextDose) {
-  if (nextDose == null) return null;
-  if (typeof nextDose === 'string' || typeof nextDose === 'number') return nextDose;
-  if (typeof nextDose === 'object') {
-    const name = nextDose.name ?? nextDose.medication_name ?? nextDose.drug_name;
-    const dosage = nextDose.dosage ?? nextDose.dose ?? nextDose.strength;
-    if (name && dosage) return `${name} · ${dosage}`;
-    return name ?? dosage ?? null;
-  }
-  return null;
-}
-
 function StatusBadge({ status }) {
   const map = {
     2: { label: 'Actif',       cls: 'badge-active' },
