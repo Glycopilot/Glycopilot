@@ -14,6 +14,45 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
+/* Cache local HbA1c — workaround tant que le backend patient-dashboard
+   ne renvoie pas le champ. Clé par patient. Le frontend hydrate avec
+   cette valeur si l'API n'en fournit pas, et y écrit après chaque PATCH. */
+const HBA1C_CACHE_PREFIX = 'gp_hba1c_';
+
+function readHba1cCache(patientId) {
+  if (!patientId) return null;
+  try {
+    const raw = localStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Number.isFinite(parsed?.value) ? parsed : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function writeHba1cCache(patientId, value, measuredAt) {
+  if (!patientId || !Number.isFinite(value)) return;
+  try {
+    localStorage.setItem(
+      `${HBA1C_CACHE_PREFIX}${patientId}`,
+      JSON.stringify({ value, unit: '%', measuredAt: measuredAt ?? new Date().toISOString() })
+    );
+  } catch (_e) { /* quota / safari privé : on ignore */ }
+}
+
+function formatNextDose(nextDose) {
+  if (nextDose == null) return null;
+  if (typeof nextDose === 'string' || typeof nextDose === 'number') return nextDose;
+  if (typeof nextDose === 'object') {
+    const name = nextDose.name ?? nextDose.medication_name ?? nextDose.drug_name;
+    const dosage = nextDose.dosage ?? nextDose.dose ?? nextDose.strength;
+    if (name && dosage) return `${name} · ${dosage}`;
+    return name ?? dosage ?? null;
+  }
+  return null;
+}
+
 function StatusBadge({ status }) {
   const map = {
     2: { label: 'Actif',       cls: 'badge-active' },
@@ -383,7 +422,6 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
     </div>
   );
 }
-
 /* ─── Modal : Dossier patient ── */
 function PatientDashboardModal({ member, onClose }) {
   const p         = member.patient_details;
@@ -452,13 +490,18 @@ function PatientDashboardModal({ member, onClose }) {
 
   const handleSaveHba1c = async (newValue) => {
     try {
-      await apiClient.post('/doctors/care-team/patient-hba1c/', {
-        patient_user_id: patientId,
-        value: newValue,
-        unit: '%',
-      });
+      const res = await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
       toastSuccess('HbA1c mis à jour', `Nouvelle valeur : ${newValue.toFixed(1)} %`);
-      await refreshDashboard();
+      const savedValue = res.data?.patient_details?.hba1c ?? newValue;
+      const measuredAt = new Date().toISOString();
+      writeHba1cCache(patientId, Number(savedValue), measuredAt);
+      try { await refreshDashboard(); } catch (_e) { /* no-op */ }
+      // Le backend patient-dashboard ne renvoie pas hba1c → on l'injecte localement
+      // pour que la valeur reste visible dans la modale après la sauvegarde.
+      setDashboard((prev) => ({
+        ...(prev ?? {}),
+        hba1c: { value: savedValue, unit: '%', measuredAt },
+      }));
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
       toastError('Erreur', msg);
@@ -504,13 +547,21 @@ function PatientDashboardModal({ member, onClose }) {
       activeMinutes: extractValue(dashboard.activity?.activeMinutes),
     },
     medication: {
-      nextDose: extractValue(dashboard.medication?.nextDose) ?? dashboard.medication?.nextDose,
+      nextDose: formatNextDose(dashboard.medication?.nextDose),
     },
-    hba1c: {
-      value:      extractValue(dashboard.hba1c),
-      unit:       typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
-      measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
-    },
+    hba1c: (() => {
+      const fromApi = extractValue(dashboard.hba1c);
+      if (fromApi != null) {
+        return {
+          value: fromApi,
+          unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
+          measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
+        };
+      }
+      const cached = readHba1cCache(patientId);
+      if (cached) return cached;
+      return { value: null, unit: '%', measuredAt: null };
+    })(),
   } : null;
 
   return (
@@ -969,6 +1020,7 @@ function PatientDashboardModal({ member, onClose }) {
                   </div>
                 )
               )}
+
             </>
           )}
         </div>
@@ -1058,10 +1110,15 @@ function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
         id_team_member: invite.id_team_member,
       });
       toastSuccess('Demande refusée', `La demande de ${p?.first_name ?? ''} ${p?.last_name ?? ''} a été refusée`);
-      onDeclined();
+      onDeclined?.();
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
-      toastError('Erreur', msg);
+      const status = err.response?.status;
+      if (status === 404 || status === 405) {
+        toastError('Bientôt disponible', "Le refus d'invitation n'est pas encore activé côté serveur.");
+      } else {
+        const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
+        toastError('Erreur', msg);
+      }
     } finally {
       setDeclining(false);
       setConfirmingDecline(false);
@@ -1178,7 +1235,6 @@ export default function PatientsScreen({ navigation }) {
     <div className="patients-root">
       <Sidebar activePage="patients" navigation={navigation} />
 
-      {/* ── Main ── */}
       <main className="patients-main">
         <header className="patients-header">
           <div>
@@ -1224,7 +1280,6 @@ export default function PatientsScreen({ navigation }) {
             <div className="state-center state-error"><AlertCircle size={40} /><p>{error}</p></div>
           )}
 
-          {/* Patients actifs */}
           {!loading && !error && tab === 'active' && (
             filtered.length === 0
               ? <div className="state-center"><Users size={48} strokeWidth={1} /><p>{search ? 'Aucun résultat.' : 'Aucun patient actif pour le moment.'}</p></div>
@@ -1235,7 +1290,7 @@ export default function PatientsScreen({ navigation }) {
                 </div>
           )}
 
-          {/* Invitations envoyées par le médecin */}
+
           {!loading && !error && tab === 'sent' && (
             sentInvites.length === 0
               ? <div className="state-center"><Send size={48} strokeWidth={1} /><p>Aucune invitation envoyée en attente.</p></div>
@@ -1244,7 +1299,6 @@ export default function PatientsScreen({ navigation }) {
                 </div>
           )}
 
-          {/* Invitations reçues par le médecin (à accepter) */}
           {!loading && !error && tab === 'received' && (
             receivedInvites.length === 0
               ? <div className="state-center"><UserPlus size={48} strokeWidth={1} /><p>Aucune demande reçue.</p></div>
@@ -1262,7 +1316,6 @@ export default function PatientsScreen({ navigation }) {
         </div>
       </main>
 
-      {/* ── Modals ── */}
       {showAddModal && (
         <AddPatientModal
           onClose={() => setShowAddModal(false)}

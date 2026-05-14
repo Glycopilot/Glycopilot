@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 jest.mock('../../services/authService', () => {
-  const apiClient = { get: jest.fn(), post: jest.fn() };
+  const apiClient = { get: jest.fn(), post: jest.fn(), patch: jest.fn() };
   return {
     __esModule: true,
     default: {
@@ -26,7 +26,7 @@ import PatientsScreen from '../../screens/PatientsScreen';
 import authService from '../../services/authService';
 import { toastError, toastSuccess } from '../../services/toastService';
 
-const { get: mockGet, post: mockPost } = authService.getApiClient();
+const { get: mockGet, post: mockPost, patch: mockPatch } = authService.getApiClient();
 
 function makeActiveMember(id = '1', firstName = 'Alice', lastName = 'Martin') {
   return {
@@ -121,6 +121,7 @@ describe('PatientsScreen', () => {
     jest.clearAllMocks();
     navigation.navigate.mockClear();
     mockPost.mockResolvedValue({ data: {} });
+    mockPatch.mockResolvedValue({ data: {} });
   });
 
   describe('État de chargement', () => {
@@ -426,7 +427,7 @@ describe('PatientsScreen', () => {
         );
       });
 
-      it('refus réussi → toastSuccess', async () => {
+      it('succès → toastSuccess "Demande refusée"', async () => {
         setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
         await goToReceived();
         fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
@@ -439,46 +440,28 @@ describe('PatientsScreen', () => {
         );
       });
 
-      it('refus réussi → fetchTeam relancé pour rafraîchir la liste', async () => {
-        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
-        await goToReceived();
-        const initialCallCount = mockGet.mock.calls.filter(
-          ([url]) => url.includes('/doctors/care-team/my-team/')
-        ).length;
-        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
-        fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
-        await waitFor(() => {
-          const after = mockGet.mock.calls.filter(
-            ([url]) => url.includes('/doctors/care-team/my-team/')
-          ).length;
-          expect(after).toBeGreaterThan(initialCallCount);
-        });
-      });
-
-      it('refus échoue → toastError, confirmation se ferme', async () => {
-        mockPost.mockRejectedValueOnce({ response: { data: { error: 'Action non autorisée' } } });
+      it('404 → message "Bientôt disponible" (route backend non encore activée)', async () => {
+        mockPost.mockRejectedValueOnce({ response: { status: 404, data: {} } });
         setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
         await goToReceived();
         fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
         fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
         await waitFor(() =>
-          expect(toastError).toHaveBeenCalledWith('Erreur', 'Action non autorisée')
-        );
-      });
-
-      it('aucun POST envoyé si on accepte sans passer par le refus', async () => {
-        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
-        await goToReceived();
-        fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
-        await waitFor(() =>
-          expect(mockPost).toHaveBeenCalledWith(
-            '/doctors/care-team/accept-invitation/',
-            expect.anything()
+          expect(toastError).toHaveBeenCalledWith(
+            'Bientôt disponible',
+            expect.stringMatching(/n'est pas encore activé/i)
           )
         );
-        expect(mockPost).not.toHaveBeenCalledWith(
-          '/doctors/care-team/decline-invitation/',
-          expect.anything()
+      });
+
+      it('autre erreur → toastError standard', async () => {
+        mockPost.mockRejectedValueOnce({ response: { status: 500, data: { error: 'Boom' } } });
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
+        await waitFor(() =>
+          expect(toastError).toHaveBeenCalledWith('Erreur', 'Boom')
         );
       });
     });
@@ -823,8 +806,8 @@ describe('PatientsScreen', () => {
       fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
       fireEvent.click(screen.getByRole('button', { name: /annuler/i }));
       expect(screen.queryByLabelText('Valeur HbA1c')).not.toBeInTheDocument();
-      expect(mockPost).not.toHaveBeenCalledWith(
-        '/doctors/care-team/patient-hba1c/',
+      expect(mockPatch).not.toHaveBeenCalledWith(
+        '/doctors/patients/1/medical/',
         expect.anything()
       );
     });
@@ -837,8 +820,8 @@ describe('PatientsScreen', () => {
       await userEvent.type(input, '2');
       fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
       expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
-      expect(mockPost).not.toHaveBeenCalledWith(
-        '/doctors/care-team/patient-hba1c/',
+      expect(mockPatch).not.toHaveBeenCalledWith(
+        '/doctors/patients/1/medical/',
         expect.anything()
       );
     });
@@ -851,8 +834,8 @@ describe('PatientsScreen', () => {
       await userEvent.type(input, '25');
       fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
       expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
-      expect(mockPost).not.toHaveBeenCalledWith(
-        '/doctors/care-team/patient-hba1c/',
+      expect(mockPatch).not.toHaveBeenCalledWith(
+        '/doctors/patients/1/medical/',
         expect.anything()
       );
     });
@@ -866,7 +849,7 @@ describe('PatientsScreen', () => {
       expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
     });
 
-    it('valeur valide → POST /patient-hba1c/ avec le bon payload', async () => {
+    it('valeur valide → PATCH /doctors/patients/<id>/medical/ avec { hba1c }', async () => {
       await openDossier({ hba1c: { value: 6.8, unit: '%' } });
       fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
       const input = screen.getByLabelText('Valeur HbA1c');
@@ -874,15 +857,11 @@ describe('PatientsScreen', () => {
       await userEvent.type(input, '7.2');
       fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
       await waitFor(() =>
-        expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/patient-hba1c/', {
-          patient_user_id: '1',
-          value: 7.2,
-          unit: '%',
-        })
+        expect(mockPatch).toHaveBeenCalledWith('/doctors/patients/1/medical/', { hba1c: 7.2 })
       );
     });
 
-    it('POST réussi → toastSuccess et fermeture de l\'éditeur', async () => {
+    it('PATCH réussi → toastSuccess et fermeture de l\'éditeur', async () => {
       await openDossier({ hba1c: { value: 6.8, unit: '%' } });
       fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
       const input = screen.getByLabelText('Valeur HbA1c');
@@ -895,9 +874,9 @@ describe('PatientsScreen', () => {
       );
     });
 
-    it('POST échoue → toastError et l\'éditeur reste ouvert', async () => {
+    it('PATCH échoue → toastError et l\'éditeur reste ouvert', async () => {
       await openDossier({ hba1c: { value: 6.8, unit: '%' } });
-      mockPost.mockRejectedValueOnce({ response: { data: { error: 'Service indisponible' } } });
+      mockPatch.mockRejectedValueOnce({ response: { data: { error: 'Service indisponible' } } });
       fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
       const input = screen.getByLabelText('Valeur HbA1c');
       await userEvent.clear(input);
@@ -917,9 +896,7 @@ describe('PatientsScreen', () => {
       fireEvent.change(input, { target: { value: '6,5' } });
       fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
       await waitFor(() =>
-        expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/patient-hba1c/',
-          expect.objectContaining({ value: 6.5 })
-        )
+        expect(mockPatch).toHaveBeenCalledWith('/doctors/patients/1/medical/', { hba1c: 6.5 })
       );
     });
 
@@ -930,9 +907,7 @@ describe('PatientsScreen', () => {
       await userEvent.clear(input);
       await userEvent.type(input, '7.1{Enter}');
       await waitFor(() =>
-        expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/patient-hba1c/',
-          expect.objectContaining({ value: 7.1 })
-        )
+        expect(mockPatch).toHaveBeenCalledWith('/doctors/patients/1/medical/', { hba1c: 7.1 })
       );
     });
   });

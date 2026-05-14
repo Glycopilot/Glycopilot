@@ -3,6 +3,7 @@ import { LayoutDashboard, Users, User, LogOut, Menu, X } from 'lucide-react';
 import authService from '../services/authService';
 import { devWarn } from '../lib/logger';
 import { getInitials } from '../lib/utils';
+import HelpButton from './tour/HelpButton';
 import logo from '../assets/glycopilot.png';
 
 const apiClient = authService.getApiClient();
@@ -76,6 +77,7 @@ export default function Sidebar({ activePage, navigation }) {
             <span className="sb-doc-role">Médecin</span>
           </div>
         </div>
+        <HelpButton />
         <button className="sb-logout" onClick={handleLogout} title="Se déconnecter">
           <LogOut size={16} />
         </button>

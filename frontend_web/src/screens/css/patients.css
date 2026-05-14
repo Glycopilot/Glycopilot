@@ -1555,97 +1555,6 @@
 .hba1c-save:disabled,
 .hba1c-cancel:disabled { opacity: .6; cursor: not-allowed; }
 
-/* ── Refuser une invitation reçue ─────────── */
-.card-footer-split {
-  display: flex;
-  gap: 8px;
-}
-.card-btn-decline {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 9px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #B91C1C;
-  background: #fff;
-  border: 1px solid #FECACA;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background .15s ease, border-color .15s ease;
-}
-.card-btn-decline:hover {
-  background: #FEF2F2;
-  border-color: #FCA5A5;
-}
-.card-btn-decline:disabled {
-  opacity: .55;
-  cursor: not-allowed;
-}
-
-.invite-decline-confirm {
-  margin-top: 14px;
-  padding: 12px 14px;
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.invite-decline-msg {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 12.5px;
-  color: #7F1D1D;
-  line-height: 1.4;
-}
-.invite-decline-msg svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.invite-decline-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-.card-btn-cancel {
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--mid);
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-}
-.card-btn-cancel:hover { background: #F8FAFC; }
-.card-btn-cancel:disabled { opacity: .6; cursor: not-allowed; }
-
-.card-btn-decline-confirm {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  background: #DC2626;
-  border: 1px solid #DC2626;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.card-btn-decline-confirm:hover {
-  background: #B91C1C;
-  border-color: #B91C1C;
-}
-.card-btn-decline-confirm:disabled {
-  opacity: .65;
-  cursor: not-allowed;
-}
-
 /* ── Polish layer ─────────────────────────── */
 .patients-header h1 {
   font-size: clamp(22px, 2.5vw, 28px);
@@ -1704,9 +1613,6 @@
 /* Boutons d'action de carte — lift au hover */
 .card-btn,
 .card-btn-accept,
-.card-btn-decline,
-.card-btn-decline-confirm,
-.card-btn-cancel,
 .hba1c-edit-btn,
 .hba1c-save,
 .hba1c-cancel {
@@ -1745,7 +1651,77 @@
   .tabs { overflow-x: auto; gap: 6px; padding-bottom: 4px; }
   .tab { white-space: nowrap; }
   .cards-grid { grid-template-columns: 1fr !important; gap: 12px; }
-  .card-footer-split { flex-wrap: wrap; }
-  .card-footer-split .card-btn-decline { flex: 1 0 auto; }
-  .card-footer-split .card-btn-accept { flex: 1 1 100%; }
 }
+
+
+/* ── Refuser une invitation reçue ─────────── */
+.card-footer-split {
+  display: flex;
+  gap: 8px;
+}
+.card-btn-decline {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #B91C1C;
+  background: #fff;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.card-btn-decline:hover { background: #FEF2F2; border-color: #FCA5A5; }
+.card-btn-decline:disabled { opacity: .55; cursor: not-allowed; }
+
+.invite-decline-confirm {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.invite-decline-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #7F1D1D;
+  line-height: 1.4;
+}
+.invite-decline-msg svg { flex-shrink: 0; margin-top: 2px; }
+.invite-decline-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.card-btn-cancel {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mid);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.card-btn-cancel:hover { background: #F8FAFC; }
+.card-btn-cancel:disabled { opacity: .6; cursor: not-allowed; }
+.card-btn-decline-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #DC2626;
+  border: 1px solid #DC2626;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.card-btn-decline-confirm:hover { background: #B91C1C; border-color: #B91C1C; }
+.card-btn-decline-confirm:disabled { opacity: .65; cursor: not-allowed; }
+
