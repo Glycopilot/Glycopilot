@@ -26,6 +26,7 @@ import mealService from '../services/mealService';
 import { toastSuccess, toastError } from '../services/toastService';
 import type {
   MealType,
+  InputMode,
   MealReference,
   UserMeal,
   ComposedItem,
@@ -124,6 +125,54 @@ function formatWeekRange(start: string, end: string): string {
 
 type ViewMode = 'day' | 'week';
 
+// ─── Helpers hors composant ───────────────────────────────────────────────────
+
+function getInputMode(item: ComposedItem): InputMode {
+  if (item.selectedRef?.barcode) return 'barcode';
+  if (item.selectedRef) return 'search';
+  return 'manual';
+}
+
+async function resolveItemMealId(item: ComposedItem): Promise<number> {
+  const mealId = item.selectedRef?.meal_id ?? -1;
+
+  if (mealId === -1 && item.selectedRef) {
+    const created = await mealService.createMealFromProduct({
+      name: item.selectedRef.name,
+      barcode: item.selectedRef.barcode,
+      calories: item.selectedRef.calories,
+      glucides: item.selectedRef.glucides,
+      proteines: item.selectedRef.proteines,
+      lipides: item.selectedRef.lipides,
+      image_url: item.selectedRef.link_photo,
+    });
+    if (created) return created.meal_id;
+  }
+
+  if (mealId !== -1) return mealId;
+
+  const glucidesVal = Number.parseFloat(item.glucidesRaw) || null;
+  const caloriesVal = Number.parseInt(item.caloriesRaw, 10) || null;
+  try {
+    const refs = await mealService.searchReference(item.name);
+    const existing = refs.find(m => m.name.toLowerCase() === item.name.toLowerCase());
+    if (existing) return existing.meal_id;
+    const created = await mealService.createMealFromProduct({
+      name: item.name,
+      barcode: null,
+      calories: caloriesVal,
+      glucides: glucidesVal,
+      proteines: null,
+      lipides: null,
+      image_url: null,
+    });
+    if (created) return created.meal_id;
+  } catch {
+    // ignore, return -1
+  }
+  return -1;
+}
+
 // ─── Bar chart semaine ────────────────────────────────────────────────────────
 
 interface WeekBarChartProps {
@@ -133,7 +182,7 @@ interface WeekBarChartProps {
   onSelectDay: (date: string) => void;
 }
 
-function WeekBarChart({ weekData, selectedDate, objectif, onSelectDay }: WeekBarChartProps) {
+function WeekBarChart({ weekData, selectedDate, objectif, onSelectDay }: Readonly<WeekBarChartProps>) {
   const maxVal = Math.max(...weekData.map(d => d.total_glucides), objectif, 1);
 
   return (
@@ -142,6 +191,9 @@ function WeekBarChart({ weekData, selectedDate, objectif, onSelectDay }: WeekBar
         const isSelected = day.date === selectedDate;
         const hasData = day.total_glucides > 0;
         const barH = hasData ? Math.max((day.total_glucides / maxVal) * 96, 6) : 3;
+        let barStyle = styles.barEmpty;
+        if (isSelected) barStyle = styles.barActive;
+        else if (hasData) barStyle = styles.barInactive;
 
         return (
           <TouchableOpacity
@@ -155,11 +207,7 @@ function WeekBarChart({ weekData, selectedDate, objectif, onSelectDay }: WeekBar
             </Text>
             <View style={styles.barTrack}>
               <View
-                style={[
-                  styles.bar,
-                  { height: barH },
-                  isSelected ? styles.barActive : hasData ? styles.barInactive : styles.barEmpty,
-                ]}
+                style={[styles.bar, { height: barH }, barStyle]}
               />
             </View>
             <Text style={[styles.barDayLabel, isSelected && styles.barDayLabelActive]}>
@@ -254,47 +302,6 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
     setShowAdd(true);
   };
 
-  const resolveItemMealId = async (item: ComposedItem): Promise<number> => {
-    let mealId = item.selectedRef?.meal_id ?? -1;
-
-    if (mealId === -1 && item.selectedRef) {
-      const created = await mealService.createMealFromProduct({
-        name: item.selectedRef.name,
-        barcode: item.selectedRef.barcode,
-        calories: item.selectedRef.calories,
-        glucides: item.selectedRef.glucides,
-        proteines: item.selectedRef.proteines,
-        lipides: item.selectedRef.lipides,
-        image_url: item.selectedRef.link_photo,
-      });
-      if (created) return created.meal_id;
-    }
-
-    if (mealId === -1) {
-      const glucidesVal = Number.parseFloat(item.glucidesRaw) || null;
-      const caloriesVal = Number.parseInt(item.caloriesRaw, 10) || null;
-      try {
-        const refs = await mealService.searchReference(item.name);
-        const existing = refs.find(m => m.name.toLowerCase() === item.name.toLowerCase());
-        if (existing) return existing.meal_id;
-        const created = await mealService.createMealFromProduct({
-          name: item.name,
-          barcode: null,
-          calories: caloriesVal,
-          glucides: glucidesVal,
-          proteines: null,
-          lipides: null,
-          image_url: null,
-        });
-        if (created) return created.meal_id;
-      } catch {
-        // ignore
-      }
-    }
-
-    return mealId;
-  };
-
   const handleSubmit = async (pendingItem: ComposedItem | null) => {
     const allItems = pendingItem ? [...composedItems, pendingItem] : [...composedItems];
     if (allItems.length === 0) return;
@@ -315,7 +322,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
           taken_at,
           meal_type: compositionMealType,
           portion_g: item.portionG ? Number.parseFloat(item.portionG) : undefined,
-          input_mode: item.selectedRef?.barcode ? 'barcode' : item.selectedRef ? 'search' : 'manual',
+          input_mode: getInputMode(item),
           session_key: sessionKey,
         });
       }
@@ -402,6 +409,25 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
     );
   };
 
+  // Variables extraites pour éviter les ternaires imbriqués dans le JSX
+  let headerSubtitle: string;
+  if (viewMode === 'week') {
+    headerSubtitle = formatWeekRange(weekStart, weekEnd);
+  } else if (isToday) {
+    headerSubtitle = "Aujourd'hui";
+  } else {
+    headerSubtitle = formatDate(selectedDate);
+  }
+
+  let sectionTitle: string;
+  if (viewMode === 'day') {
+    sectionTitle = 'Repas du jour';
+  } else if (isToday) {
+    sectionTitle = "Aujourd'hui";
+  } else {
+    sectionTitle = formatDateShort(selectedDate);
+  }
+
   return (
     <Layout navigation={navigation} currentRoute="Home" userName="Utilisateur">
       <View style={{ flex: 1 }}>
@@ -415,11 +441,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
             <View>
               <Text style={styles.title}>Nutrition</Text>
               <Text style={styles.subtitle} numberOfLines={1}>
-                {viewMode === 'week'
-                  ? formatWeekRange(weekStart, weekEnd)
-                  : isToday
-                    ? "Aujourd'hui"
-                    : formatDate(selectedDate)}
+                {headerSubtitle}
               </Text>
             </View>
             <View style={styles.dateNav}>
@@ -548,11 +570,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
 
               {/* Liste des repas */}
               <View style={styles.mealsHeader}>
-                <Text style={styles.sectionTitle}>
-                  {viewMode === 'week'
-                    ? (isToday ? "Aujourd'hui" : formatDateShort(selectedDate))
-                    : 'Repas du jour'}
-                </Text>
+                <Text style={styles.sectionTitle}>{sectionTitle}</Text>
                 <TouchableOpacity style={styles.addButton} onPress={openAdd}>
                   <Plus size={24} color="#fff" />
                 </TouchableOpacity>
@@ -907,7 +925,7 @@ const styles = StyleSheet.create({
   },
   barActive: { backgroundColor: '#007AFF' },
   barInactive: { backgroundColor: '#BFDBFE' },
-  barEmpty: { backgroundColor: '#E5E7EB', height: 3 },
+  barEmpty: { backgroundColor: '#E5E7EB' },
   barDayLabel: {
     fontSize: 12,
     fontWeight: '600',
