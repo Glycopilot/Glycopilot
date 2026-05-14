@@ -73,8 +73,39 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+  test-ai-service:
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd ai_service
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+
+    - name: Run tests with coverage
+      run: |
+        cd ai_service
+        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-ai-service
+        path: ai_service/coverage.xml
+        retention-days: 1
+        if-no-files-found: error
+
   sonarqube:
-    needs: [test-backend, test-frontend]
+    needs: [test-backend, test-frontend, test-ai-service]
     runs-on: ubuntu-latest
     continue-on-error: true  # TODO: Retirer une fois que le coverage sera suffisant
     permissions:
@@ -101,6 +132,22 @@ jobs:
           echo "Backend coverage file not found"
         fi
     
+    - name: Download AI Service Coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-ai-service
+        path: ai_service/
+
+    - name: Verify AI Service Coverage
+      run: |
+        if [ -f ai_service/coverage.xml ]; then
+          echo "AI Service coverage file found"
+          ls -lh ai_service/coverage.xml
+        else
+          echo "AI Service coverage file not found"
+          exit 1
+        fi
+
     - name: Download Frontend Coverage
       uses: actions/download-artifact@v4
       with:
@@ -368,7 +415,7 @@ jobs:
           sudo docker image prune -f
 
   notify:
-    needs: [secret-scan, test-backend, test-frontend, sonarqube, deploy]
+    needs: [secret-scan, test-backend, test-frontend, test-ai-service, sonarqube, deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -387,6 +434,7 @@ jobs:
         echo "Secret Scan: ${{ needs.secret-scan.result }}"
         echo "Backend Tests: ${{ needs.test-backend.result }}"
         echo "Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "AI Service Tests: ${{ needs.test-ai-service.result }}"
         echo "SonarQube: ${{ needs.sonarqube.result }}"
         echo "Deploy: ${{ needs.deploy.result }}"
         echo "======================================"
