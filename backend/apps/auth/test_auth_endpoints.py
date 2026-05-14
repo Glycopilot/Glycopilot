@@ -17,8 +17,10 @@ class TestAuthEndpoints:
 
     def test_register_creates_all_entities(self, client):
         """
-        Verify /register creates User, AuthAccount and Profile
+        Verify /register creates User, AuthAccount and Profile.
+        Depuis l'ajout de la vérification email, le compte est inactif et aucun JWT n'est retourné.
         """
+        from unittest.mock import patch
         url = reverse("register")
         data = {
             "email": "test@example.com",
@@ -29,13 +31,19 @@ class TestAuthEndpoints:
             "role": "PATIENT",
         }
 
-        response = client.post(url, data)
+        with patch("apps.auth.serializers._verify_email_domain"):
+            response = client.post(url, data)
+
         assert response.status_code == status.HTTP_201_CREATED
+        # Pas de JWT — le compte doit être vérifié d'abord
+        assert "message" in response.data
+        assert "access" not in response.data
 
         # Verify DB
         assert AuthAccount.objects.count() == 1
         account = AuthAccount.objects.first()
         assert account.email == "test@example.com"
+        assert account.is_active is False  # inactif jusqu'à vérification email
 
         # Check Identity link
         identity = account.user
