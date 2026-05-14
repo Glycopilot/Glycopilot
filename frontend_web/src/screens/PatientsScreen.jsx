@@ -4,7 +4,7 @@ import {
   Mail, Phone, AlertCircle, Plus, X,
   Activity, Utensils, Pill, Droplets, Heart, Footprints,
   Flame, AlertTriangle, CheckCircle, Send, UserPlus,
-  Pencil, TrendingUp
+  Pencil, TrendingUp, XCircle
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
@@ -1050,9 +1050,11 @@ function SentInviteCard({ invite }) {
 }
 
 /** Invitation reçue par le médecin → il peut l'accepter */
-function ReceivedInviteCard({ invite, onAccepted }) {
+function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
   const p = invite.patient_details;
   const [accepting, setAccepting] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [confirmingDecline, setConfirmingDecline] = useState(false);
 
   const handleAccept = async (e) => {
     e.stopPropagation();
@@ -1068,6 +1070,24 @@ function ReceivedInviteCard({ invite, onAccepted }) {
       toastError('Erreur', msg);
     } finally {
       setAccepting(false);
+    }
+  };
+
+  const handleDecline = async (e) => {
+    e.stopPropagation();
+    setDeclining(true);
+    try {
+      await apiClient.post('/doctors/care-team/decline-invitation/', {
+        id_team_member: invite.id_team_member,
+      });
+      toastSuccess('Demande refusée', `La demande de ${p?.first_name ?? ''} ${p?.last_name ?? ''} a été refusée`);
+      onDeclined();
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
+      toastError('Erreur', msg);
+    } finally {
+      setDeclining(false);
+      setConfirmingDecline(false);
     }
   };
 
@@ -1089,13 +1109,44 @@ function ReceivedInviteCard({ invite, onAccepted }) {
         {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
         {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
       </div>
-      <div className="card-footer">
-        <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
-          {accepting
-            ? <><span className="mini-spinner-sm" /> Acceptation…</>
-            : <><CheckCircle size={14} /> Accepter la demande</>}
-        </button>
-      </div>
+
+      {confirmingDecline ? (
+        <div className="invite-decline-confirm" role="alertdialog" aria-label="Confirmer le refus">
+          <p className="invite-decline-msg">
+            <AlertTriangle size={14} /> Refuser cette demande ? Le patient ne pourra plus vous solliciter
+            tant qu'il n'envoie pas une nouvelle invitation.
+          </p>
+          <div className="invite-decline-actions">
+            <button
+              className="card-btn-cancel"
+              onClick={(e) => { e.stopPropagation(); setConfirmingDecline(false); }}
+              disabled={declining}
+            >
+              Annuler
+            </button>
+            <button className="card-btn-decline-confirm" onClick={handleDecline} disabled={declining}>
+              {declining
+                ? <><span className="mini-spinner-sm" /> Refus en cours…</>
+                : <><XCircle size={14} /> Confirmer le refus</>}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="card-footer card-footer-split">
+          <button
+            className="card-btn-decline"
+            onClick={(e) => { e.stopPropagation(); setConfirmingDecline(true); }}
+            disabled={accepting}
+          >
+            <X size={14} /> Refuser
+          </button>
+          <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
+            {accepting
+              ? <><span className="mini-spinner-sm" /> Acceptation…</>
+              : <><CheckCircle size={14} /> Accepter la demande</>}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1226,6 +1277,7 @@ export default function PatientsScreen({ navigation }) {
                       key={inv.id_team_member}
                       invite={inv}
                       onAccepted={() => { setLoading(true); fetchTeam(); }}
+                      onDeclined={() => { setLoading(true); fetchTeam(); }}
                     />
                   ))}
                 </div>
