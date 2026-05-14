@@ -9,10 +9,6 @@ jest.mock('../../components/common/Layout', () => {
   };
 });
 
-jest.mock('expo-camera', () => ({
-  CameraView: 'CameraView',
-  useCameraPermissions: () => [{ granted: false }, jest.fn()],
-}));
 
 const mockAddMeals = jest.fn().mockResolvedValue(true);
 const mockDeleteMeal = jest.fn().mockResolvedValue(undefined);
