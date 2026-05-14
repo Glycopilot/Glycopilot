@@ -3,25 +3,10 @@ import { Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
+import InputField from '../components/InputField';
+import { validateEmail } from '../lib/utils';
 import logo from '../assets/glycopilot.png';
 import './css/auth.css';
-
-const InputField = ({ label, value, onChangeText, icon, placeholder, type = 'text', rightElement }) => (
-  <div className="input-field">
-    <label>{label}</label>
-    <div className="input-wrapper">
-      <span className="input-icon">{icon}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChangeText(e.target.value)}
-        placeholder={placeholder}
-        autoComplete={type === 'password' ? 'current-password' : 'email'}
-      />
-      {rightElement && <span className="input-right">{rightElement}</span>}
-    </div>
-  </div>
-);
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail]               = useState('');
@@ -54,7 +39,8 @@ export default function LoginScreen({ navigation }) {
 
   const handlePasswordReset = async () => {
     if (!resetEmail) return toastError('Email manquant', 'Veuillez entrer votre email.');
-    if (!/\S+@\S+\.\S+/.test(resetEmail)) return toastError('Email invalide', "L'adresse email n'est pas valide");
+    const emailError = validateEmail(resetEmail);
+    if (emailError) return toastError('Email invalide', emailError);
     setIsResettingPassword(true);
     try {
       await passwordService.requestPasswordReset(resetEmail);
@@ -68,8 +54,14 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (isPasswordResetMode) handlePasswordReset();
+    else handleLogin();
+  };
+
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') isPasswordResetMode ? handlePasswordReset() : handleLogin();
+    if (e.key === 'Enter') onSubmit(e);
   };
 
   // ── Compte en attente ──

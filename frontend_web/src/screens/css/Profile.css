@@ -311,3 +311,57 @@
 @media (max-width: 600px) {
   .profile-header { flex-direction: column; align-items: flex-start; }
 }
+/* ── Polish layer ─────────────────────────── */
+.profile-header h1 {
+  letter-spacing: -0.015em;
+  font-size: clamp(22px, 2.4vw, 28px);
+}
+
+.pcard {
+  transition:
+    box-shadow var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+  box-shadow: var(--shadow-xs);
+}
+.pcard:hover { box-shadow: var(--shadow-sm); }
+
+.pfield-input {
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out);
+}
+.pfield-input:focus-within {
+  border-color: rgba(74, 144, 226, 0.55);
+  box-shadow: var(--ring);
+}
+
+.btn-edit,
+.btn-cancel,
+.btn-save,
+.btn-reset-pass {
+  transition:
+    background var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+.btn-edit:hover,
+.btn-save:not(:disabled):hover,
+.btn-reset-pass:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-big-avatar {
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 480px) {
+  .profile-main { padding: 20px 16px; }
+  .profile-hero { gap: 12px; }
+  .profile-actions { width: 100%; }
+  .profile-actions button { flex: 1; justify-content: center; }
+  .pfields-row { grid-template-columns: 1fr !important; }
+}

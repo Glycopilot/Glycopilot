@@ -3,18 +3,16 @@ import {
   Users, Clock, Search, ChevronRight,
   Mail, Phone, AlertCircle, Plus, X,
   Activity, Utensils, Pill, Droplets, Heart, Footprints,
-  Flame, AlertTriangle, CheckCircle, Send, UserPlus
+  Flame, AlertTriangle, CheckCircle, Send, UserPlus,
+  Pencil, TrendingUp, XCircle
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
+import { getInitials, extractValue, toArr, hba1cBand } from '../lib/utils';
 import './css/patients.css';
 
 const apiClient = authService.getApiClient();
-
-function getInitials(firstName, lastName) {
-  return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
-}
 
 function StatusBadge({ status }) {
   const map = {
@@ -24,14 +22,6 @@ function StatusBadge({ status }) {
   };
   const { label, cls } = map[status] || { label: 'Inconnu', cls: 'badge-inactive' };
   return <span className={`status-badge ${cls}`}>{label}</span>;
-}
-
-/* ─── Helper : extrait une valeur primitive depuis un champ qui peut être
-       soit un scalaire, soit un objet { value, unit, trend, recordedAt, … } ─── */
-function extractValue(field) {
-  if (field == null) return null;
-  if (typeof field === 'object') return field.value ?? null;
-  return field;
 }
 
 /* ─── Modal : Ajouter un patient ─── */
@@ -292,6 +282,107 @@ function HealthScore({ score }) {
   );
 }
 
+/* ─── Carte HbA1c (lecture + édition) ─── */
+function HbA1cCard({ value, unit, measuredAt, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState('');
+  const [saving,  setSaving]  = useState(false);
+  const band = hba1cBand(value);
+
+  const startEdit = () => {
+    setDraft(value != null ? String(value) : '');
+    setEditing(true);
+  };
+
+  const cancel = () => {
+    setDraft('');
+    setEditing(false);
+  };
+
+  const save = async () => {
+    const parsed = parseFloat(String(draft).replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed < 3 || parsed > 20) {
+      toastError('Valeur invalide', "L'HbA1c doit être un nombre entre 3 et 20 %");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(parsed);
+      setEditing(false);
+    } catch (_e) {
+      /* l'erreur est déjà signalée à l'utilisateur en amont */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="hba1c-card" data-testid="hba1c-card">
+      <div className="hba1c-top">
+        <div className="hba1c-icon"><TrendingUp size={18} /></div>
+        <div className="hba1c-meta">
+          <span className="hba1c-label">HbA1c (3 derniers mois)</span>
+          {measuredAt && (
+            <span className="hba1c-date">
+              Dernière mesure le {new Date(measuredAt).toLocaleDateString('fr-FR')}
+            </span>
+          )}
+        </div>
+        {!editing && (
+          <button
+            className="hba1c-edit-btn"
+            onClick={startEdit}
+            aria-label={value != null ? "Modifier l'HbA1c" : "Renseigner l'HbA1c"}
+          >
+            <Pencil size={14} /> {value != null ? 'Modifier' : 'Renseigner'}
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="hba1c-edit">
+          <div className="hba1c-input-wrap">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && save()}
+              placeholder="Ex : 6.8"
+              aria-label="Valeur HbA1c"
+              autoFocus
+            />
+            <span className="hba1c-unit-input">{unit || '%'}</span>
+          </div>
+          <div className="hba1c-actions">
+            <button className="hba1c-cancel" onClick={cancel} disabled={saving}>Annuler</button>
+            <button className="hba1c-save" onClick={save} disabled={saving}>
+              {saving
+                ? <><span className="mini-spinner" /> Enregistrement…</>
+                : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="hba1c-display">
+          {value != null ? (
+            <>
+              <span className="hba1c-value" style={{ color: band.color }}>
+                {Number(value).toFixed(1)}
+              </span>
+              <span className="hba1c-unit-display">{unit || '%'}</span>
+              <span className="hba1c-band" style={{ color: band.color, background: band.bg }}>
+                {band.label}
+              </span>
+            </>
+          ) : (
+            <span className="hba1c-empty">Aucune valeur renseignée</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 /* ─── Modal : Dossier patient ── */
 function PatientDashboardModal({ member, onClose }) {
   const p         = member.patient_details;
@@ -324,6 +415,12 @@ function PatientDashboardModal({ member, onClose }) {
     return {};
   }, [period, customStart, customEnd]);
 
+  const refreshDashboard = useCallback(async () => {
+    const res = await apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`);
+    setDashboard(res.data);
+    return res.data;
+  }, [patientId]);
+
   useEffect(() => {
     // Pour 'custom', n'envoie la requête que si les deux dates sont remplies
     if (period === 'custom' && (!customStart || !customEnd)) return;
@@ -340,14 +437,9 @@ function PatientDashboardModal({ member, onClose }) {
           apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`),
         ]);
         setDashboard(d.data);
-        const toArr = (data, keys) => {
-          if (Array.isArray(data)) return data;
-          for (const k of keys) if (Array.isArray(data?.[k])) return data[k];
-          return [];
-        };
-        setMeals(toArr(m.data, ['results','meals','data']));
-        setMedications(toArr(med.data, ['results','medications','data']));
-        setGlycemia(toArr(g.data, ['results','glycemia','data']));
+        setMeals(toArr(m.data, ['results', 'meals', 'data']));
+        setMedications(toArr(med.data, ['results', 'medications', 'data']));
+        setGlycemia(toArr(g.data, ['results', 'glycemia', 'data']));
       } catch (err) {
         toastError('Erreur', 'Impossible de charger les données du patient');
       } finally {
@@ -356,6 +448,27 @@ function PatientDashboardModal({ member, onClose }) {
     };
     load();
   }, [patientId, period, customStart, customEnd, getPeriodDates]);
+
+  const handleSaveHba1c = async (newValue) => {
+    try {
+      const res = await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
+      toastSuccess('HbA1c mis à jour', `Nouvelle valeur : ${newValue.toFixed(1)} %`);
+      const savedValue = res.data?.patient_details?.hba1c ?? newValue;
+      const measuredAt = new Date().toISOString();
+      writeHba1cCache(patientId, Number(savedValue), measuredAt);
+      try { await refreshDashboard(); } catch (_e) { /* no-op */ }
+      // Le backend patient-dashboard ne renvoie pas hba1c → on l'injecte localement
+      // pour que la valeur reste visible dans la modale après la sauvegarde.
+      setDashboard((prev) => ({
+        ...(prev ?? {}),
+        hba1c: { value: savedValue, unit: '%', measuredAt },
+      }));
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
+      toastError('Erreur', msg);
+      throw err;
+    }
+  };
 
   const tabs = [
     { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <Heart size={15} /> },
@@ -395,8 +508,21 @@ function PatientDashboardModal({ member, onClose }) {
       activeMinutes: extractValue(dashboard.activity?.activeMinutes),
     },
     medication: {
-      nextDose: extractValue(dashboard.medication?.nextDose) ?? dashboard.medication?.nextDose,
+      nextDose: formatNextDose(dashboard.medication?.nextDose),
     },
+    hba1c: (() => {
+      const fromApi = extractValue(dashboard.hba1c);
+      if (fromApi != null) {
+        return {
+          value: fromApi,
+          unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
+          measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
+        };
+      }
+      const cached = readHba1cCache(patientId);
+      if (cached) return cached;
+      return { value: null, unit: '%', measuredAt: null };
+    })(),
   } : null;
 
   return (
@@ -477,6 +603,13 @@ function PatientDashboardModal({ member, onClose }) {
               {/* ══ Vue d'ensemble ══ */}
               {activeTab === 'dashboard' && dash && (
                 <div className="pdm-overview">
+
+                  <HbA1cCard
+                    value={dash.hba1c.value}
+                    unit={dash.hba1c.unit}
+                    measuredAt={dash.hba1c.measuredAt}
+                    onSave={handleSaveHba1c}
+                  />
 
                   {/* Ligne 1 : score + alertes */}
                   <div className="pdm-row pdm-row-top">
@@ -848,6 +981,7 @@ function PatientDashboardModal({ member, onClose }) {
                   </div>
                 )
               )}
+
             </>
           )}
         </div>
@@ -906,9 +1040,11 @@ function SentInviteCard({ invite }) {
 }
 
 /** Invitation reçue par le médecin → il peut l'accepter */
-function ReceivedInviteCard({ invite, onAccepted }) {
+function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
   const p = invite.patient_details;
   const [accepting, setAccepting] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [confirmingDecline, setConfirmingDecline] = useState(false);
 
   const handleAccept = async (e) => {
     e.stopPropagation();
@@ -924,6 +1060,29 @@ function ReceivedInviteCard({ invite, onAccepted }) {
       toastError('Erreur', msg);
     } finally {
       setAccepting(false);
+    }
+  };
+
+  const handleDecline = async (e) => {
+    e.stopPropagation();
+    setDeclining(true);
+    try {
+      await apiClient.post('/doctors/care-team/decline-invitation/', {
+        id_team_member: invite.id_team_member,
+      });
+      toastSuccess('Demande refusée', `La demande de ${p?.first_name ?? ''} ${p?.last_name ?? ''} a été refusée`);
+      onDeclined?.();
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 404 || status === 405) {
+        toastError('Bientôt disponible', "Le refus d'invitation n'est pas encore activé côté serveur.");
+      } else {
+        const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
+        toastError('Erreur', msg);
+      }
+    } finally {
+      setDeclining(false);
+      setConfirmingDecline(false);
     }
   };
 
@@ -945,13 +1104,44 @@ function ReceivedInviteCard({ invite, onAccepted }) {
         {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
         {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
       </div>
-      <div className="card-footer">
-        <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
-          {accepting
-            ? <><span className="mini-spinner-sm" /> Acceptation…</>
-            : <><CheckCircle size={14} /> Accepter la demande</>}
-        </button>
-      </div>
+
+      {confirmingDecline ? (
+        <div className="invite-decline-confirm" role="alertdialog" aria-label="Confirmer le refus">
+          <p className="invite-decline-msg">
+            <AlertTriangle size={14} /> Refuser cette demande ? Le patient ne pourra plus vous solliciter
+            tant qu'il n'envoie pas une nouvelle invitation.
+          </p>
+          <div className="invite-decline-actions">
+            <button
+              className="card-btn-cancel"
+              onClick={(e) => { e.stopPropagation(); setConfirmingDecline(false); }}
+              disabled={declining}
+            >
+              Annuler
+            </button>
+            <button className="card-btn-decline-confirm" onClick={handleDecline} disabled={declining}>
+              {declining
+                ? <><span className="mini-spinner-sm" /> Refus en cours…</>
+                : <><XCircle size={14} /> Confirmer le refus</>}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="card-footer card-footer-split">
+          <button
+            className="card-btn-decline"
+            onClick={(e) => { e.stopPropagation(); setConfirmingDecline(true); }}
+            disabled={accepting}
+          >
+            <X size={14} /> Refuser
+          </button>
+          <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
+            {accepting
+              ? <><span className="mini-spinner-sm" /> Acceptation…</>
+              : <><CheckCircle size={14} /> Accepter la demande</>}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1006,7 +1196,6 @@ export default function PatientsScreen({ navigation }) {
     <div className="patients-root">
       <Sidebar activePage="patients" navigation={navigation} />
 
-      {/* ── Main ── */}
       <main className="patients-main">
         <header className="patients-header">
           <div>
@@ -1052,7 +1241,6 @@ export default function PatientsScreen({ navigation }) {
             <div className="state-center state-error"><AlertCircle size={40} /><p>{error}</p></div>
           )}
 
-          {/* Patients actifs */}
           {!loading && !error && tab === 'active' && (
             filtered.length === 0
               ? <div className="state-center"><Users size={48} strokeWidth={1} /><p>{search ? 'Aucun résultat.' : 'Aucun patient actif pour le moment.'}</p></div>
@@ -1063,7 +1251,7 @@ export default function PatientsScreen({ navigation }) {
                 </div>
           )}
 
-          {/* Invitations envoyées par le médecin */}
+
           {!loading && !error && tab === 'sent' && (
             sentInvites.length === 0
               ? <div className="state-center"><Send size={48} strokeWidth={1} /><p>Aucune invitation envoyée en attente.</p></div>
@@ -1072,7 +1260,6 @@ export default function PatientsScreen({ navigation }) {
                 </div>
           )}
 
-          {/* Invitations reçues par le médecin (à accepter) */}
           {!loading && !error && tab === 'received' && (
             receivedInvites.length === 0
               ? <div className="state-center"><UserPlus size={48} strokeWidth={1} /><p>Aucune demande reçue.</p></div>
@@ -1082,6 +1269,7 @@ export default function PatientsScreen({ navigation }) {
                       key={inv.id_team_member}
                       invite={inv}
                       onAccepted={() => { setLoading(true); fetchTeam(); }}
+                      onDeclined={() => { setLoading(true); fetchTeam(); }}
                     />
                   ))}
                 </div>
@@ -1089,7 +1277,6 @@ export default function PatientsScreen({ navigation }) {
         </div>
       </main>
 
-      {/* ── Modals ── */}
       {showAddModal && (
         <AddPatientModal
           onClose={() => setShowAddModal(false)}
