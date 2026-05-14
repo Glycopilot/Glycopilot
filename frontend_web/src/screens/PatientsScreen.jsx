@@ -4,7 +4,7 @@ import {
   Mail, Phone, AlertCircle, Plus, X,
   Activity, Utensils, Pill, Droplets, Heart, Footprints,
   Flame, AlertTriangle, CheckCircle, Send, UserPlus,
-  Pencil, TrendingUp, XCircle
+  Pencil, TrendingUp
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
@@ -283,6 +283,13 @@ function HealthScore({ score }) {
 }
 
 /* ─── Carte HbA1c (lecture + édition) ─── */
+function hba1cBand(value) {
+  if (value == null) return null;
+  if (value < 7)  return { color: '#16A34A', bg: '#F0FDF4', label: 'Objectif atteint' };
+  if (value < 8)  return { color: '#F97316', bg: '#FFF7ED', label: 'Légèrement élevée' };
+  return { color: '#DC2626', bg: '#FEF2F2', label: 'Élevée' };
+}
+
 function HbA1cCard({ value, unit, measuredAt, onSave }) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState('');
@@ -383,6 +390,7 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
     </div>
   );
 }
+
 /* ─── Modal : Dossier patient ── */
 function PatientDashboardModal({ member, onClose }) {
   const p         = member.patient_details;
@@ -421,6 +429,12 @@ function PatientDashboardModal({ member, onClose }) {
     return res.data;
   }, [patientId]);
 
+  const refreshDashboard = useCallback(async () => {
+    const res = await apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`);
+    setDashboard(res.data);
+    return res.data;
+  }, [patientId]);
+
   useEffect(() => {
     // Pour 'custom', n'envoie la requête que si les deux dates sont remplies
     if (period === 'custom' && (!customStart || !customEnd)) return;
@@ -451,18 +465,13 @@ function PatientDashboardModal({ member, onClose }) {
 
   const handleSaveHba1c = async (newValue) => {
     try {
-      const res = await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
+      await apiClient.post('/doctors/care-team/patient-hba1c/', {
+        patient_user_id: patientId,
+        value: newValue,
+        unit: '%',
+      });
       toastSuccess('HbA1c mis à jour', `Nouvelle valeur : ${newValue.toFixed(1)} %`);
-      const savedValue = res.data?.patient_details?.hba1c ?? newValue;
-      const measuredAt = new Date().toISOString();
-      writeHba1cCache(patientId, Number(savedValue), measuredAt);
-      try { await refreshDashboard(); } catch (_e) { /* no-op */ }
-      // Le backend patient-dashboard ne renvoie pas hba1c → on l'injecte localement
-      // pour que la valeur reste visible dans la modale après la sauvegarde.
-      setDashboard((prev) => ({
-        ...(prev ?? {}),
-        hba1c: { value: savedValue, unit: '%', measuredAt },
-      }));
+      await refreshDashboard();
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
       toastError('Erreur', msg);
@@ -508,21 +517,13 @@ function PatientDashboardModal({ member, onClose }) {
       activeMinutes: extractValue(dashboard.activity?.activeMinutes),
     },
     medication: {
-      nextDose: formatNextDose(dashboard.medication?.nextDose),
+      nextDose: extractValue(dashboard.medication?.nextDose) ?? dashboard.medication?.nextDose,
     },
-    hba1c: (() => {
-      const fromApi = extractValue(dashboard.hba1c);
-      if (fromApi != null) {
-        return {
-          value: fromApi,
-          unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
-          measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
-        };
-      }
-      const cached = readHba1cCache(patientId);
-      if (cached) return cached;
-      return { value: null, unit: '%', measuredAt: null };
-    })(),
+    hba1c: {
+      value:      extractValue(dashboard.hba1c),
+      unit:       typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
+      measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
+    },
   } : null;
 
   return (
@@ -603,6 +604,13 @@ function PatientDashboardModal({ member, onClose }) {
               {/* ══ Vue d'ensemble ══ */}
               {activeTab === 'dashboard' && dash && (
                 <div className="pdm-overview">
+
+                  <HbA1cCard
+                    value={dash.hba1c.value}
+                    unit={dash.hba1c.unit}
+                    measuredAt={dash.hba1c.measuredAt}
+                    onSave={handleSaveHba1c}
+                  />
 
                   <HbA1cCard
                     value={dash.hba1c.value}
