@@ -244,7 +244,7 @@ describe('AddMealModal', () => {
     ]);
 
     jest.useFakeTimers();
-    const { getByText, getByPlaceholderText, findByText } = render(<AddMealModal {...defaultProps} />);
+    const { getByText, getByPlaceholderText } = render(<AddMealModal {...defaultProps} />);
     fireEvent.press(getByText('Recherche'));
     fireEvent.changeText(getByPlaceholderText('Yaourt, riz basmati…'), 'ya');
 

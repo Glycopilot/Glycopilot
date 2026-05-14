@@ -249,7 +249,7 @@ describe('NutritionScreen', () => {
     await waitFor(() => expect(getByText('Nutrition')).toBeTruthy());
     const { TouchableOpacity } = require('react-native');
     const touchables = UNSAFE_getAllByType(TouchableOpacity);
-    const addBtn = touchables[touchables.length - 1];
+    const addBtn = touchables.at(-1);
     fireEvent.press(addBtn);
     await waitFor(() => expect(getByText('Composer un repas')).toBeTruthy());
   });
@@ -264,25 +264,15 @@ describe('NutritionScreen', () => {
   });
 
   it('closes add modal after successful submit', async () => {
-    const { toastSuccess } = require('../../services/toastService');
     mockAddMeals.mockResolvedValue(true);
-
-    const mealServiceMock = require('../../services/mealService').default;
-    mealServiceMock.searchReference = jest.fn().mockResolvedValue([{ meal_id: 5, name: 'Pain' }]);
-
     const { getByText, UNSAFE_getAllByType } = render(<NutritionScreen navigation={mockNavigation} />);
     await waitFor(() => expect(getByText('Nutrition')).toBeTruthy());
 
     const { TouchableOpacity } = require('react-native');
     const touchables = UNSAFE_getAllByType(TouchableOpacity);
-    fireEvent.press(touchables[touchables.length - 1]);
+    fireEvent.press(touchables.at(-1));
 
     await waitFor(() => expect(getByText('Composer un repas')).toBeTruthy());
-
-    // Fill and submit via Enregistrer
-    const { getByPlaceholderText } = require('@testing-library/react-native').within
-      ? { getByPlaceholderText: () => null }
-      : { getByPlaceholderText: getByText }; // fallback
   });
 
   it('deletes a composed meal item', async () => {
