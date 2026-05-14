@@ -181,7 +181,11 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG or ENV == "development"
 CORS_ALLOW_CREDENTIALS = True
 if not CORS_ALLOW_ALL_ORIGINS:
     CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
-    CSRF_TRUSTED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+    CSRF_TRUSTED_ORIGINS = config(
+        "CSRF_TRUSTED_ORIGINS",
+        default=config("CORS_ALLOWED_ORIGINS", default=""),
+        cast=Csv(),
+    )
 
 # --- REST FRAMEWORK CONFIG ---
 # Throttling is disabled when running tests so the auth rate limit
@@ -321,19 +325,29 @@ FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
 # --- SECURITY SETTINGS ---
 if not DEBUG:
     SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+    USE_X_FORWARDED_HOST = config("USE_X_FORWARDED_HOST", default=True, cast=bool)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=True, cast=bool)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Strict"
-    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=True, cast=bool)
     CSRF_COOKIE_HTTPONLY = True
     CSRF_COOKIE_SAMESITE = "Strict"
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = config(
+        "SECURE_CROSS_ORIGIN_OPENER_POLICY",
+        default="same-origin",
+    )
     X_FRAME_OPTIONS = "DENY"
 else:
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = config(
+        "SECURE_CROSS_ORIGIN_OPENER_POLICY",
+        default=None,
+    )
     X_FRAME_OPTIONS = "DENY"
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
