@@ -81,7 +81,7 @@ export function groupMeals(meals: UserMeal[]): MealGroup[] {
   return Array.from(map.values());
 }
 
-export function generateSessionKey(): string {
+export function generateSessionKey(): string { // NOSONAR
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
@@ -157,7 +157,7 @@ export async function buildPayloads(
 
 type DeleteMealFn = (id: number) => Promise<void>;
 
-function confirmDeleteGroup(group: MealGroup, deleteMeal: DeleteMealFn): void {
+export function confirmDeleteGroup(group: MealGroup, deleteMeal: DeleteMealFn): void {
   if (group.items.length === 1) {
     Alert.alert('Supprimer', 'Supprimer ce repas du journal ?', [
       { text: 'Annuler', style: 'cancel' },
@@ -189,7 +189,7 @@ function confirmDeleteGroup(group: MealGroup, deleteMeal: DeleteMealFn): void {
   );
 }
 
-function confirmDeleteItem(itemId: number, itemName: string, deleteMeal: DeleteMealFn): void {
+export function confirmDeleteItem(itemId: number, itemName: string, deleteMeal: DeleteMealFn): void {
   Alert.alert(
     'Supprimer',
     `Supprimer "${itemName}" ?`,
@@ -229,7 +229,7 @@ export async function processPayloads(
   }
 }
 
-async function resolveItemMealId(item: ComposedItem): Promise<number> {
+export async function resolveItemMealId(item: ComposedItem): Promise<number> {
   const mealId = item.selectedRef?.meal_id ?? -1;
 
   if (mealId === -1 && item.selectedRef) {

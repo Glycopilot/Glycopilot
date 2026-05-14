@@ -197,4 +197,134 @@ describe('mealService', () => {
       expect(result).toBeNull();
     });
   });
+
+  // ─── deleteMeal ─────────────────────────────────────────────────────────────
+
+  describe('deleteMeal', () => {
+    it('sends DELETE request to correct endpoint', async () => {
+      mock.onDelete('/meals/log/42/').reply(204);
+
+      await mealService.deleteMeal(42);
+
+      expect(mock.history.delete).toHaveLength(1);
+      expect(mock.history.delete[0].url).toBe('/meals/log/42/');
+    });
+  });
+
+  // ─── searchReference ────────────────────────────────────────────────────────
+
+  describe('searchReference', () => {
+    it('returns array response directly', async () => {
+      const meals = [{ meal_id: 1, name: 'Pomme' }];
+      mock.onGet('/meals/reference/').reply(200, meals);
+
+      const result = await mealService.searchReference('pomme');
+
+      expect(result).toEqual(meals);
+      expect(mock.history.get[0].params).toEqual({ search: 'pomme' });
+    });
+
+    it('unwraps paginated results', async () => {
+      const meals = [{ meal_id: 1, name: 'Pomme' }];
+      mock.onGet('/meals/reference/').reply(200, { results: meals });
+
+      const result = await mealService.searchReference('pomme');
+
+      expect(result).toEqual(meals);
+    });
+  });
+
+  // ─── searchOpenFoodFacts ────────────────────────────────────────────────────
+
+  describe('searchOpenFoodFacts', () => {
+    it('returns products on success', async () => {
+      const products = [{ name: 'Yaourt', glucides: 5, calories: 60, proteines: 3, lipides: 1, barcode: null, image_url: null }];
+      mock.onGet('/meals/reference/search-openfood/').reply(200, products);
+
+      const result = await mealService.searchOpenFoodFacts('yaourt');
+
+      expect(result).toEqual(products);
+      expect(mock.history.get[0].params).toEqual({ q: 'yaourt' });
+    });
+
+    it('returns empty array on failure', async () => {
+      mock.onGet('/meals/reference/search-openfood/').reply(500);
+
+      const result = await mealService.searchOpenFoodFacts('yaourt');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  // ─── createMealFromProduct ──────────────────────────────────────────────────
+
+  describe('createMealFromProduct', () => {
+    it('creates via from-openfood when barcode present', async () => {
+      const ref = { meal_id: 1, name: 'Nutella', calories: 539, glucides: 57.5, proteines: 6.3, lipides: 30.9, glucose: null, barcode: '3017620422003', source: 'openfood', link_photo: null };
+      mock.onPost('/meals/reference/from-openfood/').reply(201, ref);
+
+      const result = await mealService.createMealFromProduct({
+        name: 'Nutella',
+        barcode: '3017620422003',
+        calories: 539,
+        glucides: 57.5,
+        proteines: 6.3,
+        lipides: 30.9,
+        image_url: null,
+      });
+
+      expect(result).toEqual(ref);
+    });
+
+    it('falls back to add-meal-ref when from-openfood fails', async () => {
+      const ref = { meal_id: 2, name: 'Nutella', calories: 539, glucides: 57.5, proteines: 6.3, lipides: 30.9, glucose: null, barcode: '123', source: 'openfood', link_photo: null };
+      mock.onPost('/meals/reference/from-openfood/').reply(500);
+      mock.onPost('/meals/add-meal-ref/').reply(201, ref);
+
+      const result = await mealService.createMealFromProduct({
+        name: 'Nutella',
+        barcode: '123',
+        calories: 539,
+        glucides: 57.5,
+        proteines: 6.3,
+        lipides: 30.9,
+        image_url: null,
+      });
+
+      expect(result).toEqual(ref);
+    });
+
+    it('creates via add-meal-ref when no barcode', async () => {
+      const ref = { meal_id: 3, name: 'Pomme', calories: 52, glucides: 14, proteines: 0.3, lipides: 0.2, glucose: null, barcode: null, source: 'manual', link_photo: null };
+      mock.onPost('/meals/add-meal-ref/').reply(201, ref);
+
+      const result = await mealService.createMealFromProduct({
+        name: 'Pomme',
+        barcode: null,
+        calories: 52,
+        glucides: 14,
+        proteines: 0.3,
+        lipides: 0.2,
+        image_url: null,
+      });
+
+      expect(result).toEqual(ref);
+    });
+
+    it('returns null when all requests fail', async () => {
+      mock.onPost('/meals/add-meal-ref/').reply(500);
+
+      const result = await mealService.createMealFromProduct({
+        name: 'Pomme',
+        barcode: null,
+        calories: null,
+        glucides: null,
+        proteines: null,
+        lipides: null,
+        image_url: null,
+      });
+
+      expect(result).toBeNull();
+    });
+  });
 });

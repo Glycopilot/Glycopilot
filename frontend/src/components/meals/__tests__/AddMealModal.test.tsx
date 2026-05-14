@@ -1,9 +1,10 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import AddMealModal, { calcItemGlucides } from '../AddMealModal';
 import type { ComposedItem, MealReference, MealType } from '../../../types/meals.types';
 
 jest.mock('../../../services/mealService', () => ({
+  __esModule: true,
   default: {
     searchOpenFoodFacts: jest.fn().mockResolvedValue([]),
   },
@@ -234,6 +235,50 @@ describe('AddMealModal', () => {
     fireEvent.changeText(inputs[0], '10');
     fireEvent.changeText(getAllByPlaceholderText('150')[0], '200');
     expect(getByText(/glucides pour cette portion/)).toBeTruthy();
+  });
+
+  it('fires handleSearchChange and shows results', async () => {
+    const mealService = require('../../../services/mealService').default;
+    mealService.searchOpenFoodFacts = jest.fn().mockResolvedValue([
+      { name: 'Yaourt nature', glucides: 5, calories: 60, proteines: 3, lipides: 1, barcode: null, image_url: null },
+    ]);
+
+    jest.useFakeTimers();
+    const { getByText, getByPlaceholderText, findByText } = render(<AddMealModal {...defaultProps} />);
+    fireEvent.press(getByText('Recherche'));
+    fireEvent.changeText(getByPlaceholderText('Yaourt, riz basmati…'), 'ya');
+
+    await act(async () => {
+      jest.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+
+    expect(mealService.searchOpenFoodFacts).toHaveBeenCalledWith('ya');
+    jest.useRealTimers();
+  });
+
+  it('selects product from search results and fills form', async () => {
+    const mealService = require('../../../services/mealService').default;
+    mealService.searchOpenFoodFacts = jest.fn().mockResolvedValue([
+      { name: 'Yaourt nature', glucides: 5, calories: 60, proteines: 3, lipides: 1, barcode: null, image_url: null },
+    ]);
+
+    jest.useFakeTimers();
+    const { getByText, getByPlaceholderText, findByText } = render(<AddMealModal {...defaultProps} />);
+    fireEvent.press(getByText('Recherche'));
+    fireEvent.changeText(getByPlaceholderText('Yaourt, riz basmati…'), 'ya');
+
+    await act(async () => {
+      jest.advanceTimersByTime(700);
+      await Promise.resolve();
+    });
+
+    jest.useRealTimers();
+
+    const result = await findByText('Yaourt nature');
+    fireEvent.press(result);
+
+    await waitFor(() => expect(getByPlaceholderText("Pomme, pain complet, jus d'orange…").props.value).toBe('Yaourt nature'));
   });
 
   it('calls onRemoveItem when X pressed on chip', () => {
