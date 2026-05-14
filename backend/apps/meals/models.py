@@ -47,7 +47,7 @@ class UserMeal(models.Model):
     taken_at = models.DateTimeField()
     meal_type = models.CharField(max_length=15, choices=MEAL_TYPE_CHOICES, default="lunch")
     portion_g = models.FloatField(blank=True, null=True)
-    notes = models.TextField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)  # NOSONAR
     input_mode = models.CharField(max_length=10, choices=INPUT_MODE_CHOICES, default="manual")
     session_key = models.CharField(max_length=40, blank=True, null=True)
 

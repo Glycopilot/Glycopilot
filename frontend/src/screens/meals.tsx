@@ -181,7 +181,7 @@ interface NutritionScreenProps {
   };
 }
 
-export default function NutritionScreen({ navigation }: NutritionScreenProps): React.JSX.Element {
+export default function NutritionScreen({ navigation }: Readonly<NutritionScreenProps>): React.JSX.Element {
   const {
     meals,
     summary,
@@ -271,8 +271,8 @@ export default function NutritionScreen({ navigation }: NutritionScreenProps): R
     }
 
     if (mealId === -1) {
-      const glucidesVal = parseFloat(item.glucidesRaw) || null;
-      const caloriesVal = parseInt(item.caloriesRaw, 10) || null;
+      const glucidesVal = Number.parseFloat(item.glucidesRaw) || null;
+      const caloriesVal = Number.parseInt(item.caloriesRaw, 10) || null;
       try {
         const refs = await mealService.searchReference(item.name);
         const existing = refs.find(m => m.name.toLowerCase() === item.name.toLowerCase());
@@ -314,7 +314,7 @@ export default function NutritionScreen({ navigation }: NutritionScreenProps): R
           meal_id: mealId,
           taken_at,
           meal_type: compositionMealType,
-          portion_g: item.portionG ? parseFloat(item.portionG) : undefined,
+          portion_g: item.portionG ? Number.parseFloat(item.portionG) : undefined,
           input_mode: item.selectedRef?.barcode ? 'barcode' : item.selectedRef ? 'search' : 'manual',
           session_key: sessionKey,
         });
@@ -379,6 +379,27 @@ export default function NutritionScreen({ navigation }: NutritionScreenProps): R
         ]
       );
     }
+  };
+
+  const handleDeleteItem = (itemId: number, itemName: string) => {
+    Alert.alert(
+      'Supprimer',
+      `Supprimer "${itemName}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMeal(itemId);
+            } catch {
+              toastError('Erreur', 'Impossible de supprimer cet aliment.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -602,34 +623,15 @@ export default function NutritionScreen({ navigation }: NutritionScreenProps): R
                                       <Text style={styles.composedItemName}>{item.meal.name}</Text>
                                       <Text style={styles.composedItemMeta}>
                                         {item.portion_g ? `${item.portion_g}g` : ''}
-                                        {item.portion_g && item.glucides_consommes != null ? ' · ' : ''}
-                                        {item.glucides_consommes != null
-                                          ? `${item.glucides_consommes}g gluc.`
-                                          : ''}
+                                        {item.portion_g && item.glucides_consommes == null ? '' : ' · '}
+                                        {item.glucides_consommes == null
+                                          ? ''
+                                          : `${item.glucides_consommes}g gluc.`}
                                       </Text>
                                     </View>
                                     <TouchableOpacity
                                       style={styles.deleteItemBtn}
-                                      onPress={() =>
-                                        Alert.alert(
-                                          'Supprimer',
-                                          `Supprimer "${item.meal.name}" ?`,
-                                          [
-                                            { text: 'Annuler', style: 'cancel' },
-                                            {
-                                              text: 'Supprimer',
-                                              style: 'destructive',
-                                              onPress: async () => {
-                                                try {
-                                                  await deleteMeal(item.id);
-                                                } catch {
-                                                  toastError('Erreur', 'Impossible de supprimer cet aliment.');
-                                                }
-                                              },
-                                            },
-                                          ]
-                                        )
-                                      }
+                                      onPress={() => handleDeleteItem(item.id, item.meal.name)}
                                     >
                                       <Trash2 size={14} color="#DC2626" />
                                     </TouchableOpacity>
@@ -649,9 +651,9 @@ export default function NutritionScreen({ navigation }: NutritionScreenProps): R
                                 <View style={styles.detailRow}>
                                   <Text style={styles.detailLabel}>Calories</Text>
                                   <Text style={styles.detailValue}>
-                                    {group.items[0].calories_consommes != null
-                                      ? `${group.items[0].calories_consommes} kcal`
-                                      : '—'}
+                                    {group.items[0].calories_consommes == null
+                                      ? '—'
+                                      : `${group.items[0].calories_consommes} kcal`}
                                   </Text>
                                 </View>
                                 {group.items[0].portion_g && (
