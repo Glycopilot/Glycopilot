@@ -3,9 +3,7 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
 } from 'axios';
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || '';
 const WS_URL = process.env.EXPO_PUBLIC_WS_URL || '';
