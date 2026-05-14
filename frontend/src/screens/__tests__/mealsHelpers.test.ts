@@ -376,7 +376,7 @@ describe('confirmDeleteGroup', () => {
       id: i + 1,
       meal: { meal_id: i + 1, name: `Item ${i}`, glucides: null, calories: null, barcode: null, source: 'manual' as const, link_photo: null, proteines: null, lipides: null, glucose: null },
       taken_at: '2026-05-14T12:00:00Z',
-      meal_type: 'lunch' as MealType,
+      meal_type: 'lunch',
       portion_g: null,
       notes: null,
       input_mode: 'manual' as const,

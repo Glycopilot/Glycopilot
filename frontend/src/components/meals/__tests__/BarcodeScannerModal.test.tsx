@@ -87,7 +87,8 @@ describe('BarcodeScannerModal', () => {
 
     expect(capturedOnBarcodeScanned).toBeDefined();
     await act(async () => {
-      await capturedOnBarcodeScanned!({ data: '3017620422003' });
+      capturedOnBarcodeScanned!({ data: '3017620422003' });
+      await Promise.resolve();
     });
 
     expect(mealService.lookupBarcode).toHaveBeenCalledWith('3017620422003');
@@ -104,14 +105,11 @@ describe('BarcodeScannerModal', () => {
 
     expect(capturedOnBarcodeScanned).toBeDefined();
     await act(async () => {
-      await capturedOnBarcodeScanned!({ data: '0000000000000' });
+      capturedOnBarcodeScanned!({ data: '0000000000000' });
+      await Promise.resolve();
     });
 
-    // notFound is true, "Saisir manuellement" should appear
-    await waitFor(() => {
-      const { queryByText } = render(<BarcodeScannerModal {...defaultProps} />);
-      expect(queryByText !== null).toBe(true);
-    });
+    expect(mealService.lookupBarcode).toHaveBeenCalledWith('0000000000000');
   });
 
   it('does not scan when already scanning', async () => {
@@ -123,12 +121,12 @@ describe('BarcodeScannerModal', () => {
     expect(capturedOnBarcodeScanned).toBeDefined();
 
     // First scan - starts loading
-    const firstScan = capturedOnBarcodeScanned!({ data: '123' });
-    // Second scan while first is running - should be ignored
+    capturedOnBarcodeScanned!({ data: '123' });
+    // Second scan while first is running - should be ignored (scannedRef.current is true)
     await act(async () => {
-      await capturedOnBarcodeScanned!({ data: '456' });
+      capturedOnBarcodeScanned!({ data: '456' });
+      await Promise.resolve();
     });
-    await act(async () => { await firstScan; });
 
     expect(mealService.lookupBarcode).toHaveBeenCalledTimes(1);
   });
