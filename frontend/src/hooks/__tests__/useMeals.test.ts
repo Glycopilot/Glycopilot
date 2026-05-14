@@ -138,4 +138,47 @@ describe('useMeals', () => {
     expect(result.current.meals).toEqual([]);
     expect(result.current.summary).toBeNull();
   });
+
+  it('resets meals to empty array on load error', async () => {
+    (mealService.getLog as jest.Mock).mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useMeals());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.meals).toEqual([]);
+  });
+
+  it('addMeal returns null on failure', async () => {
+    (mealService.addMeal as jest.Mock).mockRejectedValue(new Error('fail'));
+    const { result } = renderHook(() => useMeals());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let res: any;
+    await act(async () => {
+      res = await result.current.addMeal({
+        meal_id: 1,
+        taken_at: '2026-05-14T12:00:00Z',
+        meal_type: 'lunch',
+        input_mode: 'manual',
+      });
+    });
+    expect(res).toBeNull();
+  });
+
+  it('addMeal returns created meal on success', async () => {
+    (mealService.addMeal as jest.Mock).mockResolvedValue(mockMeal);
+    const { result } = renderHook(() => useMeals());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let res: any;
+    await act(async () => {
+      res = await result.current.addMeal({
+        meal_id: 1,
+        taken_at: '2026-05-14T12:00:00Z',
+        meal_type: 'lunch',
+        input_mode: 'manual',
+      });
+    });
+    expect(res).toEqual(mockMeal);
+  });
 });
