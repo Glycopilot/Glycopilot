@@ -1,42 +1,33 @@
-/**
- * @file PatientsScreen.test.jsx
- * Stack : Vitest + React Testing Library
- * Lancer : npx vitest run src/__tests__/PatientsScreen.test.jsx
- */
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
-// ── Mocks ────────────────────────────────────────────────────────────────────
-const { mockGet, mockPost } = vi.hoisted(() => ({
-  mockGet:  vi.fn(),
-  mockPost: vi.fn(),
-}));
 
-vi.mock('../services/authService', () => ({
-  default: {
-    getApiClient:  () => ({ get: mockGet, post: mockPost }),
-    getStoredUser: vi.fn(() => ({ first_name: 'Jean', last_name: 'Dupont', doctor_id: 'doc-1' })),
-    logout: vi.fn(),
-  },
+jest.mock('../../services/authService', () => {
+  const apiClient = { get: jest.fn(), post: jest.fn() };
+  return {
+    __esModule: true,
+    default: {
+      getApiClient: () => apiClient,
+      getStoredUser: jest.fn(() => ({ first_name: 'Jean', last_name: 'Dupont', doctor_id: 'doc-1' })),
+      logout: jest.fn(),
+    },
+  };
+});
+jest.mock('../../services/toastService', () => ({
+  toastError: jest.fn(),
+  toastSuccess: jest.fn(),
 }));
-vi.mock('../services/toastService', () => ({
-  toastError: vi.fn(), toastSuccess: vi.fn(),
-}));
-vi.mock('../components/Sidebar', () => ({
+jest.mock('../../components/Sidebar', () => ({
+  __esModule: true,
   default: ({ activePage }) => <div data-testid="sidebar" data-page={activePage} />,
 }));
-vi.mock('./css/patients.css', () => ({}));
 
-import PatientsScreen from '../screens/PatientsScreen';
-import { toastError, toastSuccess } from '../services/toastService';
+import PatientsScreen from '../../screens/PatientsScreen';
+import authService from '../../services/authService';
+import { toastError, toastSuccess } from '../../services/toastService';
 
-// ── Fixtures ──────────────────────────────────────────────────────────────────
-/**
- * approved_by !== null → invitation envoyée par le médecin (sentInvites)
- * approved_by === null → invitation reçue d'un patient (receivedInvites)
- */
+const { get: mockGet, post: mockPost } = authService.getApiClient();
+
 function makeActiveMember(id = '1', firstName = 'Alice', lastName = 'Martin') {
   return {
     id_team_member: `tm-${id}`,
@@ -49,7 +40,7 @@ function makeActiveMember(id = '1', firstName = 'Alice', lastName = 'Martin') {
     },
     status: 2,
     role_label: 'Referent Doctor',
-    approved_by: 'doc-1',   // ← actif
+    approved_by: 'doc-1',
   };
 }
 
@@ -59,7 +50,7 @@ function makeSentInvite(id = 'inv-s1', email = 'invite@test.com') {
     patient_details: { first_name: null, last_name: null, email },
     invitation_email: email,
     status: 1,
-    approved_by: 'doc-1',   // ← envoyée par le médecin
+    approved_by: 'doc-1',
   };
 }
 
@@ -74,7 +65,7 @@ function makeReceivedInvite(id = 'inv-r1', firstName = 'Bob', lastName = 'Durand
       phone_number: null,
     },
     status: 1,
-    approved_by: null,       // ← reçue d'un patient
+    approved_by: null,
   };
 }
 
@@ -95,124 +86,103 @@ function makeDashboard(overrides = {}) {
 
 function makeGlycemia() {
   return [
-    { value: 200, unit: 'mg/dL', context: 'fasting',     measuredAt: '2026-03-09T12:00:00Z', notes: '' },
-    { value: 55,  unit: 'mg/dL', context: 'preprandial', measuredAt: '2026-03-09T11:00:00Z', notes: '' },
-    { value: 110, unit: 'mg/dL', context: 'fasting',     measuredAt: '2026-03-09T10:00:00Z', notes: '' },
+    { value: 200, unit: 'mg/dL', context: 'fasting', measuredAt: '2026-03-09T12:00:00Z', notes: '' },
+    { value: 55, unit: 'mg/dL', context: 'preprandial', measuredAt: '2026-03-09T11:00:00Z', notes: '' },
+    { value: 110, unit: 'mg/dL', context: 'fasting', measuredAt: '2026-03-09T10:00:00Z', notes: '' },
   ];
 }
 
-// Configure mockGet avec des données par défaut pour tous les endpoints
 function setupDefaultMocks({
   activePatients = [],
   pendingInvites = [],
-  dashboard      = makeDashboard(),
-  glycemia       = [],
-  meals          = [],
-  medications    = [],
-  alerts         = [],
+  dashboard = makeDashboard(),
+  glycemia = [],
+  meals = [],
+  medications = [],
+  alerts = [],
 } = {}) {
   mockGet.mockImplementation((url) => {
     if (url.includes('/doctors/care-team/my-team/'))
       return Promise.resolve({ data: { active_patients: activePatients, pending_invites: pendingInvites } });
-    if (url.includes('patient-dashboard'))
-      return Promise.resolve({ data: dashboard });
-    if (url.includes('patient-glycemia'))
-      return Promise.resolve({ data: glycemia });
-    if (url.includes('patient-meals'))
-      return Promise.resolve({ data: meals });
-    if (url.includes('patient-medications'))
-      return Promise.resolve({ data: medications });
-    if (url.includes('patient-alerts'))
-      return Promise.resolve({ data: alerts });
+    if (url.includes('patient-dashboard')) return Promise.resolve({ data: dashboard });
+    if (url.includes('patient-glycemia')) return Promise.resolve({ data: glycemia });
+    if (url.includes('patient-meals')) return Promise.resolve({ data: meals });
+    if (url.includes('patient-medications')) return Promise.resolve({ data: medications });
+    if (url.includes('patient-alerts')) return Promise.resolve({ data: alerts });
     return Promise.resolve({ data: {} });
   });
 }
 
-// Helpers DOM
-const navigation = { navigate: vi.fn() };
-const render$ = () => render(<PatientsScreen navigation={navigation} />);
-const clickSubmit = () =>
-  fireEvent.click(screen.getByRole('button', { name: /créer mon compte|ajouter un patient/i }));
+const navigation = { navigate: jest.fn() };
+const renderPatients = () => render(<PatientsScreen navigation={navigation} />);
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
 describe('PatientsScreen', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     navigation.navigate.mockClear();
     mockPost.mockResolvedValue({ data: {} });
   });
 
-  // ─── 1. Chargement ───────────────────────────────────────────────────────
   describe('État de chargement', () => {
-    it('affiche le spinner "Chargement des patients…" pendant le fetch', () => {
-      mockGet.mockReturnValue(new Promise(() => {})); // ne résout jamais
-      render$();
+    it('affiche le spinner pendant le fetch', () => {
+      mockGet.mockReturnValue(new Promise(() => {}));
+      renderPatients();
       expect(screen.getByText('Chargement des patients…')).toBeInTheDocument();
     });
 
     it('affiche le header "Mes patients" après chargement', async () => {
       setupDefaultMocks();
-      render$();
+      renderPatients();
       await waitFor(() =>
         expect(screen.getByRole('heading', { name: 'Mes patients' })).toBeInTheDocument()
       );
     });
 
-    it('affiche "Impossible de charger…" si l\'API échoue', async () => {
+    it('affiche un message d\'erreur si l\'API échoue', async () => {
       mockGet.mockRejectedValue(new Error('Network error'));
-      render$();
+      renderPatients();
       await waitFor(() =>
         expect(screen.getByText('Impossible de charger la liste des patients.')).toBeInTheDocument()
       );
     });
 
-    it('la sidebar est montée avec activePage="patients"', async () => {
+    it('monte la sidebar avec activePage="patients"', async () => {
       setupDefaultMocks();
-      render$();
+      renderPatients();
       await waitFor(() =>
         expect(screen.getByTestId('sidebar')).toHaveAttribute('data-page', 'patients')
       );
     });
   });
 
-  // ─── 2. Stats et onglets ─────────────────────────────────────────────────
-  describe('Stats et onglets', () => {
-    it('compteur "Patients actifs" = nombre de membres actifs', async () => {
+  describe('Onglets et compteurs', () => {
+    const tabCount = (tabName) =>
+      screen.getByRole('button', { name: tabName }).querySelector('.tab-count')?.textContent.trim();
+
+    it('compteur Mes patients', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1'), makeActiveMember('2')] });
-      render$();
-      await waitFor(() => {
-        // La stat card affiche le label
-        expect(screen.getByText('Patients actifs')).toBeInTheDocument();
-      });
-      // La valeur 2 doit apparaître (stat-value + tab-count)
-      expect(screen.getAllByText('2').length).toBeGreaterThanOrEqual(1);
+      renderPatients();
+      await waitFor(() => screen.getByRole('button', { name: /mes patients/i }));
+      expect(tabCount(/mes patients/i)).toBe('2');
     });
 
-    it('compteur "Invitations envoyées" correspond aux sentInvites', async () => {
+    it('compteur Invitations envoyées', async () => {
       setupDefaultMocks({ pendingInvites: [makeSentInvite()] });
-      render$();
-      await waitFor(() => {
-        const label = Array.from(document.querySelectorAll('.stat-label'))
-          .find(el => el.textContent.trim() === 'Invitations envoyées');
-        expect(label).toBeTruthy();
-        expect(label.previousSibling?.textContent.trim() || label.parentElement.querySelector('.stat-value')?.textContent.trim()).toBe('1');
-      });
+      renderPatients();
+      await waitFor(() => screen.getByRole('button', { name: /invitations envoyées/i }));
+      expect(tabCount(/invitations envoyées/i)).toBe('1');
     });
 
-    it('compteur "Demandes reçues" correspond aux receivedInvites', async () => {
+    it('compteur Demandes reçues', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite()] });
-      render$();
-      await waitFor(() => {
-        const label = Array.from(document.querySelectorAll('.stat-label'))
-          .find(el => el.textContent.trim() === 'Demandes reçues');
-        expect(label).toBeTruthy();
-        expect(label.parentElement.querySelector('.stat-value')?.textContent.trim()).toBe('1');
-      });
+      renderPatients();
+      await waitFor(() => screen.getByRole('button', { name: /demandes reçues/i }));
+      expect(tabCount(/demandes reçues/i)).toBe('1');
     });
 
-    it('3 onglets présents : Actifs / Envoyées / Reçues', async () => {
+    it('3 onglets présents', async () => {
       setupDefaultMocks();
-      render$();
+      renderPatients();
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /mes patients/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /invitations envoyées/i })).toBeInTheDocument();
@@ -221,64 +191,62 @@ describe('PatientsScreen', () => {
     });
   });
 
-  // ─── 3. Onglet Actifs ────────────────────────────────────────────────────
   describe('Onglet Actifs', () => {
     it('affiche le nom du patient', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1', 'Alice', 'Martin')] });
-      render$();
+      renderPatients();
       await waitFor(() => expect(screen.getByText('Alice Martin')).toBeInTheDocument());
     });
 
     it('affiche l\'email du patient', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1', 'Alice', 'Martin')] });
-      render$();
+      renderPatients();
       await waitFor(() => expect(screen.getByText('alice@test.com')).toBeInTheDocument());
     });
 
-    it('affiche le badge "Actif" (status=2)', async () => {
+    it('affiche le badge "Actif"', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1')] });
-      render$();
+      renderPatients();
       await waitFor(() => expect(screen.getByText('Actif')).toBeInTheDocument());
     });
 
-    it('affiche "Aucun patient actif pour le moment." si liste vide', async () => {
+    it('affiche un message si liste vide', async () => {
       setupDefaultMocks();
-      render$();
+      renderPatients();
       await waitFor(() =>
         expect(screen.getByText('Aucun patient actif pour le moment.')).toBeInTheDocument()
       );
     });
 
-    it('bouton "Voir le dossier" présent par patient', async () => {
+    it('bouton "Voir le dossier" par patient', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1')] });
-      render$();
+      renderPatients();
       await waitFor(() =>
         expect(screen.getByRole('button', { name: /voir le dossier/i })).toBeInTheDocument()
       );
     });
   });
 
-  // ─── 4. Recherche ────────────────────────────────────────────────────────
-  describe('Recherche de patients', () => {
+  describe('Recherche', () => {
     beforeEach(() => {
       setupDefaultMocks({
         activePatients: [
           makeActiveMember('1', 'Alice', 'Martin'),
-          makeActiveMember('2', 'Bob',   'Durand'),
+          makeActiveMember('2', 'Bob', 'Durand'),
         ],
       });
     });
 
     it('filtre sur le prénom (insensible à la casse)', async () => {
-      render$();
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'ALICE');
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument();
     });
 
-    it('filtre sur le nom de famille', async () => {
-      render$();
+    it('filtre sur le nom', async () => {
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'durand');
       expect(screen.getByText('Bob Durand')).toBeInTheDocument();
@@ -286,22 +254,22 @@ describe('PatientsScreen', () => {
     });
 
     it('filtre sur l\'email', async () => {
-      render$();
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'alice@');
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument();
     });
 
-    it('affiche "Aucun résultat." si aucune correspondance', async () => {
-      render$();
+    it('"Aucun résultat" si aucune correspondance', async () => {
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'zzzzz');
       expect(screen.getByText('Aucun résultat.')).toBeInTheDocument();
     });
 
-    it('montre tous les patients si champ de recherche vidé', async () => {
-      render$();
+    it('restaure tout après avoir vidé le champ', async () => {
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       const searchInput = screen.getByPlaceholderText(/rechercher un patient/i);
       await userEvent.type(searchInput, 'Alice');
@@ -311,11 +279,10 @@ describe('PatientsScreen', () => {
     });
   });
 
-  // ─── 5. Onglet Invitations envoyées ──────────────────────────────────────
   describe('Onglet Envoyées', () => {
-    it('affiche la carte d\'invitation envoyée avec le badge "Invitation envoyée"', async () => {
+    it('affiche le badge "Invitation envoyée"', async () => {
       setupDefaultMocks({ pendingInvites: [makeSentInvite('inv-s1', 'invite@test.com')] });
-      render$();
+      renderPatients();
       await waitFor(() => screen.getByRole('button', { name: /envoyées/i }));
       fireEvent.click(screen.getByRole('button', { name: /envoyées/i }));
       await waitFor(() =>
@@ -325,16 +292,16 @@ describe('PatientsScreen', () => {
 
     it('affiche "En attente de la réponse du patient"', async () => {
       setupDefaultMocks({ pendingInvites: [makeSentInvite()] });
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /envoyées/i }));
       await waitFor(() =>
         expect(screen.getByText('En attente de la réponse du patient')).toBeInTheDocument()
       );
     });
 
-    it('affiche "Aucune invitation envoyée en attente." si liste vide', async () => {
+    it('message si aucune invitation envoyée', async () => {
       setupDefaultMocks();
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /envoyées/i }));
       await waitFor(() =>
         expect(screen.getByText('Aucune invitation envoyée en attente.')).toBeInTheDocument()
@@ -343,45 +310,43 @@ describe('PatientsScreen', () => {
 
     it('affiche l\'email de l\'invitation', async () => {
       setupDefaultMocks({ pendingInvites: [makeSentInvite('inv-s1', 'nouveau@test.com')] });
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /invitations envoyées/i }));
       await waitFor(() =>
-        // L'email est dans la card (invitation_email fallback ou p.email)
         expect(screen.getAllByText('nouveau@test.com').length).toBeGreaterThanOrEqual(1)
       );
     });
   });
 
-  // ─── 6. Onglet Invitations reçues ────────────────────────────────────────
   describe('Onglet Reçues', () => {
-    it('affiche le nom du patient qui a envoyé la demande', async () => {
+    it('affiche le nom du patient', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1', 'Bob', 'Durand')] });
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() => expect(screen.getByText('Bob Durand')).toBeInTheDocument());
     });
 
-    it('affiche le bouton "Accepter la demande"', async () => {
+    it('bouton "Accepter la demande" présent', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite()] });
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() =>
         expect(screen.getByRole('button', { name: /accepter la demande/i })).toBeInTheDocument()
       );
     });
 
-    it('affiche "Aucune demande reçue." si liste vide', async () => {
+    it('message si aucune demande reçue', async () => {
       setupDefaultMocks();
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() =>
         expect(screen.getByText('Aucune demande reçue.')).toBeInTheDocument()
       );
     });
 
-    it('clic "Accepter" → POST /doctors/care-team/accept-invitation/', async () => {
+    it('POST /accept-invitation au clic', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() => screen.getByRole('button', { name: /accepter la demande/i }));
       fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
@@ -392,19 +357,19 @@ describe('PatientsScreen', () => {
       );
     });
 
-    it('clic "Accepter" → toastSuccess', async () => {
+    it('toastSuccess après acceptation', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() => screen.getByRole('button', { name: /accepter la demande/i }));
       fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
       await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     });
 
-    it('clic "Accepter" échoue → toastError', async () => {
+    it('toastError si acceptation échoue', async () => {
       mockPost.mockRejectedValue({ response: { data: { error: 'Déjà membre' } } });
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
-      render$();
+      renderPatients();
       fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() => screen.getByRole('button', { name: /accepter la demande/i }));
       fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
@@ -414,7 +379,6 @@ describe('PatientsScreen', () => {
     });
   });
 
-  // ─── 7. Modal "Ajouter un patient" ───────────────────────────────────────
   describe('Modal Ajouter un patient', () => {
     beforeEach(() => setupDefaultMocks());
 
@@ -423,35 +387,34 @@ describe('PatientsScreen', () => {
       fireEvent.click(screen.getByRole('button', { name: /ajouter un patient/i }));
     }
 
-    it('modal fermée par défaut', async () => {
-      render$();
+    it('fermée par défaut', async () => {
+      renderPatients();
       await waitFor(() => screen.getByRole('heading', { name: 'Mes patients' }));
       expect(screen.queryByRole('heading', { name: 'Ajouter un patient' })).not.toBeInTheDocument();
     });
 
-    it('clic "Ajouter un patient" ouvre la modal', async () => {
-      render$();
+    it('ouverte au clic', async () => {
+      renderPatients();
       await openModal();
       expect(screen.getByRole('heading', { name: 'Ajouter un patient' })).toBeInTheDocument();
     });
 
-    it('clic "Annuler" ferme la modal', async () => {
-      render$();
+    it('fermée au clic "Annuler"', async () => {
+      renderPatients();
       await openModal();
       fireEvent.click(screen.getByRole('button', { name: /annuler/i }));
       expect(screen.queryByRole('heading', { name: 'Ajouter un patient' })).not.toBeInTheDocument();
     });
 
-    it('clic sur l\'overlay ferme la modal', async () => {
-      render$();
+    it('fermée au clic sur l\'overlay', async () => {
+      renderPatients();
       await openModal();
-      // Le premier .modal-overlay cliqué → stopPropagation sur .modal-box, donc clic en dehors
       fireEvent.click(document.querySelector('.modal-overlay'));
       expect(screen.queryByRole('heading', { name: 'Ajouter un patient' })).not.toBeInTheDocument();
     });
 
-    it('email invalide → toastError "Veuillez saisir un email valide"', async () => {
-      render$();
+    it('email invalide → toastError', async () => {
+      renderPatients();
       await openModal();
       await userEvent.type(screen.getByPlaceholderText('patient@exemple.com'), 'pasunemail');
       fireEvent.click(screen.getByRole('button', { name: /envoyer l'invitation/i }));
@@ -459,14 +422,14 @@ describe('PatientsScreen', () => {
     });
 
     it('email vide → toastError', async () => {
-      render$();
+      renderPatients();
       await openModal();
       fireEvent.click(screen.getByRole('button', { name: /envoyer l'invitation/i }));
       expect(toastError).toHaveBeenCalledWith('Erreur', 'Veuillez saisir un email valide');
     });
 
-    it('POST /doctors/care-team/add-patient/ avec email et phone_number', async () => {
-      render$();
+    it('POST /add-patient avec email et téléphone', async () => {
+      renderPatients();
       await openModal();
       await userEvent.type(screen.getByPlaceholderText('patient@exemple.com'), 'nouveau@test.com');
       await userEvent.type(screen.getByPlaceholderText('+33 6 00 00 00 00'), '+33612345678');
@@ -479,16 +442,16 @@ describe('PatientsScreen', () => {
       );
     });
 
-    it('invitation réussie → toastSuccess', async () => {
-      render$();
+    it('toastSuccess après envoi', async () => {
+      renderPatients();
       await openModal();
       await userEvent.type(screen.getByPlaceholderText('patient@exemple.com'), 'nouveau@test.com');
       fireEvent.click(screen.getByRole('button', { name: /envoyer l'invitation/i }));
       await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     });
 
-    it('invitation réussie → modal se ferme', async () => {
-      render$();
+    it('modal se ferme après envoi réussi', async () => {
+      renderPatients();
       await openModal();
       await userEvent.type(screen.getByPlaceholderText('patient@exemple.com'), 'nouveau@test.com');
       fireEvent.click(screen.getByRole('button', { name: /envoyer l'invitation/i }));
@@ -498,35 +461,30 @@ describe('PatientsScreen', () => {
     });
   });
 
-  // ─── 8. Modal dossier patient (PatientDashboardModal) ────────────────────
   describe('Modal dossier patient', () => {
     beforeEach(() => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1', 'Alice', 'Martin')] });
     });
 
     async function openDossier() {
-      render$();
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
-      // Attend que le chargement interne se termine
       await waitFor(() =>
         expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
       );
     }
 
-    it('ouvre la modal au clic "Voir le dossier"', async () => {
+    it('s\'ouvre au clic "Voir le dossier"', async () => {
       await openDossier();
-      // La modal contient le nom du patient
       expect(screen.getAllByText('Alice Martin').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('ferme la modal au clic sur le bouton X (.modal-close)', async () => {
+    it('se ferme au clic sur le X', async () => {
       await openDossier();
-      // Clic sur le bouton X dans le header de la modal
       const closeBtns = document.querySelectorAll('.modal-close');
       fireEvent.click(closeBtns[closeBtns.length - 1]);
       await waitFor(() =>
-        // La modal xl est retirée
         expect(document.querySelector('.modal-xl')).not.toBeInTheDocument()
       );
     });
@@ -539,43 +497,41 @@ describe('PatientsScreen', () => {
       expect(screen.getByRole('button', { name: /traitements/i })).toBeInTheDocument();
     });
 
-    it('affiche le score de santé 68', async () => {
+    it('affiche le score de santé', async () => {
       await openDossier();
-      // Le score est dans HealthScore → le texte "68" apparaît
       expect(screen.getByText('68')).toBeInTheDocument();
     });
 
-    it('affiche la glycémie 170 mg/dL', async () => {
+    it('affiche la glycémie actuelle', async () => {
       await openDossier();
-      // MetricCard "Glycémie actuelle" affiche la valeur 170
       expect(screen.getByText('170')).toBeInTheDocument();
     });
 
-    it('affiche "Aucune alerte active" quand alerts est vide', async () => {
+    it('affiche "Aucune alerte active" si pas d\'alerte', async () => {
       await openDossier();
       expect(screen.getByText('Aucune alerte active')).toBeInTheDocument();
     });
 
-    it('affiche le sélecteur de période (7 jours / 30 jours / Personnalisé)', async () => {
+    it('affiche le sélecteur de période', async () => {
       await openDossier();
       expect(screen.getByRole('button', { name: '7 jours' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '30 jours' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Personnalisé' })).toBeInTheDocument();
     });
 
-    it('mode Personnalisé → affiche 2 inputs de date', async () => {
+    it('mode Personnalisé → 2 inputs date', async () => {
       await openDossier();
       fireEvent.click(screen.getByRole('button', { name: 'Personnalisé' }));
       expect(document.querySelectorAll('.period-date-input').length).toBe(2);
     });
 
-    it('le sélecteur de période est absent sur l\'onglet Traitements', async () => {
+    it('sélecteur absent sur l\'onglet Traitements', async () => {
       await openDossier();
       fireEvent.click(screen.getByRole('button', { name: /traitements/i }));
       expect(screen.queryByRole('button', { name: '7 jours' })).not.toBeInTheDocument();
     });
 
-    it('onglet Glycémie → "Aucune mesure de glycémie enregistrée" si données vides', async () => {
+    it('Glycémie vide → message dédié', async () => {
       await openDossier();
       fireEvent.click(screen.getByRole('button', { name: /glycémie/i }));
       await waitFor(() =>
@@ -583,7 +539,7 @@ describe('PatientsScreen', () => {
       );
     });
 
-    it('onglet Traitements → "Aucun médicament enregistré" si données vides', async () => {
+    it('Traitements vide → message dédié', async () => {
       await openDossier();
       fireEvent.click(screen.getByRole('button', { name: /traitements/i }));
       await waitFor(() =>
@@ -592,7 +548,6 @@ describe('PatientsScreen', () => {
     });
   });
 
-  // ─── 9. Tableau glycémie avec données réelles ────────────────────────────
   describe('Tableau glycémie avec données', () => {
     beforeEach(() => {
       setupDefaultMocks({
@@ -602,12 +557,20 @@ describe('PatientsScreen', () => {
     });
 
     async function openGlycemiaTab() {
-      render$();
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
-      await waitFor(() => expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
+      );
       fireEvent.click(screen.getByRole('button', { name: /glycémie/i }));
       await waitFor(() => screen.getByText('200 mg/dL'));
+    }
+
+    function getStatClickable(label) {
+      const lbl = Array.from(document.querySelectorAll('.gly-stat-lbl'))
+        .find((el) => el.textContent.trim() === label);
+      return lbl?.closest('.gly-stat-clickable');
     }
 
     it('affiche les 3 valeurs de glycémie', async () => {
@@ -617,67 +580,53 @@ describe('PatientsScreen', () => {
       expect(screen.getByText('110 mg/dL')).toBeInTheDocument();
     });
 
-    it('badge Hyperglycémie pour 200 mg/dL (> 180)', async () => {
+    it('Hyperglycémie pour 200 mg/dL', async () => {
       await openGlycemiaTab();
       expect(screen.getAllByText('Hyperglycémie').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('badge Hypoglycémie pour 55 mg/dL (< 70)', async () => {
+    it('Hypoglycémie pour 55 mg/dL', async () => {
       await openGlycemiaTab();
       expect(screen.getAllByText('Hypoglycémie').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('badge Normal pour 110 mg/dL (70–180)', async () => {
+    it('Normal pour 110 mg/dL', async () => {
       await openGlycemiaTab();
       expect(screen.getAllByText('Normal').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('les compteurs dans les stats de résumé sont corrects (1 hyper / 1 hypo / 1 normal)', async () => {
+    it('les compteurs de résumé sont corrects', async () => {
       await openGlycemiaTab();
-      // Each .gly-stat-clickable contains a label and a count; verify at least one count is "1"
-      const statBlocks = Array.from(document.querySelectorAll('.gly-stat-clickable'));
-      const allText = statBlocks.map(el => el.textContent);
-      expect(allText.some(t => t.includes('1'))).toBe(true);
+      const counts = Array.from(document.querySelectorAll('.gly-stat-clickable'))
+        .map((el) => el.textContent);
+      expect(counts.some((t) => t.includes('1'))).toBe(true);
     });
-
-    // Helper: find the clickable stat card for a given label (scoped to .gly-stat-lbl)
-    function getStatClickable(label) {
-      const lbl = Array.from(document.querySelectorAll('.gly-stat-lbl'))
-        .find(el => el.textContent.trim() === label);
-      return lbl?.closest('.gly-stat-clickable');
-    }
 
     it('clic sur un stat filtre le tableau', async () => {
       await openGlycemiaTab();
-      // Clique sur le groupe Hyperglycémie
-      const hyperStat = getStatClickable('Hyperglycémie');
-      fireEvent.click(hyperStat);
-      // Seule la valeur 200 doit rester
+      fireEvent.click(getStatClickable('Hyperglycémie'));
       expect(screen.getByText('200 mg/dL')).toBeInTheDocument();
       expect(screen.queryByText('55 mg/dL')).not.toBeInTheDocument();
       expect(screen.queryByText('110 mg/dL')).not.toBeInTheDocument();
     });
 
-    it('la barre "Filtre actif" apparaît après filtrage', async () => {
+    it('la barre de filtre actif apparaît', async () => {
       await openGlycemiaTab();
-      const hyperStat = getStatClickable('Hyperglycémie');
-      fireEvent.click(hyperStat);
+      fireEvent.click(getStatClickable('Hyperglycémie'));
       expect(document.querySelector('.gly-filter-bar')).toBeTruthy();
     });
 
     it('"Effacer le filtre" restaure toutes les lignes', async () => {
       await openGlycemiaTab();
-      const hyperStat = getStatClickable('Hyperglycémie');
-      fireEvent.click(hyperStat);
+      fireEvent.click(getStatClickable('Hyperglycémie'));
       fireEvent.click(screen.getByText(/effacer le filtre/i));
       expect(screen.getByText('55 mg/dL')).toBeInTheDocument();
       expect(screen.getByText('110 mg/dL')).toBeInTheDocument();
     });
   });
 
-  // ─── 10. Alertes glycémiques ─────────────────────────────────────────────
-  describe('Alertes dans le dossier patient', () => {
-    it('affiche le type d\'alerte traduit (hypo → Hypoglycémie)', async () => {
+  describe('Alertes glycémiques', () => {
+    it('traduit hypo → Hypoglycémie', async () => {
       setupDefaultMocks({
         activePatients: [makeActiveMember('1', 'Alice', 'Martin')],
         alerts: [{ alertId: 'a1', type: 'hypo', severity: 'critical', triggeredAt: '2026-03-09T10:00:00Z' }],
@@ -685,14 +634,16 @@ describe('PatientsScreen', () => {
           alerts: [{ alertId: 'a1', type: 'hypo', severity: 'critical', triggeredAt: '2026-03-09T10:00:00Z' }],
         }),
       });
-      render$();
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
-      await waitFor(() => expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
+      );
       expect(screen.getAllByText('Hypoglycémie').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('affiche le type d\'alerte traduit (hyper → Hyperglycémie)', async () => {
+    it('traduit hyper → Hyperglycémie', async () => {
       setupDefaultMocks({
         activePatients: [makeActiveMember('1', 'Alice', 'Martin')],
         alerts: [{ alertId: 'a2', type: 'hyper', severity: 'warning', triggeredAt: '2026-03-09T10:00:00Z' }],
@@ -700,11 +651,184 @@ describe('PatientsScreen', () => {
           alerts: [{ alertId: 'a2', type: 'hyper', severity: 'warning', triggeredAt: '2026-03-09T10:00:00Z' }],
         }),
       });
-      render$();
+      renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
       fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
-      await waitFor(() => expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
+      );
       expect(screen.getAllByText('Hyperglycémie').length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('HbA1c', () => {
+    async function openDossier(dashboardOverride = {}) {
+      setupDefaultMocks({
+        activePatients: [makeActiveMember('1', 'Alice', 'Martin')],
+        dashboard: makeDashboard(dashboardOverride),
+      });
+      renderPatients();
+      await waitFor(() => screen.getByText('Alice Martin'));
+      fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
+      await waitFor(() =>
+        expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
+      );
+    }
+
+    it('affiche la carte HbA1c dans la vue d\'ensemble', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%', measuredAt: '2026-03-01T10:00:00Z' } });
+      expect(screen.getByTestId('hba1c-card')).toBeInTheDocument();
+      expect(screen.getByText('HbA1c (3 derniers mois)')).toBeInTheDocument();
+    });
+
+    it('affiche la valeur formatée à une décimale', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%', measuredAt: '2026-03-01T10:00:00Z' } });
+      expect(screen.getByText('6.8')).toBeInTheDocument();
+    });
+
+    it('catégorise < 7 % comme "Objectif atteint"', async () => {
+      await openDossier({ hba1c: { value: 6.5, unit: '%' } });
+      expect(screen.getByText('Objectif atteint')).toBeInTheDocument();
+    });
+
+    it('catégorise 7–8 % comme "Légèrement élevée"', async () => {
+      await openDossier({ hba1c: { value: 7.5, unit: '%' } });
+      expect(screen.getByText('Légèrement élevée')).toBeInTheDocument();
+    });
+
+    it('catégorise > 8 % comme "Élevée"', async () => {
+      await openDossier({ hba1c: { value: 9.2, unit: '%' } });
+      expect(screen.getByText('Élevée')).toBeInTheDocument();
+    });
+
+    it('affiche un placeholder si aucune valeur', async () => {
+      await openDossier({ hba1c: null });
+      expect(screen.getByText('Aucune valeur renseignée')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /renseigner/i })).toBeInTheDocument();
+    });
+
+    it('clic "Modifier" ouvre le champ d\'édition', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      expect(screen.getByLabelText('Valeur HbA1c')).toBeInTheDocument();
+    });
+
+    it('"Annuler" referme l\'édition sans POST', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      fireEvent.click(screen.getByRole('button', { name: /annuler/i }));
+      expect(screen.queryByLabelText('Valeur HbA1c')).not.toBeInTheDocument();
+      expect(mockPost).not.toHaveBeenCalledWith(
+        '/doctors/care-team/patient-hba1c/',
+        expect.anything()
+      );
+    });
+
+    it('valeur < 3 → toastError, pas de POST', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '2');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
+      expect(mockPost).not.toHaveBeenCalledWith(
+        '/doctors/care-team/patient-hba1c/',
+        expect.anything()
+      );
+    });
+
+    it('valeur > 20 → toastError, pas de POST', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '25');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
+      expect(mockPost).not.toHaveBeenCalledWith(
+        '/doctors/care-team/patient-hba1c/',
+        expect.anything()
+      );
+    });
+
+    it('valeur vide → toastError, pas de POST', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
+    });
+
+    it('valeur valide → POST /patient-hba1c/ avec le bon payload', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '7.2');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() =>
+        expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/patient-hba1c/', {
+          patient_user_id: '1',
+          value: 7.2,
+          unit: '%',
+        })
+      );
+    });
+
+    it('POST réussi → toastSuccess et fermeture de l\'éditeur', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '7.2');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(screen.queryByLabelText('Valeur HbA1c')).not.toBeInTheDocument()
+      );
+    });
+
+    it('POST échoue → toastError et l\'éditeur reste ouvert', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      mockPost.mockRejectedValueOnce({ response: { data: { error: 'Service indisponible' } } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '7.2');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Erreur', 'Service indisponible')
+      );
+      expect(screen.getByLabelText('Valeur HbA1c')).toBeInTheDocument();
+    });
+
+    it('virgule comme séparateur décimal acceptée', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      fireEvent.change(input, { target: { value: '6,5' } });
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() =>
+        expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/patient-hba1c/',
+          expect.objectContaining({ value: 6.5 })
+        )
+      );
+    });
+
+    it('touche Entrée déclenche l\'enregistrement', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '7.1{Enter}');
+      await waitFor(() =>
+        expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/patient-hba1c/',
+          expect.objectContaining({ value: 7.1 })
+        )
+      );
     });
   });
 });
