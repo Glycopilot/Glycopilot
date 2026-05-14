@@ -49,7 +49,7 @@ class UserMeal(models.Model):
     portion_g = models.FloatField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)  # NOSONAR
     input_mode = models.CharField(max_length=10, choices=INPUT_MODE_CHOICES, default="manual")
-    session_key = models.CharField(max_length=40, blank=True, null=True)
+    session_key = models.CharField(max_length=40, blank=True, null=True)  # NOSONAR
 
     class Meta:
         db_table = "users_meals"

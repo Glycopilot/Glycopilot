@@ -115,12 +115,8 @@ const mealService = {
   },
 
   async addMeal(payload: CreateUserMealPayload): Promise<UserMeal> {
-    try {
-      const res = await apiClient.post<UserMeal>('/meals/log/', payload);
-      return res.data;
-    } catch (err) {
-      throw err;
-    }
+    const res = await apiClient.post<UserMeal>('/meals/log/', payload);
+    return res.data;
   },
 };
 

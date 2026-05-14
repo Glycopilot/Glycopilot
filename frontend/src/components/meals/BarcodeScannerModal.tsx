@@ -70,16 +70,7 @@ export default function BarcodeScannerModal({ visible, onClose, onProductFound, 
           </Pressable>
         </View>
 
-        {!permission.granted ? (
-          <View style={styles.permissionBox}>
-            <Text style={styles.permissionText}>
-              GlycoPilot a besoin d'accéder à la caméra pour scanner les codes-barres.
-            </Text>
-            <Pressable style={styles.grantBtn} onPress={requestPermission}>
-              <Text style={styles.grantBtnText}>Autoriser la caméra</Text>
-            </Pressable>
-          </View>
-        ) : (
+        {permission.granted ? (
           <View style={styles.cameraWrapper}>
             <CameraView
               style={StyleSheet.absoluteFill}
@@ -119,6 +110,15 @@ export default function BarcodeScannerModal({ visible, onClose, onProductFound, 
                 )}
               </View>
             )}
+          </View>
+        ) : (
+          <View style={styles.permissionBox}>
+            <Text style={styles.permissionText}>
+              GlycoPilot a besoin d'accéder à la caméra pour scanner les codes-barres.
+            </Text>
+            <Pressable style={styles.grantBtn} onPress={requestPermission}>
+              <Text style={styles.grantBtnText}>Autoriser la caméra</Text>
+            </Pressable>
           </View>
         )}
       </View>
