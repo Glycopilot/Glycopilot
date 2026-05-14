@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 
 jest.mock('./services/authService', () => ({
@@ -10,7 +10,9 @@ jest.mock('./services/authService', () => ({
   },
 }));
 
-test('renders the login screen by default', () => {
+test('renders the login screen at startup when not authenticated', async () => {
   render(<App />);
-  expect(screen.getAllByText(/connexion/i).length).toBeGreaterThanOrEqual(1);
+  await waitFor(() =>
+    expect(screen.getAllByText(/connexion/i).length).toBeGreaterThanOrEqual(1)
+  );
 });

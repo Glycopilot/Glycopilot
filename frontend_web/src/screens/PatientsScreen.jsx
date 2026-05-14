@@ -9,13 +9,10 @@ import {
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
+import { getInitials, extractValue, toArr, hba1cBand } from '../lib/utils';
 import './css/patients.css';
 
 const apiClient = authService.getApiClient();
-
-function getInitials(firstName, lastName) {
-  return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
-}
 
 function StatusBadge({ status }) {
   const map = {
@@ -25,14 +22,6 @@ function StatusBadge({ status }) {
   };
   const { label, cls } = map[status] || { label: 'Inconnu', cls: 'badge-inactive' };
   return <span className={`status-badge ${cls}`}>{label}</span>;
-}
-
-/* ─── Helper : extrait une valeur primitive depuis un champ qui peut être
-       soit un scalaire, soit un objet { value, unit, trend, recordedAt, … } ─── */
-function extractValue(field) {
-  if (field == null) return null;
-  if (typeof field === 'object') return field.value ?? null;
-  return field;
 }
 
 /* ─── Modal : Ajouter un patient ─── */
@@ -294,13 +283,6 @@ function HealthScore({ score }) {
 }
 
 /* ─── Carte HbA1c (lecture + édition) ─── */
-function hba1cBand(value) {
-  if (value == null) return null;
-  if (value < 7)  return { color: '#16A34A', bg: '#F0FDF4', label: 'Objectif atteint' };
-  if (value < 8)  return { color: '#F97316', bg: '#FFF7ED', label: 'Légèrement élevée' };
-  return { color: '#DC2626', bg: '#FEF2F2', label: 'Élevée' };
-}
-
 function HbA1cCard({ value, unit, measuredAt, onSave }) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState('');
@@ -456,14 +438,9 @@ function PatientDashboardModal({ member, onClose }) {
           apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`),
         ]);
         setDashboard(d.data);
-        const toArr = (data, keys) => {
-          if (Array.isArray(data)) return data;
-          for (const k of keys) if (Array.isArray(data?.[k])) return data[k];
-          return [];
-        };
-        setMeals(toArr(m.data, ['results','meals','data']));
-        setMedications(toArr(med.data, ['results','medications','data']));
-        setGlycemia(toArr(g.data, ['results','glycemia','data']));
+        setMeals(toArr(m.data, ['results', 'meals', 'data']));
+        setMedications(toArr(med.data, ['results', 'medications', 'data']));
+        setGlycemia(toArr(g.data, ['results', 'glycemia', 'data']));
       } catch (err) {
         toastError('Erreur', 'Impossible de charger les données du patient');
       } finally {
