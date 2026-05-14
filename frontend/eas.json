@@ -4,15 +4,31 @@
   },
   "build": {
     "development": {
+      "environment": "development",
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8006/api",
+        "EXPO_PUBLIC_WS_URL": "ws://localhost:8006"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
-      "distribution": "internal"
+      "environment": "preview",
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://15.188.114.169/api",
+        "EXPO_PUBLIC_WS_URL": "ws://15.188.114.169"
+      }
     },
-    "production": {}
+    "production": {
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://15.188.114.169/api",
+        "EXPO_PUBLIC_WS_URL": "ws://15.188.114.169"
+      }
+    }
   }
 }

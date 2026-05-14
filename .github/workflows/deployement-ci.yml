@@ -43,10 +43,12 @@ jobs:
           script: |
             cd /home/ubuntu/glycopilot-app
             docker compose --profile aws up -d
-            docker compose --profile aws exec backend_aws python manage.py migrate --noinput
-            docker compose --profile aws exec backend_aws python manage.py import_medications
+            docker compose --profile aws exec -T backend_aws python manage.py migrate --noinput
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
+            docker compose --profile aws exec -T backend_aws python manage.py import_medications
             if [ -f data/import/CIS_bdpm.txt ]; then
-              docker compose --profile aws exec backend_aws python manage.py import_medications --bdpm
+              docker compose --profile aws exec -T backend_aws python manage.py import_medications --bdpm
             fi
 
   deploy-plan-a:
@@ -99,6 +101,8 @@ jobs:
             
             docker compose --profile aws down
             docker compose --profile aws up -d --build
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
             docker image prune -f
 
   deploy-plan-b:
@@ -196,16 +200,26 @@ jobs:
           cd frontend
           npm install --legacy-peer-deps
 
-      - name: Create google-services.json
+      - name: Create google-services.json and force tracking
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           cd frontend
-          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > google-services.json
+
+          printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+
+          sed -i '/google-services.json/d' .gitignore || true
+
+          git config --global user.email "ci@glycopilot.com"
+          git config --global user.name "GitHub Actions"
+          git add google-services.json .gitignore
+          git commit -m "chore: temp commit for EAS to track google-services.json" || true
 
       - name: Build Android APK
         env:
 
           EXPO_PUBLIC_API_URL: "http://15.188.114.169/api"
-          EXPO_PUBLIC_WS_URL: "ws://15.188.114.169:8006"
+          EXPO_PUBLIC_WS_URL: "ws://15.188.114.169"
           EXPO_PUBLIC_S3_BUCKET: "glycopilot-aws-s3-bucket-img-artifacts"
         run: |
           cd frontend
