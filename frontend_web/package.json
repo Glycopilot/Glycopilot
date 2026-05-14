@@ -7,8 +7,15 @@
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
     "react-scripts": "5.0.1",
+    "react-toastify": "^10.0.6",
+    "web-vitals": "^4.2.4"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "http-proxy-middleware": "^3.0.3"
     "react-toastify": "^10.0.6",
     "web-vitals": "^4.2.4"
   },
@@ -22,6 +29,10 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:unit": "react-scripts test --testPathPattern=__tests__/unit",
+    "test:integration": "react-scripts test --testPathPattern=__tests__/integration",
+    "test:ci": "react-scripts test --watchAll=false",
+    "test:coverage": "react-scripts test --watchAll=false --coverage",
     "test:unit": "react-scripts test --testPathPattern=__tests__/unit",
     "test:integration": "react-scripts test --testPathPattern=__tests__/integration",
     "test:ci": "react-scripts test --watchAll=false",

@@ -10,9 +10,10 @@ jest.mock('./services/authService', () => ({
   },
 }));
 
-test('renders the login screen at startup when not authenticated', async () => {
+test('renders the login screen by default', () => {
   render(<App />);
   await waitFor(() =>
     expect(screen.getAllByText(/connexion/i).length).toBeGreaterThanOrEqual(1)
   );
 });
+
