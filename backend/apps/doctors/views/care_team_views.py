@@ -1,6 +1,5 @@
 import logging
 
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from rest_framework import viewsets
@@ -185,7 +184,6 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         Corps JSON : uid, token, password
         """
-        from django.contrib.auth.tokens import PasswordResetTokenGenerator
         from django.utils.encoding import force_str
         from django.utils.http import urlsafe_base64_decode
 
