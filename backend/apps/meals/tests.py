@@ -122,18 +122,24 @@ class TestUserMealModel:
 
     def test_same_meal_different_time_allowed(self, user, meal):
         UserMeal.objects.create(
-            user=user, meal=meal, taken_at=datetime(2026, 5, 14, 12, 0, tzinfo=timezone.utc),
-            meal_type="lunch", input_mode="manual",
+            user=user,
+            meal=meal,
+            taken_at=datetime(2026, 5, 14, 12, 0, tzinfo=timezone.utc),
+            meal_type="lunch",
+            input_mode="manual",
         )
         UserMeal.objects.create(
-            user=user, meal=meal, taken_at=datetime(2026, 5, 14, 19, 0, tzinfo=timezone.utc),
-            meal_type="dinner", input_mode="manual",
+            user=user,
+            meal=meal,
+            taken_at=datetime(2026, 5, 14, 19, 0, tzinfo=timezone.utc),
+            meal_type="dinner",
+            input_mode="manual",
         )
         assert UserMeal.objects.filter(user=user, meal=meal).count() == 2
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 2. REFERENCE CATALOGUE — LECTURE
+# 2. REFERENCE CATALOGUE
 # ═══════════════════════════════════════════════════════════════════
 
 
@@ -328,11 +334,13 @@ class TestUserMealLog:
 
     def test_filter_by_date(self):
         make_user_meal(
-            self.user, self.meal,
+            self.user,
+            self.meal,
             taken_at=datetime(2026, 5, 14, 12, 0, tzinfo=timezone.utc),
         )
         make_user_meal(
-            self.user, self.meal,
+            self.user,
+            self.meal,
             taken_at=datetime(2026, 5, 15, 12, 0, tzinfo=timezone.utc),
         )
         resp = self.client.get("/api/meals/log/?date=2026-05-14")
@@ -380,6 +388,34 @@ class TestUserMealLog:
         assert resp.status_code == 404
 
 
+@pytest.mark.django_db
+class TestUserMealCRUD:
+    def test_create_user_meal(self, auth_client, meal):
+        resp = auth_client.post(
+            "/api/meals/log/",
+            {"meal_id": meal.meal_id, "taken_at": now().isoformat()},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.json()["meal"]["name"] == "Oatmeal"
+
+    def test_retrieve_user_meal(self, auth_client, user_meal):
+        resp = auth_client.get(f"/api/meals/log/{user_meal.id}/")
+        assert resp.status_code == 200
+        assert resp.json()["id"] == user_meal.id
+
+    def test_delete_user_meal(self, auth_client, user_meal):
+        resp = auth_client.delete(f"/api/meals/log/{user_meal.id}/")
+        assert resp.status_code == 204
+        assert not UserMeal.objects.filter(id=user_meal.id).exists()
+
+    def test_cannot_access_other_user_meal(self, other_user, user_meal):
+        other_client = APIClient()
+        other_client.force_authenticate(user=other_user)
+        resp = other_client.get(f"/api/meals/log/{user_meal.id}/")
+        assert resp.status_code == 404
+
+
 # ═══════════════════════════════════════════════════════════════════
 # 7. DAILY SUMMARY
 # ═══════════════════════════════════════════════════════════════════
@@ -395,7 +431,9 @@ class TestDailySummary:
     def test_calculates_totals_correctly(self):
         meal = make_meal(glucides=10.0, calories=52, proteines=1.0, lipides=0.5)
         make_user_meal(
-            self.user, meal, portion_g=200.0,
+            self.user,
+            meal,
+            portion_g=200.0,
             taken_at=datetime(2026, 5, 14, 12, 0, tzinfo=timezone.utc),
         )
         resp = self.client.get("/api/meals/log/daily-summary/?date=2026-05-14")
@@ -413,11 +451,15 @@ class TestDailySummary:
     def test_counts_by_meal_type(self):
         meal = make_meal()
         make_user_meal(
-            self.user, meal, meal_type="breakfast",
+            self.user,
+            meal,
+            meal_type="breakfast",
             taken_at=datetime(2026, 5, 14, 8, 0, tzinfo=timezone.utc),
         )
         make_user_meal(
-            self.user, meal, meal_type="lunch",
+            self.user,
+            meal,
+            meal_type="lunch",
             taken_at=datetime(2026, 5, 14, 12, 0, tzinfo=timezone.utc),
         )
         resp = self.client.get("/api/meals/log/daily-summary/?date=2026-05-14")
@@ -448,7 +490,9 @@ class TestRangeSummary:
     def test_calculates_glucides_per_day(self):
         meal = make_meal(glucides=10.0, calories=52)
         make_user_meal(
-            self.user, meal, portion_g=100.0,
+            self.user,
+            meal,
+            portion_g=100.0,
             taken_at=datetime(2026, 5, 14, 12, 0, tzinfo=timezone.utc),
         )
         resp = self.client.get(
