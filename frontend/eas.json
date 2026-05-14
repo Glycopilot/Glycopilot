@@ -23,6 +23,17 @@
         "EXPO_PUBLIC_WS_URL": "ws://15.188.114.169"
       }
     },
+      "apk": {
+        "environment": "production",
+        "distribution": "internal",
+        "env": {
+          "EXPO_PUBLIC_API_URL": "http://15.188.114.169/api",
+          "EXPO_PUBLIC_WS_URL": "ws://15.188.114.169"
+        },
+        "android": {
+          "buildType": "apk"
+        }
+      },
     "production": {
       "environment": "production",
       "env": {
