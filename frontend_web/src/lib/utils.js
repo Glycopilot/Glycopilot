@@ -37,6 +37,7 @@ export function validatePassword(pw) {
   return null;
 }
 
+
 export function flattenAuthMe(data) {
   const identity = data?.identity ?? {};
   const profile = identity?.profiles?.[0] ?? {};
@@ -54,7 +55,6 @@ export function flattenAuthMe(data) {
     license_number: doctor?.license_number,
     verification_status: doctor?.verification_status,
     specialty: doctor?.specialty,
-    medical_center_name: doctor?.medical_center_name,
     medical_center_address: doctor?.medical_center_address,
   };
 }

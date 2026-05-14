@@ -14,6 +14,45 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
+/* Cache local HbA1c — workaround tant que le backend patient-dashboard
+   ne renvoie pas le champ. Clé par patient. Le frontend hydrate avec
+   cette valeur si l'API n'en fournit pas, et y écrit après chaque PATCH. */
+const HBA1C_CACHE_PREFIX = 'gp_hba1c_';
+
+function readHba1cCache(patientId) {
+  if (!patientId) return null;
+  try {
+    const raw = localStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Number.isFinite(parsed?.value) ? parsed : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function writeHba1cCache(patientId, value, measuredAt) {
+  if (!patientId || !Number.isFinite(value)) return;
+  try {
+    localStorage.setItem(
+      `${HBA1C_CACHE_PREFIX}${patientId}`,
+      JSON.stringify({ value, unit: '%', measuredAt: measuredAt ?? new Date().toISOString() })
+    );
+  } catch (_e) { /* quota / safari privé : on ignore */ }
+}
+
+function formatNextDose(nextDose) {
+  if (nextDose == null) return null;
+  if (typeof nextDose === 'string' || typeof nextDose === 'number') return nextDose;
+  if (typeof nextDose === 'object') {
+    const name = nextDose.name ?? nextDose.medication_name ?? nextDose.drug_name;
+    const dosage = nextDose.dosage ?? nextDose.dose ?? nextDose.strength;
+    if (name && dosage) return `${name} · ${dosage}`;
+    return name ?? dosage ?? null;
+  }
+  return null;
+}
+
 function StatusBadge({ status }) {
   const map = {
     2: { label: 'Actif',       cls: 'badge-active' },
@@ -390,7 +429,6 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
     </div>
   );
 }
-
 /* ─── Modal : Dossier patient ── */
 function PatientDashboardModal({ member, onClose }) {
   const p         = member.patient_details;
@@ -465,13 +503,18 @@ function PatientDashboardModal({ member, onClose }) {
 
   const handleSaveHba1c = async (newValue) => {
     try {
-      await apiClient.post('/doctors/care-team/patient-hba1c/', {
-        patient_user_id: patientId,
-        value: newValue,
-        unit: '%',
-      });
+      const res = await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
       toastSuccess('HbA1c mis à jour', `Nouvelle valeur : ${newValue.toFixed(1)} %`);
-      await refreshDashboard();
+      const savedValue = res.data?.patient_details?.hba1c ?? newValue;
+      const measuredAt = new Date().toISOString();
+      writeHba1cCache(patientId, Number(savedValue), measuredAt);
+      try { await refreshDashboard(); } catch (_e) { /* no-op */ }
+      // Le backend patient-dashboard ne renvoie pas hba1c → on l'injecte localement
+      // pour que la valeur reste visible dans la modale après la sauvegarde.
+      setDashboard((prev) => ({
+        ...(prev ?? {}),
+        hba1c: { value: savedValue, unit: '%', measuredAt },
+      }));
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
       toastError('Erreur', msg);
@@ -517,13 +560,21 @@ function PatientDashboardModal({ member, onClose }) {
       activeMinutes: extractValue(dashboard.activity?.activeMinutes),
     },
     medication: {
-      nextDose: extractValue(dashboard.medication?.nextDose) ?? dashboard.medication?.nextDose,
+      nextDose: formatNextDose(dashboard.medication?.nextDose),
     },
-    hba1c: {
-      value:      extractValue(dashboard.hba1c),
-      unit:       typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
-      measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
-    },
+    hba1c: (() => {
+      const fromApi = extractValue(dashboard.hba1c);
+      if (fromApi != null) {
+        return {
+          value: fromApi,
+          unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
+          measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
+        };
+      }
+      const cached = readHba1cCache(patientId);
+      if (cached) return cached;
+      return { value: null, unit: '%', measuredAt: null };
+    })(),
   } : null;
 
   return (
