@@ -189,6 +189,46 @@ function confirmDeleteGroup(group: MealGroup, deleteMeal: DeleteMealFn): void {
   );
 }
 
+function confirmDeleteItem(itemId: number, itemName: string, deleteMeal: DeleteMealFn): void {
+  Alert.alert(
+    'Supprimer',
+    `Supprimer "${itemName}" ?`,
+    [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          try { await deleteMeal(itemId); }
+          catch { toastError('Erreur', 'Impossible de supprimer cet aliment.'); }
+        },
+      },
+    ]
+  );
+}
+
+async function processPayloads(
+  payloads: CreateUserMealPayload[],
+  addMeals: (p: CreateUserMealPayload[]) => Promise<boolean>,
+  closeAdd: () => void,
+  setSubmitting: (v: boolean) => void,
+): Promise<void> {
+  if (payloads.length === 0) {
+    toastError('Repas invalide', 'Impossible de créer ces aliments.');
+    setSubmitting(false);
+    return;
+  }
+  const success = await addMeals(payloads);
+  setSubmitting(false);
+  if (success) {
+    closeAdd();
+    const msg = payloads.length > 1 ? `${payloads.length} aliments ajoutés` : 'Ajouté au journal';
+    toastSuccess('Repas enregistré', msg);
+  } else {
+    toastError('Erreur', "Impossible d'enregistrer le repas.");
+  }
+}
+
 async function resolveItemMealId(item: ComposedItem): Promise<number> {
   const mealId = item.selectedRef?.meal_id ?? -1;
 
@@ -361,25 +401,11 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
   const handleSubmit = async (pendingItem: ComposedItem | null) => {
     const allItems = pendingItem ? [...composedItems, pendingItem] : [...composedItems];
     if (allItems.length === 0) return;
-
     setSubmitting(true);
     const sessionKey = allItems.length > 1 ? generateSessionKey() : undefined;
     try {
       const payloads = await buildPayloads(allItems, compositionMealType, sessionKey, new Date().toISOString());
-      if (payloads.length === 0) {
-        toastError('Repas invalide', 'Impossible de créer ces aliments.');
-        setSubmitting(false);
-        return;
-      }
-      const success = await addMeals(payloads);
-      setSubmitting(false);
-      if (success) {
-        closeAdd();
-        const msg = payloads.length > 1 ? `${payloads.length} aliments ajoutés` : 'Ajouté au journal';
-        toastSuccess('Repas enregistré', msg);
-      } else {
-        toastError('Erreur', "Impossible d'enregistrer le repas.");
-      }
+      await processPayloads(payloads, addMeals, closeAdd, setSubmitting);
     } catch {
       setSubmitting(false);
       toastError('Erreur', "Une erreur est survenue.");
@@ -388,26 +414,8 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
 
   const handleDeleteGroup = (group: MealGroup) => confirmDeleteGroup(group, deleteMeal);
 
-  const handleDeleteItem = (itemId: number, itemName: string) => {
-    Alert.alert(
-      'Supprimer',
-      `Supprimer "${itemName}" ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMeal(itemId);
-            } catch {
-              toastError('Erreur', 'Impossible de supprimer cet aliment.');
-            }
-          },
-        },
-      ]
-    );
-  };
+  const handleDeleteItem = (itemId: number, itemName: string) =>
+    confirmDeleteItem(itemId, itemName, deleteMeal);
 
   // Sections JSX pré-calculées pour éviter les ternaires imbriqués
   let summarySection: React.ReactNode;
