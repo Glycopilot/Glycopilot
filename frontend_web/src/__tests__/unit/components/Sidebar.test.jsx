@@ -12,6 +12,10 @@ jest.mock('../../../services/authService', () => {
     },
   };
 });
+jest.mock('../../../components/tour/HelpButton', () => ({
+  __esModule: true,
+  default: () => <button data-testid="help-button" />,
+}));
 
 import Sidebar from '../../../components/Sidebar';
 import authService from '../../../services/authService';
