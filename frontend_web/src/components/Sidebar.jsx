@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, User, LogOut, Menu, X } from 'lucide-react';
 import authService from '../services/authService';
+import { devWarn } from '../lib/logger';
+import { getInitials } from '../lib/utils';
 import logo from '../assets/glycopilot.png';
 
 const apiClient = authService.getApiClient();
-
-function getInitials(firstName, lastName) {
-  return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
-}
 
 export default function Sidebar({ activePage, navigation }) {
   const stored = authService.getStoredUser();
@@ -33,7 +31,7 @@ export default function Sidebar({ activePage, navigation }) {
     try {
       await apiClient.post('/auth/logout/');
     } catch (err) {
-      console.warn('Logout API warning:', err?.response?.status);
+      devWarn('Logout API warning:', err?.response?.status);
     } finally {
       authService.logout();
       navigation.navigate('/login');

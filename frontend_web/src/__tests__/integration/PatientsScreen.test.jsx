@@ -377,6 +377,111 @@ describe('PatientsScreen', () => {
         expect(toastError).toHaveBeenCalledWith('Erreur', 'Déjà membre')
       );
     });
+
+    describe('Refus d\'une demande', () => {
+      async function goToReceived() {
+        renderPatients();
+        fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
+        await waitFor(() => screen.getByRole('button', { name: /^refuser$/i }));
+      }
+
+      it('bouton "Refuser" présent à côté de "Accepter la demande"', async () => {
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        expect(screen.getByRole('button', { name: /^refuser$/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /accepter la demande/i })).toBeInTheDocument();
+      });
+
+      it('clic "Refuser" affiche la confirmation et masque les boutons initiaux', async () => {
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
+        expect(screen.getByRole('alertdialog', { name: /confirmer le refus/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /confirmer le refus/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /accepter la demande/i })).not.toBeInTheDocument();
+      });
+
+      it('"Annuler" referme la confirmation sans POST', async () => {
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /^annuler$/i }));
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /accepter la demande/i })).toBeInTheDocument();
+        expect(mockPost).not.toHaveBeenCalledWith(
+          '/doctors/care-team/decline-invitation/',
+          expect.anything()
+        );
+      });
+
+      it('"Confirmer le refus" → POST /decline-invitation/ avec l\'id', async () => {
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
+        await waitFor(() =>
+          expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/decline-invitation/', {
+            id_team_member: 'inv-r1',
+          })
+        );
+      });
+
+      it('refus réussi → toastSuccess', async () => {
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
+        await waitFor(() =>
+          expect(toastSuccess).toHaveBeenCalledWith(
+            'Demande refusée',
+            expect.stringMatching(/refusée/i)
+          )
+        );
+      });
+
+      it('refus réussi → fetchTeam relancé pour rafraîchir la liste', async () => {
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        const initialCallCount = mockGet.mock.calls.filter(
+          ([url]) => url.includes('/doctors/care-team/my-team/')
+        ).length;
+        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
+        await waitFor(() => {
+          const after = mockGet.mock.calls.filter(
+            ([url]) => url.includes('/doctors/care-team/my-team/')
+          ).length;
+          expect(after).toBeGreaterThan(initialCallCount);
+        });
+      });
+
+      it('refus échoue → toastError, confirmation se ferme', async () => {
+        mockPost.mockRejectedValueOnce({ response: { data: { error: 'Action non autorisée' } } });
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
+        fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
+        await waitFor(() =>
+          expect(toastError).toHaveBeenCalledWith('Erreur', 'Action non autorisée')
+        );
+      });
+
+      it('aucun POST envoyé si on accepte sans passer par le refus', async () => {
+        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
+        await goToReceived();
+        fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
+        await waitFor(() =>
+          expect(mockPost).toHaveBeenCalledWith(
+            '/doctors/care-team/accept-invitation/',
+            expect.anything()
+          )
+        );
+        expect(mockPost).not.toHaveBeenCalledWith(
+          '/doctors/care-team/decline-invitation/',
+          expect.anything()
+        );
+      });
+    });
   });
 
   describe('Modal Ajouter un patient', () => {
