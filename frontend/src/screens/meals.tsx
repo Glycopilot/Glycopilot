@@ -316,6 +316,26 @@ function WeekBarChart({ weekData, selectedDate, objectif, onSelectDay }: Readonl
   );
 }
 
+function getHeaderTexts(
+  viewMode: ViewMode,
+  weekStart: string,
+  weekEnd: string,
+  isToday: boolean,
+  selectedDate: string,
+): { subtitle: string; sectionTitle: string } {
+  let subtitle: string;
+  if (viewMode === 'week') subtitle = formatWeekRange(weekStart, weekEnd);
+  else if (isToday) subtitle = "Aujourd'hui";
+  else subtitle = formatDate(selectedDate);
+
+  let sectionTitle: string;
+  if (viewMode === 'day') sectionTitle = 'Repas du jour';
+  else if (isToday) sectionTitle = "Aujourd'hui";
+  else sectionTitle = formatDateShort(selectedDate);
+
+  return { subtitle, sectionTitle };
+}
+
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
 interface NutritionScreenProps {
@@ -376,8 +396,9 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
   const isCurrentWeek = weekStart === getWeekStart(todayISO);
   const weekHasNoData = !weekLoading && weekData.length > 0 && weekData.every(d => d.meal_count === 0);
 
-  const handlePrev = () => setDate(shiftDate(selectedDate, viewMode === 'week' ? -7 : -1));
-  const handleNext = () => setDate(shiftDate(selectedDate, viewMode === 'week' ? 7 : 1));
+  const dateShift = viewMode === 'week' ? 7 : 1;
+  const handlePrev = () => setDate(shiftDate(selectedDate, -dateShift));
+  const handleNext = () => setDate(shiftDate(selectedDate, dateShift));
   const isCurrentPeriod = viewMode === 'week' ? isCurrentWeek : isToday;
 
   const openAdd = () => {
@@ -507,24 +528,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
     );
   }
 
-  // Variables extraites pour éviter les ternaires imbriqués dans le JSX
-  let headerSubtitle: string;
-  if (viewMode === 'week') {
-    headerSubtitle = formatWeekRange(weekStart, weekEnd);
-  } else if (isToday) {
-    headerSubtitle = "Aujourd'hui";
-  } else {
-    headerSubtitle = formatDate(selectedDate);
-  }
-
-  let sectionTitle: string;
-  if (viewMode === 'day') {
-    sectionTitle = 'Repas du jour';
-  } else if (isToday) {
-    sectionTitle = "Aujourd'hui";
-  } else {
-    sectionTitle = formatDateShort(selectedDate);
-  }
+  const { subtitle: headerSubtitle, sectionTitle } = getHeaderTexts(viewMode, weekStart, weekEnd, isToday, selectedDate);
 
   return (
     <Layout navigation={navigation} currentRoute="Home" userName="Utilisateur">
