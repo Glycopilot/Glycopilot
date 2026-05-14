@@ -3,7 +3,8 @@ import {
   Users, Clock, Search, ChevronRight,
   Mail, Phone, AlertCircle, Plus, X,
   Activity, Utensils, Pill, Droplets, Heart, Footprints,
-  Flame, AlertTriangle, CheckCircle, Send, UserPlus
+  Flame, AlertTriangle, CheckCircle, Send, UserPlus,
+  Pencil, TrendingUp
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
@@ -292,6 +293,115 @@ function HealthScore({ score }) {
   );
 }
 
+/* ─── Carte HbA1c (lecture + édition) ─── */
+function hba1cBand(value) {
+  if (value == null) return null;
+  if (value < 7)  return { color: '#16A34A', bg: '#F0FDF4', label: 'Objectif atteint' };
+  if (value < 8)  return { color: '#F97316', bg: '#FFF7ED', label: 'Légèrement élevée' };
+  return { color: '#DC2626', bg: '#FEF2F2', label: 'Élevée' };
+}
+
+function HbA1cCard({ value, unit, measuredAt, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState('');
+  const [saving,  setSaving]  = useState(false);
+  const band = hba1cBand(value);
+
+  const startEdit = () => {
+    setDraft(value != null ? String(value) : '');
+    setEditing(true);
+  };
+
+  const cancel = () => {
+    setDraft('');
+    setEditing(false);
+  };
+
+  const save = async () => {
+    const parsed = parseFloat(String(draft).replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed < 3 || parsed > 20) {
+      toastError('Valeur invalide', "L'HbA1c doit être un nombre entre 3 et 20 %");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(parsed);
+      setEditing(false);
+    } catch (_e) {
+      /* l'erreur est déjà signalée à l'utilisateur en amont */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="hba1c-card" data-testid="hba1c-card">
+      <div className="hba1c-top">
+        <div className="hba1c-icon"><TrendingUp size={18} /></div>
+        <div className="hba1c-meta">
+          <span className="hba1c-label">HbA1c (3 derniers mois)</span>
+          {measuredAt && (
+            <span className="hba1c-date">
+              Dernière mesure le {new Date(measuredAt).toLocaleDateString('fr-FR')}
+            </span>
+          )}
+        </div>
+        {!editing && (
+          <button
+            className="hba1c-edit-btn"
+            onClick={startEdit}
+            aria-label={value != null ? "Modifier l'HbA1c" : "Renseigner l'HbA1c"}
+          >
+            <Pencil size={14} /> {value != null ? 'Modifier' : 'Renseigner'}
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="hba1c-edit">
+          <div className="hba1c-input-wrap">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && save()}
+              placeholder="Ex : 6.8"
+              aria-label="Valeur HbA1c"
+              autoFocus
+            />
+            <span className="hba1c-unit-input">{unit || '%'}</span>
+          </div>
+          <div className="hba1c-actions">
+            <button className="hba1c-cancel" onClick={cancel} disabled={saving}>Annuler</button>
+            <button className="hba1c-save" onClick={save} disabled={saving}>
+              {saving
+                ? <><span className="mini-spinner" /> Enregistrement…</>
+                : 'Enregistrer'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="hba1c-display">
+          {value != null ? (
+            <>
+              <span className="hba1c-value" style={{ color: band.color }}>
+                {Number(value).toFixed(1)}
+              </span>
+              <span className="hba1c-unit-display">{unit || '%'}</span>
+              <span className="hba1c-band" style={{ color: band.color, background: band.bg }}>
+                {band.label}
+              </span>
+            </>
+          ) : (
+            <span className="hba1c-empty">Aucune valeur renseignée</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Modal : Dossier patient ── */
 function PatientDashboardModal({ member, onClose }) {
   const p         = member.patient_details;
@@ -323,6 +433,12 @@ function PatientDashboardModal({ member, onClose }) {
     if (p === 'custom') return { start_date: customStart, end_date: customEnd };
     return {};
   }, [period, customStart, customEnd]);
+
+  const refreshDashboard = useCallback(async () => {
+    const res = await apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`);
+    setDashboard(res.data);
+    return res.data;
+  }, [patientId]);
 
   useEffect(() => {
     // Pour 'custom', n'envoie la requête que si les deux dates sont remplies
@@ -356,6 +472,22 @@ function PatientDashboardModal({ member, onClose }) {
     };
     load();
   }, [patientId, period, customStart, customEnd, getPeriodDates]);
+
+  const handleSaveHba1c = async (newValue) => {
+    try {
+      await apiClient.post('/doctors/care-team/patient-hba1c/', {
+        patient_user_id: patientId,
+        value: newValue,
+        unit: '%',
+      });
+      toastSuccess('HbA1c mis à jour', `Nouvelle valeur : ${newValue.toFixed(1)} %`);
+      await refreshDashboard();
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
+      toastError('Erreur', msg);
+      throw err;
+    }
+  };
 
   const tabs = [
     { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <Heart size={15} /> },
@@ -396,6 +528,11 @@ function PatientDashboardModal({ member, onClose }) {
     },
     medication: {
       nextDose: extractValue(dashboard.medication?.nextDose) ?? dashboard.medication?.nextDose,
+    },
+    hba1c: {
+      value:      extractValue(dashboard.hba1c),
+      unit:       typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
+      measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
     },
   } : null;
 
@@ -477,6 +614,13 @@ function PatientDashboardModal({ member, onClose }) {
               {/* ══ Vue d'ensemble ══ */}
               {activeTab === 'dashboard' && dash && (
                 <div className="pdm-overview">
+
+                  <HbA1cCard
+                    value={dash.hba1c.value}
+                    unit={dash.hba1c.unit}
+                    measuredAt={dash.hba1c.measuredAt}
+                    onSave={handleSaveHba1c}
+                  />
 
                   {/* Ligne 1 : score + alertes */}
                   <div className="pdm-row pdm-row-top">
