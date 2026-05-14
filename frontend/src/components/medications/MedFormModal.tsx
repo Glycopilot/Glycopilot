@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,13 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { Search, X, ChevronRight, Plus, Minus } from 'lucide-react-native';
+import { Plus, Minus } from 'lucide-react-native';
+import MedicationAutocomplete from './MedicationAutocomplete';
 import { colors } from '../../themes/colors';
-import medicationService from '../../services/medicationService';
 import { toastSuccess, toastError } from '../../services/toastService';
 import type {
+  FdaMedicationResult,
   MealTiming,
-  ReferenceMedication,
   UserMedication,
   CreateUserMedicationPayload,
 } from '../../types/medications.types';
@@ -61,10 +61,7 @@ export default function MedFormModal({
   onUpdate,
 }: MedFormModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ReferenceMedication[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchDone, setSearchDone] = useState(false);
-  const [selectedMedRef, setSelectedMedRef] = useState<ReferenceMedication | null>(null);
+  const [selectedMedRef, setSelectedMedRef] = useState<FdaMedicationResult | null>(null);
 
   const [customName, setCustomName] = useState('');
   const [customDosage, setCustomDosage] = useState('');
@@ -76,8 +73,6 @@ export default function MedFormModal({
   const [mealTiming, setMealTiming] = useState<MealTiming>('anytime');
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -109,8 +104,6 @@ export default function MedFormModal({
 
   const resetForm = useCallback(() => {
     setSearchQuery('');
-    setSearchResults([]);
-    setSearchDone(false);
     setSelectedMedRef(null);
     setCustomName('');
     setCustomDosage('');
@@ -128,35 +121,11 @@ export default function MedFormModal({
     onClose();
   }, [resetForm, onClose]);
 
-  const handleSearch = useCallback((q: string) => {
-    setSearchQuery(q);
-    setSelectedMedRef(null);
-    setSearchDone(false);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (q.length < 2) { setSearchResults([]); return; }
-    searchTimer.current = setTimeout(async () => {
-      setSearchLoading(true);
-      const results = await medicationService.search(q);
-      setSearchResults(results.slice(0, 10));
-      setSearchDone(true);
-      setSearchLoading(false);
-    }, 350);
+  const handleSelectFdaMed = useCallback((med: FdaMedicationResult) => {
+    setSelectedMedRef(med);
+    setCustomName(med.brandName);
+    setSearchQuery('');
   }, []);
-
-  const selectSearchResult = useCallback((item: ReferenceMedication) => {
-    setCustomName(item.name);
-    setCustomDosage(item.dosage ?? '');
-    setSelectedMedRef(item);
-    setSearchQuery(item.name);
-    setSearchResults([]);
-    setSearchDone(false);
-  }, []);
-
-  const useTypedName = useCallback(() => {
-    setCustomName(searchQuery.trim());
-    setSearchResults([]);
-    setSearchDone(false);
-  }, [searchQuery]);
 
   const updateDosesPerDay = useCallback((n: number) => {
     const value = Math.max(1, Math.min(6, n));
@@ -216,7 +185,6 @@ export default function MedFormModal({
       : undefined;
 
     const payload: CreateUserMedicationPayload = {
-      ...(selectedMedRef ? { medication_id: selectedMedRef.medication_id } : {}),
       custom_name: customName.trim(),
       custom_dosage: customDosage.trim() || undefined,
       source: isPrescribed ? 'prescribed' : 'manual',
@@ -278,50 +246,15 @@ export default function MedFormModal({
             {editingMed ? 'Modifier le traitement' : 'Nouveau médicament'}
           </Text>
 
-          {/* Recherche */}
+          {/* Recherche FDA */}
           <View style={styles.section}>
-            <Text style={styles.label}>Rechercher un médicament</Text>
-            <View style={styles.searchRow}>
-              <Search size={18} color="#9CA3AF" style={{ marginLeft: 12 }} />
-              <TextInput
-                style={styles.searchInput}
-                value={searchQuery}
-                onChangeText={handleSearch}
-                placeholder="Doliprane, Metformine..."
-                placeholderTextColor="#9CA3AF"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => { setSearchQuery(''); setSearchResults([]); }}
-                  style={{ marginRight: 12 }}
-                >
-                  <X size={16} color="#9CA3AF" />
-                </TouchableOpacity>
-              )}
-            </View>
-            {searchLoading && <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 8 }} />}
-            {searchResults.length > 0 && (
-              <View style={styles.resultsList}>
-                {searchResults.map(item => (
-                  <TouchableOpacity
-                    key={`ref-${item.medication_id}`}
-                    style={styles.resultItem}
-                    onPress={() => selectSearchResult(item)}
-                  >
-                    <Text style={styles.resultName}>{item.name}</Text>
-                    {item.dosage && <Text style={styles.resultDosage}>{item.dosage}</Text>}
-                    <ChevronRight size={16} color="#9CA3AF" />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            {searchDone && searchResults.length === 0 && searchQuery.length >= 2 && (
-              <TouchableOpacity style={styles.useTypedBtn} onPress={useTypedName}>
-                <Text style={styles.useTypedText}>Utiliser « {searchQuery} »</Text>
-                <ChevronRight size={14} color="#007AFF" />
-              </TouchableOpacity>
-            )}
+            <MedicationAutocomplete
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSelectMedication={handleSelectFdaMed}
+              label="Rechercher un médicament"
+              placeholder="Doliprane, Metformine..."
+            />
           </View>
 
           {/* Nom */}
@@ -510,25 +443,6 @@ const styles = StyleSheet.create({
   section: { marginBottom: 16 },
   formRow: { flexDirection: 'row', marginBottom: 0 },
   label: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 8 },
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 2, borderColor: '#E5E7EB', borderRadius: 12, gap: 8,
-  },
-  searchInput: { flex: 1, paddingVertical: 12, fontSize: 16, color: colors.textPrimary },
-  resultsList: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, marginTop: 6, overflow: 'hidden' },
-  resultItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6', gap: 8,
-  },
-  resultName: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  resultDosage: { fontSize: 13, color: colors.textSecondary },
-  useTypedBtn: {
-    flexDirection: 'row', alignItems: 'center', marginTop: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: '#EBF5FF', borderRadius: 10, gap: 6,
-  },
-  useTypedText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#007AFF' },
   input: {
     borderWidth: 2, borderColor: '#E5E7EB', borderRadius: 12,
     paddingHorizontal: 16, paddingVertical: 12,
