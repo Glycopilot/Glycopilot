@@ -32,8 +32,10 @@ def _verify_email_domain(email: str) -> None:
                 "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
             )
         try:
-            dns.resolver.resolve(domain, "MX")
-        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            resolver = dns.resolver.Resolver()
+            resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+            resolver.resolve(domain, "MX", lifetime=3.0)
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
             raise serializers.ValidationError(
                 "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
             )
