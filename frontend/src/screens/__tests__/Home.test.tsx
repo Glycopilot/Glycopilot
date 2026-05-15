@@ -215,6 +215,30 @@ describe('Home Screen', () => {
     expect(() => render(<Home navigation={mockNavigation as any} />)).not.toThrow();
   });
 
+  it('affiche status low quand glycémie est inférieure à 70', async () => {
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue({
+      id: '1', value: 55, unit: 'mg/dL', measured_at: '2026-01-01T09:00:00Z', source: 'cgm',
+    });
+    (useDashboard as jest.Mock).mockReturnValue({
+      ...defaultDashboard,
+      glucose: { value: 55, unit: 'mg/dL', trend: 'falling', recordedAt: '2026-01-01T08:00:00Z' },
+    });
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => expect(getByText('55')).toBeTruthy());
+  });
+
+  it('affiche status high quand glycémie est supérieure à 180', async () => {
+    (glycemiaService.getCurrent as jest.Mock).mockResolvedValue({
+      id: '1', value: 210, unit: 'mg/dL', measured_at: '2026-01-01T09:00:00Z', source: 'cgm',
+    });
+    (useDashboard as jest.Mock).mockReturnValue({
+      ...defaultDashboard,
+      glucose: { value: 210, unit: 'mg/dL', trend: 'rising', recordedAt: '2026-01-01T08:00:00Z' },
+    });
+    const { getByText } = render(<Home navigation={mockNavigation as any} />);
+    await waitFor(() => expect(getByText('210')).toBeTruthy());
+  });
+
   it('ne active pas le WebSocket quand le token est null', async () => {
     const AsyncStorage = require('@react-native-async-storage/async-storage');
     AsyncStorage.getItem.mockResolvedValue(null);
