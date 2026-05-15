@@ -25,7 +25,7 @@
     "test:unit": "react-scripts test --testPathPattern=__tests__/unit",
     "test:integration": "react-scripts test --testPathPattern=__tests__/integration",
     "test:ci": "react-scripts test --watchAll=false",
-    "test:coverage": "react-scripts test --watchAll=false --coverage",
+    "test:coverage": "react-scripts test --watchAll=false --coverage --runInBand",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

@@ -92,6 +92,7 @@ if "test" in sys.argv or "pytest" in sys.argv[0]:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": ":memory:",
+            "OPTIONS": {"timeout": 20},
         }
     }
 else:

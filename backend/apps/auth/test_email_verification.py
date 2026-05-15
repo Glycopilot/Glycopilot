@@ -9,6 +9,7 @@ Couvre :
 """
 from unittest.mock import patch
 
+from django.test import override_settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
@@ -202,6 +203,7 @@ def test_resend_verification_active_account_does_not_send(api, mailoutbox):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.django_db
+@override_settings(TESTING=False)
 def test_verify_email_domain_accepts_valid_domain():
     from apps.auth.serializers import _verify_email_domain
     # Aucune exception attendue
@@ -209,6 +211,7 @@ def test_verify_email_domain_accepts_valid_domain():
 
 
 @pytest.mark.django_db
+@override_settings(TESTING=False)
 def test_verify_email_domain_rejects_nonexistent_domain():
     from rest_framework import serializers as drf_serializers
     from apps.auth.serializers import _verify_email_domain
@@ -217,6 +220,7 @@ def test_verify_email_domain_rejects_nonexistent_domain():
 
 
 @pytest.mark.django_db
+@override_settings(TESTING=False)
 def test_verify_email_domain_rejects_domain_without_dot():
     from rest_framework import serializers as drf_serializers
     from apps.auth.serializers import _verify_email_domain
@@ -225,6 +229,7 @@ def test_verify_email_domain_rejects_domain_without_dot():
 
 
 @pytest.mark.django_db
+@override_settings(TESTING=False)
 def test_register_with_fake_domain_returns_400(api):
     data = {
         "email": "test@domaine-inexistant-xyzabc999.com",
