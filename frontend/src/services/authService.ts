@@ -132,6 +132,20 @@ const authService = {
     }
   },
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      await apiClient.post('/users/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+    } catch (error) {
+      const axiosError = error as import('axios').AxiosError<{ error?: string }>;
+      throw new Error(
+        axiosError.response?.data?.error || 'Erreur lors du changement de mot de passe'
+      );
+    }
+  },
+
   async refreshToken(): Promise<{ access: string }> {
     try {
       const refreshToken = await AsyncStorage.getItem('refresh_token');

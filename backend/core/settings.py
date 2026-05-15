@@ -305,7 +305,7 @@ if EMAIL_PORT == 465:
 DEFAULT_FROM_EMAIL = (
     _env("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "noreply@glycopilot.com"
 )
-FRONTEND_URL = _env("FRONTEND_URL") or "http://localhost:3000"
+FRONTEND_URL = (_env("FRONTEND_URL") or "http://localhost:3000").rstrip("/")
 
 
 # --- SECURITY SETTINGS ---

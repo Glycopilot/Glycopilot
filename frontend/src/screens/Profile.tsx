@@ -33,6 +33,7 @@ import AddContactModal from '../components/profile/AddContactModal';
 import LocationModal from '../components/profile/LocationModal';
 import InviteDoctorModal from '../components/profile/InviteDoctorModal';
 import doctorService from '../services/doctorService';
+import { toastSuccess, toastError } from '../services/toastService';
 import type { Doctor, PendingInvite } from '../components/profile/DoctorCard';
 import type { EmergencyContact } from '../components/profile/EmergencyContactCard';
 
@@ -53,6 +54,14 @@ export default function ProfileScreen({
   const [contactName, setContactName] = useState('');
   const [contactRelation, setContactRelation] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+
+  // Modal d'édition d'un proche
+  const [editContactModalVisible, setEditContactModalVisible] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [editContactName, setEditContactName] = useState('');
+  const [editContactRelation, setEditContactRelation] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
 
   // Modal d'édition du profil
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
@@ -259,6 +268,7 @@ export default function ProfileScreen({
         last_name,
         phone_number: contactPhone,
         relation_type: contactRelation || 'Proche',
+        ...(contactEmail.trim() ? { email: contactEmail.trim().toLowerCase() } : {}),
       });
 
       const newContact: EmergencyContact = {
@@ -273,8 +283,15 @@ export default function ProfileScreen({
       setContactName('');
       setContactRelation('');
       setContactPhone('');
+      setContactEmail('');
+
+      if (result.invitation_sent) {
+        toastSuccess('Invitation envoyée', `Un email a été envoyé à ${contactEmail.trim()}`);
+      } else {
+        toastSuccess('Contact ajouté', `${contactName} a été ajouté à vos proches`);
+      }
     } catch (error) {
-      Alert.alert('Erreur', (error as Error).message || "Impossible d'ajouter le contact");
+      toastError('Erreur', (error as Error).message || "Impossible d'ajouter le contact");
     }
   };
 
@@ -300,6 +317,52 @@ export default function ProfileScreen({
         },
       ]
     );
+  };
+
+  const openEditContact = (contact: EmergencyContact): void => {
+    setEditingContactId(contact.id);
+    setEditContactName(contact.name);
+    setEditContactRelation(contact.relation);
+    setEditContactPhone(contact.phone);
+    setEditContactModalVisible(true);
+  };
+
+  const handleEditContactPhoneChange = (text: string): void => {
+    const sanitized = text.replaceAll(/[^0-9+\-()\s]/g, '');
+    if (sanitized.length <= 14) {
+      setEditContactPhone(sanitized);
+    }
+  };
+
+  const updateContact = async (): Promise<void> => {
+    if (!editingContactId || !editContactName.trim() || !editContactPhone.trim()) return;
+
+    const parts = editContactName.trim().split(' ');
+    const first_name = parts[0];
+    const last_name = parts.slice(1).join(' ') || '.';
+
+    try {
+      await doctorService.updateFamilyMember({
+        id_team_member: editingContactId,
+        first_name,
+        last_name,
+        phone_number: editContactPhone,
+        relation_type: editContactRelation || 'Proche',
+      });
+
+      setEmergencyContacts(prev =>
+        prev.map(c =>
+          c.id === editingContactId
+            ? { ...c, name: editContactName.trim(), relation: editContactRelation || 'Proche', phone: editContactPhone }
+            : c
+        )
+      );
+      setEditContactModalVisible(false);
+      setEditingContactId(null);
+      toastSuccess('Contact modifié', `${editContactName.trim()} a été mis à jour`);
+    } catch (error) {
+      toastError('Erreur', (error as Error).message || 'Impossible de modifier le contact');
+    }
   };
 
   const openEditProfileModal = (): void => {
@@ -445,6 +508,7 @@ export default function ProfileScreen({
           onAddContact={() => setModalVisible(true)}
           onCallContact={id => console.log('Appeler contact:', id)}
           onDeleteContact={removeContact}
+          onEditContact={openEditContact}
         />
 
         <SettingsMenu items={settingsMenu} />
@@ -463,10 +527,27 @@ export default function ProfileScreen({
         contactName={contactName}
         contactRelation={contactRelation}
         contactPhone={contactPhone}
+        contactEmail={contactEmail}
         onNameChange={setContactName}
         onRelationChange={setContactRelation}
         onPhoneChange={handleContactPhoneChange}
+        onEmailChange={setContactEmail}
         onSubmit={addEmergencyContact}
+      />
+
+      <AddContactModal
+        visible={editContactModalVisible}
+        onClose={() => setEditContactModalVisible(false)}
+        contactName={editContactName}
+        contactRelation={editContactRelation}
+        contactPhone={editContactPhone}
+        contactEmail=""
+        onNameChange={setEditContactName}
+        onRelationChange={setEditContactRelation}
+        onPhoneChange={handleEditContactPhoneChange}
+        onEmailChange={() => undefined}
+        onSubmit={updateContact}
+        isEdit
       />
 
       <EditProfileModal

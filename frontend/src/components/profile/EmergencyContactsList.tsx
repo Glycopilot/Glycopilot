@@ -11,6 +11,7 @@ interface EmergencyContactsListProps {
   readonly onAddContact: () => void;
   readonly onCallContact: (id: string) => void;
   readonly onDeleteContact: (id: string) => void;
+  readonly onEditContact: (contact: EmergencyContact) => void;
 }
 
 export default function EmergencyContactsList({
@@ -18,6 +19,7 @@ export default function EmergencyContactsList({
   onAddContact,
   onCallContact,
   onDeleteContact,
+  onEditContact,
 }: EmergencyContactsListProps): React.JSX.Element {
   return (
     <View style={styles.section}>
@@ -38,6 +40,7 @@ export default function EmergencyContactsList({
             contact={contact}
             onCall={() => onCallContact(contact.id)}
             onDelete={() => onDeleteContact(contact.id)}
+            onEdit={() => onEditContact(contact)}
           />
         ))}
       </View>

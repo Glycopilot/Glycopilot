@@ -12,6 +12,9 @@ import ActivitiesScreen from '../screens/Activities';
 import GlycemiaScreen from '@/screens/Glycemia';
 import SensorActivationScreen from '../screens/SensorActivation';
 import PredictionsScreen from '../screens/Predictions';
+import ProcheActivationScreen from '../screens/ProcheActivation';
+import ProcheHomeScreen from '../screens/ProcheHome';
+import ProcheGlycemiaScreen from '../screens/ProcheGlycemia';
 import { setNavigate } from './navigationRef';
 
 type ScreenName =
@@ -28,58 +31,52 @@ type ScreenName =
   | 'Glycemia'
   | 'SensorActivation'
   | 'Predictions'
-  | 'Test';
+  | 'ProcheActivation'
+  | 'ProcheHome'
+  | 'ProcheGlycemia';
+
 export default function AppNavigator() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('Login');
+  const [prochePatientName, setProchePatientName] = useState<string | undefined>();
 
   useEffect(() => {
-    setNavigate((screen: string) => setCurrentScreen(screen as ScreenName));
+    setNavigate((screen: string, params?: Record<string, unknown>) => {
+      if (params?.patientName) setProchePatientName(params.patientName as string);
+      setCurrentScreen(screen as ScreenName);
+    });
   }, []);
 
   const navigation = {
-    navigate: (screen: string) => setCurrentScreen(screen as ScreenName),
+    navigate: (screen: string, params?: Record<string, unknown>) => {
+      if (params?.patientName) setProchePatientName(params.patientName as string);
+      setCurrentScreen(screen as ScreenName);
+    },
     reset: ({ routes }: { index: number; routes: Array<{ name: string }> }) =>
       setCurrentScreen(routes[0].name as ScreenName),
   };
 
-  if (currentScreen === 'Login') {
-    return <LoginScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'SignIn') {
-    return <SignInScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Home') {
-    return <HomeScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Stats') {
-    return <StatsScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Profile') {
-    return <ProfileScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Notifications') {
-    return <NotificationsScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Journal') {
-    return <JournalScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Repas') {
-    return <MealsScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Traitements') {
-    return <MedicationsScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Activite') {
-    return <ActivitiesScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Glycemia') {
-    return <GlycemiaScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'SensorActivation') {
-    return <SensorActivationScreen navigation={navigation} />;
-  }
-  if (currentScreen === 'Predictions') {
-    return <PredictionsScreen navigation={navigation} />;
+  // ─── Écrans patient ───────────────────────────────────────────────────────
+
+  if (currentScreen === 'Login') return <LoginScreen navigation={navigation} />;
+  if (currentScreen === 'SignIn') return <SignInScreen navigation={navigation} />;
+  if (currentScreen === 'Home') return <HomeScreen navigation={navigation} />;
+  if (currentScreen === 'Stats') return <StatsScreen navigation={navigation} />;
+  if (currentScreen === 'Profile') return <ProfileScreen navigation={navigation} />;
+  if (currentScreen === 'Notifications') return <NotificationsScreen navigation={navigation} />;
+  if (currentScreen === 'Journal') return <JournalScreen navigation={navigation} />;
+  if (currentScreen === 'Repas') return <MealsScreen navigation={navigation} />;
+  if (currentScreen === 'Traitements') return <MedicationsScreen navigation={navigation} />;
+  if (currentScreen === 'Activite') return <ActivitiesScreen navigation={navigation} />;
+  if (currentScreen === 'Glycemia') return <GlycemiaScreen navigation={navigation} />;
+  if (currentScreen === 'SensorActivation') return <SensorActivationScreen navigation={navigation} />;
+  if (currentScreen === 'Predictions') return <PredictionsScreen navigation={navigation} />;
+
+  // ─── Écrans proche ────────────────────────────────────────────────────────
+
+  if (currentScreen === 'ProcheActivation') return <ProcheActivationScreen navigation={navigation} />;
+  if (currentScreen === 'ProcheHome') return <ProcheHomeScreen navigation={navigation} />;
+  if (currentScreen === 'ProcheGlycemia') {
+    return <ProcheGlycemiaScreen navigation={navigation} patientName={prochePatientName} />;
   }
 
   return <LoginScreen navigation={navigation} />;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Phone, X } from 'lucide-react-native';
+import { Phone, X, Pencil } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
 export interface EmergencyContact {
@@ -14,12 +14,14 @@ interface EmergencyContactCardProps {
   readonly contact: EmergencyContact;
   readonly onCall: () => void;
   readonly onDelete: () => void;
+  readonly onEdit: () => void;
 }
 
 export default function EmergencyContactCard({
   contact,
   onCall,
   onDelete,
+  onEdit,
 }: EmergencyContactCardProps): React.JSX.Element {
   const getInitials = (name: string): string => {
     return name
@@ -45,6 +47,9 @@ export default function EmergencyContactCard({
       <View style={styles.cardRight}>
         <TouchableOpacity style={styles.callButton} onPress={onCall}>
           <Phone size={18} color="#007AFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+          <Pencil size={18} color="#10B981" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
           <X size={18} color="#EF4444" />
@@ -112,6 +117,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 12,
     backgroundColor: '#EBF5FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#D1FAE5',
     alignItems: 'center',
     justifyContent: 'center',
   },

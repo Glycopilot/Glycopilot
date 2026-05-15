@@ -26,6 +26,7 @@ export interface FamilyMember {
     first_name: string;
     last_name: string;
     phone_number: string | null;
+    email?: string | null;
   };
   relation_type: string;
   role: string;
@@ -65,13 +66,24 @@ const doctorService = {
     first_name: string;
     last_name: string;
     phone_number?: string;
+    email?: string;
     relation_type: string;
-  }): Promise<{ id: string }> {
-    const response = await apiClient.post<{ id: string }>(
+  }): Promise<{ id: string; invitation_sent: boolean }> {
+    const response = await apiClient.post<{ id: string; invitation_sent: boolean }>(
       '/doctors/care-team/add-family/',
       { ...data, role: 'FAMILY' }
     );
     return response.data;
+  },
+
+  async updateFamilyMember(data: {
+    id_team_member: string;
+    first_name: string;
+    last_name: string;
+    phone_number?: string;
+    relation_type?: string;
+  }): Promise<void> {
+    await apiClient.patch('/doctors/care-team/update-member/', data);
   },
 };
 
