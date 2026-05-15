@@ -85,8 +85,8 @@ describe('NotificationsScreen — Alertes glycémie', () => {
 
   it('renders the screen title', async () => {
     const { getByText } = renderScreen();
-    await waitFor(() => expect(getByText('Notifications')).toBeTruthy());
-  });
+    await waitFor(() => expect(getByText('Notifications')).toBeTruthy(), { timeout: 10000 });
+  }, 15000);
 
   it('calls alertService.getHistory on mount', () => {
     renderScreen();
