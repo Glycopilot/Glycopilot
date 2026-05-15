@@ -99,11 +99,32 @@ function persistUser(user) {
   }
 }
 
+function extractRoles(user) {
+  const profiles = user?.identity?.profiles ?? user?.profiles ?? [];
+  if (!Array.isArray(profiles)) return [];
+  return profiles
+    .map((p) => (p?.role_name ?? p?.role?.name ?? '').toString().toUpperCase())
+    .filter(Boolean);
+}
+
+function isDoctorUser(user) {
+  const roles = extractRoles(user);
+  return roles.includes('DOCTOR');
+}
+
 const authService = {
   async login(email, password) {
     try {
       const response = await apiClient.post('/auth/login/', { email, password });
       const { access, refresh, user } = response.data;
+
+      if (!isDoctorUser(user)) {
+        const err = new Error(
+          "Cet espace est réservé aux médecins. Pour un compte patient, utilisez l'application mobile Glycopilot."
+        );
+        err.code = 'ROLE_NOT_ALLOWED';
+        throw err;
+      }
 
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
@@ -111,6 +132,7 @@ const authService = {
 
       return response.data;
     } catch (error) {
+      if (error.code === 'ROLE_NOT_ALLOWED') throw error;
       const data = error.response?.data;
       const nonFieldErr = data?.non_field_errors?.[0];
       if (nonFieldErr) {
