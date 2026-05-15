@@ -3,6 +3,7 @@ import { LayoutDashboard, Users, User, LogOut, Menu, X } from 'lucide-react';
 import authService from '../services/authService';
 import { devWarn } from '../lib/logger';
 import { getInitials } from '../lib/utils';
+import HelpButton from './tour/HelpButton';
 import logo from '../assets/glycopilot.png';
 
 const apiClient = authService.getApiClient();
