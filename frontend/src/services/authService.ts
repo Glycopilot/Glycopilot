@@ -38,7 +38,8 @@ const authService = {
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
-      throw new Error(axiosError.response?.data?.message || 'Erreur de connexion');
+      const data = axiosError.response?.data;
+      throw new Error(data?.error || data?.message || 'Erreur de connexion');
     }
   },
 
@@ -57,22 +58,9 @@ const authService = {
       await storeAuthData(access, refresh, user);
       return response.data;
     } catch (error) {
-      const axiosError = error as AxiosError<ApiError | Record<string, unknown>>;
-      let message = "Erreur lors de l'inscription";
-      if (axiosError.response?.data) {
-        const data = axiosError.response.data;
-        if (typeof data === 'string') {
-          message = data;
-        } else if ('message' in data && typeof data.message === 'string') {
-          message = data.message;
-        } else {
-          try {
-            message = JSON.stringify(data);
-          } catch {
-            message = "Erreur lors de l'inscription (voir logs)";
-          }
-        }
-      }
+      const axiosError = error as AxiosError<ApiError>;
+      const data = axiosError.response?.data;
+      const message = data?.error || data?.message || "Erreur lors de l'inscription";
       throw new Error(message);
     }
   },
