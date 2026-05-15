@@ -172,7 +172,8 @@ LOGGING = {
         "django.request": {"level": "WARNING"},
         "django.security": {"level": "WARNING"},
         "apps": {"level": "INFO" if DEBUG else "WARNING"},
-        "middleware.request": {"level": "INFO" if DEBUG else "WARNING"},
+        "apps.auth": {"level": "INFO"},
+        "middleware.request": {"level": config("REQUEST_LOG_LEVEL", default="INFO")},
     },
 }
 

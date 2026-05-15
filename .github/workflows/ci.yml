@@ -103,8 +103,61 @@ jobs:
         retention-days: 1
         if-no-files-found: error
 
+  test-frontend:
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: cd frontend && npm ci --legacy-peer-deps
+
+    - name: Run tests with coverage
+      env:
+        EXPO_PUBLIC_API_URL: http://localhost:8006/api
+        EXPO_PUBLIC_WS_URL: ws://localhost:8006
+        EXPO_PUBLIC_API_TIMEOUT: "5000"
+      run: cd frontend && npm test -- --watchAll=false
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-frontend
+        path: frontend/coverage/lcov.info
+        retention-days: 1
+        if-no-files-found: error
+
+  build-frontend-web:
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: frontend_web/package-lock.json
+
+    - name: Install dependencies
+      run: cd frontend_web && npm ci --legacy-peer-deps
+
+    - name: Build
+      env:
+        REACT_APP_API_URL: http://localhost:8006/api
+        REACT_APP_API_TIMEOUT: "10000"
+      run: cd frontend_web && npm run build
+
   sonarqube:
-    needs: [test-backend, test-frontend, test-ai-service]
+    needs: [test-backend, test-frontend, build-frontend-web, test-ai-service]
     runs-on: ubuntu-latest
     continue-on-error: true
     permissions:
@@ -152,8 +205,7 @@ jobs:
       with:
         name: coverage-frontend
         path: frontend/coverage/
-      continue-on-error: true
-    
+
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
@@ -177,7 +229,7 @@ jobs:
         SONAR_HOST_URL: https://sonarcloud.io
 
   notify:
-    needs: [secret-scan, test-backend, test-frontend, test-ai-service, sonarqube, deploy]
+    needs: [secret-scan, test-backend, test-frontend, build-frontend-web, test-ai-service, sonarqube]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -195,7 +247,8 @@ jobs:
         echo "======================================"
         echo "Secret Scan: ${{ needs.secret-scan.result }}"
         echo "Backend Tests: ${{ needs.test-backend.result }}"
-        echo "Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "Mobile Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "Web Frontend Build: ${{ needs.build-frontend-web.result }}"
         echo "AI Service Tests: ${{ needs.test-ai-service.result }}"
         echo "SonarQube: ${{ needs.sonarqube.result }}"
         echo "======================================"
@@ -213,7 +266,12 @@ jobs:
         fi
         
         if [ "${{ needs.test-frontend.result }}" != "success" ]; then
-          echo "CRITICAL: Frontend tests failed"
+          echo "CRITICAL: Mobile frontend tests failed"
+          CRITICAL_FAILED=true
+        fi
+
+        if [ "${{ needs.build-frontend-web.result }}" != "success" ]; then
+          echo "CRITICAL: Web frontend build failed"
           CRITICAL_FAILED=true
         fi
         

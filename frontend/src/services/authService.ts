@@ -26,6 +26,18 @@ const mapToUser = (data: Record<string, any>): User => ({
   diabetesType: data.profiles?.[0]?.patient_details?.diabetes_type,
 });
 
+const extractApiErrorMessage = (
+  data: ApiError | string | Record<string, unknown> | undefined,
+  fallback: string
+): string => {
+  if (!data) return fallback;
+  if (typeof data === 'string') return data;
+  if ('error' in data && typeof data.error === 'string') return data.error;
+  if ('message' in data && typeof data.message === 'string') return data.message;
+  if ('detail' in data && typeof data.detail === 'string') return data.detail;
+  return JSON.stringify(data);
+};
+
 const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
@@ -59,9 +71,12 @@ const authService = {
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
-      const data = axiosError.response?.data;
-      const message = data?.error || data?.message || "Erreur lors de l'inscription";
-      throw new Error(message);
+      throw new Error(
+        extractApiErrorMessage(
+          axiosError.response?.data as ApiError | string | Record<string, unknown> | undefined,
+          "Erreur lors de l'inscription"
+        )
+      );
     }
   },
 

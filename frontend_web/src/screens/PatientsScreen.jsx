@@ -14,6 +14,17 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
+function formatNextDose(nextDose) {
+  if (!nextDose) return null;
+  if (typeof nextDose === 'string') return nextDose;
+
+  const label = nextDose.label || nextDose.medicationName || nextDose.medication_name || nextDose.name;
+  const time = nextDose.time || nextDose.scheduledAt || nextDose.scheduled_at || nextDose.datetime;
+
+  if (label && time) return `${label} - ${time}`;
+  return label || time || null;
+}
+
 function StatusBadge({ status }) {
   const map = {
     2: { label: 'Actif',       cls: 'badge-active' },

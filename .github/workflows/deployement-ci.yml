@@ -26,7 +26,10 @@ on:
 
 env:
   AWS_REGION: eu-west-3
-  S3_BUCKET_FRONTEND: glycopilot-web-frontend-958587270787
+  PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+  PUBLIC_WS_URL: ${{ vars.PUBLIC_WS_URL }}
+  S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND }}
+  S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
 
 jobs:
   db-migrate-plan-a:
@@ -157,11 +160,13 @@ jobs:
           node-version: '22'
 
       - name: Build for Production
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
           cd frontend_web
           npm install --legacy-peer-deps
-          
-          export REACT_APP_API_URL="http://15.188.114.169/api"
+
+          export REACT_APP_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/api}"
           export REACT_APP_API_TIMEOUT="10000"
 
           npm run build
@@ -174,7 +179,12 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Sync to S3
-        run: aws s3 sync ./frontend_web/build/ s3://${{ env.S3_BUCKET_FRONTEND }}/ --delete
+        run: |
+          if [ -z "$S3_BUCKET_FRONTEND" ]; then
+            echo "S3_BUCKET_FRONTEND repository variable is required."
+            exit 1
+          fi
+          aws s3 sync ./frontend_web/build/ s3://${S3_BUCKET_FRONTEND}/ --delete
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)
@@ -217,11 +227,23 @@ jobs:
 
       - name: Build Android APK
         env:
-          EXPO_PUBLIC_API_URL: "http://15.188.114.169/api"
-          EXPO_PUBLIC_WS_URL: "ws://15.188.114.169"
-          EXPO_PUBLIC_S3_BUCKET: "glycopilot-aws-s3-bucket-img-artifacts"
+          EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
           cd frontend
+          export EXPO_PUBLIC_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/api}"
+          export EXPO_PUBLIC_WS_URL="${PUBLIC_WS_URL:-ws://${EC2_HOST}}"
+          export EXPO_PUBLIC_S3_BUCKET="${S3_BUCKET_MEDIA:-glycopilot-aws-s3-bucket-img-artifacts}"
+          node - <<'NODE'
+          const fs = require('fs');
+          const eas = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          eas.build.apk.env = {
+            ...(eas.build.apk.env || {}),
+            EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+            EXPO_PUBLIC_WS_URL: process.env.EXPO_PUBLIC_WS_URL,
+            EXPO_PUBLIC_S3_BUCKET: process.env.EXPO_PUBLIC_S3_BUCKET,
+          };
+          fs.writeFileSync('eas.json', `${JSON.stringify(eas, null, 2)}\n`);
+          NODE
           # Build APK standalone pour test en conditions reelles.
           # Ce profil ne doit pas attendre Metro ni utiliser expo-dev-client.
           eas build --platform android --profile apk --non-interactive
