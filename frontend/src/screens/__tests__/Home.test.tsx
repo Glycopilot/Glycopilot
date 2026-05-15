@@ -259,19 +259,15 @@ describe('Home Screen', () => {
   });
 
   it('navigue vers les différents écrans via les boutons d\'action', async () => {
-    const { getByTestId } = render(<Home navigation={mockNavigation as any} />);
-    
+    const { getByText, getByTestId } = render(<Home navigation={mockNavigation as any} />);
+    const { fireEvent } = require('@testing-library/react-native');
+
     await act(async () => {
-        const btnRepas = getByTestId('action-repas');
-        const btnMedic = getByTestId('action-medic');
-        const btnActivite = getByTestId('action-activite');
-        const btnPrediction = getByTestId('action-prediction');
-        
-        const { fireEvent } = require('@testing-library/react-native');
-        fireEvent.press(btnRepas);
-        fireEvent.press(btnMedic);
-        fireEvent.press(btnActivite);
-        fireEvent.press(btnPrediction);
+      fireEvent.press(getByText('Repas'));
+      fireEvent.press(getByText('Médic'));
+      // « Activité » apparaît aussi sur la StatCard pas — le bouton rapide utilise l’icône Zap (mock lucide).
+      fireEvent.press(getByTestId('Zap').parent!);
+      fireEvent.press(getByText('Prédiction'));
     });
 
     expect(mockNavigation.navigate).toHaveBeenCalledWith('Repas');

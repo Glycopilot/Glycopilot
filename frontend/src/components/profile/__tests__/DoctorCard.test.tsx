@@ -66,8 +66,8 @@ describe('DoctorCard', () => {
     const { getByTestId } = render(
       <DoctorCard {...defaultProps} doctor={mockDoctor} onRemoveDoctor={onRemoveDoctor} />
     );
-    // The remove button uses an X icon (no text label)
-    fireEvent.press(getByTestId('X'));
+    const deleteIcon = getByTestId('X');
+    fireEvent.press(deleteIcon.parent!);
     expect(onRemoveDoctor).toHaveBeenCalledTimes(1);
   });
 
@@ -212,9 +212,9 @@ describe('DoctorCard', () => {
     expect(getByText('Invitation reçue')).toBeTruthy();
   });
 
-  it('uses testID on delete button', () => {
+  it('renders delete control (X icon) when doctor is present', () => {
     const { getByTestId } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
-    expect(getByTestId('delete-doctor-button')).toBeTruthy();
+    expect(getByTestId('X')).toBeTruthy();
   });
 
   it('does not show address section when address is null', () => {

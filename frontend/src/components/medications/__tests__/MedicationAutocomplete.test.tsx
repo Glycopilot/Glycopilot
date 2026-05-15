@@ -2,11 +2,17 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import MedicationAutocomplete from '../MedicationAutocomplete';
 
-// Mock lucide-react-native
-jest.mock('lucide-react-native', () => ({
-  Pill: () => null,
-  X: () => null,
-}));
+// Mock lucide-react-native (icônes = View + testID, comme jest.setup.js)
+jest.mock('lucide-react-native', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const mockIcon = (name) => (props) =>
+    React.createElement(View, { ...props, testID: name });
+  return {
+    Pill: mockIcon('Pill'),
+    X: mockIcon('X'),
+  };
+});
 
 // Mock process.env
 process.env.EXPO_PUBLIC_FDA_API_URL = 'https://api.fda.gov/drug/label.json';
@@ -168,8 +174,8 @@ describe('MedicationAutocomplete', () => {
       />
     );
 
-    const clearButton = getByTestId('medication-autocomplete-clear');
-    fireEvent.press(clearButton);
+    const clearButton = getByTestId('X');
+    fireEvent.press(clearButton.parent!);
 
     expect(onChangeText).toHaveBeenCalledWith('');
   });
@@ -182,7 +188,7 @@ describe('MedicationAutocomplete', () => {
         onSelectMedication={jest.fn()} 
       />
     );
-    expect(queryByTestId('medication-autocomplete-clear')).toBeNull();
+    expect(queryByTestId('X')).toBeNull();
   });
 
   it('renders without label when label prop is omitted', () => {
