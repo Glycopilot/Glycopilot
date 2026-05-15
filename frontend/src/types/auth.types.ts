@@ -44,7 +44,9 @@ export interface PasswordResetConfirm {
 }
 
 export interface ApiError {
-  message: string;
+  error?: string;
+  message?: string;
+  errors?: Record<string, string>;
   status?: number;
   data?: unknown;
 }
