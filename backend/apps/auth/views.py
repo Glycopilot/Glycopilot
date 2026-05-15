@@ -48,22 +48,6 @@ def _send_verification_link(auth_account) -> None:
     send_verification_email(auth_account.email, link)
 
 
-def _send_verification_link(auth_account) -> None:
-    """Génère un token de vérification et envoie l'email d'activation."""
-    from django.conf import settings
-    from django.utils.encoding import force_bytes
-    from django.utils.http import urlsafe_base64_encode
-
-    from apps.auth.email_smtp import send_verification_email
-    from apps.auth.tokens import email_verification_token
-
-    uid = urlsafe_base64_encode(force_bytes(auth_account.pk))
-    token = email_verification_token.make_token(auth_account)
-    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    link = f"{frontend_url}/verify-email?uid={uid}&token={token}"
-    send_verification_email(auth_account.email, link)
-
-
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
