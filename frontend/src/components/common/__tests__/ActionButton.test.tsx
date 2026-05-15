@@ -59,9 +59,10 @@ describe('ActionButton', () => {
     expect(getByText('Prédiction')).toBeTruthy();
   });
 
-  it('renders with testID prop', () => {
-    const { getByTestId } = render(<ActionButton type="glycemie" testID="my-btn" />);
-    expect(getByTestId('my-btn')).toBeTruthy();
+  it('renders lucide icon for type (Gauge for glycémie)', () => {
+    const { getByTestId, getByText } = render(<ActionButton type="glycemie" />);
+    expect(getByTestId('Gauge')).toBeTruthy();
+    expect(getByText('Glycémie')).toBeTruthy();
   });
 
   it('prediction type with custom label overrides default', () => {

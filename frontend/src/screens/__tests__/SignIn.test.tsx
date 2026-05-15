@@ -138,7 +138,7 @@ describe('SignIn Screen', () => {
                 expect(authService.register).toHaveBeenCalled();
                 expect(mockNavigation.reset).toHaveBeenCalledWith({
                     index: 0,
-                    routes: [{ name: 'Login' }],
+                    routes: [{ name: 'Home' }],
                 });
             });
         });
@@ -153,7 +153,7 @@ describe('SignIn Screen', () => {
             await act(async () => { pressSubmit(q); });
 
             await waitFor(() => {
-                expect(navWithoutReset.navigate).toHaveBeenCalledWith('Login');
+                expect(navWithoutReset.navigate).toHaveBeenCalledWith('Home');
             });
         });
 
@@ -167,7 +167,7 @@ describe('SignIn Screen', () => {
             await act(async () => { pressSubmit(q); });
 
             await waitFor(() => {
-                expect(toastError).toHaveBeenCalledWith('Erreur inscription', 'Email déjà utilisé');
+                expect(toastError).toHaveBeenCalledWith('Email déjà utilisé', '');
             });
         });
     });

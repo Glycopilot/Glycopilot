@@ -42,7 +42,8 @@ describe('EmergencyContactsList', () => {
 
   it('calls onAddContact when add button is pressed', () => {
     const { getByTestId } = render(<EmergencyContactsList {...defaultProps} />);
-    fireEvent.press(getByTestId('add-contact-button'));
+    const plusIcon = getByTestId('Plus');
+    fireEvent.press(plusIcon.parent!);
     expect(defaultProps.onAddContact).toHaveBeenCalledTimes(1);
   });
 

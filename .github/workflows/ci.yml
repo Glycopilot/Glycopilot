@@ -105,7 +105,7 @@ jobs:
         if-no-files-found: error
 
   sonarqube:
-    needs: [test-backend, test-frontend, test-ai-service]
+    needs: [test-backend, test-frontend-mobile, test-frontend-web, test-ai-service]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -147,19 +147,31 @@ jobs:
           exit 1
         fi
 
-    - name: Download Frontend Coverage
+    - name: Download Frontend Mobile Coverage
       uses: actions/download-artifact@v4
       with:
-        name: coverage-frontend
+        name: coverage-frontend-mobile
         path: frontend/coverage/
+    
+    - name: Download Frontend Web Coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-frontend-web
+        path: frontend_web/coverage/
     
     - name: Verify Frontend Coverage
       run: |
         if [ -f frontend/coverage/lcov.info ]; then
-          echo "Frontend coverage file found"
+          echo "Frontend mobile lcov found"
           ls -lh frontend/coverage/lcov.info
         else
-          echo "Frontend coverage file not found"
+          echo "Frontend mobile coverage file not found"
+        fi
+        if [ -f frontend_web/coverage/lcov.info ]; then
+          echo "Frontend web lcov found"
+          ls -lh frontend_web/coverage/lcov.info
+        else
+          echo "Frontend web coverage file not found"
         fi
     
     - name: Set up Node.js
@@ -408,7 +420,7 @@ jobs:
           sudo docker image prune -f
 
   notify:
-    needs: [secret-scan, test-backend, test-frontend, test-ai-service, sonarqube, deploy]
+    needs: [secret-scan, test-backend, test-frontend-mobile, test-frontend-web, test-ai-service, sonarqube, deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -426,7 +438,8 @@ jobs:
         echo "======================================"
         echo "Secret Scan: ${{ needs.secret-scan.result }}"
         echo "Backend Tests: ${{ needs.test-backend.result }}"
-        echo "Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "Frontend Mobile Tests: ${{ needs.test-frontend-mobile.result }}"
+        echo "Frontend Web Tests: ${{ needs.test-frontend-web.result }}"
         echo "AI Service Tests: ${{ needs.test-ai-service.result }}"
         echo "SonarQube: ${{ needs.sonarqube.result }}"
         echo "Deploy: ${{ needs.deploy.result }}"
@@ -447,8 +460,13 @@ jobs:
           CRITICAL_FAILED=true
         fi
         
-        if [ "${{ needs.test-frontend.result }}" != "success" ]; then
-          echo "CRITICAL: Frontend tests failed"
+        if [ "${{ needs.test-frontend-mobile.result }}" != "success" ]; then
+          echo "CRITICAL: Frontend mobile tests failed"
+          CRITICAL_FAILED=true
+        fi
+        
+        if [ "${{ needs.test-frontend-web.result }}" != "success" ]; then
+          echo "CRITICAL: Frontend web tests failed"
           CRITICAL_FAILED=true
         fi
         

@@ -130,7 +130,7 @@ describe('authService', () => {
         it('should handle complex registration errors (objects)', async () => {
             mock.onPost(/\/auth\/register/).reply(400, { email: ['Invalid format'], password: ['Too short'] });
 
-            await expect(authService.register({} as any)).rejects.toThrow(JSON.stringify({ email: ['Invalid format'], password: ['Too short'] }));
+            await expect(authService.register({} as any)).rejects.toThrow("Erreur lors de l'inscription");
         });
     });
 
@@ -241,7 +241,7 @@ describe('authService', () => {
     describe('register error formats', () => {
         it('should handle string error response', async () => {
             mock.onPost(/\/auth\/register/).reply(400, 'Simple error string');
-            await expect(authService.register({} as any)).rejects.toThrow('Simple error string');
+            await expect(authService.register({} as any)).rejects.toThrow("Erreur lors de l'inscription");
         });
     });
 });

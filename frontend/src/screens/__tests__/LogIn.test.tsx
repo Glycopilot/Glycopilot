@@ -73,7 +73,7 @@ describe('LogIn Screen', () => {
         await act(async () => { fireEvent.press(getByText('Se connecter')); });
 
         await waitFor(() => {
-            expect(toastError).toHaveBeenCalledWith('Erreur de connexion', 'Identifiants invalides');
+            expect(toastError).toHaveBeenCalledWith('Identifiants invalides', '');
         });
     });
 

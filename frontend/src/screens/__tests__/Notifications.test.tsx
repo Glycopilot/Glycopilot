@@ -126,10 +126,10 @@ describe('NotificationsScreen — helper functions', () => {
       triggered_at: new Date(Date.now() - 7200000).toISOString(),
       glycemia_value: 250,
     }]);
-    const { findByText, queryByTestId } = renderScreen();
+    const { findByText, queryAllByTestId } = renderScreen();
     expect(await findByText('Résolue')).toBeTruthy();
     await waitFor(() => {
-      expect(queryByTestId('ack-button-resolved-1')).toBeNull();
+      expect(queryAllByTestId('CheckCircle').length).toBe(0);
     });
   });
 
@@ -153,10 +153,10 @@ describe('NotificationsScreen — helper functions', () => {
       triggered_at: new Date(Date.now() - 3600000).toISOString(),
       glycemia_value: 65,
     }]);
-    const { findByText, queryByTestId } = renderScreen();
+    const { findByText, queryAllByTestId } = renderScreen();
     expect(await findByText('Acquittée')).toBeTruthy();
     await waitFor(() => {
-      expect(queryByTestId('ack-button-acked-1')).toBeNull();
+      expect(queryAllByTestId('CheckCircle').length).toBe(0);
     });
   });
 
@@ -255,14 +255,14 @@ describe('NotificationsScreen — Alertes glycémie', () => {
   });
 
   it('appelle alertService.ackAlert quand on clique sur le bouton d\'acquittement', async () => {
-    const { getByTestId } = await renderAndWaitForAlerts();
+    const view = await renderAndWaitForAlerts();
     const { toastSuccess } = require('../../services/toastService');
-    
-    const ackButton = getByTestId('ack-button-1');
+
+    const ackIcon = view.getByTestId('CheckCircle');
     await act(async () => {
-        fireEvent.press(ackButton);
+      fireEvent.press(ackIcon.parent!);
     });
-    
+
     expect(alertService.ackAlert).toHaveBeenCalledWith('1');
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Alerte acquittée'));
   });
@@ -308,11 +308,12 @@ describe('NotificationsScreen — handleAck failure', () => {
   });
 
   it('affiche toastError quand ackAlert retourne false', async () => {
-    const { getByTestId } = renderScreen();
+    const view = renderScreen();
     const { toastError } = require('../../services/toastService');
 
-    await waitFor(() => expect(getByTestId('ack-button-99')).toBeTruthy());
-    await act(async () => { fireEvent.press(getByTestId('ack-button-99')); });
+    await waitFor(() => expect(view.getByTestId('CheckCircle')).toBeTruthy());
+    const ackIcon = view.getByTestId('CheckCircle');
+    await act(async () => { fireEvent.press(ackIcon.parent!); });
 
     await waitFor(() => expect(toastError).toHaveBeenCalled());
   });

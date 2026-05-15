@@ -119,18 +119,18 @@ describe('EditProfileModal', () => {
   });
 
   it('calls onDiabetesTypeChange with TYPE1 when Type 1 is pressed', () => {
-    const { getByTestId } = render(
+    const { getByText } = render(
       <EditProfileModal {...defaultProps} showDiabetesTypePicker={true} />
     );
-    fireEvent.press(getByTestId('diabetes-type-1'));
+    fireEvent.press(getByText('Type 1'));
     expect(defaultProps.onDiabetesTypeChange).toHaveBeenCalledWith('TYPE1');
   });
 
   it('calls onDiabetesTypeChange with TYPE2 when Type 2 is pressed', () => {
-    const { getByTestId } = render(
+    const { getByText } = render(
       <EditProfileModal {...defaultProps} showDiabetesTypePicker={true} />
     );
-    fireEvent.press(getByTestId('diabetes-type-2'));
+    fireEvent.press(getByText('Type 2'));
     expect(defaultProps.onDiabetesTypeChange).toHaveBeenCalledWith('TYPE2');
   });
 
@@ -184,10 +184,10 @@ describe('EditProfileModal', () => {
   });
 
   it('calls onDiabetesTypeChange with GESTATIONAL when Gestationnel pressed', () => {
-    const { getByTestId } = render(
+    const { getByText } = render(
       <EditProfileModal {...defaultProps} showDiabetesTypePicker={true} />
     );
-    fireEvent.press(getByTestId('diabetes-type-gestational'));
+    fireEvent.press(getByText('Gestationnel'));
     expect(defaultProps.onDiabetesTypeChange).toHaveBeenCalledWith('GESTATIONAL');
   });
 });
