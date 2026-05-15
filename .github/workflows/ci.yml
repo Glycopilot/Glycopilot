@@ -182,6 +182,9 @@ jobs:
     - name: Install frontend dependencies (for tsconfig resolution)
       run: cd frontend && npm install --legacy-peer-deps
 
+    - name: Fix backend coverage paths for SonarCloud
+      run: python3 scripts/fix_coverage_paths.py
+
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
       with:
