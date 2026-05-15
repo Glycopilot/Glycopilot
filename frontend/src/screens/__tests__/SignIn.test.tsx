@@ -167,7 +167,7 @@ describe('SignIn Screen', () => {
             await act(async () => { pressSubmit(q); });
 
             await waitFor(() => {
-                expect(toastError).toHaveBeenCalledWith('Email déjà utilisé', '');
+                expect(toastError).toHaveBeenCalledWith('Erreur inscription', 'Email déjà utilisé');
             });
         });
     });
