@@ -94,6 +94,7 @@ def confirm_email(request):
     """
     from django.http import HttpResponse
     from django.utils.encoding import force_str
+    from django.utils.html import format_html
     from django.utils.http import urlsafe_base64_decode
 
     from apps.auth.tokens import email_verification_token
@@ -101,32 +102,34 @@ def confirm_email(request):
     uid = request.query_params.get("uid")
     token = request.query_params.get("token")
 
-    error_html = """<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-    <title>Glycopilot</title>
-    <style>body{{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5}}
-    .card{{background:white;padding:2rem 3rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);text-align:center;max-width:400px}}
-    h2{{color:{color}}}p{{color:#555}}</style></head>
-    <body><div class="card"><h2>{title}</h2><p>{msg}</p></div></body></html>"""
+    _ERROR_TPL = (
+        '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+        '<title>Glycopilot</title>'
+        '<style>body{{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5}}'
+        '.card{{background:white;padding:2rem 3rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);text-align:center;max-width:400px}}'
+        'h2{{color:#e53e3e}}p{{color:#555}}</style></head>'
+        '<body><div class="card"><h2>{title}</h2><p>{msg}</p></div></body></html>'
+    )
 
-    if not uid or not token:
+    def _error_response(title: str, msg: str) -> HttpResponse:
         return HttpResponse(
-            error_html.format(color="#e53e3e", title="Lien invalide", msg="Ce lien de vérification est incomplet."),
+            format_html(_ERROR_TPL, title=title, msg=msg),
             content_type="text/html", status=400,
         )
+
+    if not uid or not token:
+        return _error_response("Lien invalide", "Ce lien de vérification est incomplet.")
 
     try:
         auth_id = force_str(urlsafe_base64_decode(uid))
         user = AuthAccount.objects.get(pk=auth_id)
     except (TypeError, ValueError, AuthAccount.DoesNotExist):
-        return HttpResponse(
-            error_html.format(color="#e53e3e", title="Lien invalide", msg="Ce lien de vérification n'est pas valide."),
-            content_type="text/html", status=400,
-        )
+        return _error_response("Lien invalide", "Ce lien de vérification n'est pas valide.")
 
     if not email_verification_token.check_token(user, token):
-        return HttpResponse(
-            error_html.format(color="#e53e3e", title="Lien expiré", msg="Ce lien a expiré ou a déjà été utilisé. Demandez un nouvel email de vérification depuis l'application."),
-            content_type="text/html", status=400,
+        return _error_response(
+            "Lien expiré",
+            "Ce lien a expiré ou a déjà été utilisé. Demandez un nouvel email de vérification depuis l'application.",
         )
 
     if not user.is_active:
