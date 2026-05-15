@@ -27,7 +27,8 @@ export default function SignInScreen({ navigation }) {
   const handleSignIn = async () => {
     if (!firstName || !lastName) return toastError('Erreur', 'Veuillez fournir le nom et le prénom');
     if (!email)                  return toastError('Erreur', 'Veuillez remplir tous les champs');
-    if (validateEmail(email))    return toastError('Erreur', "L'adresse email n'est pas valide");
+    const emailErr = validateEmail(email);
+    if (emailErr)                return toastError('Erreur', emailErr);
     if (confirmationEmail !== email) return toastError('Erreur', 'Les emails ne correspondent pas');
     if (!licenseNumber)          return toastError('Erreur', 'Veuillez fournir votre numéro de licence');
     if (!specialty)              return toastError('Erreur', 'Veuillez indiquer votre spécialité');

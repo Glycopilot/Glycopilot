@@ -14,6 +14,21 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
+/** Normalise nextDose API (string ou { name, dosage, … }) pour l'affichage métrique. */
+function formatNextDose(nextDose) {
+  if (nextDose == null) return null;
+  if (typeof nextDose === 'string') return nextDose;
+  if (typeof nextDose === 'object') {
+    const name = nextDose.name ?? nextDose.label;
+    const dosage = nextDose.dosage;
+    if (name && dosage) return `${name} — ${dosage}`;
+    if (name) return String(name);
+    const v = extractValue(nextDose);
+    return v != null ? String(v) : null;
+  }
+  return String(nextDose);
+}
+
 function StatusBadge({ status }) {
   const map = {
     2: { label: 'Actif',       cls: 'badge-active' },
