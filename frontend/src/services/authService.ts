@@ -26,6 +26,18 @@ const mapToUser = (data: Record<string, any>): User => ({
   diabetesType: data.profiles?.[0]?.patient_details?.diabetes_type,
 });
 
+const extractApiErrorMessage = (
+  data: ApiError | string | Record<string, unknown> | undefined,
+  fallback: string
+): string => {
+  if (!data) return fallback;
+  if (typeof data === 'string') return data;
+  if ('error' in data && typeof data.error === 'string') return data.error;
+  if ('message' in data && typeof data.message === 'string') return data.message;
+  if ('detail' in data && typeof data.detail === 'string') return data.detail;
+  return JSON.stringify(data);
+};
+
 const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
@@ -38,7 +50,8 @@ const authService = {
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
-      throw new Error(axiosError.response?.data?.message || 'Erreur de connexion');
+      const data = axiosError.response?.data;
+      throw new Error(data?.error || data?.message || 'Erreur de connexion');
     }
   },
 
@@ -57,23 +70,13 @@ const authService = {
       await storeAuthData(access, refresh, user);
       return response.data;
     } catch (error) {
-      const axiosError = error as AxiosError<ApiError | Record<string, unknown>>;
-      let message = "Erreur lors de l'inscription";
-      if (axiosError.response?.data) {
-        const data = axiosError.response.data;
-        if (typeof data === 'string') {
-          message = data;
-        } else if ('message' in data && typeof data.message === 'string') {
-          message = data.message;
-        } else {
-          try {
-            message = JSON.stringify(data);
-          } catch {
-            message = "Erreur lors de l'inscription (voir logs)";
-          }
-        }
-      }
-      throw new Error(message);
+      const axiosError = error as AxiosError<ApiError>;
+      throw new Error(
+        extractApiErrorMessage(
+          axiosError.response?.data as ApiError | string | Record<string, unknown> | undefined,
+          "Erreur lors de l'inscription"
+        )
+      );
     }
   },
 

@@ -80,7 +80,7 @@ export default function SignInScreen({ navigation }: SignInScreenProps) {
         password,
         passwordConfirm: ConfirmationPassword,
       });
-      toastSuccess('Inscription réussie!', 'Bienvenue !');
+      toastSuccess('Inscription réussie !', 'Bienvenue sur Glycopilot !');
       setEmail('');
       setfirstName('');
       setlastName('');
@@ -88,13 +88,13 @@ export default function SignInScreen({ navigation }: SignInScreenProps) {
       setConfirmationPassword('');
       setConfirmationEmail('');
       if (navigation && navigation.reset) {
-        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
       } else if (navigation && navigation.navigate) {
-        navigation.navigate('Login');
+        navigation.navigate('Home');
       }
     } catch (error) {
       const err = error as Error;
-      toastError('Erreur inscription', err.message);
+      toastError('Erreur inscription', err.message || "Erreur lors de l'inscription");
     }
   };
 
