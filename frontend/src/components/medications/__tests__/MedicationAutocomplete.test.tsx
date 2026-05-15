@@ -235,6 +235,38 @@ describe('MedicationAutocomplete', () => {
     process.env.EXPO_PUBLIC_FDA_API_URL = originalUrl;
   });
 
+  it('onFocus shows suggestions again when they exist', async () => {
+    const mockResults = {
+      results: [{ openfda: { brand_name: ['Metformin'], generic_name: ['Metformin'] } }],
+    };
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue(mockResults),
+    });
+
+    const { getByPlaceholderText, findByText } = render(
+      <MedicationAutocomplete value="" onChangeText={jest.fn()} onSelectMedication={jest.fn()} />
+    );
+    const input = getByPlaceholderText('Rechercher un médicament...');
+
+    // Perform search to populate suggestions
+    await act(async () => {
+      fireEvent.changeText(input, 'Metf');
+      jest.advanceTimersByTime(300);
+    });
+
+    // Suggestions should be visible
+    expect(await findByText('Metformin')).toBeTruthy();
+
+    // Fire focus event — triggers onFocus handler with suggestions.length > 0
+    await act(async () => {
+      fireEvent(input, 'focus');
+    });
+
+    // Suggestions still visible
+    expect(await findByText('Metformin')).toBeTruthy();
+  });
+
   it('shows loading indicator during search', async () => {
     let resolveSearch: (v: any) => void;
     (global.fetch as jest.Mock).mockReturnValue(
