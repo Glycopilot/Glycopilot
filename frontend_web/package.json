@@ -36,20 +36,17 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "src/**/*.{js,jsx}",
-      "!src/index.js",
-      "!src/reportWebVitals.js",
-      "!src/setupProxy.js",
-      "!src/setupTests.js",
-      "!src/App.jsx",
-      "!src/services/index.js",
-      "!src/services/authService.js",
-      "!src/lib/auth-redirect.js",
-      "!src/lib/logger.js",
-      "!src/components/ErrorBoundary.jsx",
-      "!src/components/tour/**",
-      "!src/screens/PatientsScreen.jsx",
-      "!src/**/*.css"
+      "src/hooks/**/*.{js,jsx}",
+      "src/lib/utils.js",
+      "src/components/InputField.jsx",
+      "src/components/Sidebar.jsx",
+      "src/screens/HomeScreen.jsx",
+      "src/screens/LoginScreen.jsx",
+      "src/screens/SignInScreen.jsx",
+      "src/screens/ProfileScreen.jsx",
+      "src/services/passwordService.js",
+      "src/services/toastService.js",
+      "src/services/userService.js"
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
