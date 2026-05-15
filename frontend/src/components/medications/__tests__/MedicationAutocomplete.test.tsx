@@ -237,7 +237,7 @@ describe('MedicationAutocomplete', () => {
 
   it('onFocus shows suggestions again when they exist', async () => {
     const mockResults = {
-      results: [{ openfda: { brand_name: ['Metformin'], generic_name: ['Metformin'] } }],
+      results: [{ openfda: { brand_name: ['Metformine'], generic_name: ['Metformin HCl'] } }],
     };
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -256,7 +256,7 @@ describe('MedicationAutocomplete', () => {
     });
 
     // Suggestions should be visible
-    expect(await findByText('Metformin')).toBeTruthy();
+    expect(await findByText('Metformine')).toBeTruthy();
 
     // Fire focus event — triggers onFocus handler with suggestions.length > 0
     await act(async () => {
@@ -264,7 +264,7 @@ describe('MedicationAutocomplete', () => {
     });
 
     // Suggestions still visible
-    expect(await findByText('Metformin')).toBeTruthy();
+    expect(await findByText('Metformine')).toBeTruthy();
   });
 
   it('shows loading indicator during search', async () => {
