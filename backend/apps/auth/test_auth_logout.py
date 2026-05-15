@@ -44,6 +44,15 @@ class LogoutEndpointTests(APITestCase):
         response = self.client.post("/api/auth/logout/", {"refresh": self.refresh_token})
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_logout_returns_403_when_token_belongs_to_different_user(self):
+        # Create another user and use their refresh token
+        other_identity = _mk_patient("logout-other@test.com")
+        other_token = str(RefreshToken.for_user(other_identity))
+
+        # Try to logout with another user's token
+        response = self.client.post("/api/auth/logout/", {"refresh": other_token})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
 
 class CreateAdminAccountTests(APITestCase):
     def setUp(self):
