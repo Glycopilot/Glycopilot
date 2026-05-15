@@ -204,6 +204,7 @@ def resend_verification(request):
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([AllowAny])
 @throttle_classes([AuthRateThrottle])
 def login(request):
@@ -244,6 +245,7 @@ def login(request):
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def refresh_token(request):
     """

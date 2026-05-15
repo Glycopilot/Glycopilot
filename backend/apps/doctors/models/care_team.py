@@ -41,6 +41,13 @@ class PatientCareTeam(models.Model):
         blank=True, null=True, verbose_name=_("Invitation Email (for Pending Doctors)")
     )
 
+    activation_code = models.CharField(
+        max_length=6,
+        blank=True,
+        null=True,
+        verbose_name=_("Activation Code (6 chars, proche only)"),
+    )
+
     relation_type = models.CharField(
         max_length=100,
         blank=True,

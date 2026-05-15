@@ -9,9 +9,11 @@ describe('AddContactModal', () => {
         contactName: '',
         contactRelation: '',
         contactPhone: '',
+        contactEmail: '',
         onNameChange: jest.fn(),
         onRelationChange: jest.fn(),
         onPhoneChange: jest.fn(),
+        onEmailChange: jest.fn(),
         onSubmit: jest.fn(),
     };
 
