@@ -14,6 +14,41 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
+const HBA1C_CACHE_PREFIX = 'hba1c-cache:';
+
+function readHba1cCache(patientId) {
+  if (!patientId) return null;
+  try {
+    const raw = localStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.value === 'number') {
+      return {
+        value: parsed.value,
+        unit: parsed.unit || '%',
+        measuredAt: parsed.measuredAt || null,
+      };
+    }
+  } catch (_e) {
+    return null;
+  }
+  return null;
+}
+
+function writeHba1cCache(patientId, value, measuredAt) {
+  if (!patientId || typeof value !== 'number') return;
+  try {
+    const payload = {
+      value,
+      unit: '%',
+      measuredAt: measuredAt || new Date().toISOString(),
+    };
+    localStorage.setItem(`${HBA1C_CACHE_PREFIX}${patientId}`, JSON.stringify(payload));
+  } catch (_e) {
+    // ignore storage failures
+  }
+}
+
 function formatNextDose(nextDose) {
   if (!nextDose) return null;
   if (typeof nextDose === 'string') return nextDose;
