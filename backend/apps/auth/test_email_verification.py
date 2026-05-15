@@ -36,6 +36,23 @@ def api():
     return APIClient()
 
 
+def _call_verify_email_domain(email):
+    """Exécute _verify_email_domain (logique MX) malgré TESTING=true en CI."""
+    import builtins
+
+    from apps.auth.serializers import _verify_email_domain
+
+    real_getattr = builtins.getattr
+
+    def getattr_side_effect(obj, name, default=None):
+        if name == "TESTING":
+            return False
+        return real_getattr(obj, name, default)
+
+    with patch.object(builtins, "getattr", new=getattr_side_effect):
+        _verify_email_domain(email)
+
+
 def _register(api, email="user@test.com", extra=None):
     data = {
         "email": email,
@@ -202,30 +219,39 @@ def test_resend_verification_active_account_does_not_send(api, mailoutbox):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.django_db
-def test_verify_email_domain_accepts_valid_domain():
-    from apps.auth.serializers import _verify_email_domain
-    # Aucune exception attendue
-    _verify_email_domain("user@gmail.com")
+@patch("dns.resolver.Resolver")
+def test_verify_email_domain_accepts_valid_domain(mock_resolver_cls):
+    mock_resolver_cls.return_value.resolve.return_value = object()
+    _call_verify_email_domain("user@gmail.com")
 
 
 @pytest.mark.django_db
-def test_verify_email_domain_rejects_nonexistent_domain():
+@patch("dns.resolver.Resolver")
+def test_verify_email_domain_rejects_nonexistent_domain(mock_resolver_cls):
+    import dns.resolver
     from rest_framework import serializers as drf_serializers
-    from apps.auth.serializers import _verify_email_domain
+
+    mock_resolver_cls.return_value.resolve.side_effect = dns.resolver.NXDOMAIN()
     with pytest.raises(drf_serializers.ValidationError):
-        _verify_email_domain("user@domaine-inexistant-xyzabc999.com")
+        _call_verify_email_domain("user@domaine-inexistant-xyzabc999.com")
 
 
 @pytest.mark.django_db
 def test_verify_email_domain_rejects_domain_without_dot():
     from rest_framework import serializers as drf_serializers
-    from apps.auth.serializers import _verify_email_domain
+
     with pytest.raises(drf_serializers.ValidationError):
-        _verify_email_domain("user@localhost")
+        _call_verify_email_domain("user@localhost")
 
 
 @pytest.mark.django_db
-def test_register_with_fake_domain_returns_400(api):
+@patch("apps.auth.serializers._verify_email_domain")
+def test_register_with_fake_domain_returns_400(mock_verify, api):
+    from rest_framework import serializers as drf_serializers
+
+    mock_verify.side_effect = drf_serializers.ValidationError(
+        "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
+    )
     data = {
         "email": "test@domaine-inexistant-xyzabc999.com",
         "password": "StrongPass123!",
