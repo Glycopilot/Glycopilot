@@ -14,6 +14,7 @@ from apps.doctors.models import InvitationStatus, PatientCareTeam
 from apps.doctors.serializers import PatientCareTeamSerializer
 from apps.doctors.services import DoctorPatientDataService
 from apps.doctors.utils import send_care_team_invitation, send_proche_invitation
+from apps.notifications.services.push import send_push_to_user
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 
@@ -504,6 +505,58 @@ class CareTeamViewSet(viewsets.ViewSet):
         return Response(
             {"message": "Invitation acceptée.", "status": "ACTIVE"}, status=200
         )
+
+    @action(detail=False, methods=["post"], url_path="decline-invitation")
+    def decline_invitation(self, request):
+        id_team_member = request.data.get("id_team_member")
+        reason = request.data.get("reason", "Aucun motif spécifié.")
+
+        if not id_team_member:
+            return Response({"error": "id_team_member requis."}, status=400)
+
+        try:
+            entry = PatientCareTeam.objects.get(
+                id_team_member=id_team_member, status__label="PENDING"
+            )
+        except PatientCareTeam.DoesNotExist:
+            return Response({"error": "Invitation introuvable."}, status=404)
+
+        current_identity = _get_identity(request.user)
+        if not current_identity:
+            return Response({"error": "Utilisateur non identifié."}, status=403)
+
+        is_doctor = bool(
+            entry.member_profile and entry.member_profile.user == current_identity
+        )
+        is_patient = bool(
+            entry.patient_profile
+            and entry.patient_profile.profile.user == current_identity
+        )
+
+        if not is_doctor and not is_patient:
+            return Response({"error": "Action non autorisée."}, status=403)
+
+        rejected_status = _get_invitation_status("REJECTED")
+
+        with transaction.atomic():
+            entry.status = rejected_status
+            entry.rejection_reason = reason
+            entry.save(update_fields=["status", "rejection_reason", "updated_at"])
+
+            if is_doctor:
+                patient_auth = AuthAccount.objects.filter(
+                    user=entry.patient_profile.profile.user
+                ).first()
+                if patient_auth:
+                    doctor_name = f"Dr. {current_identity.last_name}"
+                    send_push_to_user(
+                        patient_auth,
+                        title="Invitation refusée",
+                        body=f"Désolé, le {doctor_name} a refusé votre invitation. Motif : {reason}",
+                        data={"type": "INVITATION_REJECTED", "id": str(id_team_member)},
+                    )
+
+        return Response({"message": "Invitation déclinée.", "status": "REJECTED"})
 
     @action(detail=False, methods=["get"], url_path="my-team")
     def my_team(self, request):
