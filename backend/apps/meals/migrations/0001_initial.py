@@ -19,7 +19,22 @@ class Migration(migrations.Migration):
                 ("recipe", models.TextField(blank=True, null=True)),
                 ("glucose", models.FloatField(blank=True, null=True)),
                 ("calories", models.IntegerField(blank=True, null=True)),
+                ("glucides", models.FloatField(blank=True, null=True)),
+                ("proteines", models.FloatField(blank=True, null=True)),
+                ("lipides", models.FloatField(blank=True, null=True)),
                 ("link_photo", models.URLField(blank=True, null=True)),
+                (
+                    "barcode",
+                    models.CharField(blank=True, max_length=30, null=True, unique=True),
+                ),
+                (
+                    "source",
+                    models.CharField(
+                        choices=[("manual", "Manuel"), ("openfood", "Open Food Facts")],
+                        default="manual",
+                        max_length=10,
+                    ),
+                ),
             ],
             options={
                 "db_table": "meals",
@@ -38,6 +53,34 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("taken_at", models.DateTimeField()),
+                (
+                    "meal_type",
+                    models.CharField(
+                        choices=[
+                            ("breakfast", "Petit-déjeuner"),
+                            ("lunch", "Déjeuner"),
+                            ("snack", "Collation"),
+                            ("dinner", "Dîner"),
+                        ],
+                        default="lunch",
+                        max_length=15,
+                    ),
+                ),
+                ("portion_g", models.FloatField(blank=True, null=True)),
+                ("notes", models.TextField(blank=True, null=True)),
+                (
+                    "input_mode",
+                    models.CharField(
+                        choices=[
+                            ("manual", "Manuel"),
+                            ("barcode", "Code-barres"),
+                            ("search", "Recherche"),
+                        ],
+                        default="manual",
+                        max_length=10,
+                    ),
+                ),
+                ("session_key", models.CharField(blank=True, max_length=40, null=True)),
                 (
                     "meal",
                     models.ForeignKey(
