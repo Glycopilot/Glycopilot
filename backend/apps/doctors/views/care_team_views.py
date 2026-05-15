@@ -1,6 +1,5 @@
 import logging
 
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from rest_framework import viewsets
@@ -10,11 +9,11 @@ from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
-from apps.doctors.doctor_patient_access import verify_doctor_can_access_patient
+from apps.doctors.doctor_patient_access import verify_doctor_can_access_patient, verify_proche_can_access_patient
 from apps.doctors.models import InvitationStatus, PatientCareTeam
 from apps.doctors.serializers import PatientCareTeamSerializer
 from apps.doctors.services import DoctorPatientDataService
-from apps.doctors.utils import send_care_team_invitation
+from apps.doctors.utils import send_care_team_invitation, send_proche_invitation
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 
@@ -43,23 +42,36 @@ class CareTeamViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="add-family")
     def add_family_member(self, request):
         """
-        Ajoute un membre de la famille ou un aidant manuellement.
+        Ajoute un proche (famille / aidant) à l'équipe de soin du patient.
+
+        Corps JSON :
+          first_name, last_name      — requis
+          email                      — optionnel ; si fourni, un compte invité est créé
+          phone_number, address      — optionnels
+          relation_type              — ex. "Conjoint", "Parent" (défaut : "Family")
+          role                       — FAMILY | CAREGIVER | NURSE (défaut : FAMILY)
+
+        Comportement selon email :
+          - Avec email (compte existant) : lien immédiat, statut ACTIVE, email de notification
+          - Avec email (nouveau)         : compte inactif créé, statut PENDING, email d'activation
+          - Sans email                   : shell vide (pas de login), statut ACTIVE
         """
+        from django.contrib.auth.tokens import PasswordResetTokenGenerator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
         data = request.data
 
-        # Security Check: Ensure requester is a PATIENT
         identity = _get_identity(request.user)
         patient_role_profile = (
             identity.profiles.filter(role__name__iexact="PATIENT").first()
             if identity
             else None
         )
-
         if not patient_role_profile:
             return Response(
                 {"error": "Only patients can add care team members."}, status=403
             )
-
         if not hasattr(patient_role_profile, "patient_profile"):
             return Response({"error": "Patient profile incomplete."}, status=400)
 
@@ -67,51 +79,142 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         first_name = data.get("first_name")
         last_name = data.get("last_name")
+        email = (data.get("email") or "").strip().lower() or None
         phone_number = data.get("phone_number")
         address = data.get("address")
         relation = data.get("relation_type", "Family")
         role_name = (data.get("role") or "FAMILY").strip().upper()
-        allowed_family_roles = {"FAMILY", "CAREGIVER", "NURSE"}
-        if role_name not in allowed_family_roles:
+
+        if role_name not in {"FAMILY", "CAREGIVER", "NURSE"}:
             return Response(
-                {
-                    "error": "Rôle invalide. Valeurs acceptées : FAMILY, CAREGIVER, NURSE."
-                },
+                {"error": "Rôle invalide. Valeurs acceptées : FAMILY, CAREGIVER, NURSE."},
                 status=400,
             )
-
         if not first_name or not last_name:
             return Response({"error": "Prénom et nom sont requis."}, status=400)
 
-        role_obj, _ = Role.objects.get_or_create(
-            name=role_name, defaults={"name": role_name}
-        )
-        active_status = _get_invitation_status("ACTIVE")
+        role_obj, _ = Role.objects.get_or_create(name=role_name, defaults={"name": role_name})
+        inviter_name = f"{identity.first_name} {identity.last_name}".strip() or "Votre proche"
 
         with transaction.atomic():
-            user_identity = User.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                phone_number=phone_number or "",
-                address=address or "",
-            )
-            member_profile = Profile.objects.create(user=user_identity, role=role_obj)
+            if email:
+                existing_auth = AuthAccount.objects.filter(email=email).first()
 
-            team_member = PatientCareTeam.objects.create(
-                patient_profile=patient_profile,
-                member_profile=member_profile,
-                role=role_name,
-                relation_type=relation or "",
-                status=active_status,
-            )
+                if existing_auth:
+                    # Proche déjà inscrit → lier directement
+                    member_profile, _ = Profile.objects.get_or_create(
+                        user=existing_auth.user, role=role_obj
+                    )
+                    team_member = PatientCareTeam.objects.create(
+                        patient_profile=patient_profile,
+                        member_profile=member_profile,
+                        role=role_name,
+                        relation_type=relation or "",
+                        status=_get_invitation_status("ACTIVE"),
+                        invitation_email=email,
+                    )
+                    send_care_team_invitation(email, inviter_name, role_name, is_existing_user=True)
+                else:
+                    # Nouveau proche → compte inactif + email d'activation
+                    user_identity = User.objects.create(
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone_number=phone_number or "",
+                        address=address or "",
+                    )
+                    auth_account = AuthAccount.objects.create_user(
+                        email=email,
+                        password=None,
+                        user_identity=user_identity,
+                    )
+                    auth_account.is_active = False
+                    auth_account.save(update_fields=["is_active"])
+
+                    member_profile = Profile.objects.create(user=user_identity, role=role_obj)
+                    team_member = PatientCareTeam.objects.create(
+                        patient_profile=patient_profile,
+                        member_profile=member_profile,
+                        role=role_name,
+                        relation_type=relation or "",
+                        status=_get_invitation_status("PENDING"),
+                        invitation_email=email,
+                    )
+
+                    uid = urlsafe_base64_encode(force_bytes(auth_account.pk))
+                    token = PasswordResetTokenGenerator().make_token(auth_account)
+                    send_proche_invitation(email, inviter_name, uid, token)
+
+            else:
+                # Pas d'email → shell vide, pas de login
+                user_identity = User.objects.create(
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone_number=phone_number or "",
+                    address=address or "",
+                )
+                member_profile = Profile.objects.create(user=user_identity, role=role_obj)
+                team_member = PatientCareTeam.objects.create(
+                    patient_profile=patient_profile,
+                    member_profile=member_profile,
+                    role=role_name,
+                    relation_type=relation or "",
+                    status=_get_invitation_status("ACTIVE"),
+                )
 
         return Response(
             {
                 "message": "Membre ajouté à l'équipe.",
                 "id": str(team_member.id_team_member),
+                "status": team_member.status.label,
+                "invitation_sent": email is not None,
             },
             status=201,
         )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="activate-proche",
+        permission_classes=[],
+    )
+    def activate_proche_account(self, request):
+        """
+        POST /api/doctors/care-team/activate-proche/
+        Valide le token d'activation, fixe le mot de passe et active le compte proche.
+
+        Corps JSON : uid, token, password
+        """
+        from django.utils.encoding import force_str
+        from django.utils.http import urlsafe_base64_decode
+
+        uid = request.data.get("uid")
+        token = request.data.get("token")
+        password = request.data.get("password")
+
+        if not uid or not token or not password:
+            return Response({"error": "uid, token et password sont requis."}, status=400)
+
+        try:
+            auth_id = force_str(urlsafe_base64_decode(uid))
+            auth_account = AuthAccount.objects.get(pk=auth_id)
+        except (TypeError, ValueError, AuthAccount.DoesNotExist):
+            return Response({"error": "Lien invalide."}, status=400)
+
+        from apps.auth.tokens import email_verification_token as _token_gen
+        if not _token_gen.check_token(auth_account, token):
+            return Response({"error": "Lien expiré ou invalide."}, status=400)
+
+        auth_account.set_password(password)
+        auth_account.is_active = True
+        auth_account.save(update_fields=["password", "is_active"])
+
+        active_status = _get_invitation_status("ACTIVE")
+        PatientCareTeam.objects.filter(
+            member_profile__user=auth_account.user,
+            status__label="PENDING",
+        ).update(status=active_status)
+
+        return Response({"message": "Compte activé avec succès."}, status=200)
 
     @action(detail=False, methods=["post"], url_path="invite-doctor")
     def invite_doctor(self, request):
@@ -486,6 +589,66 @@ class CareTeamViewSet(viewsets.ViewSet):
         entry.delete()
         return Response({"message": "Membre retiré de l'équipe."}, status=200)
 
+    @action(detail=False, methods=["patch"], url_path="update-member")
+    def update_member(self, request):
+        """
+        PATCH /api/doctors/care-team/update-member/
+        Modifie les informations d'un proche (famille / aidant) de l'équipe du patient.
+
+        Corps JSON :
+          id_team_member  — requis (UUID)
+          first_name      — optionnel
+          last_name       — optionnel
+          phone_number    — optionnel
+          address         — optionnel
+          relation_type   — optionnel
+        """
+        id_team_member = request.data.get("id_team_member")
+        if not id_team_member:
+            return Response({"error": "id_team_member requis."}, status=400)
+
+        identity = _get_identity(request.user)
+        patient_role_profile = (
+            identity.profiles.filter(role__name__iexact="PATIENT").first()
+            if identity else None
+        )
+        if not patient_role_profile or not hasattr(patient_role_profile, "patient_profile"):
+            return Response({"error": "Seuls les patients peuvent modifier un membre."}, status=403)
+
+        try:
+            entry = PatientCareTeam.objects.select_related("member_profile__user").get(
+                id_team_member=id_team_member,
+                patient_profile=patient_role_profile.patient_profile,
+                role__in=["FAMILY", "CAREGIVER", "NURSE"],
+            )
+        except PatientCareTeam.DoesNotExist:
+            return Response({"error": "Membre introuvable."}, status=404)
+
+        member_user = entry.member_profile.user
+
+        updatable_user_fields = ("first_name", "last_name", "phone_number", "address")
+        user_changed = False
+        for field in updatable_user_fields:
+            if field in request.data:
+                setattr(member_user, field, request.data[field])
+                user_changed = True
+        if user_changed:
+            member_user.save(update_fields=[f for f in updatable_user_fields if f in request.data])
+
+        if "relation_type" in request.data:
+            entry.relation_type = request.data["relation_type"]
+            entry.save(update_fields=["relation_type"])
+
+        return Response({
+            "message": "Membre mis à jour.",
+            "id_team_member": str(entry.id_team_member),
+            "first_name": member_user.first_name,
+            "last_name": member_user.last_name,
+            "phone_number": member_user.phone_number,
+            "address": member_user.address,
+            "relation_type": entry.relation_type,
+        })
+
     @action(detail=False, methods=["get"], url_path="patient-dashboard")
     def get_patient_dashboard(self, request):
         """
@@ -538,3 +701,57 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         data = DoctorPatientDataService.get_glycemia_history(user)
         return Response(data)
+
+    # ------------------------------------------------------------------ #
+    #  Endpoints Proche                                                    #
+    # ------------------------------------------------------------------ #
+
+    @action(detail=False, methods=["get"], url_path="my-linked-patient")
+    def my_linked_patient(self, request):
+        """
+        GET /api/doctors/care-team/my-linked-patient/
+        Retourne les infos de base du patient lié au proche connecté.
+        """
+        patient_auth, entry, error = verify_proche_can_access_patient(request)
+        if error:
+            return error
+
+        patient_user = patient_auth.user
+        patient_profile = None
+        profile_obj = patient_user.profiles.filter(role__name__iexact="PATIENT").first()
+        if profile_obj and hasattr(profile_obj, "patient_profile"):
+            patient_profile = profile_obj.patient_profile
+
+        return Response({
+            "patient_user_id": str(patient_user.id_user),
+            "first_name": patient_user.first_name,
+            "last_name": patient_user.last_name,
+            "diabetes_type": getattr(patient_profile, "diabetes_type", None),
+            "relation_type": entry.relation_type,
+        })
+
+    @action(detail=False, methods=["get"], url_path="proche-glycemia")
+    def get_proche_glycemia(self, request):
+        """
+        GET /api/doctors/care-team/proche-glycemia/
+        Historique glycémie du patient lié, accessible au proche connecté.
+        """
+        patient_auth, _, error = verify_proche_can_access_patient(request)
+        if error:
+            return error
+
+        from apps.doctors.services import DoctorPatientDataService
+        return Response(DoctorPatientDataService.get_glycemia_history(patient_auth))
+
+    @action(detail=False, methods=["get"], url_path="proche-dashboard")
+    def get_proche_dashboard(self, request):
+        """
+        GET /api/doctors/care-team/proche-dashboard/
+        Résumé tableau de bord du patient lié, accessible au proche connecté.
+        """
+        patient_auth, _, error = verify_proche_can_access_patient(request)
+        if error:
+            return error
+
+        from apps.doctors.services import DoctorPatientDataService
+        return Response(DoctorPatientDataService.get_patient_dashboard(patient_auth))

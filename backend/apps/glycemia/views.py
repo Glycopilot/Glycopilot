@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.dashboard.services import DashboardCache
+from utils.helpers import format_serializer_errors
 from .models import Glycemia, GlycemiaDataIA, GlycemiaHisto, PersonalModelApproval
 from .serializers import (
     GlycemiaDataIASerializer,
@@ -127,7 +128,7 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         serializer = GlycemiaHistoCreateSerializer(data=request.data)
 
         if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
+            return Response(format_serializer_errors(serializer.errors), status=400)
 
         histo_entry = serializer.save(user=request.user, source="manual")
 
@@ -150,7 +151,7 @@ class GlycemiaViewSet(viewsets.ModelViewSet):
         serializer = GlycemiaHistoCreateSerializer(data=request.data)
 
         if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
+            return Response(format_serializer_errors(serializer.errors), status=400)
 
         histo_entry = serializer.save(user=request.user, source="cgm")
 

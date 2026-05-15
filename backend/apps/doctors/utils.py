@@ -49,6 +49,38 @@ def send_care_team_invitation(to_email, inviter_name, role, is_existing_user=Fal
         return False
 
 
+def send_proche_invitation(to_email, inviter_name, uid, token):
+    """
+    Envoie l'email d'activation de compte au proche invité.
+    Le lien pointe vers l'écran d'activation du frontend.
+    """
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+    link = f"{frontend_url}/proche/activate?uid={uid}&token={token}"
+    subject = f"Glycopilot — {inviter_name} vous invite en tant que proche"
+    message_body = (
+        f"Bonjour,\n\n"
+        f"{inviter_name} vous a ajouté comme proche sur Glycopilot.\n"
+        f"Créez votre mot de passe pour accéder aux données de votre proche :\n\n"
+        f"{link}\n\n"
+        f"Ce lien est valable 48h.\n\n"
+        f"Si vous n'attendiez pas cet email, vous pouvez l'ignorer."
+    )
+    try:
+        send_mail(
+            subject=subject,
+            message=message_body,
+            from_email=settings.DEFAULT_FROM_EMAIL or "noreply@glycopilot.com",
+            recipient_list=[to_email],
+            fail_silently=False,
+        )
+        if settings.DEBUG:
+            logger.debug("Proche invitation email sent.")
+        return True
+    except Exception:
+        logger.exception("Proche invitation email failed.")
+        return False
+
+
 def send_doctor_verification_result_email(to_email, is_accepted, rejection_reason=None):
     """
     Envoie un email au docteur pour l'informer du résultat de la vérification.

@@ -110,7 +110,7 @@ class TestPushTokenRegister:
             "device_type": "android",
         }, format="json")
         assert resp.status_code == 400
-        assert "token" in resp.json()
+        assert "error" in resp.json()
 
     def test_register_token_idempotent(self, client):
         client.post("/api/notifications/push-token/", {
