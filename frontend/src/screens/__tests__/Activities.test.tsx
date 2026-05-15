@@ -81,6 +81,21 @@ describe('Activities Screen — stats and summary', () => {
     const { getAllByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
     expect(getAllByText(/kcal/).length).toBeGreaterThan(0);
   });
+
+  it('renders activity time stamps', () => {
+    const { getByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    expect(getByText('07:30')).toBeTruthy();
+  });
+
+  it('renders mg/dL impact text', () => {
+    const { getAllByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    expect(getAllByText(/mg\/dL/).length).toBeGreaterThan(0);
+  });
+
+  it('renders en moyenne label', () => {
+    const { getAllByText } = render(<ActivityScreen navigation={mockNavigation as any} />);
+    expect(getAllByText('en moyenne').length).toBeGreaterThan(0);
+  });
 });
 
 describe('Activities Screen — add activity modal', () => {

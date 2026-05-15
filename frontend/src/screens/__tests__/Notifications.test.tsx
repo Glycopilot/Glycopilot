@@ -183,6 +183,23 @@ describe('NotificationsScreen — helper functions', () => {
     const { findByText } = renderScreen();
     expect(await findByText('Il y a 3h')).toBeTruthy();
   });
+
+  it('shows glycemia value in alert card', async () => {
+    (alertService.getHistory as jest.Mock).mockResolvedValue([{
+      id: 'gly-1',
+      rule_name: 'Hypo Test',
+      status: 'TRIGGERED',
+      triggered_at: new Date(Date.now() - 120000).toISOString(),
+      glycemia_value: 63,
+    }]);
+    const { findByText } = renderScreen();
+    expect(await findByText(/63 mg\/dL/)).toBeTruthy();
+  });
+
+  it('shows Alertes glycémie tab text', async () => {
+    const { findByText } = renderScreen();
+    expect(await findByText('Alertes glycémie')).toBeTruthy();
+  });
 });
 
 describe('NotificationsScreen — Alertes glycémie', () => {
@@ -405,6 +422,11 @@ describe('NotificationsScreen — Rappels médicaments', () => {
     const queries = renderScreen();
     await switchToMedications(queries);
     await waitFor(() => expect(queries.getByText('500mg')).toBeTruthy());
+  });
+
+  it('Rappels méd. tab text is shown', async () => {
+    const queries = renderScreen();
+    await waitFor(() => expect(queries.getByText('Rappels méd.')).toBeTruthy());
   });
 
   it('shows Pris filter and filters taken intakes correctly', async () => {
