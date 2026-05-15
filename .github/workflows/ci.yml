@@ -55,8 +55,8 @@ jobs:
         SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
         TESTING: true
       run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
-        pytest backend --cov=backend --cov-report=xml:backend/coverage.xml
+        cd backend
+        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
     
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
@@ -73,8 +73,39 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+  test-ai-service:
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd ai_service
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+
+    - name: Run tests with coverage
+      run: |
+        cd ai_service
+        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-ai-service
+        path: ai_service/coverage.xml
+        retention-days: 1
+        if-no-files-found: error
+
   sonarqube:
-    needs: [test-backend, test-frontend-mobile, test-frontend-web]
+    needs: [test-backend, test-frontend, test-ai-service]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -91,47 +122,44 @@ jobs:
         name: coverage-backend
         path: backend/
     
-    - name: Verify and Fix Backend Coverage Paths
+    - name: Verify Backend Coverage
       run: |
         if [ -f backend/coverage.xml ]; then
           echo "Backend coverage file found"
           ls -lh backend/coverage.xml
-          echo "=== Sample filenames before fix ==="
-          grep 'filename=' backend/coverage.xml | head -5
-          python3 scripts/fix_coverage_paths.py
-          echo "=== Sample filenames after fix ==="
-          grep 'filename=' backend/coverage.xml | head -5
-          grep '<source>' backend/coverage.xml
         else
           echo "Backend coverage file not found"
+        fi
+    
+    - name: Download AI Service Coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-ai-service
+        path: ai_service/
+
+    - name: Verify AI Service Coverage
+      run: |
+        if [ -f ai_service/coverage.xml ]; then
+          echo "AI Service coverage file found"
+          ls -lh ai_service/coverage.xml
+        else
+          echo "AI Service coverage file not found"
           exit 1
         fi
 
-    - name: Download Frontend Mobile Coverage
+    - name: Download Frontend Coverage
       uses: actions/download-artifact@v4
       with:
-        name: coverage-frontend-mobile
+        name: coverage-frontend
         path: frontend/coverage/
-
-    - name: Download Frontend Web Coverage
-      uses: actions/download-artifact@v4
-      with:
-        name: coverage-frontend-web
-        path: frontend_web/coverage/
     
     - name: Verify Frontend Coverage
       run: |
         if [ -f frontend/coverage/lcov.info ]; then
-          echo "Frontend Mobile coverage file found"
+          echo "Frontend coverage file found"
           ls -lh frontend/coverage/lcov.info
-          # Correction des chemins pour SonarCloud
-          sed -i 's|SF:src|SF:frontend/src|g' frontend/coverage/lcov.info
-        fi
-        if [ -f frontend_web/coverage/lcov.info ]; then
-          echo "Frontend Web coverage file found"
-          ls -lh frontend_web/coverage/lcov.info
-          # Correction des chemins pour SonarCloud
-          sed -i 's|SF:src|SF:frontend_web/src|g' frontend_web/coverage/lcov.info
+        else
+          echo "Frontend coverage file not found"
         fi
     
     - name: Set up Node.js
@@ -271,7 +299,7 @@ jobs:
           
           ---
           
-          ${qualityGate !== 'OK' ? '**Note:** Le Quality Gate est temporairement en mode \`continue-on-error\` pendant le développement actif.' : ''}
+          ${qualityGate !== 'OK' ? '**Note:** Le Quality Gate requiert une couverture de code ≥ 80% sur le nouveau code.' : ''}
           `;
           
           // Chercher si un commentaire existe déjà
@@ -307,10 +335,9 @@ jobs:
       run: |
         echo "::warning title=SonarQube Quality Gate::Le Quality Gate peut échouer en raison d'une couverture de code insuffisante. Ceci est temporaire pendant le développement."
         echo "SonarCloud analysis completed"
-        echo "ATTENTION: continue-on-error est activé temporairement"
-        echo "Le Quality Gate devrait passer une fois le code et les tests complétés"
+        echo "Le Quality Gate requiert une couverture ≥ 80% sur le nouveau code"
 
-  test-frontend-mobile:
+  test-frontend:
     needs: secret-scan
     runs-on: ubuntu-latest
     steps:
@@ -334,45 +361,14 @@ jobs:
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-frontend-mobile
+        name: coverage-frontend
         path: frontend/coverage/
-        retention-days: 1
-        if-no-files-found: ignore
-
-  test-frontend-web:
-    needs: secret-scan
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-    
-    - name: Install dependencies
-      run: |
-        cd frontend_web
-        npm install
-    
-    - name: Run tests with coverage
-      env:
-        CI: true
-      run: |
-        cd frontend_web
-        npm test -- --coverage --watchAll=false
-    
-    - name: Upload coverage artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-frontend-web
-        path: frontend_web/coverage/
         retention-days: 1
         if-no-files-found: ignore
 
   deploy:
     name: Deploy to EC2
-    needs: [test-backend, test-frontend-mobile, test-frontend-web, sonarqube]
+    needs: [test-backend, test-frontend, sonarqube]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
@@ -412,7 +408,7 @@ jobs:
           sudo docker image prune -f
 
   notify:
-    needs: [secret-scan, test-backend, test-frontend-mobile, test-frontend-web, sonarqube, deploy]
+    needs: [secret-scan, test-backend, test-frontend, test-ai-service, sonarqube, deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -430,8 +426,8 @@ jobs:
         echo "======================================"
         echo "Secret Scan: ${{ needs.secret-scan.result }}"
         echo "Backend Tests: ${{ needs.test-backend.result }}"
-        echo "Frontend Mobile Tests: ${{ needs.test-frontend-mobile.result }}"
-        echo "Frontend Web Tests: ${{ needs.test-frontend-web.result }}"
+        echo "Frontend Tests: ${{ needs.test-frontend.result }}"
+        echo "AI Service Tests: ${{ needs.test-ai-service.result }}"
         echo "SonarQube: ${{ needs.sonarqube.result }}"
         echo "Deploy: ${{ needs.deploy.result }}"
         echo "======================================"
@@ -451,13 +447,8 @@ jobs:
           CRITICAL_FAILED=true
         fi
         
-        if [ "${{ needs.test-frontend-mobile.result }}" != "success" ]; then
-          echo "CRITICAL: Frontend mobile tests failed"
-          CRITICAL_FAILED=true
-        fi
-        
-        if [ "${{ needs.test-frontend-web.result }}" != "success" ]; then
-          echo "CRITICAL: Frontend web tests failed"
+        if [ "${{ needs.test-frontend.result }}" != "success" ]; then
+          echo "CRITICAL: Frontend tests failed"
           CRITICAL_FAILED=true
         fi
         

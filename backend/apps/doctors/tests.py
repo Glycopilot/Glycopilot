@@ -177,7 +177,10 @@ class CareTeamIntegrationTests(TestCase):
         self.assertEqual(doc_prof.verification_status.label, "REJECTED")
 
     def test_patient_register_creates_account(self):
-        """Création d'un compte patient via l'API register."""
+        """Création d'un compte patient via l'API register.
+        Depuis l'ajout de la vérification email, retourne un message (pas de JWT).
+        """
+        from unittest.mock import patch
         data = {
             "email": "patient_care@test.com",
             "password": "Password123!",
@@ -186,9 +189,12 @@ class CareTeamIntegrationTests(TestCase):
             "last_name": "Patient",
             "role": "PATIENT",
         }
-        response = self.client.post("/api/auth/register/", data)
+        with patch("apps.auth.serializers._verify_email_domain"), \
+             patch("apps.auth.views._send_verification_link"):
+            response = self.client.post("/api/auth/register/", data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
         self.assertTrue(User.objects.filter(email="patient_care@test.com").exists())
 
     def test_patient_invite_unverified_doctor_returns_not_available(self):
@@ -332,7 +338,7 @@ class CareTeamIntegrationTests(TestCase):
             "/api/auth/login/", {"email": "unv_doc@test.com", "password": "pass123"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("non_field_errors", response.data)
+        self.assertIn("error", response.data)
 
     def test_verified_doctor_can_add_patient(self):
         """Après validation par l'admin, le docteur peut ajouter un patient."""

@@ -187,11 +187,7 @@ function AlertsSection({ alerts, refreshing, onRefresh, onAck }: AlertsSectionPr
                       </View>
                     </View>
                     {canAck && (
-                      <TouchableOpacity 
-                        style={styles.ackButton} 
-                        onPress={() => onAck(alert.id)}
-                        testID={`ack-button-${alert.id}`}
-                      >
+                      <TouchableOpacity style={styles.ackButton} onPress={() => onAck(alert.id)}>
                         <CheckCircle size={22} color="#10B981" strokeWidth={2} />
                       </TouchableOpacity>
                     )}

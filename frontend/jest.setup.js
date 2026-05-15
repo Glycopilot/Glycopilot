@@ -61,6 +61,11 @@ jest.mock('expo-constants', () => ({
     installationId: 'test-installation-id',
 }));
 
+jest.mock('expo-camera', () => ({
+    CameraView: 'CameraView',
+    useCameraPermissions: () => [{ granted: false }, jest.fn()],
+}));
+
 jest.mock('expo-device', () => ({
     isDevice: true,
     brand: 'Apple',

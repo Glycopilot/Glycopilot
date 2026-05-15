@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Push notification service for alerts.
 Uses Expo Push API via the notifications module.

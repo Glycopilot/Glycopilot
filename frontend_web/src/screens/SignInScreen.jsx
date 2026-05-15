@@ -2,25 +2,10 @@ import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, CreditCard, Stethoscope, MapPin, User, ChevronRight } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
+import InputField from '../components/InputField';
+import { validateEmail, validatePassword } from '../lib/utils';
 import logo from '../assets/glycopilot.png';
 import './css/auth.css';
-
-const InputField = ({ label, value, onChangeText, icon, placeholder, type = 'text', rightElement }) => (
-  <div className="input-field">
-    <label>{label}</label>
-    <div className="input-wrapper">
-      {icon && <span className="input-icon">{icon}</span>}
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChangeText(e.target.value)}
-        placeholder={placeholder}
-        autoComplete={type === 'password' ? 'new-password' : type === 'email' ? 'email' : 'off'}
-      />
-      {rightElement && <span className="input-right">{rightElement}</span>}
-    </div>
-  </div>
-);
 
 export default function SignInScreen({ navigation }) {
   const [firstName, setFirstName]                       = useState('');
@@ -41,16 +26,15 @@ export default function SignInScreen({ navigation }) {
 
   const handleSignIn = async () => {
     if (!firstName || !lastName) return toastError('Erreur', 'Veuillez fournir le nom et le prénom');
-    if (!email)                   return toastError('Erreur', 'Veuillez remplir tous les champs');
-    if (!/\S+@\S+\.\S+/.test(email)) return toastError('Erreur', "L'adresse email n'est pas valide");
-    if (confirmationEmail !== email)  return toastError('Erreur', 'Les emails ne correspondent pas');
-    if (!licenseNumber)           return toastError('Erreur', 'Veuillez fournir votre numéro de licence');
-    if (!specialty)               return toastError('Erreur', 'Veuillez indiquer votre spécialité');
-    if (!medicalCenterAddress)    return toastError('Erreur', "Veuillez indiquer l'adresse de votre centre médical");
-    if (!password)                return toastError('Erreur', 'Veuillez remplir tous les champs');
-    if (password.length < 8)      return toastError('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
-    if (!/\d/.test(password))     return toastError('Erreur', 'Le mot de passe doit contenir au moins un chiffre');
-    if (!/[A-Z]/.test(password))  return toastError('Erreur', 'Le mot de passe doit contenir au moins une lettre majuscule');
+    if (!email)                  return toastError('Erreur', 'Veuillez remplir tous les champs');
+    if (validateEmail(email))    return toastError('Erreur', "L'adresse email n'est pas valide");
+    if (confirmationEmail !== email) return toastError('Erreur', 'Les emails ne correspondent pas');
+    if (!licenseNumber)          return toastError('Erreur', 'Veuillez fournir votre numéro de licence');
+    if (!specialty)              return toastError('Erreur', 'Veuillez indiquer votre spécialité');
+    if (!medicalCenterAddress)   return toastError('Erreur', "Veuillez indiquer l'adresse de votre centre médical");
+    if (!password)               return toastError('Erreur', 'Veuillez remplir tous les champs');
+    const pwError = validatePassword(password);
+    if (pwError)                 return toastError('Erreur', pwError);
     if (confirmationPassword !== password) return toastError('Erreur', 'Les mots de passe ne correspondent pas');
 
     setIsLoading(true);
