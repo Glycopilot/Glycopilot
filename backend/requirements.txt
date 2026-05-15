@@ -27,3 +27,6 @@ daphne==4.0.0
 
 # HTTP client for Expo Push API
 requests==2.31.0
+
+# DNS lookup pour validation d'existence des adresses email à l'inscription
+dnspython==2.7.0
