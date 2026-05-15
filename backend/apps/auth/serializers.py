@@ -41,7 +41,7 @@ def _verify_email_domain(email: str) -> None:
             )
         except (dns.resolver.Timeout, dns.exception.DNSException):
             # Réseau indisponible ou timeout → on laisse passer pour ne pas bloquer l'inscription
-            logger.warning(f"DNS lookup timeout for domain: {email.split('@')[1]}")
+            logger.warning("DNS lookup timeout during MX check")
     except ImportError:
         logger.warning("dnspython not installed, skipping MX check")
 
