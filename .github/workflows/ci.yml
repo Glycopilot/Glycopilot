@@ -349,7 +349,7 @@ jobs:
         echo "SonarCloud analysis completed"
         echo "Le Quality Gate requiert une couverture ≥ 80% sur le nouveau code"
 
-  test-frontend:
+  test-frontend-mobile:
     needs: secret-scan
     runs-on: ubuntu-latest
     steps:
@@ -373,14 +373,45 @@ jobs:
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-frontend
+        name: coverage-frontend-mobile
         path: frontend/coverage/
         retention-days: 1
-        if-no-files-found: ignore
+        if-no-files-found: error
+
+  test-frontend-web:
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    
+    - name: Install dependencies
+      run: |
+        cd frontend_web
+        npm ci
+    
+    - name: Run tests with coverage
+      env:
+        CI: true
+      run: |
+        cd frontend_web
+        npm run test:coverage
+    
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-frontend-web
+        path: frontend_web/coverage/
+        retention-days: 1
+        if-no-files-found: error
 
   deploy:
     name: Deploy to EC2
-    needs: [test-backend, test-frontend, sonarqube]
+    needs: [test-backend, test-frontend-mobile, test-frontend-web, sonarqube]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
