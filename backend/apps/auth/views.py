@@ -24,6 +24,7 @@ from apps.auth.serializers import (
 )
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
+from utils.helpers import format_serializer_errors
 from utils.permissions import allowed_roles
 
 
@@ -38,8 +39,8 @@ def _send_verification_link(auth_account) -> None:
 
     uid = urlsafe_base64_encode(force_bytes(auth_account.pk))
     token = email_verification_token.make_token(auth_account)
-    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    link = f"{frontend_url}/verify-email?uid={uid}&token={token}"
+    backend_url = getattr(settings, "BACKEND_URL", "http://localhost:8006")
+    link = f"{backend_url}/api/auth/confirm-email?uid={uid}&token={token}"
     send_verification_email(auth_account.email, link)
 
 
@@ -56,7 +57,7 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
 
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(format_serializer_errors(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
 
     user = serializer.save()
     is_doctor = user.user.profiles.filter(role__name="DOCTOR").exists()
@@ -69,15 +70,73 @@ def register(request):
             status=status.HTTP_201_CREATED,
         )
 
-    # Patient : désactiver le compte jusqu'à vérification de l'email
-    user.is_active = False
-    user.save(update_fields=["is_active"])
+    # Envoie l'email de vérification (non bloquant — le compte est déjà actif)
     _send_verification_link(user)
 
-    return Response(
-        {"message": "Compte créé. Vérifiez votre email pour activer votre compte."},
-        status=status.HTTP_201_CREATED,
-    )
+    tokens = AuthResponseSerializer.get_tokens_for_user(user)
+    return Response(tokens, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def confirm_email(request):
+    """
+    GET /api/auth/confirm-email?uid=...&token=...
+    Lien cliquable depuis l'email — active le compte et retourne une page HTML.
+    """
+    from django.http import HttpResponse
+    from django.utils.encoding import force_str
+    from django.utils.http import urlsafe_base64_decode
+
+    from apps.auth.tokens import email_verification_token
+
+    uid = request.query_params.get("uid")
+    token = request.query_params.get("token")
+
+    error_html = """<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+    <title>Glycopilot</title>
+    <style>body{{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5}}
+    .card{{background:white;padding:2rem 3rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);text-align:center;max-width:400px}}
+    h2{{color:{color}}}p{{color:#555}}</style></head>
+    <body><div class="card"><h2>{title}</h2><p>{msg}</p></div></body></html>"""
+
+    if not uid or not token:
+        return HttpResponse(
+            error_html.format(color="#e53e3e", title="Lien invalide", msg="Ce lien de vérification est incomplet."),
+            content_type="text/html", status=400,
+        )
+
+    try:
+        auth_id = force_str(urlsafe_base64_decode(uid))
+        user = AuthAccount.objects.get(pk=auth_id)
+    except (TypeError, ValueError, AuthAccount.DoesNotExist):
+        return HttpResponse(
+            error_html.format(color="#e53e3e", title="Lien invalide", msg="Ce lien de vérification n'est pas valide."),
+            content_type="text/html", status=400,
+        )
+
+    if not email_verification_token.check_token(user, token):
+        return HttpResponse(
+            error_html.format(color="#e53e3e", title="Lien expiré", msg="Ce lien a expiré ou a déjà été utilisé. Demandez un nouvel email de vérification depuis l'application."),
+            content_type="text/html", status=400,
+        )
+
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+    success_html = """<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+    <title>Glycopilot — Compte activé</title>
+    <style>body{{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5}}
+    .card{{background:white;padding:2rem 3rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);text-align:center;max-width:400px}}
+    h2{{color:#38a169}}p{{color:#555}}.emoji{{font-size:3rem;margin-bottom:1rem}}</style></head>
+    <body><div class="card"><div class="emoji">✅</div>
+    <h2>Compte activé !</h2>
+    <p>Votre adresse email a été confirmée.<br>Vous pouvez maintenant vous connecter à l'application Glycopilot.</p>
+    </div></body></html>"""
+
+    return HttpResponse(success_html, content_type="text/html", status=200)
 
 
 @api_view(["POST"])
@@ -181,7 +240,7 @@ def login(request):
 
         return Response(tokens, status=status.HTTP_200_OK)
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    return Response(format_serializer_errors(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
@@ -288,7 +347,7 @@ def create_admin_account(request):
         )
     serializer = CreateAdminAccountSerializer(data=request.data)
     if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(format_serializer_errors(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
 
     data = serializer.validated_data
     email = data["email"].lower()
