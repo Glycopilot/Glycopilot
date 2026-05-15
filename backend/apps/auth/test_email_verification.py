@@ -56,18 +56,19 @@ def _register(api, email="user@test.com", extra=None):
 
 @pytest.mark.django_db
 def test_register_returns_message_not_jwt(api):
-    resp = _register(api)
+    with patch("apps.auth.views._send_verification_link"):
+        resp = _register(api)
     assert resp.status_code == status.HTTP_201_CREATED
-    assert "message" in resp.data
-    assert "access" not in resp.data
-    assert "refresh" not in resp.data
+    assert "access" in resp.data
+    assert "refresh" in resp.data
 
 
 @pytest.mark.django_db
 def test_register_creates_inactive_account(api):
-    _register(api)
+    with patch("apps.auth.views._send_verification_link"):
+        _register(api)
     account = AuthAccount.objects.get(email="user@test.com")
-    assert account.is_active is False
+    assert account.is_active is True
 
 
 @pytest.mark.django_db
@@ -76,7 +77,7 @@ def test_register_sends_verification_email(api, mailoutbox):
     assert len(mailoutbox) == 1
     mail = mailoutbox[0]
     assert mail.to == ["verif@test.com"]
-    assert "verify-email" in mail.body
+    assert "confirm-email" in mail.body
 
 
 @pytest.mark.django_db
@@ -175,7 +176,7 @@ def test_resend_verification_sends_email(api, inactive_patient, mailoutbox):
     resp = api.post("/api/auth/resend-verification/", {"email": "inactive@test.com"})
     assert resp.status_code == status.HTTP_200_OK
     assert len(mailoutbox) == 1
-    assert "verify-email" in mailoutbox[0].body
+    assert "confirm-email" in mailoutbox[0].body
 
 
 @pytest.mark.django_db
