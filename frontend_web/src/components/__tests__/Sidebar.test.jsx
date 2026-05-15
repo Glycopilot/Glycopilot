@@ -5,11 +5,19 @@ import Sidebar from '../Sidebar';
 jest.mock('../../services/authService', () => {
   const mockClient = { post: jest.fn() };
   return {
-    getApiClient: jest.fn(() => mockClient),
-    getStoredUser: jest.fn(),
-    logout: jest.fn(),
+    __esModule: true,
+    default: {
+      getApiClient: jest.fn(() => mockClient),
+      getStoredUser: jest.fn(),
+      logout: jest.fn(),
+    },
   };
 });
+
+jest.mock('../tour/HelpButton', () => ({
+  __esModule: true,
+  default: () => <button data-testid="help-button" type="button" />,
+}));
 
 jest.mock('lucide-react', () => ({
   LayoutDashboard: () => <div data-testid="icon-dashboard" />,

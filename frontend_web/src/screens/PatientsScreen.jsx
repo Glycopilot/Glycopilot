@@ -14,6 +14,41 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
+const HBA1C_CACHE_PREFIX = 'glycopilot_hba1c_';
+
+function readHba1cCache(patientId) {
+  if (patientId == null) return null;
+  try {
+    const raw = sessionStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.value == null) return null;
+    return {
+      value: parsed.value,
+      unit: parsed.unit ?? '%',
+      measuredAt: parsed.measuredAt ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeHba1cCache(patientId, value, measuredAt) {
+  if (patientId == null || value == null) return;
+  try {
+    sessionStorage.setItem(
+      `${HBA1C_CACHE_PREFIX}${patientId}`,
+      JSON.stringify({
+        value,
+        unit: '%',
+        measuredAt: measuredAt ?? new Date().toISOString(),
+      }),
+    );
+  } catch {
+    /* sessionStorage indisponible (SSR / certains environnements de test) */
+  }
+}
+
 /** Normalise nextDose API (string ou { name, dosage, … }) pour l'affichage métrique. */
 function formatNextDose(nextDose) {
   if (nextDose == null) return null;
