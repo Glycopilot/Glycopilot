@@ -543,20 +543,49 @@
                                     }
                                 }
                             },
-                            "response": [],
-                            "event": [
-                                {
-                                    "listen": "prerequest",
-                                    "script": {
-                                        "exec": [
-                                            "if (!pm.collectionVariables.get(\"id_team_member\")) {",
-                                            "    throw new Error(\"id_team_member manquant. Lance d'abord une invitation.\");",
-                                            "}"
-                                        ],
-                                        "type": "text/javascript"
+                            "response": []
+                        },
+                        {
+                            "name": "Decline Invitation",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "type": "text"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json",
+                                        "type": "text"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/doctors/care-team/decline-invitation/",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "doctors",
+                                        "care-team",
+                                        "decline-invitation",
+                                        ""
+                                    ]
+                                },
+                                "description": "Décliner une invitation (médecin ou patient). Body: id_team_member (UUID), reason (string).",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"id_team_member\": \"{{id_team_member}}\",\n    \"reason\": \"Désolé, je ne prends plus de nouveaux patients pour le moment.\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "language": "json"
+                                        }
                                     }
                                 }
-                            ]
+                            },
+                            "response": []
                         }
                     ]
                 },
