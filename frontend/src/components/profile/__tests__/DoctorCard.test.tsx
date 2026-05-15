@@ -244,4 +244,33 @@ describe('DoctorCard', () => {
     const { getByText } = render(<DoctorCard {...defaultProps} doctor={mockDoctor} />);
     expect(getByText('Adresse')).toBeTruthy();
   });
+
+  it('renders doctor card alongside pending invite', () => {
+    const invite: PendingInvite = {
+      id_team_member: 'tm-extra',
+      doctorName: 'Dr. Extra',
+      specialty: 'Cardiologie',
+      direction: 'sent',
+    };
+    const { getByText } = render(
+      <DoctorCard {...defaultProps} doctor={mockDoctor} pendingInvites={[invite]} />
+    );
+    // Both doctor and invite are shown
+    expect(getByText('Dr. Jean Dupont')).toBeTruthy();
+    expect(getByText('Dr. Extra')).toBeTruthy();
+  });
+
+  it('does not show empty state when pendingInvites are present', () => {
+    const invite: PendingInvite = {
+      id_team_member: 'tm-only',
+      doctorName: 'Dr. Only',
+      specialty: null,
+      direction: 'received',
+    };
+    const { queryByText } = render(
+      <DoctorCard {...defaultProps} pendingInvites={[invite]} />
+    );
+    // Empty state should NOT show when there are pending invites
+    expect(queryByText('Aucun médecin traitant')).toBeNull();
+  });
 });
