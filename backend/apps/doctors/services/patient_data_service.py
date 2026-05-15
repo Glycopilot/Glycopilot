@@ -29,6 +29,7 @@ class DoctorPatientDataService:
             "medication": DoctorPatientDataService._get_medication_data(patient_user),
             "nutrition": DoctorPatientDataService._get_nutrition_data(patient_user),
             "activity": DoctorPatientDataService._get_activity_data(patient_user),
+            "hba1c": DoctorPatientDataService._get_hba1c_data(patient_user),
             "healthScore": HealthScoreService.calculate(patient_user),
         }
 
@@ -128,6 +129,13 @@ class DoctorPatientDataService:
             "steps": {"value": 0, "goal": 8000},
             "activeMinutes": int(total_minutes),
         }
+
+    @staticmethod
+    def _get_hba1c_data(user) -> float | None:
+        profile = user.profiles.filter(role__name="PATIENT").first()
+        if profile and hasattr(profile, "patient_profile"):
+            return profile.patient_profile.hba1c
+        return None
 
     @staticmethod
     def get_glycemia_history(user, limit=50) -> list:

@@ -92,7 +92,9 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             return None
         if not obj.patient_profile.profile.user:
             return None
-        return SimpleUserSerializer(obj.patient_profile.profile.user).data
+        data = SimpleUserSerializer(obj.patient_profile.profile.user).data
+        data["hba1c"] = obj.patient_profile.hba1c
+        return data
 
     class Meta:
         model = PatientCareTeam
@@ -107,6 +109,7 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             "role_label",
             "relation_type",
             "status",
+            "rejection_reason",
             "approved_by",
         ]
 
