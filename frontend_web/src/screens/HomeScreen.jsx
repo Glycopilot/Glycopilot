@@ -144,7 +144,11 @@ export default function HomeScreen({ navigation }) {
     const load = async () => {
       try {
         const teamRes  = await apiClient.get('/doctors/care-team/my-team/');
-        const teamData = teamRes.data;
+        const raw      = teamRes.data ?? {};
+        const teamData = {
+          active_patients: Array.isArray(raw.active_patients) ? raw.active_patients : [],
+          pending_invites: Array.isArray(raw.pending_invites) ? raw.pending_invites : [],
+        };
         setTeam(teamData);
 
         const dates = getFmt();

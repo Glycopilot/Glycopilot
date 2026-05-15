@@ -31,13 +31,15 @@ beforeEach(() => {
 
 describe('authService', () => {
   describe('login', () => {
-    it('stocke les tokens et infos user après succès', async () => {
+    const doctorUser = {
+      id_auth: 'u-1',
+      email: 'doc@test.com',
+      identity: { profiles: [{ role_name: 'DOCTOR' }] },
+    };
+
+    it('stocke les tokens et infos user après succès (médecin)', async () => {
       apiClient.post.mockResolvedValueOnce({
-        data: {
-          access:  'access-token',
-          refresh: 'refresh-token',
-          user:    { id_auth: 'u-1', email: 'doc@test.com' },
-        },
+        data: { access: 'access-token', refresh: 'refresh-token', user: doctorUser },
       });
       const result = await authService.login('doc@test.com', 'Password1');
       expect(apiClient.post).toHaveBeenCalledWith('/auth/login/', { email: 'doc@test.com', password: 'Password1' });
@@ -46,6 +48,49 @@ describe('authService', () => {
       expect(localStorage.getItem('user_id')).toBe('u-1');
       expect(localStorage.getItem('user_email')).toBe('doc@test.com');
       expect(result.access).toBe('access-token');
+    });
+
+    it('refuse la connexion d\'un patient (ROLE_NOT_ALLOWED)', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: {
+          access: 'a',
+          refresh: 'r',
+          user: {
+            id_auth: 'p-1',
+            email: 'patient@test.com',
+            identity: { profiles: [{ role_name: 'PATIENT' }] },
+          },
+        },
+      });
+      await expect(authService.login('patient@test.com', 'Password1'))
+        .rejects.toMatchObject({ code: 'ROLE_NOT_ALLOWED', message: expect.stringMatching(/médecins/i) });
+      expect(localStorage.getItem('access_token')).toBeNull();
+      expect(localStorage.getItem('refresh_token')).toBeNull();
+    });
+
+    it('refuse la connexion si aucun profil n\'est renvoyé', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: { access: 'a', refresh: 'r', user: { id_auth: 'x', email: 'x@test.com' } },
+      });
+      await expect(authService.login('x@test.com', 'Password1'))
+        .rejects.toMatchObject({ code: 'ROLE_NOT_ALLOWED' });
+      expect(localStorage.getItem('access_token')).toBeNull();
+    });
+
+    it('accepte la connexion si DOCTOR figure parmi plusieurs rôles', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: {
+          access: 'a',
+          refresh: 'r',
+          user: {
+            id_auth: 'u-1',
+            email: 'doc@test.com',
+            identity: { profiles: [{ role_name: 'PATIENT' }, { role_name: 'DOCTOR' }] },
+          },
+        },
+      });
+      await expect(authService.login('doc@test.com', 'Password1')).resolves.toBeTruthy();
+      expect(localStorage.getItem('access_token')).toBe('a');
     });
 
     it('lève une erreur ACCOUNT_PENDING quand non_field_errors présent', async () => {

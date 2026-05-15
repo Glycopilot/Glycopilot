@@ -4,7 +4,7 @@ import {
   Mail, Phone, AlertCircle, Plus, X,
   Activity, Utensils, Pill, Droplets, Heart, Footprints,
   Flame, AlertTriangle, CheckCircle, Send, UserPlus,
-  Pencil, TrendingUp
+  Pencil, TrendingUp, XCircle
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
@@ -319,13 +319,6 @@ function HealthScore({ score }) {
 }
 
 /* ─── Carte HbA1c (lecture + édition) ─── */
-function hba1cBand(value) {
-  if (value == null) return null;
-  if (value < 7)  return { color: '#16A34A', bg: '#F0FDF4', label: 'Objectif atteint' };
-  if (value < 8)  return { color: '#F97316', bg: '#FFF7ED', label: 'Légèrement élevée' };
-  return { color: '#DC2626', bg: '#FEF2F2', label: 'Élevée' };
-}
-
 function HbA1cCard({ value, unit, measuredAt, onSave }) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState('');
@@ -457,12 +450,6 @@ function PatientDashboardModal({ member, onClose }) {
     if (p === 'custom') return { start_date: customStart, end_date: customEnd };
     return {};
   }, [period, customStart, customEnd]);
-
-  const refreshDashboard = useCallback(async () => {
-    const res = await apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`);
-    setDashboard(res.data);
-    return res.data;
-  }, [patientId]);
 
   const refreshDashboard = useCallback(async () => {
     const res = await apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`);
@@ -652,13 +639,6 @@ function PatientDashboardModal({ member, onClose }) {
               {/* ══ Vue d'ensemble ══ */}
               {activeTab === 'dashboard' && dash && (
                 <div className="pdm-overview">
-
-                  <HbA1cCard
-                    value={dash.hba1c.value}
-                    unit={dash.hba1c.unit}
-                    measuredAt={dash.hba1c.measuredAt}
-                    onSave={handleSaveHba1c}
-                  />
 
                   <HbA1cCard
                     value={dash.hba1c.value}
@@ -1214,7 +1194,11 @@ export default function PatientsScreen({ navigation }) {
   const fetchTeam = useCallback(async () => {
     try {
       const res = await apiClient.get('/doctors/care-team/my-team/');
-      setData(res.data);
+      const raw = res.data ?? {};
+      setData({
+        active_patients: Array.isArray(raw.active_patients) ? raw.active_patients : [],
+        pending_invites: Array.isArray(raw.pending_invites) ? raw.pending_invites : [],
+      });
     } catch (err) {
       setError('Impossible de charger la liste des patients.');
       toastError('Erreur', err.message);
