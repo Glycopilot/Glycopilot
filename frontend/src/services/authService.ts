@@ -35,7 +35,15 @@ const extractApiErrorMessage = (
   if ('error' in data && typeof data.error === 'string') return data.error;
   if ('message' in data && typeof data.message === 'string') return data.message;
   if ('detail' in data && typeof data.detail === 'string') return data.detail;
-  return JSON.stringify(data);
+  if (typeof data === 'object' && data !== null) {
+    const parts = Object.entries(data).flatMap(([key, val]) => {
+      if (Array.isArray(val)) return val.map((v) => `${key}: ${String(v)}`);
+      if (typeof val === 'string') return [val];
+      return [];
+    });
+    if (parts.length) return parts.join(' — ');
+  }
+  return fallback;
 };
 
 const authService = {

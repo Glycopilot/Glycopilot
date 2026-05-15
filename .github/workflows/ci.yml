@@ -203,7 +203,7 @@ jobs:
     - name: Download Frontend Mobile Coverage
       uses: actions/download-artifact@v4
       with:
-        name: coverage-frontend-mobile
+        name: coverage-frontend
         path: frontend/coverage/
 
     - name: Set up Node.js
