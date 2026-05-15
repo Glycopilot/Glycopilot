@@ -1402,3 +1402,435 @@
 }
 .period-date-input:focus { border-color: #93C5FD; }
 .period-date-sep { font-size: 12px; color: #94A3B8; }
+/* ── Carte HbA1c ───────────────────────────── */
+.hba1c-card {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hba1c-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hba1c-icon {
+  width: 36px; height: 36px;
+  background: #EEF5FD;
+  color: var(--blue-dark);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.hba1c-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.hba1c-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--dark);
+}
+.hba1c-date {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.hba1c-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: #fff;
+  color: var(--blue-dark);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.hba1c-edit-btn:hover {
+  background: var(--blue-pale);
+  border-color: #BFD7F0;
+}
+
+.hba1c-display {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hba1c-value {
+  font-family: 'Sora', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+.hba1c-unit-display {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--mid);
+}
+.hba1c-band {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+.hba1c-empty {
+  font-size: 14px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.hba1c-edit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hba1c-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.hba1c-input-wrap:focus-within {
+  border-color: #93C5FD;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.12);
+}
+.hba1c-input-wrap input {
+  width: 90px;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--dark);
+  background: transparent;
+  font-family: inherit;
+}
+.hba1c-unit-input {
+  color: var(--muted);
+  font-size: 14px;
+}
+.hba1c-actions {
+  display: flex;
+  gap: 8px;
+}
+.hba1c-cancel,
+.hba1c-save {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hba1c-cancel {
+  background: #fff;
+  color: var(--mid);
+}
+.hba1c-cancel:hover { background: #F8FAFC; }
+.hba1c-save {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.hba1c-save:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
+.hba1c-save:disabled,
+.hba1c-cancel:disabled { opacity: .6; cursor: not-allowed; }
+
+/* ── Polish layer ─────────────────────────── */
+.patients-header h1 {
+  font-size: clamp(22px, 2.5vw, 28px);
+  letter-spacing: -0.01em;
+}
+
+.add-btn {
+  transition:
+    background var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+.add-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.add-btn:active { transform: translateY(0); }
+
+.patient-card {
+  transition:
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+.patient-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: rgba(74, 144, 226, 0.22);
+}
+
+.tab {
+  transition:
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.modal-overlay {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlay-fade var(--dur-base) var(--ease-out) both;
+}
+@keyframes overlay-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-box {
+  box-shadow: var(--shadow-xl);
+  animation: modal-pop var(--dur-slow) var(--ease-out) both;
+}
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-close {
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover { transform: rotate(90deg); }
+
+/* Boutons d'action de carte — lift au hover */
+.card-btn,
+.card-btn-accept,
+.hba1c-edit-btn,
+.hba1c-save,
+.hba1c-cancel {
+  transition:
+    background var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+.card-btn:hover,
+.card-btn-accept:hover,
+.hba1c-save:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.mcard {
+  transition:
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+.mcard:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.gly-stat-clickable {
+  transition: background var(--dur-base) var(--ease-out);
+}
+.gly-stat-clickable:hover { background: rgba(74, 144, 226, 0.06); }
+
+@media (max-width: 480px) {
+  .patients-main { padding: 20px 16px; }
+  .toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+  .tabs { overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .tab { white-space: nowrap; }
+  .cards-grid { grid-template-columns: 1fr !important; gap: 12px; }
+}
+
+
+/* ── Refuser une invitation reçue ─────────── */
+.card-footer-split {
+  display: flex;
+  gap: 8px;
+}
+.card-btn-decline {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #B91C1C;
+  background: #fff;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.card-btn-decline:hover { background: #FEF2F2; border-color: #FCA5A5; }
+.card-btn-decline:disabled { opacity: .55; cursor: not-allowed; }
+
+.invite-decline-confirm {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.invite-decline-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #7F1D1D;
+  line-height: 1.4;
+}
+.invite-decline-msg svg { flex-shrink: 0; margin-top: 2px; }
+.invite-decline-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.card-btn-cancel {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mid);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.card-btn-cancel:hover { background: #F8FAFC; }
+.card-btn-cancel:disabled { opacity: .6; cursor: not-allowed; }
+.card-btn-decline-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #DC2626;
+  border: 1px solid #DC2626;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.card-btn-decline-confirm:hover {
+  background: #B91C1C;
+  border-color: #B91C1C;
+}
+.card-btn-decline-confirm:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+/* ── Polish layer ─────────────────────────── */
+.patients-header h1 {
+  font-size: clamp(22px, 2.5vw, 28px);
+  letter-spacing: -0.01em;
+}
+
+.add-btn {
+  transition:
+    background var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+.add-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.add-btn:active { transform: translateY(0); }
+
+.patient-card {
+  transition:
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+.patient-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: rgba(74, 144, 226, 0.22);
+}
+
+.tab {
+  transition:
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.modal-overlay {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlay-fade var(--dur-base) var(--ease-out) both;
+}
+@keyframes overlay-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-box {
+  box-shadow: var(--shadow-xl);
+  animation: modal-pop var(--dur-slow) var(--ease-out) both;
+}
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-close {
+  transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.modal-close:hover { transform: rotate(90deg); }
+
+/* Boutons d'action de carte — lift au hover */
+.card-btn,
+.card-btn-accept,
+.card-btn-decline,
+.card-btn-decline-confirm,
+.card-btn-cancel,
+.hba1c-edit-btn,
+.hba1c-save,
+.hba1c-cancel {
+  transition:
+    background var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+.card-btn:hover,
+.card-btn-accept:hover,
+.hba1c-save:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.mcard {
+  transition:
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+.mcard:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.gly-stat-clickable {
+  transition: background var(--dur-base) var(--ease-out);
+}
+.gly-stat-clickable:hover { background: rgba(74, 144, 226, 0.06); }
+
+@media (max-width: 480px) {
+  .patients-main { padding: 20px 16px; }
+  .toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
+  .tabs { overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .tab { white-space: nowrap; }
+  .cards-grid { grid-template-columns: 1fr !important; gap: 12px; }
+  .card-footer-split { flex-wrap: wrap; }
+  .card-footer-split .card-btn-decline { flex: 1 0 auto; }
+  .card-footer-split .card-btn-accept { flex: 1 1 100%; }
+}

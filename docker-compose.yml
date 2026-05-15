@@ -59,7 +59,7 @@ services:
       redis_local:
         condition: service_healthy
     restart: unless-stopped
-    command: sh -c "python manage.py migrate && python manage.py import_medications && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+    command: sh -c "python manage.py migrate && python manage.py import_medications && python manage.py runserver 0.0.0.0:8000"
 
   # --- Scheduler rappels médicaments (local) ---
   medication_scheduler_local:
@@ -147,7 +147,6 @@ services:
       - frontend_web_modules:/app/node_modules
     working_dir: /app
     environment:
-      - REACT_APP_API_URL=http://backend_local:8000/api
       - FAST_REFRESH=false
     command: sh -c "npm install && npm start"
     depends_on:

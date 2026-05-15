@@ -219,25 +219,21 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <ActionButton
             type="repas"
             label="Repas"
-            testID="action-repas"
             onPress={() => navigation?.navigate('Repas')}
           />
           <ActionButton
             type="medic"
             label="Médic"
-            testID="action-medic"
             onPress={() => navigation?.navigate('Traitements')}
           />
           <ActionButton
             type="action"
             label="Activité"
-            testID="action-activite"
             onPress={() => navigation?.navigate('Activite')}
           />
           <ActionButton
             type="prediction"
             label="Prédiction"
-            testID="action-prediction"
             onPress={() => navigation?.navigate('Predictions')}
           />
         </View>
