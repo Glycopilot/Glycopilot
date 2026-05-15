@@ -14,54 +14,50 @@ import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
-const HBA1C_CACHE_PREFIX = 'glycopilot_hba1c_';
+const HBA1C_CACHE_PREFIX = 'hba1c-cache:';
 
 function readHba1cCache(patientId) {
-  if (patientId == null) return null;
+  if (!patientId) return null;
   try {
-    const raw = sessionStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
+    const raw = localStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed?.value == null) return null;
-    return {
-      value: parsed.value,
-      unit: parsed.unit ?? '%',
-      measuredAt: parsed.measuredAt ?? null,
-    };
-  } catch {
+    if (parsed && typeof parsed.value === 'number') {
+      return {
+        value: parsed.value,
+        unit: parsed.unit || '%',
+        measuredAt: parsed.measuredAt || null,
+      };
+    }
+  } catch (_e) {
     return null;
   }
+  return null;
 }
 
 function writeHba1cCache(patientId, value, measuredAt) {
-  if (patientId == null || value == null) return;
+  if (!patientId || typeof value !== 'number') return;
   try {
-    sessionStorage.setItem(
-      `${HBA1C_CACHE_PREFIX}${patientId}`,
-      JSON.stringify({
-        value,
-        unit: '%',
-        measuredAt: measuredAt ?? new Date().toISOString(),
-      }),
-    );
-  } catch {
-    /* sessionStorage indisponible (SSR / certains environnements de test) */
+    const payload = {
+      value,
+      unit: '%',
+      measuredAt: measuredAt || new Date().toISOString(),
+    };
+    localStorage.setItem(`${HBA1C_CACHE_PREFIX}${patientId}`, JSON.stringify(payload));
+  } catch (_e) {
+    // ignore storage failures
   }
 }
 
-/** Normalise nextDose API (string ou { name, dosage, … }) pour l'affichage métrique. */
 function formatNextDose(nextDose) {
-  if (nextDose == null) return null;
+  if (!nextDose) return null;
   if (typeof nextDose === 'string') return nextDose;
-  if (typeof nextDose === 'object') {
-    const name = nextDose.name ?? nextDose.label;
-    const dosage = nextDose.dosage;
-    if (name && dosage) return `${name} — ${dosage}`;
-    if (name) return String(name);
-    const v = extractValue(nextDose);
-    return v != null ? String(v) : null;
-  }
-  return String(nextDose);
+
+  const label = nextDose.label || nextDose.medicationName || nextDose.medication_name || nextDose.name;
+  const time = nextDose.time || nextDose.scheduledAt || nextDose.scheduled_at || nextDose.datetime;
+
+  if (label && time) return `${label} - ${time}`;
+  return label || time || null;
 }
 
 function StatusBadge({ status }) {

@@ -2,6 +2,8 @@
 Contrôleur pour l'authentification
 """
 
+import logging
+
 from rest_framework import status
 from rest_framework.decorators import (
     api_view,
@@ -26,6 +28,8 @@ from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 from utils.helpers import format_serializer_errors
 from utils.permissions import allowed_roles
+
+logger = logging.getLogger(__name__)
 
 
 def _send_verification_link(auth_account) -> None:
@@ -57,12 +61,14 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
 
     if not serializer.is_valid():
+        logger.info("Registration rejected: fields=%s", sorted(serializer.errors.keys()))
         return Response(format_serializer_errors(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
 
     user = serializer.save()
     is_doctor = user.user.profiles.filter(role__name="DOCTOR").exists()
 
     if is_doctor:
+        logger.info("Doctor registration created pending admin validation.")
         return Response(
             {
                 "message": "Votre compte médecin a été créé. Il est en attente de validation par un administrateur."
@@ -74,6 +80,7 @@ def register(request):
     _send_verification_link(user)
 
     tokens = AuthResponseSerializer.get_tokens_for_user(user)
+    logger.info("Patient registration created.")
     return Response(tokens, status=status.HTTP_201_CREATED)
 
 

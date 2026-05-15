@@ -47,7 +47,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (error) {
       const err = error as Error;
-      toastError(err.message || 'Erreur de connexion', '');
+      toastError('Erreur de connexion', err.message || 'Identifiants invalides');
     } finally {
       setIsLoading(false);
     }

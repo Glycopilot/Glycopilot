@@ -94,7 +94,7 @@ export default function SignInScreen({ navigation }: SignInScreenProps) {
       }
     } catch (error) {
       const err = error as Error;
-      toastError(err.message || "Erreur lors de l'inscription", '');
+      toastError('Erreur inscription', err.message || "Erreur lors de l'inscription");
     }
   };
 

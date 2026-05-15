@@ -64,7 +64,7 @@ jest.mock('expo-constants', () => ({
 jest.mock('expo-camera', () => ({
     CameraView: 'CameraView',
     useCameraPermissions: () => [{ granted: false }, jest.fn()],
-}));
+}), { virtual: true });
 
 jest.mock('expo-device', () => ({
     isDevice: true,

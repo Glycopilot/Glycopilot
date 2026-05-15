@@ -22,8 +22,6 @@ def _verify_email_domain(email: str) -> None:
     Lève ValidationError si le domaine n'existe pas ou ne peut pas recevoir d'emails.
     En cas d'erreur réseau (timeout, DNS indisponible), laisse passer sans bloquer.
     """
-    if getattr(settings, "TESTING", False):
-        return
     try:
         import dns.resolver
         import dns.exception
