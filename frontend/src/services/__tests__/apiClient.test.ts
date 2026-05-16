@@ -54,6 +54,18 @@ describe('apiClient', () => {
         expect(response.config.headers.Authorization).toBeUndefined();
     });
 
+    it('should NOT add Authorization header on public auth endpoints', async () => {
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('fake-token');
+
+        mock.onPost(`${API_URL}/auth/register`).reply(201, { success: true });
+
+        const response = await apiClient.post('/auth/register', {
+            email: 'test@example.com',
+        });
+
+        expect(response.config.headers.Authorization).toBeUndefined();
+    });
+
     it('should handle token refresh on 401 error', async () => {
         const oldToken = 'old-token';
         const newToken = 'new-token';
@@ -147,5 +159,12 @@ describe('apiClient URL reading', () => {
         const { API_URL: devApiUrl, WS_URL: devWsUrl } = require('../apiClient');
         expect(devApiUrl).toBe('http://test.local/api');
         expect(devWsUrl).toBe('ws://test.local');
+    });
+
+    it('normalizes host-only API URL to include /api', () => {
+        jest.resetModules();
+        process.env.EXPO_PUBLIC_API_URL = 'http://test.local';
+        const { API_URL: devApiUrl } = require('../apiClient');
+        expect(devApiUrl).toBe('http://test.local/api');
     });
 });

@@ -5,13 +5,39 @@ import axios, {
 } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || '';
+const normalizeApiUrl = (url: string): string => {
+  const trimmedUrl = url.trim().replace(/\/+$/, '');
+
+  if (!trimmedUrl) {
+    return '';
+  }
+
+  return /\/api(\/|$)/.test(trimmedUrl) ? trimmedUrl : `${trimmedUrl}/api`;
+};
+
+const API_URL = normalizeApiUrl(process.env.EXPO_PUBLIC_API_URL || '');
 const WS_URL = process.env.EXPO_PUBLIC_WS_URL || '';
 
 const API_TIMEOUT = parseInt(
   process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',
   10
 );
+
+const PUBLIC_AUTH_PATHS = [
+  '/auth/register',
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+];
+
+const isPublicAuthPath = (url?: string): boolean => {
+  if (!url) {
+    return false;
+  }
+
+  return PUBLIC_AUTH_PATHS.some(path => url === path || url.startsWith(`${path}/`));
+};
 
 interface QueueItem {
   resolve: (token: string) => void;
@@ -32,7 +58,7 @@ apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
       const token = await AsyncStorage.getItem('access_token');
-      if (token && config.headers) {
+      if (token && config.headers && !isPublicAuthPath(config.url)) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch {
