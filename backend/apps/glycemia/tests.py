@@ -1,4 +1,7 @@
-from unittest.mock import patch
+import asyncio
+import json
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.utils.timezone import now, timedelta
@@ -8,6 +11,9 @@ from rest_framework.test import APIClient
 
 from apps.devices.models import Device
 from apps.glycemia.models import Glycemia, GlycemiaDataIA, GlycemiaHisto
+from apps.glycemia.consumers import GlycemiaConsumer
+from apps.glycemia.middleware import JWTAuthMiddleware
+from apps.glycemia.services import ia_client
 from apps.glycemia.signals import HYPER_THRESHOLD, HYPO_THRESHOLD
 
 User = get_user_model()
@@ -526,3 +532,266 @@ class TestGlycemiaSerializers:
         s = GlycemiaDataIASerializer()
         assert "id" in s.Meta.read_only_fields
         assert "created_at" in s.Meta.read_only_fields
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 5. WEBSOCKET MIDDLEWARE / CONSUMER
+# ═══════════════════════════════════════════════════════════════════
+
+
+def test_jwt_auth_middleware_closes_connection_without_valid_user():
+    async def run():
+        app = AsyncMock()
+        middleware = JWTAuthMiddleware(app)
+        sent = []
+
+        async def send(message):
+            sent.append(message)
+
+        with patch("apps.glycemia.middleware.get_user_from_token", new=AsyncMock(return_value=None)):
+            await middleware({"query_string": b"token=bad"}, AsyncMock(), send)
+
+        assert sent == [{"type": "websocket.close", "code": 4001}]
+        app.assert_not_called()
+
+    asyncio.run(run())
+
+
+def test_jwt_auth_middleware_sets_user_and_calls_inner_app():
+    async def run():
+        user_obj = SimpleNamespace(id_auth="user-1")
+        scopes = []
+
+        async def app(scope, receive, send):
+            scopes.append(scope)
+
+        middleware = JWTAuthMiddleware(app)
+
+        with patch(
+            "apps.glycemia.middleware.get_user_from_token",
+            new=AsyncMock(return_value=user_obj),
+        ) as get_user:
+            await middleware({"query_string": b"token=good"}, AsyncMock(), AsyncMock())
+
+        get_user.assert_awaited_once_with("good")
+        assert scopes[0]["user"] is user_obj
+
+    asyncio.run(run())
+
+
+def test_glycemia_consumer_rejects_unauthenticated_user():
+    async def run():
+        consumer = GlycemiaConsumer()
+        consumer.scope = {"user": SimpleNamespace(is_authenticated=False)}
+        consumer.close = AsyncMock()
+
+        await consumer.connect()
+
+        consumer.close.assert_awaited_once_with(code=4001)
+
+    asyncio.run(run())
+
+
+def test_glycemia_consumer_connects_authenticated_user_and_sends_confirmation():
+    async def run():
+        consumer = GlycemiaConsumer()
+        user_obj = SimpleNamespace(is_authenticated=True, id_auth="auth-1")
+        consumer.scope = {"user": user_obj}
+        consumer.channel_name = "channel-1"
+        consumer.channel_layer = SimpleNamespace(group_add=AsyncMock())
+        consumer.accept = AsyncMock()
+        consumer.send = AsyncMock()
+
+        await consumer.connect()
+
+        consumer.channel_layer.group_add.assert_awaited_once_with(
+            "glycemia_user_auth-1", "channel-1"
+        )
+        consumer.accept.assert_awaited_once()
+        sent_payload = json.loads(consumer.send.await_args.kwargs["text_data"])
+        assert sent_payload["type"] == "connection_established"
+        assert sent_payload["user_id"] == "auth-1"
+
+    asyncio.run(run())
+
+
+def test_glycemia_consumer_disconnect_discards_group_when_joined():
+    async def run():
+        consumer = GlycemiaConsumer()
+        consumer.user = SimpleNamespace(id_auth="auth-1")
+        consumer.group_name = "glycemia_user_auth-1"
+        consumer.channel_name = "channel-1"
+        consumer.channel_layer = SimpleNamespace(group_discard=AsyncMock())
+
+        await consumer.disconnect(1000)
+
+        consumer.channel_layer.group_discard.assert_awaited_once_with(
+            "glycemia_user_auth-1", "channel-1"
+        )
+
+    asyncio.run(run())
+
+
+def test_glycemia_consumer_receive_replies_to_ping_and_ignores_invalid_json():
+    async def run():
+        consumer = GlycemiaConsumer()
+        consumer.send = AsyncMock()
+
+        await consumer.receive('{"type": "ping"}')
+        await consumer.receive("{invalid")
+
+        sent_payload = json.loads(consumer.send.await_args.kwargs["text_data"])
+        assert sent_payload == {"type": "pong"}
+        assert consumer.send.await_count == 1
+
+    asyncio.run(run())
+
+
+def test_glycemia_consumer_forwards_update_and_alert_events():
+    async def run():
+        consumer = GlycemiaConsumer()
+        consumer.send = AsyncMock()
+
+        await consumer.glycemia_update({"data": {"value": 120}})
+        await consumer.glycemia_alert(
+            {"alert_type": "hypoglycemia", "data": {"value": 65}}
+        )
+
+        update_payload = json.loads(consumer.send.await_args_list[0].kwargs["text_data"])
+        alert_payload = json.loads(consumer.send.await_args_list[1].kwargs["text_data"])
+        assert update_payload == {"type": "glycemia_update", "data": {"value": 120}}
+        assert alert_payload == {
+            "type": "glycemia_alert",
+            "alert_type": "hypoglycemia",
+            "data": {"value": 65},
+        }
+
+    asyncio.run(run())
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 6. AI CLIENT
+# ═══════════════════════════════════════════════════════════════════
+
+
+def test_ai_client_build_payload_normalizes_datetimes_and_optional_fields():
+    measured_at = now()
+    user_obj = SimpleNamespace(id_auth="auth-1")
+    instance = SimpleNamespace(measured_at=measured_at)
+    readings = [
+        {
+            "measured_at": measured_at,
+            "value": 123,
+            "trend": "",
+            "rate": None,
+            "context": "",
+        }
+    ]
+
+    payload = ia_client._build_payload(user_obj, instance, readings)
+
+    assert payload["user_id"] == "auth-1"
+    assert payload["for_time"].endswith("+00:00")
+    assert payload["readings"][0]["trend"] is None
+    assert payload["readings"][0]["context"] is None
+
+
+def test_ai_client_post_predict_sends_json_and_token():
+    response = MagicMock()
+    response.__enter__.return_value.read.return_value = b'{"status": "ok"}'
+
+    with patch("apps.glycemia.services.ia_client.urllib.request.urlopen", return_value=response) as urlopen:
+        result = ia_client._post_predict({"user_id": "auth-1"})
+
+    request = urlopen.call_args.args[0]
+    assert result == {"status": "ok"}
+    assert request.full_url.endswith("/predict")
+    assert request.headers["X-internal-token"] == ia_client.AI_SERVICE_TOKEN
+
+
+@patch("apps.glycemia.services.ia_client.logger")
+@patch("apps.glycemia.services.ia_client._fetch_recent_readings", return_value=[1, 2, 3])
+def test_request_prediction_skips_when_not_enough_readings(fetch_readings, logger_mock):
+    instance = SimpleNamespace(user=SimpleNamespace(id_auth="auth-1"), measured_at=now())
+
+    ia_client.request_prediction(instance)
+
+    fetch_readings.assert_called_once()
+    logger_mock.debug.assert_called_once()
+
+
+@patch("apps.glycemia.services.ia_client._persist_prediction")
+@patch("apps.glycemia.services.ia_client._post_predict", return_value={"status": "ok", "source": "baseline"})
+@patch("apps.glycemia.services.ia_client._build_payload", return_value={"payload": True})
+@patch("apps.glycemia.services.ia_client._fetch_recent_readings", return_value=[1, 2, 3, 4, 5, 6])
+def test_request_prediction_posts_and_persists_when_enough_readings(
+    fetch_readings, build_payload, post_predict, persist_prediction
+):
+    instance = SimpleNamespace(user=SimpleNamespace(id_auth="auth-1"), measured_at=now())
+
+    ia_client.request_prediction(instance)
+
+    build_payload.assert_called_once_with(instance.user, instance, [1, 2, 3, 4, 5, 6])
+    post_predict.assert_called_once_with({"payload": True})
+    persist_prediction.assert_called_once_with(
+        instance.user, instance, {"status": "ok", "source": "baseline"}
+    )
+
+
+@patch("apps.glycemia.services.ia_client.logger")
+@patch("apps.glycemia.services.ia_client._post_predict", side_effect=ia_client.urllib.error.URLError("down"))
+@patch("apps.glycemia.services.ia_client._build_payload", return_value={"payload": True})
+@patch("apps.glycemia.services.ia_client._fetch_recent_readings", return_value=[1, 2, 3, 4, 5, 6])
+def test_request_prediction_logs_unreachable_ai_service(
+    fetch_readings, build_payload, post_predict, logger_mock
+):
+    instance = SimpleNamespace(user=SimpleNamespace(id_auth="auth-1"), measured_at=now())
+
+    ia_client.request_prediction(instance)
+
+    logger_mock.warning.assert_called_once()
+
+
+@patch("apps.glycemia.services.ia_client._fetch_recent_readings")
+@patch("apps.glycemia.models.GlycemiaDataIA.objects.update_or_create")
+def test_persist_prediction_maps_response_to_model_defaults(update_or_create, fetch_readings):
+    measured_at = now()
+    user_obj = SimpleNamespace(id_auth="auth-1")
+    instance = SimpleNamespace(measured_at=measured_at, device=None)
+    fetch_readings.return_value = [
+        {"measured_at": measured_at - timedelta(minutes=5)},
+        {"measured_at": measured_at - timedelta(minutes=10)},
+    ]
+
+    ia_client._persist_prediction(
+        user_obj,
+        instance,
+        {
+            "model_version": "v2",
+            "source": "ensemble",
+            "status": "low_confidence",
+            "runtime_ms": 12,
+            "confidence": 0.7,
+            "input_readings_count": 8,
+            "missing_ratio": 0.1,
+            "recommendation": "Verifier dans 15 minutes",
+            "recommendation_level": "watch",
+            "sub_models": {"baseline": "ok"},
+            "predictions": {
+                "horizon_15": {"y_hat": 100, "p10": 90, "p90": 110, "risk_hypo": 0.1, "risk_hyper": 0.2},
+                "horizon_30": {"y_hat": 105, "p10": 95, "p90": 115, "risk_hypo": 0.0, "risk_hyper": 0.3},
+                "horizon_60": {"y_hat": 115, "p10": 100, "p90": 130, "risk_hypo": 0.0, "risk_hyper": 0.4},
+            },
+        },
+    )
+
+    kwargs = update_or_create.call_args.kwargs
+    assert kwargs["model_version"] == "v2"
+    assert kwargs["defaults"]["source"] == "ensemble"
+    assert kwargs["defaults"]["status"] == "low_confidence"
+    assert kwargs["defaults"]["y_hat_15"] == 100
+    assert kwargs["defaults"]["risk_hyper_60"] == 0.4
+    assert kwargs["defaults"]["meta_json"] == {
+        "recommendation_level": "watch",
+        "sub_models": {"baseline": "ok"},
+    }

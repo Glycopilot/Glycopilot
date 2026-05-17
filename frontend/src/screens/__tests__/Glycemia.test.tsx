@@ -1,16 +1,67 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+
 import GlycemiaScreen from '../Glycemia';
 import { useGlycemia } from '../../hooks/useGlycemia';
 
-// Mock hooks
 jest.mock('../../hooks/useGlycemia');
+jest.mock('../../components/common/Layout', () => {
+  const { View } = require('react-native');
+  return function MockLayout({ children }: any) {
+    return <View>{children}</View>;
+  };
+});
 
-// Mock navigation
 const mockNavigation = {
-    navigate: jest.fn(),
-    goBack: jest.fn(),
+  navigate: jest.fn(),
+  goBack: jest.fn(),
 };
+
+const todayIso = new Date().toISOString();
+
+const baseMeasurements = [
+  {
+    id: 1,
+    reading_id: 'manual-1',
+    measured_at: todayIso,
+    value: 118,
+    context: 'fasting',
+    source: 'manual',
+    notes: 'Avant petit déjeuner',
+  },
+  {
+    id: 2,
+    reading_id: 'cgm-1',
+    measured_at: '2026-05-16T13:20:00Z',
+    value: 205,
+    context: 'postprandial_1h',
+    source: 'cgm',
+    notes: 'Capteur Libre',
+  },
+  {
+    id: 3,
+    reading_id: 'manual-2',
+    measured_at: '2026-05-15T22:10:00Z',
+    value: 62,
+    context: 'bedtime',
+    source: 'manual',
+    notes: '',
+  },
+];
+
+function mockGlycemia(overrides: Partial<ReturnType<typeof useGlycemia>> = {}) {
+  const value = {
+    measurements: baseMeasurements,
+    loading: false,
+    refreshing: false,
+    refresh: jest.fn(),
+    addManualReading: jest.fn().mockResolvedValue(true),
+    ...overrides,
+  };
+  (useGlycemia as jest.Mock).mockReturnValue(value);
+  return value;
+}
 
 describe('Glycemia Screen', () => {
     beforeEach(() => {

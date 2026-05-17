@@ -1,0 +1,252 @@
+name: Master Deployment Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_db_migrations:
+        description: '0. Executer les migrations DB (EC2 - Plan A)'
+        type: boolean
+        default: false
+      deploy_plan_a:
+        description: '1. Déployer Backend sur Plan A (EC2)'
+        type: boolean
+        default: false
+      deploy_plan_b:
+        description: '2. Déployer Backend sur Plan B (ECS/RDS)'
+        type: boolean
+        default: false
+      deploy_front_web:
+        description: '3. Déployer Frontend Web (S3)'
+        type: boolean
+        default: false
+      deploy_mobile:
+        description: '4. Compiler App Mobile (Expo EAS)'
+        type: boolean
+        default: false
+
+env:
+  AWS_REGION: eu-west-3
+  PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+  PUBLIC_WS_URL: ${{ vars.PUBLIC_WS_URL }}
+  S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND }}
+  S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
+
+jobs:
+  db-migrate-plan-a:
+    name: Run DB Migrations (EC2)
+    if: ${{ inputs.deploy_db_migrations }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute migrations on EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/glycopilot-app
+            docker compose --profile aws up -d
+            docker compose --profile aws exec -T backend_aws python manage.py migrate --noinput
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
+            docker compose --profile aws exec -T backend_aws python manage.py import_medications
+            if [ -f data/import/CIS_bdpm.txt ]; then
+              docker compose --profile aws exec -T backend_aws python manage.py import_medications --bdpm
+            fi
+
+  deploy-plan-a:
+    name: Deploy Plan A (EC2)
+    if: ${{ inputs.deploy_plan_a }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync repository to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+          AI_ENV_FILE: ${{ secrets.AI_ENV_FILE }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/glycopilot_ec2_key
+          chmod 600 ~/.ssh/glycopilot_ec2_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/glycopilot_ec2_key "$EC2_USERNAME@$EC2_HOST" "mkdir -p /home/ubuntu/glycopilot-app"
+
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'backend/.env' \
+            --exclude 'backend/.env.prod' \
+            --exclude 'ai_service/.env' \
+            --exclude 'ai_service/.env.prod' \
+            --exclude 'node_modules/' \
+            --exclude 'frontend_web/node_modules/' \
+            --exclude 'frontend/node_modules/' \
+            --exclude 'backend/db.sqlite3' \
+            --exclude 'backend/media/' \
+            -e "ssh -i ~/.ssh/glycopilot_ec2_key" \
+            ./ "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/"
+
+          printf '%s\n' "$PROD_ENV_FILE" > backend/.env.prod
+          printf '%s\n' "$AI_ENV_FILE" > ai_service/.env.prod
+          scp -i ~/.ssh/glycopilot_ec2_key backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
+          scp -i ~/.ssh/glycopilot_ec2_key ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
+
+      - name: Execute deployment on EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/glycopilot-app
+            
+            docker compose --profile aws down
+            docker compose --profile aws up -d --build
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
+            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
+            docker image prune -f
+
+  deploy-plan-b:
+    name: Deploy Plan B (Enterprise)
+    if: ${{ inputs.deploy_plan_b }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Backend
+        run: |
+          cd backend
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest
+
+      - name: Build & Push AI Service
+        run: |
+          cd ai_service
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest .
+          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest
+
+      - name: Setup Terraform & Apply
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ">= 1.5.0"
+      - run: |
+          cd infra/terraform-plan-b
+          terraform init
+          terraform apply -auto-approve
+
+  deploy-front-web:
+    name: Deploy Frontend Web
+    if: ${{ inputs.deploy_front_web }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build for Production
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          cd frontend_web
+          npm install --legacy-peer-deps
+
+          export REACT_APP_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/register/api}"
+          export REACT_APP_API_TIMEOUT="10000"
+
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        run: |
+          if [ -z "$S3_BUCKET_FRONTEND" ]; then
+            echo "S3_BUCKET_FRONTEND repository variable is required."
+            exit 1
+          fi
+          aws s3 sync ./frontend_web/build/ s3://${S3_BUCKET_FRONTEND}/ --delete
+
+  deploy-mobile:
+    name: Build Mobile App (Expo EAS)
+    if: ${{ inputs.deploy_mobile }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+
+      - name: Create google-services.json and force tracking
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          cd frontend
+
+          printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+
+          sed -i '/google-services.json/d' .gitignore || true
+
+          git config --global user.email "ci@glycopilot.com"
+          git config --global user.name "GitHub Actions"
+          git add google-services.json .gitignore
+          git commit -m "chore: temp commit for EAS to track google-services.json" || true
+
+      - name: Build Android APK
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          cd frontend
+          export EXPO_PUBLIC_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/register/api}"
+          export EXPO_PUBLIC_WS_URL="${PUBLIC_WS_URL:-ws://${EC2_HOST}}"
+          export EXPO_PUBLIC_S3_BUCKET="${S3_BUCKET_MEDIA:-glycopilot-aws-s3-bucket-img-artifacts}"
+          node - <<'NODE'
+          const fs = require('fs');
+          const eas = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          eas.build.apk.env = {
+            ...(eas.build.apk.env || {}),
+            EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+            EXPO_PUBLIC_WS_URL: process.env.EXPO_PUBLIC_WS_URL,
+            EXPO_PUBLIC_S3_BUCKET: process.env.EXPO_PUBLIC_S3_BUCKET,
+          };
+          fs.writeFileSync('eas.json', `${JSON.stringify(eas, null, 2)}\n`);
+          NODE
+          # Build APK standalone pour test en conditions reelles.
+          # Ce profil ne doit pas attendre Metro ni utiliser expo-dev-client.
+          eas build --platform android --profile apk --non-interactive

@@ -54,6 +54,18 @@ describe('apiClient', () => {
         expect(response.config.headers.Authorization).toBeUndefined();
     });
 
+    it('should NOT add Authorization header on public auth endpoints', async () => {
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue('fake-token');
+
+        mock.onPost(`${API_URL}/auth/register`).reply(201, { success: true });
+
+        const response = await apiClient.post('/auth/register', {
+            email: 'test@example.com',
+        });
+
+        expect(response.config.headers.Authorization).toBeUndefined();
+    });
+
     it('should handle token refresh on 401 error', async () => {
         const oldToken = 'old-token';
         const newToken = 'new-token';
@@ -135,21 +147,31 @@ describe('apiClient', () => {
     });
 });
 
-describe('apiClient URL detection', () => {
+describe('apiClient URL reading', () => {
     afterEach(() => {
         jest.resetModules();
     });
 
-    it('uses hostUri to build API_URL in dev mode', () => {
+    it('uses process.env for URLs', () => {
         jest.resetModules();
-        jest.doMock('expo-constants', () => ({
-            expoConfig: {
-                hostUri: '10.0.0.1:8081',
-                extra: { eas: { projectId: 'test' } },
-            },
-        }));
+        process.env.EXPO_PUBLIC_API_URL = 'http://test.local/api';
+        process.env.EXPO_PUBLIC_WS_URL = 'ws://test.local';
         const { API_URL: devApiUrl, WS_URL: devWsUrl } = require('../apiClient');
-        expect(devApiUrl).toBe('http://10.0.0.1:8006/api'); // NOSONAR - URL de dev local uniquement
-        expect(devWsUrl).toBe('ws://10.0.0.1:8006');
+        expect(devApiUrl).toBe('http://test.local/api');
+        expect(devWsUrl).toBe('ws://test.local');
+    });
+
+    it('normalizes host-only API URL to include /api', () => {
+        jest.resetModules();
+        process.env.EXPO_PUBLIC_API_URL = 'http://test.local';
+        const { API_URL: devApiUrl } = require('../apiClient');
+        expect(devApiUrl).toBe('http://test.local/api');
+    });
+
+    it('preserves prefixed API URLs', () => {
+        jest.resetModules();
+        process.env.EXPO_PUBLIC_API_URL = 'http://test.local/register/api';
+        const { API_URL: devApiUrl } = require('../apiClient');
+        expect(devApiUrl).toBe('http://test.local/register/api');
     });
 });

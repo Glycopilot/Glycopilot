@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ========================================
   # MODE LOCAL (dev)
@@ -203,8 +201,13 @@ services:
     restart: always
     env_file:
       - ./backend/.env.prod
+    environment:
+      Django_ENV: production
+      DB_ENGINE: postgresql
+      DB_HOST: database_aws
+      DB_PORT: 5432
     # Daphne au lieu de Gunicorn pour supporter WebSocket
-    command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py import_medications && if [ -f data/import/CIS_bdpm.txt ]; then python manage.py import_medications --bdpm; fi && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
+    command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py import_medications && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
@@ -228,6 +231,11 @@ services:
     restart: always
     env_file:
       - ./backend/.env.prod
+    environment:
+      Django_ENV: production
+      DB_ENGINE: postgresql
+      DB_HOST: database_aws
+      DB_PORT: 5432
     depends_on:
       backend_aws:
         condition: service_started

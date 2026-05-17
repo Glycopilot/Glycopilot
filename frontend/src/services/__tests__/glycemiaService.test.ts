@@ -66,6 +66,32 @@ describe('glycemiaService', () => {
 
             expect(result).toEqual([]);
         });
+
+        it('should fetch day and week histories through convenience helpers', async () => {
+            mock.onGet('/glycemia/range/').reply(200, { entries: [] });
+
+            await glycemiaService.getTodayHistory();
+            await glycemiaService.getWeekHistory();
+
+            expect(mock.history.get[0].params).toEqual({ days: 1 });
+            expect(mock.history.get[1].params).toEqual({ days: 7 });
+        });
+
+        it('should fetch month history through the convenience helper', async () => {
+            mock.onGet('/glycemia/range/').reply(200, { entries: [] });
+
+            await glycemiaService.getMonthHistory();
+
+            expect(mock.history.get[0].params).toEqual({ days: 30 });
+        });
+
+        it('should default to an empty list when the API omits entries', async () => {
+            mock.onGet('/glycemia/range/').reply(200, { stats: {}, range_days: 7 });
+
+            const result = await glycemiaService.getHistory({ period: 'week' });
+
+            expect(result).toEqual([]);
+        });
     });
 
     describe('createManualReading', () => {
@@ -176,6 +202,29 @@ describe('glycemiaService', () => {
         });
     });
 
+    describe('createCgmReading', () => {
+        it('should create a cgm reading on success', async () => {
+            const data = { value: 118, measured_at: '2023-01-01T12:00:00Z', unit: 'mg/dL' };
+            const response = { ...data, id: 'cgm-1', source: 'cgm' };
+            mock.onPost('/glycemia/cgm-readings/').reply(201, response);
+
+            const result = await glycemiaService.createCgmReading(data);
+
+            expect(result).toEqual(response);
+        });
+
+        it('should return null when cgm creation fails', async () => {
+            mock.onPost('/glycemia/cgm-readings/').reply(500);
+
+            const result = await glycemiaService.createCgmReading({
+                value: 118,
+                measured_at: '2023-01-01T12:00:00Z',
+            });
+
+            expect(result).toBeNull();
+        });
+    });
+
     describe('transformForChart', () => {
         it('should return default data when history is empty', () => {
             const result = glycemiaService.transformForChart([]);
@@ -207,6 +256,20 @@ describe('glycemiaService', () => {
 
             expect(result.labels.length).toBeLessThanOrEqual(10);
             expect(result.datasets[0].data.length).toBeLessThanOrEqual(10);
+        });
+
+        it('should transform month history with sampling', () => {
+            const history: GlycemiaEntry[] = Array.from({ length: 25 }, (_, i) => ({
+                id: i.toString(),
+                value: 90 + i,
+                measured_at: new Date(2023, 1, i + 1).toISOString(),
+                source: 'manual'
+            }));
+
+            const result = glycemiaService.transformForChart(history, 'month');
+
+            expect(result.labels.length).toBeLessThanOrEqual(10);
+            expect(result.datasets[0].data[0]).toBe(90);
         });
 
         it('should sort history before transforming', () => {

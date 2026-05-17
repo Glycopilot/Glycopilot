@@ -59,6 +59,10 @@ class CareTeamViewSet(viewsets.ViewSet):
           - Avec email (nouveau)         : compte inactif créé, statut PENDING, code d'activation 6 chars
           - Sans email                   : shell vide (pas de login), statut ACTIVE
         """
+        from django.contrib.auth.tokens import PasswordResetTokenGenerator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+
         data = request.data
 
         identity = _get_identity(request.user)
