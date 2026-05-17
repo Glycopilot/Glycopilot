@@ -1,13 +1,16 @@
 """Tests for meals app."""
 
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.utils.timezone import now
 from rest_framework.test import APIClient
 
+from apps.meals.management.commands.import_meals import Command
 from apps.meals.models import Meal, UserMeal
 
 User = get_user_model()
@@ -519,3 +522,53 @@ class TestRangeSummary:
             "/api/meals/log/range-summary/?date_from=not-a-date&date_to=2026-05-18"
         )
         assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+def test_import_meals_creates_and_updates_rows(tmp_path):
+    path = tmp_path / "meals.csv"
+    path.write_text(
+        "id,name,ingredients,recipe,glucose,calories\n"
+        "1,Bowl,Riz,Cuire,45.5,600\n"
+        "2,Salade,,,15,\n",
+        encoding="utf-8",
+    )
+
+    command = Command()
+    command.import_meals(path)
+
+    assert Meal.objects.count() == 2
+    assert Meal.objects.get(meal_id=1).glucose == 45.5
+    assert Meal.objects.get(meal_id=2).calories is None
+
+    path.write_text(
+        "id,name,ingredients,recipe,glucose,calories\n"
+        "1,Bowl update,Riz complet,Cuire,50,650\n",
+        encoding="utf-8",
+    )
+    command.import_meals(path)
+
+    meal = Meal.objects.get(meal_id=1)
+    assert meal.name == "Bowl update"
+    assert meal.calories == 650
+
+
+def test_import_meals_ignores_missing_file():
+    command = Command()
+
+    command.import_meals(Path("/tmp/does-not-exist-glycopilot.csv"))
+
+
+@pytest.mark.django_db
+def test_import_meals_management_command_uses_default_path(settings, tmp_path):
+    data_dir = tmp_path / "data" / "import"
+    data_dir.mkdir(parents=True)
+    (data_dir / "meals.csv").write_text(
+        "id,name,ingredients,recipe,glucose,calories\n3,Soupe,,,20,120\n",
+        encoding="utf-8",
+    )
+    settings.BASE_DIR = tmp_path
+
+    call_command("import_meals")
+
+    assert Meal.objects.filter(meal_id=3, name="Soupe").exists()
