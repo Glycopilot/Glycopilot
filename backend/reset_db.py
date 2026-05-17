@@ -1,4 +1,6 @@
+import glob
 import os
+import shutil
 import sys
 
 from django.core.management import execute_from_command_line
@@ -74,7 +76,47 @@ def reset_database():
                 else:
                     print("✓ DB was already empty")
 
-    print("... Migrating with existing migration files ...")
+    apps_list = [
+        "users",
+        "profiles",
+        "doctors",
+        "auth",
+        "glycemia",
+        "meals",
+        "activities",
+        "alerts",
+        "medications",
+        "notifications",
+        "dashboard",
+        "devices",
+    ]
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    for app in apps_list:
+        migration_path = os.path.join(base_dir, "apps", app, "migrations")
+        if os.path.exists(migration_path):
+            files = glob.glob(os.path.join(migration_path, "*.py"))
+            for f in files:
+                if "__init__.py" not in f:
+                    try:
+                        os.remove(f)
+                    except OSError as e:
+                        print(f"warning: Could not remove {f}: {e}")
+
+            # Remove __pycache__
+            pycache = os.path.join(migration_path, "__pycache__")
+            if os.path.exists(pycache):
+                shutil.rmtree(pycache, ignore_errors=True)
+            print(f"✓ Cleared migrations for {app}")
+        else:
+            os.makedirs(migration_path, exist_ok=True)
+            with open(os.path.join(migration_path, "__init__.py"), "w") as f:
+                pass
+
+    print("... Making Migrations ...")
+    execute_from_command_line(["manage.py", "makemigrations"])
+
+    print("... Migrating ...")
     execute_from_command_line(["manage.py", "migrate"])
 
     print("... Seeding Initial Data ...")

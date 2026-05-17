@@ -167,4 +167,11 @@ describe('apiClient URL reading', () => {
         const { API_URL: devApiUrl } = require('../apiClient');
         expect(devApiUrl).toBe('http://test.local/api');
     });
+
+    it('preserves prefixed API URLs', () => {
+        jest.resetModules();
+        process.env.EXPO_PUBLIC_API_URL = 'http://test.local/register/api';
+        const { API_URL: devApiUrl } = require('../apiClient');
+        expect(devApiUrl).toBe('http://test.local/register/api');
+    });
 });
