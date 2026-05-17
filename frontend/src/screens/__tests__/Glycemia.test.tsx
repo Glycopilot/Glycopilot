@@ -25,10 +25,10 @@ describe('Glycemia Screen', () => {
     });
 
     it('renders correctly', async () => {
-        const { getByText } = render(<GlycemiaScreen navigation={mockNavigation as any} />);
+        const { getAllByText } = render(<GlycemiaScreen navigation={mockNavigation as any} />);
 
         await waitFor(() => {
-            expect(getByText('Glycémie')).toBeTruthy();
+            expect(getAllByText('Glycémie').length).toBeGreaterThan(0);
         });
     });
 });
