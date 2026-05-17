@@ -189,7 +189,7 @@ export default function ActivityScreen({
   return (
     <Layout
       navigation={navigation}
-      currentRoute="Home"
+      currentRoute="Journal"
       userName="Utilisateur"
     >
       <View style={{ flex: 1 }}>

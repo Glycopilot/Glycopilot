@@ -49,20 +49,20 @@ def send_care_team_invitation(to_email, inviter_name, role, is_existing_user=Fal
         return False
 
 
-def send_proche_invitation(to_email, inviter_name, uid, token):
+def send_proche_invitation(to_email, inviter_name, code):
     """
     Envoie l'email d'activation de compte au proche invité.
-    Le lien pointe vers l'écran d'activation du frontend.
+    Contient un code à 6 caractères à saisir dans l'application.
     """
-    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    link = f"{frontend_url}/proche/activate?uid={uid}&token={token}"
     subject = f"Glycopilot — {inviter_name} vous invite en tant que proche"
     message_body = (
         f"Bonjour,\n\n"
-        f"{inviter_name} vous a ajouté comme proche sur Glycopilot.\n"
-        f"Créez votre mot de passe pour accéder aux données de votre proche :\n\n"
-        f"{link}\n\n"
-        f"Ce lien est valable 48h.\n\n"
+        f"{inviter_name} vous a ajouté comme proche sur Glycopilot.\n\n"
+        f"Votre code d'activation (6 caractères) :\n\n"
+        f"        {code}\n\n"
+        f"Ouvrez l'application Glycopilot, appuyez sur\n"
+        f"\"J'ai reçu une invitation proche\" et entrez ce code\n"
+        f"pour créer votre mot de passe.\n\n"
         f"Si vous n'attendiez pas cet email, vous pouvez l'ignorer."
     )
     try:

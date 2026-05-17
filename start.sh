@@ -121,9 +121,9 @@ echo "ℹ️  Environment détecté: $CURRENT_ENV"
 echo ""
 echo "🔨 Construction de l'image Docker backend..."
 if [ "$COMPOSE_PROFILES" == "aws" ]; then
-    $DOCKER_COMPOSE --profile aws build backend_aws
+    DOCKER_BUILDKIT=0 $DOCKER_COMPOSE --profile aws build backend_aws
 else
-    $DOCKER_COMPOSE --profile local build backend_local
+    DOCKER_BUILDKIT=0 $DOCKER_COMPOSE --profile local build backend_local
 fi
 
 if [ "$CURRENT_ENV" == "production" ] || [ "$COMPOSE_PROFILES" == "aws" ]; then

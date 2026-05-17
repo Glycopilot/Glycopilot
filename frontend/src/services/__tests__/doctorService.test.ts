@@ -39,6 +39,20 @@ describe('doctorService', () => {
         status: 'ACTIVE',
       },
     ],
+    pending_family: [
+      {
+        id_team_member: 'tm-3',
+        member_details: {
+          first_name: 'Paul',
+          last_name: 'Martin',
+          phone_number: null,
+          email: 'paul@proche.fr',
+        },
+        relation_type: 'Frère',
+        role: 'FAMILY',
+        status: 'PENDING',
+      },
+    ],
   };
 
   beforeEach(() => {
@@ -59,6 +73,16 @@ describe('doctorService', () => {
       expect(result).toEqual(mockTeam);
       expect(result.doctors).toHaveLength(1);
       expect(result.family).toHaveLength(1);
+      expect(result.pending_family).toHaveLength(1);
+    });
+
+    it('should include pending_family in response', async () => {
+      mock.onGet('/doctors/care-team/my-team/').reply(200, mockTeam);
+
+      const result = await doctorService.getMyTeam();
+
+      expect(result.pending_family[0].status).toBe('PENDING');
+      expect(result.pending_family[0].id_team_member).toBe('tm-3');
     });
 
     it('should throw on server error', async () => {
@@ -142,7 +166,9 @@ describe('doctorService', () => {
 
   describe('addFamilyMember', () => {
     it('should add family member with required fields', async () => {
-      mock.onPost('/doctors/care-team/add-family/').reply(201, { id: 'fm-1' });
+      mock.onPost('/doctors/care-team/add-family/').reply(201, {
+        id: 'fm-1', invitation_sent: false, status: 'ACTIVE',
+      });
 
       const result = await doctorService.addFamilyMember({
         first_name: 'Pierre',
@@ -150,7 +176,7 @@ describe('doctorService', () => {
         relation_type: 'brother',
       });
 
-      expect(result).toEqual({ id: 'fm-1' });
+      expect(result).toEqual({ id: 'fm-1', invitation_sent: false, status: 'ACTIVE' });
       const sentData = JSON.parse(mock.history.post[0].data);
       expect(sentData).toEqual({
         first_name: 'Pierre',
@@ -160,8 +186,26 @@ describe('doctorService', () => {
       });
     });
 
+    it('should return PENDING status when email provided', async () => {
+      mock.onPost('/doctors/care-team/add-family/').reply(201, {
+        id: 'fm-2', invitation_sent: true, status: 'PENDING',
+      });
+
+      const result = await doctorService.addFamilyMember({
+        first_name: 'Sophie',
+        last_name: 'Blanc',
+        email: 'sophie@proche.fr',
+        relation_type: 'mother',
+      });
+
+      expect(result.status).toBe('PENDING');
+      expect(result.invitation_sent).toBe(true);
+    });
+
     it('should include phone_number when provided', async () => {
-      mock.onPost('/doctors/care-team/add-family/').reply(201, { id: 'fm-2' });
+      mock.onPost('/doctors/care-team/add-family/').reply(201, {
+        id: 'fm-3', invitation_sent: false, status: 'ACTIVE',
+      });
 
       await doctorService.addFamilyMember({
         first_name: 'Sophie',
@@ -175,11 +219,62 @@ describe('doctorService', () => {
       expect(sentData.role).toBe('FAMILY');
     });
 
+    it('should propagate backend error message', async () => {
+      mock.onPost('/doctors/care-team/add-family/').reply(400, {
+        error: 'Ce proche a déjà été invité.',
+      });
+
+      await expect(
+        doctorService.addFamilyMember({ first_name: 'X', last_name: 'Y', relation_type: 'z' })
+      ).rejects.toMatchObject({ message: 'Ce proche a déjà été invité.' });
+    });
+
+    it('should propagate already_proche code on 409', async () => {
+      mock.onPost('/doctors/care-team/add-family/').reply(409, {
+        error: 'Cette personne suit déjà un patient.',
+        code: 'already_proche',
+      });
+
+      await expect(
+        doctorService.addFamilyMember({ first_name: 'X', last_name: 'Y', relation_type: 'z' })
+      ).rejects.toMatchObject({ code: 'already_proche' });
+    });
+
     it('should throw on validation error', async () => {
       mock.onPost('/doctors/care-team/add-family/').reply(400);
 
       await expect(
         doctorService.addFamilyMember({ first_name: '', last_name: '', relation_type: '' })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('updateFamilyMember', () => {
+    it('should patch with correct payload', async () => {
+      mock.onPatch('/doctors/care-team/update-member/').reply(200);
+
+      await doctorService.updateFamilyMember({
+        id_team_member: 'tm-2',
+        first_name: 'NouveauPrénom',
+        last_name: 'NouveauNom',
+        relation_type: 'Sœur',
+      });
+
+      const sentData = JSON.parse(mock.history.patch[0].data);
+      expect(sentData.id_team_member).toBe('tm-2');
+      expect(sentData.first_name).toBe('NouveauPrénom');
+      expect(sentData.relation_type).toBe('Sœur');
+    });
+
+    it('should throw on 404', async () => {
+      mock.onPatch('/doctors/care-team/update-member/').reply(404);
+
+      await expect(
+        doctorService.updateFamilyMember({
+          id_team_member: 'unknown',
+          first_name: 'X',
+          last_name: 'Y',
+        })
       ).rejects.toThrow();
     });
   });

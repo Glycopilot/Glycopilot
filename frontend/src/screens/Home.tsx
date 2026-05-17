@@ -11,7 +11,8 @@ import Layout from '../components/common/Layout';
 import Banner from '../components/dashboard/Banner';
 import GlycemieCard from '../components/dashboard/GlycemieCard';
 import StatCard from '../components/dashboard/StatCard';
-import ActionButton from '../components/common/ActionButton';
+import { TouchableOpacity } from 'react-native';
+import { Gauge, Brain, ChevronRight } from 'lucide-react-native';
 import useDashboard from '../hooks/useDashboard';
 import { useMedications } from '../hooks/useMedications';
 import { Activity, Pill } from 'lucide-react-native';
@@ -203,39 +204,36 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <Text style={styles.sectionTitle}>Actions rapides</Text>
         </View>
 
-        <View style={styles.sensorRow}>
-          <ActionButton
-            type="glycemie"
-            label="Mon capteur"
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('SensorActivation');
-              }
-            }}
-          />
-        </View>
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={[styles.quickCard, { backgroundColor: '#FFF4F4' }]}
+            onPress={() => navigation?.navigate('SensorActivation')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.quickIcon, { backgroundColor: '#FFE5E5' }]}>
+              <Gauge size={28} color="#FF6B6B" strokeWidth={2} />
+            </View>
+            <View style={styles.quickText}>
+              <Text style={styles.quickTitle}>Mon capteur</Text>
+              <Text style={styles.quickSub}>Surveillance en temps réel</Text>
+            </View>
+            <ChevronRight size={18} color="#D1D5DB" />
+          </TouchableOpacity>
 
-        <View style={styles.actionsRow}>
-          <ActionButton
-            type="repas"
-            label="Repas"
-            onPress={() => navigation?.navigate('Repas')}
-          />
-          <ActionButton
-            type="medic"
-            label="Médic"
-            onPress={() => navigation?.navigate('Traitements')}
-          />
-          <ActionButton
-            type="action"
-            label="Activité"
-            onPress={() => navigation?.navigate('Activite')}
-          />
-          <ActionButton
-            type="prediction"
-            label="Prédiction"
+          <TouchableOpacity
+            style={[styles.quickCard, { backgroundColor: '#F5F3FF' }]}
             onPress={() => navigation?.navigate('Predictions')}
-          />
+            activeOpacity={0.75}
+          >
+            <View style={[styles.quickIcon, { backgroundColor: '#EDE9FE' }]}>
+              <Brain size={28} color="#7C3AED" strokeWidth={2} />
+            </View>
+            <View style={styles.quickText}>
+              <Text style={styles.quickTitle}>Prédiction IA</Text>
+              <Text style={styles.quickSub}>Analyse et tendances glycémiques</Text>
+            </View>
+            <ChevronRight size={18} color="#D1D5DB" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.bottomPadding} />
@@ -267,18 +265,42 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16,
   },
-  actionsRow: {
-    flexDirection: 'row',
+  quickActions: {
     paddingHorizontal: 16,
-    marginTop: 8,
+    gap: 12,
     marginBottom: 16,
-    gap: 4,
   },
-  sensorRow: {
+  quickCard: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 4,
+    alignItems: 'center',
+    borderRadius: 20,
+    padding: 16,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  quickIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickText: {
+    flex: 1,
+  },
+  quickTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 3,
+  },
+  quickSub: {
+    fontSize: 12,
+    color: '#9CA3AF',
   },
   bottomPadding: {
     height: 100,

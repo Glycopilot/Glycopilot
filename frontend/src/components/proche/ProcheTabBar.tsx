@@ -1,52 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Home, Droplet, BookOpen, User } from 'lucide-react-native';
+import { Home, Bell, MapPin, User } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
-interface Tab {
-  name: string;
+export type ProcheTab = 'home' | 'alerts' | 'location' | 'profile';
+
+interface TabItem {
+  key: ProcheTab;
   label: string;
   Icon: React.ComponentType<{ size: number; color: string; strokeWidth?: number }>;
 }
 
-interface NavbarProps {
-  navigation: any;
-  currentRoute?: string;
-}
-
-const TABS: Tab[] = [
-  { name: 'Home',     label: 'Accueil',  Icon: Home     },
-  { name: 'Glycemia', label: 'Glycémie', Icon: Droplet  },
-  { name: 'Journal',  label: 'Journal',  Icon: BookOpen },
-  { name: 'Profile',  label: 'Profil',   Icon: User     },
+const TABS: TabItem[] = [
+  { key: 'home',     label: 'Accueil',      Icon: Home   },
+  { key: 'alerts',   label: 'Alertes',      Icon: Bell   },
+  { key: 'location', label: 'Localisation', Icon: MapPin },
+  { key: 'profile',  label: 'Profil',       Icon: User   },
 ];
 
-export default function Navbar({ navigation, currentRoute = 'Home' }: NavbarProps) {
-  const [activeTab, setActiveTab] = useState(currentRoute);
+interface Props {
+  readonly activeTab: ProcheTab;
+  readonly onTabChange: (tab: ProcheTab) => void;
+  readonly alertCount?: number;
+}
 
-  useEffect(() => {
-    setActiveTab(currentRoute);
-  }, [currentRoute]);
-
-  const handleTabPress = (tabName: string) => {
-    setActiveTab(tabName);
-    if (navigation?.navigate) navigation.navigate(tabName);
-  };
-
+export default function ProcheTabBar({ activeTab, onTabChange, alertCount = 0 }: Props) {
   return (
     <View style={styles.bar}>
-      {TABS.map(({ name, label, Icon }) => {
-        const active = activeTab === name;
+      {TABS.map(({ key, label, Icon }) => {
+        const active = activeTab === key;
         const color = active ? colors.secondary : '#9CA3AF';
         return (
           <TouchableOpacity
-            key={name}
+            key={key}
             style={styles.tab}
-            onPress={() => handleTabPress(name)}
+            onPress={() => onTabChange(key)}
             activeOpacity={0.7}
           >
             <View style={styles.iconWrapper}>
               <Icon size={22} color={color} strokeWidth={active ? 2.5 : 2} />
+              {key === 'alerts' && alertCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {alertCount > 99 ? '99+' : String(alertCount)}
+                  </Text>
+                </View>
+              )}
             </View>
             <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
             {active && <View style={styles.indicator} />}
@@ -79,6 +78,23 @@ const styles = StyleSheet.create({
   },
   iconWrapper: {
     position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    color: '#fff',
+    fontWeight: '700',
   },
   label: {
     fontSize: 11,
