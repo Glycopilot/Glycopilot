@@ -2,6 +2,8 @@
 Contrôleur pour l'authentification
 """
 
+import logging
+
 from rest_framework import status
 from rest_framework.decorators import (
     api_view,
@@ -26,6 +28,24 @@ from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 from utils.helpers import format_serializer_errors
 from utils.permissions import allowed_roles
+
+logger = logging.getLogger(__name__)
+
+
+def _send_verification_link(auth_account) -> None:
+    """Génère un token de vérification et envoie l'email d'activation."""
+    from django.conf import settings
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    from apps.auth.email_smtp import send_verification_email
+    from apps.auth.tokens import email_verification_token
+
+    uid = urlsafe_base64_encode(force_bytes(auth_account.pk))
+    token = email_verification_token.make_token(auth_account)
+    backend_url = getattr(settings, "BACKEND_URL", "http://localhost:8006")
+    link = f"{backend_url}/api/auth/confirm-email?uid={uid}&token={token}"
+    send_verification_email(auth_account.email, link)
 
 
 def _send_verification_link(auth_account) -> None:

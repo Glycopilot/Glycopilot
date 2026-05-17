@@ -48,3 +48,10 @@ async function handleReading(reading: GlucoseReading): Promise<void> {
     notes: reading.serial ? `Libre serial=${reading.serial}` : undefined,
   });
 }
+
+export function resetLibre2BackgroundForTests(): void {
+  started = false;
+  lastPostedAtMs = 0;
+}
+
+export const handleLibre2BackgroundReadingForTests = handleReading;

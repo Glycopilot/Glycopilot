@@ -1,9 +1,16 @@
 import React from 'react';
+import { Alert, Linking } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import SensorActivationScreen from '../SensorActivation';
 import { useLibre2Sensor } from '../../hooks/useLibre2Sensor';
 
 jest.mock('../../hooks/useLibre2Sensor');
+jest.mock('../../components/common/Layout', () => {
+  const { View } = require('react-native');
+  return function MockLayout({ children }: any) {
+    return <View>{children}</View>;
+  };
+});
 jest.mock('libre2-cgm', () => ({
   __esModule: true,
   default: {
@@ -27,7 +34,13 @@ const defaultSensor = {
 describe('SensorActivation Screen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as any);
     (useLibre2Sensor as jest.Mock).mockReturnValue(defaultSensor);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('affiche le titre Surveillance temps réel', () => {
@@ -101,5 +114,47 @@ describe('SensorActivation Screen', () => {
   it('affiche la section aide Première fois', () => {
     const { getByText } = render(<SensorActivationScreen navigation={mockNavigation as any} />);
     expect(getByText('Première fois ?')).toBeTruthy();
+  });
+
+  it('appelle sensor.start() au clic sur Activer', async () => {
+    const mockStart = jest.fn().mockResolvedValue(true);
+    (useLibre2Sensor as jest.Mock).mockReturnValue({ ...defaultSensor, start: mockStart });
+
+    const { getByText } = render(<SensorActivationScreen navigation={mockNavigation as any} />);
+    fireEvent.press(getByText('Activer la surveillance'));
+
+    await waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+
+  it('propose l\'installation de Juggluco quand start retourne false', async () => {
+    const mockStart = jest.fn().mockResolvedValue(false);
+    (useLibre2Sensor as jest.Mock).mockReturnValue({ ...defaultSensor, start: mockStart });
+
+    const { getByText } = render(<SensorActivationScreen navigation={mockNavigation as any} />);
+    fireEvent.press(getByText('Activer la surveillance'));
+
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Juggluco non installé',
+        expect.any(String),
+        expect.any(Array)
+      )
+    );
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    buttons[1].onPress();
+    expect(Linking.openURL).toHaveBeenCalledWith('https://www.juggluco.nl/Juggluco/');
+  });
+
+  it('affiche une alerte quand le démarrage échoue', async () => {
+    const mockStart = jest.fn().mockRejectedValue(new Error('native failed'));
+    (useLibre2Sensor as jest.Mock).mockReturnValue({ ...defaultSensor, start: mockStart });
+
+    const { getByText } = render(<SensorActivationScreen navigation={mockNavigation as any} />);
+    fireEvent.press(getByText('Activer la surveillance'));
+
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith('Erreur', 'native failed')
+    );
   });
 });
