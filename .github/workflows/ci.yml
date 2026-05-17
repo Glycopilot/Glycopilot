@@ -156,6 +156,21 @@ jobs:
         REACT_APP_API_TIMEOUT: "10000"
       run: cd frontend_web && npm run build
 
+    - name: Run tests with coverage
+      env:
+        CI: true
+        REACT_APP_API_URL: http://localhost:8006/api
+        REACT_APP_API_TIMEOUT: "10000"
+      run: cd frontend_web && npm run test:coverage -- --runInBand
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-frontend-web
+        path: frontend_web/coverage/lcov.info
+        retention-days: 1
+        if-no-files-found: error
+
   sonarqube:
     needs: [test-backend, test-frontend, build-frontend-web, test-ai-service]
     runs-on: ubuntu-latest
@@ -205,6 +220,12 @@ jobs:
       with:
         name: coverage-frontend
         path: frontend/coverage/
+
+    - name: Download Web Frontend Coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: coverage-frontend-web
+        path: frontend_web/coverage/
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
