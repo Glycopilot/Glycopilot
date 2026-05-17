@@ -123,6 +123,7 @@ def login(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def refresh_token(request):
     """
     Endpoint pour rafraîchir le token d'accès
@@ -160,6 +161,7 @@ def refresh_token(request):
 
 @api_view(["POST"])
 @allowed_roles(["patient", "doctor", "admin", "superadmin"])
+@throttle_classes([AuthRateThrottle])
 def logout(request):
     """
     Endpoint pour déconnecter un utilisateur
