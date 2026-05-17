@@ -178,3 +178,34 @@ def test_set_status_does_not_invalidate_when_approved(tmp_path):
         mgr.set_status("p1", "v1.0", "approved")
 
     mgr.invalidate.assert_not_called()
+
+
+def test_predict_returns_none_when_model_missing():
+    from unittest.mock import patch
+    mgr = PersonalLSTMManager()
+
+    with patch.object(mgr, "get_model", return_value=None):
+        assert mgr.predict("p1", "v1.0", [[0.0] * 37]) is None
+
+
+def test_predict_formats_model_outputs():
+    import torch
+    from unittest.mock import MagicMock, patch
+
+    mgr = PersonalLSTMManager()
+    model = MagicMock()
+    model.return_value = (
+        torch.tensor([[65.0, 60.0, 90.0]]),
+        torch.tensor([[150.0, 140.0, 170.0]]),
+        torch.tensor([[210.0, 190.0, 230.0]]),
+    )
+
+    features = torch.zeros((24, 37), dtype=torch.float32)
+    with patch.object(mgr, "get_model", return_value=model):
+        result = mgr.predict("p1", "v1.0", features)
+
+    assert result[15]["y_hat"] == 65.0
+    assert result[15]["risk_hypo"] > 0
+    assert result[30]["risk_hyper"] == 0.0
+    assert result[60]["risk_hyper"] > 0
+    model.assert_called_once()

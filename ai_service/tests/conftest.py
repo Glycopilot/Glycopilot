@@ -2,8 +2,9 @@ import sys
 import os
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
-from fastapi.testclient import TestClient
+import pytest_asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -22,12 +23,13 @@ def _make_mock_ensemble():
     return mock
 
 
-@pytest.fixture(scope="session")
-def client():
+@pytest_asyncio.fixture
+async def client():
     with patch("models.ensemble.ensemble_model", _make_mock_ensemble()), \
          patch("core.scheduler.start_scheduler", return_value=None):
         from main import app
-        with TestClient(app) as c:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
             yield c
 
 

@@ -1,14 +1,11 @@
 [run]
 relative_files = True
 source =
-    api
-    core
-    features
-    models
-    training
+    ai_service
 
 [report]
 show_missing = True
 omit =
-    tests/*
-    */tests/*
+    ai_service/tests/*
+    ai_service/artifacts/*
+    ai_service/training/train_*.py

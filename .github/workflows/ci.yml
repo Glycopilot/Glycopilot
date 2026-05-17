@@ -94,8 +94,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        cd ai_service
-        pytest --cov-config=.coveragerc --cov=api --cov=core --cov=features --cov=models --cov=training --cov-report=xml:coverage.xml --cov-report=html --junitxml=xunit-reports/xunit-result.xml
+        PYTHONPATH=ai_service pytest --rootdir=. ai_service/tests --cov-config=ai_service/.coveragerc --cov=ai_service --cov-report=xml:ai_service/coverage.xml --cov-report=html:ai_service/htmlcov --junitxml=ai_service/xunit-reports/xunit-result.xml
 
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
