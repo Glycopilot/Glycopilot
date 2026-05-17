@@ -1,5 +1,6 @@
 jest.mock('axios', () => {
-  const instance = {
+  const instance = jest.fn();
+  Object.assign(instance, {
     interceptors: {
       request:  { use: jest.fn() },
       response: { use: jest.fn() },
@@ -8,7 +9,7 @@ jest.mock('axios', () => {
     post:  jest.fn(),
     patch: jest.fn(),
     delete: jest.fn(),
-  };
+  });
   return {
     __esModule: true,
     default: {
@@ -19,17 +20,104 @@ jest.mock('axios', () => {
   };
 });
 
+jest.mock('../../../lib/auth-redirect', () => ({
+  triggerAuthRedirect: jest.fn(),
+}));
+
 import axios from 'axios';
 import authService from '../../../services/authService';
+import { triggerAuthRedirect } from '../../../lib/auth-redirect';
 
 const apiClient = axios.create();
+const requestInterceptor = apiClient.interceptors.request.use.mock.calls[0][0];
+const requestErrorInterceptor = apiClient.interceptors.request.use.mock.calls[0][1];
+const responseInterceptor = apiClient.interceptors.response.use.mock.calls[0][0];
+const responseErrorInterceptor = apiClient.interceptors.response.use.mock.calls[0][1];
 
 beforeEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
+  apiClient.mockReset();
 });
 
 describe('authService', () => {
+  describe('intercepteurs axios', () => {
+    it('l\'intercepteur request ajoute le bearer token', () => {
+      localStorage.setItem('access_token', 'token-123');
+      const config = requestInterceptor({ headers: {} });
+      expect(config.headers.Authorization).toBe('Bearer token-123');
+    });
+
+    it('l\'intercepteur request tolère une erreur localStorage', () => {
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('storage blocked');
+      });
+      expect(requestInterceptor({ headers: {} })).toEqual({ headers: {} });
+      getItem.mockRestore();
+      consoleError.mockRestore();
+    });
+
+    it('l\'intercepteur request propage les erreurs de configuration', async () => {
+      await expect(requestErrorInterceptor(new Error('bad config'))).rejects.toThrow('bad config');
+    });
+
+    it('l\'intercepteur response retourne les réponses réussies', () => {
+      const response = { data: { ok: true } };
+      expect(responseInterceptor(response)).toBe(response);
+    });
+
+    it('rejette les erreurs non 401 sans refresh', async () => {
+      const error = { response: { status: 500 }, config: { headers: {} } };
+      await expect(responseErrorInterceptor(error)).rejects.toBe(error);
+    });
+
+    it('purge la session si 401 sans refresh_token', async () => {
+      localStorage.setItem('access_token', 'a');
+      localStorage.setItem('user_id', 'u-1');
+      const error = { response: { status: 401 }, config: { headers: {} } };
+
+      await expect(responseErrorInterceptor(error)).rejects.toBe(error);
+
+      expect(localStorage.getItem('access_token')).toBeNull();
+      expect(localStorage.getItem('user_id')).toBeNull();
+    });
+
+    it('refresh le token, réessaie la requête originale et met à jour la queue', async () => {
+      localStorage.setItem('refresh_token', 'refresh-1');
+      axios.post.mockResolvedValueOnce({ data: { access: 'access-2' } });
+      apiClient.mockResolvedValueOnce({ data: { retry: true } });
+      const originalRequest = { headers: {}, url: '/private' };
+
+      const result = await responseErrorInterceptor({
+        response: { status: 401 },
+        config: originalRequest,
+      });
+
+      expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/auth/refresh/'), { refresh: 'refresh-1' });
+      expect(localStorage.getItem('access_token')).toBe('access-2');
+      expect(originalRequest._retry).toBe(true);
+      expect(originalRequest.headers.Authorization).toBe('Bearer access-2');
+      expect(apiClient).toHaveBeenCalledWith(originalRequest);
+      expect(result).toEqual({ data: { retry: true } });
+    });
+
+    it('purge et déclenche la redirection si le refresh échoue', async () => {
+      localStorage.setItem('access_token', 'a');
+      localStorage.setItem('refresh_token', 'r');
+      axios.post.mockRejectedValueOnce(new Error('refresh failed'));
+
+      await expect(responseErrorInterceptor({
+        response: { status: 401 },
+        config: { headers: {} },
+      })).rejects.toThrow('refresh failed');
+
+      expect(localStorage.getItem('access_token')).toBeNull();
+      expect(localStorage.getItem('refresh_token')).toBeNull();
+      expect(triggerAuthRedirect).toHaveBeenCalled();
+    });
+  });
+
   describe('login', () => {
     it('stocke les tokens et infos user après succès', async () => {
       apiClient.post.mockResolvedValueOnce({
@@ -143,6 +231,13 @@ describe('authService', () => {
       });
       await expect(authService.register(baseUserData)).rejects.toThrow(/Cet email existe déjà/);
     });
+
+    it('utilise le message string renvoyé par le serveur', async () => {
+      apiClient.post.mockRejectedValueOnce({
+        response: { data: 'Inscription fermée' },
+      });
+      await expect(authService.register(baseUserData)).rejects.toThrow('Inscription fermée');
+    });
   });
 
   describe('logout', () => {
@@ -204,6 +299,35 @@ describe('authService', () => {
       expect(authService.getTokens()).toEqual({ accessToken: 'a', refreshToken: 'r' });
     });
 
+    it('getTokens retourne null/null si le storage est indisponible', () => {
+      const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      expect(authService.getTokens()).toEqual({ accessToken: null, refreshToken: null });
+      getItem.mockRestore();
+    });
+
+    it('getStoredUser retourne le JSON user stocké en priorité', () => {
+      localStorage.setItem('user', JSON.stringify({ id_auth: 'u-json', email: 'json@test.com' }));
+      localStorage.setItem('user_id', 'u-fallback');
+      expect(authService.getStoredUser()).toEqual({ id_auth: 'u-json', email: 'json@test.com' });
+    });
+
+    it('getStoredUser retombe sur user_id si le JSON est invalide', () => {
+      localStorage.setItem('user', '{bad json');
+      localStorage.setItem('user_id', 'u-1');
+      localStorage.setItem('user_email', 'doc@test.com');
+      expect(authService.getStoredUser()).toEqual({ id_auth: 'u-1', email: 'doc@test.com' });
+    });
+
+    it('getStoredUser retourne null si le storage est indisponible', () => {
+      const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      expect(authService.getStoredUser()).toBeNull();
+      getItem.mockRestore();
+    });
+
     it('getStoredUser retourne null si pas de user_id', () => {
       expect(authService.getStoredUser()).toBeNull();
     });
@@ -218,6 +342,14 @@ describe('authService', () => {
       expect(authService.isAuthenticated()).toBe(false);
       localStorage.setItem('access_token', 'a');
       expect(authService.isAuthenticated()).toBe(true);
+    });
+
+    it('isAuthenticated retourne false si le storage est indisponible', () => {
+      const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      expect(authService.isAuthenticated()).toBe(false);
+      getItem.mockRestore();
     });
 
     it('getApiClient retourne toujours la même instance', () => {
