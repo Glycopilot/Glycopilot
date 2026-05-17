@@ -56,13 +56,15 @@ jobs:
         TESTING: true
       run: |
         cd backend
-        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
+        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html --junitxml=xunit-reports/xunit-result.xml
     
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
       with:
         name: coverage-backend
-        path: backend/coverage.xml
+        path: |
+          backend/coverage.xml
+          backend/xunit-reports/xunit-result.xml
         retention-days: 1
         if-no-files-found: error
     
@@ -93,13 +95,15 @@ jobs:
     - name: Run tests with coverage
       run: |
         cd ai_service
-        pytest --cov=. --cov-report=xml:coverage.xml --cov-report=html
+        pytest --cov-config=.coveragerc --cov=api --cov=core --cov=features --cov=models --cov=training --cov-report=xml:coverage.xml --cov-report=html --junitxml=xunit-reports/xunit-result.xml
 
     - name: Upload coverage artifact
       uses: actions/upload-artifact@v4
       with:
         name: coverage-ai-service
-        path: ai_service/coverage.xml
+        path: |
+          ai_service/coverage.xml
+          ai_service/xunit-reports/xunit-result.xml
         retention-days: 1
         if-no-files-found: error
 
@@ -174,7 +178,6 @@ jobs:
   sonarqube:
     needs: [test-backend, test-frontend, build-frontend-web, test-ai-service]
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
       contents: read
       pull-requests: write
@@ -197,6 +200,15 @@ jobs:
           ls -lh backend/coverage.xml
         else
           echo "Backend coverage file not found"
+          exit 1
+        fi
+
+        if [ -f backend/xunit-reports/xunit-result.xml ]; then
+          echo "Backend xUnit report found"
+          ls -lh backend/xunit-reports/xunit-result.xml
+        else
+          echo "Backend xUnit report not found"
+          exit 1
         fi
     
     - name: Download AI Service Coverage
@@ -212,6 +224,14 @@ jobs:
           ls -lh ai_service/coverage.xml
         else
           echo "AI Service coverage file not found"
+          exit 1
+        fi
+
+        if [ -f ai_service/xunit-reports/xunit-result.xml ]; then
+          echo "AI Service xUnit report found"
+          ls -lh ai_service/xunit-reports/xunit-result.xml
+        else
+          echo "AI Service xUnit report not found"
           exit 1
         fi
 
@@ -293,6 +313,16 @@ jobs:
 
         if [ "${{ needs.build-frontend-web.result }}" != "success" ]; then
           echo "CRITICAL: Web frontend build failed"
+          CRITICAL_FAILED=true
+        fi
+
+        if [ "${{ needs.test-ai-service.result }}" != "success" ]; then
+          echo "CRITICAL: AI Service tests failed"
+          CRITICAL_FAILED=true
+        fi
+
+        if [ "${{ needs.sonarqube.result }}" != "success" ]; then
+          echo "CRITICAL: SonarQube analysis failed"
           CRITICAL_FAILED=true
         fi
         
