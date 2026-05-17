@@ -8,6 +8,7 @@ import {
   Pressable,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Users } from 'lucide-react-native';
 import { modalStyles as styles } from './modalStyles';
@@ -49,19 +50,33 @@ export default function AddContactModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose} />
-      <View
-        style={[
-          styles.container,
-          styles.containerScrollable,
-          Platform.OS === 'ios' ? { paddingBottom: 34 } : null,
-        ]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[styles.container, styles.containerScrollable, Platform.OS === 'ios' ? { paddingBottom: 34 } : null]}
       >
-        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.handle} />
 
           <Text style={styles.title}>
-            {isEdit ? 'Modifier le contact' : "Ajouter un contact d'urgence"}
+            {isEdit ? 'Modifier le proche' : 'Ajouter un proche'}
           </Text>
+
+          {!isEdit && (
+            <View style={styles.infoCard}>
+              <Users size={20} color="#3B82F6" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoTitle}>Accès à l'application</Text>
+                <Text style={styles.infoText}>
+                  Avec un email, votre proche recevra une invitation pour créer son
+                  compte et consulter votre glycémie en temps réel.
+                </Text>
+              </View>
+            </View>
+          )}
 
           <View style={styles.formSection}>
             <Text style={styles.formLabel}>Nom complet</Text>
@@ -100,7 +115,7 @@ export default function AddContactModal({
 
           {!isEdit && (
             <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Email (optionnel)</Text>
+              <Text style={styles.formLabel}>Email</Text>
               <TextInput
                 style={styles.input}
                 value={contactEmail}
@@ -111,19 +126,6 @@ export default function AddContactModal({
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-            </View>
-          )}
-
-          {!isEdit && (
-            <View style={styles.infoCard}>
-              <Users size={20} color="#3B82F6" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoTitle}>Accès à l'application</Text>
-                <Text style={styles.infoText}>
-                  Avec un email, votre proche recevra une invitation pour créer son
-                  compte et consulter votre glycémie en temps réel.
-                </Text>
-              </View>
             </View>
           )}
 
@@ -145,7 +147,7 @@ export default function AddContactModal({
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

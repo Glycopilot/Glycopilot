@@ -47,9 +47,12 @@ export interface ProcheDashboard {
     severity: string;
     triggeredAt: string;
   }>;
-  nutrition: {
-    calories: { consumed: number; goal: number };
-    carbs: { grams: number; goal: number };
+  medication: {
+    nextDose: {
+      name: string;
+      dosage: string;
+      status: string;
+    } | null;
   } | null;
   healthScore: number | null;
 }

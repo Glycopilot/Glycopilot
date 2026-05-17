@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
 import { MapPin, Clock } from 'lucide-react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { colors } from '../../themes/colors';
@@ -8,6 +8,7 @@ import type { LinkedPatient } from '../../types/proche.types';
 interface Props {
   readonly patient: LinkedPatient | null;
   readonly loading: boolean;
+  readonly onRefresh?: () => Promise<void>;
 }
 
 function formatDateTime(iso: string): string {
@@ -17,9 +18,17 @@ function formatDateTime(iso: string): string {
     + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function ProcheLocationView({ patient, loading }: Readonly<Props>) {
+export default function ProcheLocationView({ patient, loading, onRefresh }: Readonly<Props>) {
+  const [refreshing, setRefreshing] = React.useState(false);
   const loc = patient?.last_location ?? null;
   const patientName = patient ? `${patient.first_name} ${patient.last_name}` : 'Votre proche';
+
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
+  };
 
   if (loading) {
     return (
@@ -31,7 +40,10 @@ export default function ProcheLocationView({ patient, loading }: Readonly<Props>
 
   if (!loc) {
     return (
-      <View style={styles.center}>
+      <ScrollView
+        contentContainerStyle={styles.center}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.secondary} />}
+      >
         <View style={styles.emptyIcon}>
           <MapPin size={48} color="#D1D5DB" strokeWidth={1.5} />
         </View>
@@ -40,7 +52,7 @@ export default function ProcheLocationView({ patient, loading }: Readonly<Props>
           {patientName} n'a pas encore partagé sa position.{'\n'}
           La dernière localisation connue sera affichée ici.
         </Text>
-      </View>
+      </ScrollView>
     );
   }
 
