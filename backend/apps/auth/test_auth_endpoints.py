@@ -3,6 +3,7 @@ from django.urls import reverse
 import pytest
 from rest_framework import status
 
+from apps.doctors.models import DoctorProfile, VerificationStatus
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 
@@ -43,6 +44,34 @@ class TestAuthEndpoints:
 
         # Check Profile link
         assert Profile.objects.filter(user=identity, role__name="PATIENT").exists()
+
+    def test_register_doctor_rejects_duplicate_license_number(self, client):
+        VerificationStatus.objects.get_or_create(id=1, defaults={"label": "PENDING"})
+        url = reverse("register")
+        first_doctor = {
+            "email": "doctor-one@example.com",
+            "password": "StrongPassword123!",
+            "password_confirm": "StrongPassword123!",
+            "first_name": "First",
+            "last_name": "Doctor",
+            "role": "DOCTOR",
+            "license_number": "123456789",
+            "specialty": "Diabetologie",
+        }
+        second_doctor = {
+            **first_doctor,
+            "email": "doctor-two@example.com",
+            "first_name": "Second",
+        }
+
+        response = client.post(url, first_doctor)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        response = client.post(url, second_doctor)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.data["license_number"] == ["Ce numéro RPPS est déjà utilisé."]
+        assert AuthAccount.objects.filter(email="doctor-two@example.com").count() == 0
+        assert DoctorProfile.objects.filter(license_number="123456789").count() == 1
 
     def test_login_success(self, client):
         # Setup User
