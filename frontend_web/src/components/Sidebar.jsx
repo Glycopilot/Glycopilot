@@ -4,6 +4,7 @@ import authService from '../services/authService';
 import { devWarn } from '../lib/logger';
 import { getInitials } from '../lib/utils';
 import logo from '../assets/glycopilot.png';
+import HelpButton from './tour/HelpButton';
 
 const apiClient = authService.getApiClient();
 

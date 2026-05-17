@@ -1,11 +1,12 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 
 import pytest
 from rest_framework.test import APIClient
 
-from apps.alerts.models import AlertEvent, AlertRule, UserAlertRule
+from apps.alerts.models import AlertEvent, AlertRule, AlertSeverity, UserAlertRule
 from apps.alerts.services.trigger import trigger_for_value
 
 User = get_user_model()
@@ -127,3 +128,149 @@ def test_cooldown_allows_history_but_limits_push():
     events = list(AlertEvent.objects.order_by("triggered_at"))
     assert events[0].push_sent_at is not None
     assert events[1].push_sent_at is None
+
+
+# ---------------------------------------------------------------------------
+# notify_proches_of_alert
+# ---------------------------------------------------------------------------
+
+def _make_patient_with_profile(email="pat@test.com"):
+    from apps.profiles.models import Profile, Role
+    from apps.users.models import User as UserIdentity
+    Role.objects.get_or_create(name="PATIENT")
+    identity = UserIdentity.objects.create(first_name="Patient", last_name="Test")
+    account = User.objects.create_user(email=email, password="pass", user_identity=identity)
+    Profile.objects.create(user=identity, role=Role.objects.get(name="PATIENT"))
+    return account
+
+
+def _make_proche_with_account(patient_auth, email="proche@test.com", is_active=True):
+    from apps.doctors.models import InvitationStatus, PatientCareTeam
+    from apps.profiles.models import Profile, Role
+    from apps.users.models import User as UserIdentity
+    Role.objects.get_or_create(name="FAMILY")
+    InvitationStatus.objects.get_or_create(label="ACTIVE")
+    identity = UserIdentity.objects.create(first_name="Proche", last_name="Test")
+    account = User.objects.create_user(email=email, password="pass", user_identity=identity)
+    account.is_active = is_active
+    account.save(update_fields=["is_active"])
+    role_obj = Role.objects.get(name="FAMILY")
+    member_profile = Profile.objects.create(user=identity, role=role_obj)
+    patient_profile = (
+        patient_auth.user.profiles.filter(role__name="PATIENT").first().patient_profile
+    )
+    PatientCareTeam.objects.create(
+        patient_profile=patient_profile,
+        member_profile=member_profile,
+        role="FAMILY",
+        status=InvitationStatus.objects.get(label="ACTIVE"),
+    )
+    return account
+
+
+def _make_event(patient_auth, code="HYPO"):
+    rule = AlertRule.objects.create(
+        code=code, name=code, max_glycemia=70, severity=5, is_active=True
+    )
+    return AlertEvent.objects.create(
+        user=patient_auth, rule=rule, glycemia_value=65,
+    )
+
+
+@pytest.mark.django_db
+def test_notify_proches_sends_push_to_active_proche():
+    patient = _make_patient_with_profile("pat_notif@test.com")
+    proche = _make_proche_with_account(patient, "proche_notif@test.com")
+    event = _make_event(patient)
+
+    with patch("apps.alerts.services.notify_proches.send_push_to_user") as mock_push:
+        mock_push.return_value = {"success": True}
+        from apps.alerts.services.notify_proches import notify_proches_of_alert
+        notify_proches_of_alert(patient, [event])
+
+    mock_push.assert_called_once()
+    call_args = mock_push.call_args
+    assert call_args[0][0].email == "proche_notif@test.com"
+    assert "Patient Test" in call_args[0][1]  # title contient le nom du patient
+
+
+@pytest.mark.django_db
+def test_notify_proches_ignores_proche_without_account():
+    """Un proche sans AuthAccount (shell) ne doit pas planter."""
+    from apps.doctors.models import InvitationStatus, PatientCareTeam
+    from apps.profiles.models import Profile, Role
+    from apps.users.models import User as UserIdentity
+    patient = _make_patient_with_profile("pat_shell@test.com")
+    Role.objects.get_or_create(name="FAMILY")
+    InvitationStatus.objects.get_or_create(label="ACTIVE")
+    identity = UserIdentity.objects.create(first_name="Shell", last_name="Proche")
+    role_obj = Role.objects.get(name="FAMILY")
+    member_profile = Profile.objects.create(user=identity, role=role_obj)
+    patient_profile = patient.user.profiles.filter(role__name="PATIENT").first().patient_profile
+    PatientCareTeam.objects.create(
+        patient_profile=patient_profile,
+        member_profile=member_profile,
+        role="FAMILY",
+        status=InvitationStatus.objects.get(label="ACTIVE"),
+    )
+    event = _make_event(patient, code="HYPO2")
+
+    with patch("apps.alerts.services.notify_proches.send_push_to_user") as mock_push:
+        from apps.alerts.services.notify_proches import notify_proches_of_alert
+        notify_proches_of_alert(patient, [event])
+
+    mock_push.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_notify_proches_ignores_inactive_proche_account():
+    patient = _make_patient_with_profile("pat_inactive@test.com")
+    _make_proche_with_account(patient, "proche_inactive@test.com", is_active=False)
+    event = _make_event(patient, code="HYPO3")
+
+    with patch("apps.alerts.services.notify_proches.send_push_to_user") as mock_push:
+        from apps.alerts.services.notify_proches import notify_proches_of_alert
+        notify_proches_of_alert(patient, [event])
+
+    mock_push.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_notify_proches_empty_events_does_nothing():
+    patient = _make_patient_with_profile("pat_empty@test.com")
+    _make_proche_with_account(patient, "proche_empty@test.com")
+
+    with patch("apps.alerts.services.notify_proches.send_push_to_user") as mock_push:
+        from apps.alerts.services.notify_proches import notify_proches_of_alert
+        notify_proches_of_alert(patient, [])
+
+    mock_push.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_init_alert_rules_creates_and_updates_defaults():
+    call_command("init_alert_rules")
+
+    assert AlertRule.objects.filter(
+        code="HYPO", severity=AlertSeverity.CRITICAL
+    ).exists()
+    assert AlertRule.objects.filter(code="HYPER", severity=AlertSeverity.HIGH).exists()
+    assert AlertRule.objects.get(code="HYPO").name == "Hypoglycémie"
+
+
+@pytest.mark.django_db
+def test_subscribe_all_users_creates_missing_subscriptions():
+    user_a = mk_user("alert-a@example.com")
+    user_b = mk_user("alert-b@example.com")
+    active = AlertRule.objects.create(code="ACTIVE", name="Active", is_active=True)
+    AlertRule.objects.create(code="INACTIVE", name="Inactive", is_active=False)
+
+    call_command("subscribe_all_users")
+
+    assert UserAlertRule.objects.filter(user=user_a, rule=active).exists()
+    assert UserAlertRule.objects.filter(user=user_b, rule=active).exists()
+    assert UserAlertRule.objects.count() == 2
+
+    call_command("subscribe_all_users")
+
+    assert UserAlertRule.objects.count() == 2

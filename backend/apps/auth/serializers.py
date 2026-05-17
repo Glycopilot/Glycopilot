@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -11,6 +13,37 @@ from apps.profiles.models import Profile, Role
 from apps.users.models import User
 
 AuthAccount = get_user_model()
+logger = logging.getLogger(__name__)
+
+
+def _verify_email_domain(email: str) -> None:
+    """
+    Vérifie que le domaine de l'email possède un enregistrement MX valide.
+    Lève ValidationError si le domaine n'existe pas ou ne peut pas recevoir d'emails.
+    En cas d'erreur réseau (timeout, DNS indisponible), laisse passer sans bloquer.
+    """
+    try:
+        import dns.resolver
+        import dns.exception
+
+        domain = email.split("@")[1]
+        if "." not in domain:
+            raise serializers.ValidationError(
+                "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
+            )
+        try:
+            resolver = dns.resolver.Resolver()
+            resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+            resolver.resolve(domain, "MX", lifetime=3.0)
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
+            raise serializers.ValidationError(
+                "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
+            )
+        except (dns.resolver.Timeout, dns.exception.DNSException):
+            # Réseau indisponible ou timeout → on laisse passer pour ne pas bloquer l'inscription
+            logger.warning("DNS lookup timeout during MX check")
+    except ImportError:
+        logger.warning("dnspython not installed, skipping MX check")
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -47,9 +80,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         ]
 
     def validate_email(self, value):
+        value = value.lower()
         if AuthAccount.objects.filter(email=value).exists():
             raise serializers.ValidationError("Cet email est déjà utilisé.")
-        return value.lower()
+        _verify_email_domain(value)
+        return value
 
     def validate_role(self, value):
         allowed_public = ("PATIENT", "DOCTOR")

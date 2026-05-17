@@ -3,7 +3,11 @@ Tests : création compte patient, invitations, admin valide le docteur,
 docteur non validé = indisponible pour le patient, docteur validé peut ajouter un patient.
 """
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+import requests
 
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -14,6 +18,8 @@ from apps.doctors.models import (
     PatientCareTeam,
     VerificationStatus,
 )
+from apps.doctors.doctor_patient_access import verify_doctor_can_access_patient
+from apps.doctors.services.verification import DoctorVerificationService
 from apps.profiles.models import Profile, Role
 from apps.users.models import User as UserIdentity
 
@@ -93,6 +99,71 @@ class CareTeamIntegrationTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("active_patients", response.data)
         self.assertIn("pending_invites", response.data)
+
+
+class DoctorVerificationServiceTests(CareTeamIntegrationTests):
+    @override_settings(LICENCE_VERIFICATION_API=None)
+    def test_verify_license_returns_false_when_api_is_not_configured(self):
+        self.assertFalse(DoctorVerificationService.verify_license("123456789"))
+
+    @override_settings(LICENCE_VERIFICATION_API="https://annuaire.test/Practitioner")
+    def test_verify_license_returns_false_without_license_number(self):
+        self.assertFalse(DoctorVerificationService.verify_license(""))
+
+    @override_settings(LICENCE_VERIFICATION_API="https://annuaire.test/Practitioner")
+    @patch("apps.doctors.services.verification.requests.get")
+    def test_verify_license_accepts_fhir_bundle_with_entries(self, mock_get):
+        response = MagicMock(status_code=200)
+        response.json.return_value = {
+            "resourceType": "Bundle",
+            "total": 1,
+            "entry": [{"resource": {"id": "doctor-1"}}],
+        }
+        mock_get.return_value = response
+
+        self.assertTrue(DoctorVerificationService.verify_license("RPPS123"))
+        mock_get.assert_called_once_with(
+            "https://annuaire.test/Practitioner?identifier=RPPS123", timeout=5
+        )
+
+    @override_settings(
+        LICENCE_VERIFICATION_API="https://annuaire.test/Practitioner?active=true"
+    )
+    @patch("apps.doctors.services.verification.requests.get")
+    def test_verify_license_uses_ampersand_when_api_url_has_query(self, mock_get):
+        response = MagicMock(status_code=200)
+        response.json.return_value = {"resourceType": "Bundle", "total": 0, "entry": []}
+        mock_get.return_value = response
+
+        self.assertFalse(DoctorVerificationService.verify_license("RPPS123"))
+        mock_get.assert_called_once_with(
+            "https://annuaire.test/Practitioner?active=true&identifier=RPPS123",
+            timeout=5,
+        )
+
+    @override_settings(LICENCE_VERIFICATION_API="https://annuaire.test/Practitioner")
+    @patch("apps.doctors.services.verification.requests.get")
+    def test_verify_license_rejects_non_success_status(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=503)
+
+        self.assertFalse(DoctorVerificationService.verify_license("RPPS123"))
+
+    @override_settings(LICENCE_VERIFICATION_API="https://annuaire.test/Practitioner")
+    @patch("apps.doctors.services.verification.requests.get")
+    def test_verify_license_rejects_non_json_response(self, mock_get):
+        response = MagicMock(status_code=200)
+        response.json.side_effect = requests.exceptions.JSONDecodeError("bad", "", 0)
+        mock_get.return_value = response
+
+        self.assertFalse(DoctorVerificationService.verify_license("RPPS123"))
+
+    @override_settings(LICENCE_VERIFICATION_API="https://annuaire.test/Practitioner")
+    @patch("apps.doctors.services.verification.requests.get")
+    def test_verify_license_handles_request_exception(self, mock_get):
+        mock_get.side_effect = requests.RequestException("network down")
+
+        self.assertFalse(DoctorVerificationService.verify_license("RPPS123"))
+
 
     def test_care_team_accept_invitation(self):
         """POST /api/doctors/care-team/accept-invitation/ (route existe)."""
@@ -177,7 +248,10 @@ class CareTeamIntegrationTests(TestCase):
         self.assertEqual(doc_prof.verification_status.label, "REJECTED")
 
     def test_patient_register_creates_account(self):
-        """Création d'un compte patient via l'API register."""
+        """Création d'un compte patient via l'API register.
+        Depuis l'ajout de la vérification email, retourne un message (pas de JWT).
+        """
+        from unittest.mock import patch
         data = {
             "email": "patient_care@test.com",
             "password": "Password123!",
@@ -186,9 +260,12 @@ class CareTeamIntegrationTests(TestCase):
             "last_name": "Patient",
             "role": "PATIENT",
         }
-        response = self.client.post("/api/auth/register/", data)
+        with patch("apps.auth.serializers._verify_email_domain"), \
+             patch("apps.auth.views._send_verification_link"):
+            response = self.client.post("/api/auth/register/", data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
         self.assertTrue(User.objects.filter(email="patient_care@test.com").exists())
 
     def test_patient_invite_unverified_doctor_returns_not_available(self):
@@ -332,7 +409,7 @@ class CareTeamIntegrationTests(TestCase):
             "/api/auth/login/", {"email": "unv_doc@test.com", "password": "pass123"}
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("non_field_errors", response.data)
+        self.assertIn("error", response.data)
 
     def test_verified_doctor_can_add_patient(self):
         """Après validation par l'admin, le docteur peut ajouter un patient."""
@@ -482,3 +559,65 @@ class CareTeamIntegrationTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("active_patients", response.data)
         self.assertIn("pending_invites", response.data)
+
+
+class DoctorPatientAccessTests(TestCase):
+    def _request(self, user=None, query=None, data=None):
+        return SimpleNamespace(
+            user=user,
+            query_params=query or {},
+            data=data or {},
+        )
+
+    def test_access_requires_patient_id(self):
+        patient, response = verify_doctor_can_access_patient(self._request())
+
+        self.assertIsNone(patient)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["error"], "patient_user_id is required")
+
+    def test_access_rejects_non_doctor_user(self):
+        user = SimpleNamespace(profiles=MagicMock())
+        user.profiles.filter.return_value.first.return_value = None
+
+        patient, response = verify_doctor_can_access_patient(
+            self._request(user=user, query={"patient_user_id": "patient-1"})
+        )
+
+        self.assertIsNone(patient)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("Doctors only", response.data["error"])
+
+    @patch("apps.doctors.doctor_patient_access.PatientCareTeam.objects.filter")
+    def test_access_rejects_doctor_without_active_care_team_entry(self, filter_mock):
+        doctor_profile = SimpleNamespace(doctor_profile=SimpleNamespace())
+        doctor = SimpleNamespace(profiles=MagicMock())
+        doctor.profiles.filter.return_value.first.return_value = doctor_profile
+        filter_mock.return_value.exists.return_value = False
+
+        patient, response = verify_doctor_can_access_patient(
+            self._request(user=doctor, query={"patient_user_id": "patient-1"})
+        )
+
+        self.assertIsNone(patient)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("not an active doctor", response.data["error"])
+
+    @patch("apps.doctors.doctor_patient_access.AuthAccount.objects.get")
+    @patch("apps.doctors.doctor_patient_access.PatientCareTeam.objects.filter")
+    def test_access_returns_patient_when_doctor_has_active_relation(
+        self, filter_mock, get_mock
+    ):
+        doctor_profile = SimpleNamespace(doctor_profile=SimpleNamespace())
+        doctor = SimpleNamespace(profiles=MagicMock())
+        doctor.profiles.filter.return_value.first.return_value = doctor_profile
+        filter_mock.return_value.exists.return_value = True
+        patient_account = SimpleNamespace(email="patient@example.com")
+        get_mock.return_value = patient_account
+
+        patient, response = verify_doctor_can_access_patient(
+            self._request(user=doctor, data={"patient_id": "patient-1"})
+        )
+
+        self.assertIs(patient, patient_account)
+        self.assertIsNone(response)

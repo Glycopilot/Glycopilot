@@ -22,6 +22,7 @@ module.exports = {
     coverageDirectory: 'coverage',
     coverageReporters: ['lcov', 'text', 'html'],
     moduleNameMapper: {
+        '^expo-camera$': '<rootDir>/__mocks__/expo-camera.js',
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@components/(.*)$': '<rootDir>/src/components/$1',
         '^@screens/(.*)$': '<rootDir>/src/screens/$1',
