@@ -1,11 +1,12 @@
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 
 import pytest
 from rest_framework.test import APIClient
 
-from apps.alerts.models import AlertEvent, AlertRule, UserAlertRule
+from apps.alerts.models import AlertEvent, AlertRule, AlertSeverity, UserAlertRule
 from apps.alerts.services.trigger import trigger_for_value
 
 User = get_user_model()
@@ -244,3 +245,32 @@ def test_notify_proches_empty_events_does_nothing():
         notify_proches_of_alert(patient, [])
 
     mock_push.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_init_alert_rules_creates_and_updates_defaults():
+    call_command("init_alert_rules")
+
+    assert AlertRule.objects.filter(
+        code="HYPO", severity=AlertSeverity.CRITICAL
+    ).exists()
+    assert AlertRule.objects.filter(code="HYPER", severity=AlertSeverity.HIGH).exists()
+    assert AlertRule.objects.get(code="HYPO").name == "Hypoglycémie"
+
+
+@pytest.mark.django_db
+def test_subscribe_all_users_creates_missing_subscriptions():
+    user_a = mk_user("alert-a@example.com")
+    user_b = mk_user("alert-b@example.com")
+    active = AlertRule.objects.create(code="ACTIVE", name="Active", is_active=True)
+    AlertRule.objects.create(code="INACTIVE", name="Inactive", is_active=False)
+
+    call_command("subscribe_all_users")
+
+    assert UserAlertRule.objects.filter(user=user_a, rule=active).exists()
+    assert UserAlertRule.objects.filter(user=user_b, rule=active).exists()
+    assert UserAlertRule.objects.count() == 2
+
+    call_command("subscribe_all_users")
+
+    assert UserAlertRule.objects.count() == 2
