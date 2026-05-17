@@ -109,7 +109,21 @@ class CareTeamViewSet(viewsets.ViewSet):
                 existing_auth = AuthAccount.objects.filter(email=email).first()
 
                 if existing_auth and existing_auth.is_active:
-                    # Proche déjà inscrit et actif → lier directement
+                    # Vérifier si ce compte est déjà proche actif d'un autre patient
+                    is_already_proche = PatientCareTeam.objects.filter(
+                        member_profile__user=existing_auth.user,
+                        role__in=["FAMILY", "CAREGIVER", "NURSE"],
+                        status__label="ACTIVE",
+                    ).exists()
+                    if is_already_proche:
+                        return Response(
+                            {
+                                "error": "Cette personne suit déjà un patient sur Glycopilot. Un proche ne peut suivre qu'un seul patient à la fois.",
+                                "code": "already_proche",
+                            },
+                            status=409,
+                        )
+                    # Proche déjà inscrit et actif, pas encore proche → lier directement
                     member_profile, _ = Profile.objects.get_or_create(
                         user=existing_auth.user, role=role_obj
                     )
@@ -604,10 +618,14 @@ class CareTeamViewSet(viewsets.ViewSet):
         family = team.filter(
             role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="ACTIVE"
         )
+        pending_family = team.filter(
+            role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="PENDING"
+        )
         data = {
             "doctors": PatientCareTeamSerializer(doctors, many=True).data,
             "pending_doctor_invites": PatientCareTeamSerializer(pending_doctor_invites, many=True).data,
             "family": PatientCareTeamSerializer(family, many=True).data,
+            "pending_family": PatientCareTeamSerializer(pending_family, many=True).data,
         }
         return Response(data)
 
@@ -788,7 +806,7 @@ class CareTeamViewSet(viewsets.ViewSet):
         from apps.glycemia.models import GlycemiaHisto
         last_loc = (
             GlycemiaHisto.objects
-            .filter(user=patient_user, location_lat__isnull=False, location_lng__isnull=False)
+            .filter(user=patient_auth, location_lat__isnull=False, location_lng__isnull=False)
             .order_by("-measured_at")
             .values("location_lat", "location_lng", "measured_at")
             .first()
@@ -871,4 +889,49 @@ class CareTeamViewSet(viewsets.ViewSet):
             }
             for a in alerts
         ]
+        return Response(result)
+
+    @action(detail=False, methods=["get"], url_path="proche-medications")
+    def get_proche_medications(self, request):
+        """
+        GET /api/doctors/care-team/proche-medications/
+        Suivi des médicaments du patient lié (30 derniers jours).
+        """
+        patient_auth, _, error = verify_proche_can_access_patient(request)
+        if error:
+            return error
+
+        from apps.medications.models import MedicationIntake, IntakeStatus
+        from django.utils import timezone
+        from datetime import timedelta
+
+        since = (timezone.now() - timedelta(days=30)).date()
+        intakes = (
+            MedicationIntake.objects.filter(
+                user_medication__user=patient_auth,
+                scheduled_date__gte=since,
+            )
+            .select_related("user_medication__medication")
+            .order_by("-scheduled_date", "-scheduled_time")[:50]
+        )
+
+        result = []
+        for i in intakes:
+            um = i.user_medication
+            if um.medication:
+                name = um.medication.name
+                dosage = um.medication.dosage
+            elif um.custom_name:
+                name = um.custom_name
+                dosage = um.custom_dosage or ""
+            else:
+                continue
+            result.append({
+                "id": str(i.pk),
+                "name": name,
+                "dosage": dosage,
+                "taken": i.status == IntakeStatus.TAKEN,
+                "takenAt": i.taken_at,
+                "scheduledAt": f"{i.scheduled_date}T{i.scheduled_time}",
+            })
         return Response(result)

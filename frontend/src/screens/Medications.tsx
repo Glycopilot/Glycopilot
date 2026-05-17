@@ -198,7 +198,7 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
 
   if (loading) {
     return (
-      <Layout navigation={navigation} currentRoute="Home" userName="">
+      <Layout navigation={navigation} currentRoute="Journal" userName="">
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>

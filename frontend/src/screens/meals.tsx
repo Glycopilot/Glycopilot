@@ -531,7 +531,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
   const { subtitle: headerSubtitle, sectionTitle } = getHeaderTexts(viewMode, weekStart, weekEnd, isToday, selectedDate);
 
   return (
-    <Layout navigation={navigation} currentRoute="Home" userName="Utilisateur">
+    <Layout navigation={navigation} currentRoute="Journal" userName="Utilisateur">
       <View style={{ flex: 1 }}>
         <ScrollView
           style={styles.container}

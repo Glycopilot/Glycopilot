@@ -1,4 +1,6 @@
 import apiClient from './apiClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDeviceLocation } from '../utils/getDeviceLocation';
 import type {
   GlycemiaEntry,
   GlycemiaHistoryParams,
@@ -6,6 +8,21 @@ import type {
   GlycemiaChartData,
 } from '../types/glycemia.types';
 import { AxiosError } from 'axios';
+
+const LOCATION_PROCHE_KEY = '@glycopilot:location_proche_enabled';
+
+async function getLocationForAlert(value: number): Promise<{ location_lat?: number; location_lng?: number }> {
+  if (value >= 70 && value <= 180) return {};
+  try {
+    const enabled = await AsyncStorage.getItem(LOCATION_PROCHE_KEY);
+    if (enabled !== 'true') return {};
+    const coords = await getDeviceLocation();
+    if (!coords) return {};
+    return { location_lat: coords.lat, location_lng: coords.lng };
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Service pour gérer les données de glycémie
@@ -107,6 +124,7 @@ const glycemiaService = {
    * Crée une nouvelle mesure de glycémie manuelle
    * Backend: POST /api/glycemia/manual-readings/
    */
+
   async createManualReading(data: {
     measured_at: string;
     value: number;
@@ -123,9 +141,10 @@ const glycemiaService = {
     notes?: string;
   }): Promise<GlycemiaEntry | null> {
     try {
+      const locationData = await getLocationForAlert(data.value);
       const response = await apiClient.post<GlycemiaEntry>(
         '/glycemia/manual-readings/',
-        data
+        { ...data, ...locationData }
       );
       return response.data;
     } catch (error) {
@@ -150,9 +169,10 @@ const glycemiaService = {
     notes?: string;
   }): Promise<GlycemiaEntry | null> {
     try {
+      const locationData = await getLocationForAlert(data.value);
       const response = await apiClient.post<GlycemiaEntry>(
         '/glycemia/cgm-readings/',
-        data
+        { ...data, ...locationData }
       );
       return response.data;
     } catch (error) {

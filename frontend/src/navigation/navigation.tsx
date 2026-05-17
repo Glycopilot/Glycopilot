@@ -15,6 +15,7 @@ import PredictionsScreen from '../screens/Predictions';
 import ProcheActivationScreen from '../screens/ProcheActivation';
 import ProcheHomeScreen from '../screens/ProcheHome';
 import ProcheGlycemiaScreen from '../screens/ProcheGlycemia';
+import ProcheMedicationsScreen from '../screens/ProcheMedications';
 import { setNavigate } from './navigationRef';
 
 type ScreenName =
@@ -33,7 +34,8 @@ type ScreenName =
   | 'Predictions'
   | 'ProcheActivation'
   | 'ProcheHome'
-  | 'ProcheGlycemia';
+  | 'ProcheGlycemia'
+  | 'ProcheMedications';
 
 export default function AppNavigator() {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('Login');
@@ -77,6 +79,9 @@ export default function AppNavigator() {
   if (currentScreen === 'ProcheHome') return <ProcheHomeScreen navigation={navigation} />;
   if (currentScreen === 'ProcheGlycemia') {
     return <ProcheGlycemiaScreen navigation={navigation} patientName={prochePatientName} />;
+  }
+  if (currentScreen === 'ProcheMedications') {
+    return <ProcheMedicationsScreen navigation={navigation} />;
   }
 
   return <LoginScreen navigation={navigation} />;

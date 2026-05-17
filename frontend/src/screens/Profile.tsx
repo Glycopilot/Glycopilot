@@ -10,7 +10,6 @@ import {
 import {
   Bell,
   Shield,
-  MapPin,
   Settings,
   FileText,
   HelpCircle,
@@ -30,7 +29,6 @@ import SettingsMenu, {
 import ProfileActions from '../components/profile/ProfileActions';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import AddContactModal from '../components/profile/AddContactModal';
-import LocationModal from '../components/profile/LocationModal';
 import InviteDoctorModal from '../components/profile/InviteDoctorModal';
 import doctorService from '../services/doctorService';
 import { toastSuccess, toastError } from '../services/toastService';
@@ -74,7 +72,6 @@ export default function ProfileScreen({
   const [showDiabetesTypePicker, setShowDiabetesTypePicker] = useState(false);
 
   // Modal de localisation
-  const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   // Modal invitation médecin
   const [inviteDoctorModalVisible, setInviteDoctorModalVisible] = useState(false);
@@ -128,8 +125,18 @@ export default function ProfileScreen({
         name: `${f.member_details.first_name} ${f.member_details.last_name}`,
         relation: f.relation_type || 'Proche',
         phone: f.member_details.phone_number || '',
+        email: f.member_details.email ?? undefined,
+        status: 'ACTIVE' as const,
       }));
-      setEmergencyContacts(family);
+      const pendingFamily = (team.pending_family ?? []).map(f => ({
+        id: f.id_team_member,
+        name: `${f.member_details.first_name} ${f.member_details.last_name}`,
+        relation: f.relation_type || 'Proche',
+        phone: f.member_details.phone_number || '',
+        email: f.member_details.email ?? undefined,
+        status: 'PENDING' as const,
+      }));
+      setEmergencyContacts([...family, ...pendingFamily]);
     } catch {
       setDoctor(null);
       setPendingInvites([]);
@@ -224,12 +231,6 @@ export default function ProfileScreen({
       route: 'Notifications',
     },
     {
-      id: 'location',
-      icon: MapPin,
-      label: 'Localisation',
-      action: () => setLocationModalVisible(true),
-    },
-    {
       id: 'security',
       icon: Shield,
       label: 'Sécurité & Confidentialité',
@@ -285,13 +286,31 @@ export default function ProfileScreen({
       setContactPhone('');
       setContactEmail('');
 
-      if (result.invitation_sent) {
-        toastSuccess('Invitation envoyée', `Un email a été envoyé à ${contactEmail.trim()}`);
+      if (!result.invitation_sent) {
+        toastSuccess('Proche ajouté', `${contactName} a été ajouté à vos proches.`);
+      } else if (result.status === 'ACTIVE') {
+        toastSuccess(
+          'Proche ajouté',
+          `${contactName} a déjà un compte Glycopilot et a été directement lié à votre équipe.`
+        );
       } else {
-        toastSuccess('Contact ajouté', `${contactName} a été ajouté à vos proches`);
+        toastSuccess(
+          'Invitation envoyée',
+          `Un code d'activation a été envoyé à ${contactEmail.trim()}.`
+        );
       }
     } catch (error) {
-      toastError('Erreur', (error as Error).message || "Impossible d'ajouter le contact");
+      const err = error as Error & { code?: string };
+      if (err.code === 'already_proche') {
+        setModalVisible(false);
+        Alert.alert(
+          'Proche déjà lié',
+          "Cette personne suit déjà un patient sur Glycopilot.\n\nUn proche ne peut suivre qu'un seul patient à la fois : elle ne pourra pas accéder à votre glycémie.",
+          [{ text: 'Compris', style: 'default' }]
+        );
+      } else {
+        toastError('Erreur', err.message || "Impossible d'ajouter le proche");
+      }
     }
   };
 
@@ -306,8 +325,8 @@ export default function ProfileScreen({
 
   const removeContact = (id: string): void => {
     Alert.alert(
-      'Supprimer le contact',
-      "Êtes-vous sûr de vouloir supprimer ce contact d'urgence ?",
+      'Retirer le proche',
+      'Êtes-vous sûr de vouloir retirer ce proche de votre équipe ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -506,7 +525,10 @@ export default function ProfileScreen({
         <EmergencyContactsList
           contacts={emergencyContacts}
           onAddContact={() => setModalVisible(true)}
-          onCallContact={id => console.log('Appeler contact:', id)}
+          onCallContact={id => {
+            const contact = emergencyContacts.find(c => c.id === id);
+            if (contact?.phone) Linking.openURL(`tel:${contact.phone}`);
+          }}
           onDeleteContact={removeContact}
           onEditContact={openEditContact}
         />
@@ -572,13 +594,6 @@ export default function ProfileScreen({
         onSubmit={handleUpdateProfile}
       />
 
-      <LocationModal
-        visible={locationModalVisible}
-        onClose={() => setLocationModalVisible(false)}
-        onLocationUpdate={(lat, lng, address) => {
-          console.log('Position mise à jour:', { lat, lng, address });
-        }}
-      />
 
       <InviteDoctorModal
         visible={inviteDoctorModalVisible}

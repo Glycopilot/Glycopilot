@@ -15,7 +15,7 @@ import {
   LogOut,
   Calendar,
   Heart,
-  Utensils,
+  Pill,
   AlertTriangle,
   TrendingUp,
   TrendingDown,
@@ -255,18 +255,29 @@ function HomeTab({ navigation, onTabChange }: HomeTabProps) {
             subtitle="Score de santé"
           />
         )}
-        {dashboard?.nutrition && (
-          <StatCard
-            title="Nutrition"
-            icon={Utensils}
-            iconColor="#10B981"
-            iconBgColor="#D1FAE5"
-            value={dashboard.nutrition.calories.consumed}
-            secondaryValue={dashboard.nutrition.calories.goal}
-            subtitle="kcal aujourd'hui"
-          />
-        )}
       </View>
+
+      {dashboard?.medication != null && (
+        <View style={styles.medCard}>
+          <View style={styles.medHeader}>
+            <View style={styles.medIcon}>
+              <Pill size={20} color="#8B5CF6" strokeWidth={2} />
+            </View>
+            <Text style={styles.medTitle}>Prochain médicament</Text>
+          </View>
+          {dashboard.medication.nextDose ? (
+            <View style={styles.medBody}>
+              <Text style={styles.medName}>{dashboard.medication.nextDose.name}</Text>
+              <Text style={styles.medDosage}>{dashboard.medication.nextDose.dosage}</Text>
+              <View style={styles.medBadge}>
+                <Text style={styles.medBadgeText}>En attente</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.medEmpty}>Aucune prise prévue</Text>
+          )}
+        </View>
+      )}
 
       {alerts.length > 0 && (
         <>
@@ -319,6 +330,19 @@ function HomeTab({ navigation, onTabChange }: HomeTabProps) {
         <ChevronRight size={18} color={colors.secondary} />
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.historyBtn} onPress={() => navigation.navigate('ProcheMedications')}>
+        <View style={styles.historyBtnLeft}>
+          <View style={[styles.historyIcon, { backgroundColor: '#EDE9FE' }]}>
+            <Pill size={20} color="#8B5CF6" />
+          </View>
+          <View>
+            <Text style={styles.historyBtnText}>Suivi des médicaments</Text>
+            <Text style={styles.historyBtnSub}>Voir les prises du patient</Text>
+          </View>
+        </View>
+        <ChevronRight size={18} color={colors.secondary} />
+      </TouchableOpacity>
+
       <View style={{ height: 24 }} />
     </ScrollView>
   );
@@ -328,7 +352,7 @@ function HomeTab({ navigation, onTabChange }: HomeTabProps) {
 
 export default function ProcheHome({ navigation }: Readonly<Props>) {
   const [activeTab, setActiveTab] = useState<ProcheTab>('home');
-  const { patient, loading, dashboard } = useProche();
+  const { patient, loading, dashboard, refresh } = useProche();
 
   const alertCount = dashboard?.alerts?.length ?? 0;
 
@@ -369,7 +393,7 @@ export default function ProcheHome({ navigation }: Readonly<Props>) {
         )}
         {activeTab === 'alerts' && <ProcheAlertsView />}
         {activeTab === 'location' && (
-          <ProcheLocationView patient={patient} loading={loading} />
+          <ProcheLocationView patient={patient} loading={loading} onRefresh={refresh} />
         )}
         {activeTab === 'profile' && (
           <ProcheProfileView onLogout={handleLogout} />
@@ -422,6 +446,68 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#8E8E93' },
   seeAllLink: { fontSize: 13, fontWeight: '600', color: colors.secondary },
 
+  medCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  medHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  medIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#EDE9FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  medBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  medName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  medDosage: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  medBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  medBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  medEmpty: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -471,4 +557,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#EBF5FF', alignItems: 'center', justifyContent: 'center',
   },
   historyBtnText: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  historyBtnSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 });
