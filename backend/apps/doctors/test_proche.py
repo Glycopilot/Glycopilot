@@ -2,23 +2,23 @@
 Tests : fonctionnalités Proche.
 
 Couvre :
-  - add_family_member : sans email (shell), avec nouvel email (PENDING), avec email existant (ACTIVE)
-  - activate_proche_account : token valide, token invalide
+  - add_family_member : sans email (shell), avec nouvel email (PENDING), avec email existant (ACTIVE),
+    anti-doublon (400), already_proche (409)
+  - validate_proche_code : code valide, code invalide, champs manquants
+  - activate_proche_account : code valide (active + mot de passe), code invalide, réutilisation
   - update_member : PATCH champs, protection patient
-  - Endpoints lecture proche : my-linked-patient, proche-glycemia, proche-dashboard
+  - my-team : pending_family inclus
+  - Endpoints lecture proche : my-linked-patient, proche-glycemia, proche-dashboard,
+    proche-medications
 """
 from unittest.mock import patch
 
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
-
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 
 from rest_framework import status
 from rest_framework.test import APIClient
+from django.test import TestCase
 
-from apps.auth.tokens import email_verification_token
 from apps.doctors.models import InvitationStatus, PatientCareTeam
 from apps.profiles.models import Profile, Role
 from apps.users.models import User as UserIdentity
@@ -83,7 +83,7 @@ class AddFamilyMemberTests(TestCase):
         entry = PatientCareTeam.objects.get(id_team_member=resp.data["id"])
         self.assertFalse(User.objects.filter(user=entry.member_profile.user).exists())
 
-    def test_add_family_with_new_email_creates_pending_account(self, ):
+    def test_add_family_with_new_email_creates_pending_account(self):
         resp = self.client.post("/api/doctors/care-team/add-family/", {
             "first_name": "Luc", "last_name": "Proche",
             "email": "luc@proche.com", "role": "FAMILY",
@@ -102,10 +102,8 @@ class AddFamilyMemberTests(TestCase):
         })
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("proche/activate", mail.outbox[0].body)
 
     def test_add_family_with_existing_email_links_and_activates(self):
-        # Créer un compte existant
         existing_identity = UserIdentity.objects.create(first_name="Ex", last_name="User")
         User.objects.create_user(email="existing@test.com", password="x", user_identity=existing_identity)
         Role.objects.get_or_create(name="PATIENT")
@@ -117,6 +115,35 @@ class AddFamilyMemberTests(TestCase):
         })
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resp.data["status"], "ACTIVE")
+
+    def test_add_family_duplicate_email_returns_400(self):
+        # Première invitation
+        self.client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Dup", "last_name": "Test",
+            "email": "dup@proche.com", "role": "FAMILY",
+        })
+        # Deuxième invitation avec le même email → anti-doublon
+        resp = self.client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Dup", "last_name": "Test",
+            "email": "dup@proche.com", "role": "FAMILY",
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", resp.data)
+
+    def test_add_family_already_proche_returns_409(self):
+        # Créer un autre patient
+        other_patient = _make_patient("other_patient@test.com")
+        # Créer un proche actif lié à l'autre patient
+        proche_email = "already_proche@test.com"
+        _make_proche_account(proche_email, other_patient)
+
+        # Notre patient tente d'inviter ce proche qui est déjà actif ailleurs
+        resp = self.client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Already", "last_name": "Proche",
+            "email": proche_email, "role": "FAMILY",
+        })
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(resp.data.get("code"), "already_proche")
 
     def test_add_family_invalid_role_returns_400(self):
         resp = self.client.post("/api/doctors/care-team/add-family/", {
@@ -136,7 +163,9 @@ class AddFamilyMemberTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-class ActivateProcheTests(TestCase):
+class ValidateProcheCodeTests(TestCase):
+    """Tests pour POST /api/doctors/care-team/validate-proche-code/"""
+
     def setUp(self):
         self.client = APIClient()
         Role.objects.get_or_create(name="PATIENT")
@@ -144,54 +173,101 @@ class ActivateProcheTests(TestCase):
         InvitationStatus.objects.get_or_create(label="ACTIVE")
         InvitationStatus.objects.get_or_create(label="PENDING")
 
-    def _make_pending_proche(self, email="proche@test.com"):
-        identity = UserIdentity.objects.create(first_name="Proche", last_name="Inactif")
-        account = User.objects.create_user(email=email, password=None, user_identity=identity)
-        account.is_active = False
-        account.save(update_fields=["is_active"])
-        return account
+        # Créer un patient et inviter un proche pour obtenir un code
+        self.patient = _make_patient("patient_val@test.com")
+        auth_client = APIClient()
+        r = auth_client.post("/api/auth/login/", {"email": "patient_val@test.com", "password": "pass123"})
+        auth_client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
+        auth_client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Code", "last_name": "Test",
+            "email": "proche_val@test.com", "role": "FAMILY",
+        })
+        self.proche_email = "proche_val@test.com"
+        self.code = PatientCareTeam.objects.get(invitation_email=self.proche_email).activation_code
 
-    def test_activate_valid_token_activates_account(self):
-        account = self._make_pending_proche()
-        uid = urlsafe_base64_encode(force_bytes(account.pk))
-        token = email_verification_token.make_token(account)
-
-        resp = self.client.post("/api/doctors/care-team/activate-proche/", {
-            "uid": uid, "token": token, "password": "NewPass123!",
+    def test_valid_code_returns_true(self):
+        resp = self.client.post("/api/doctors/care-team/validate-proche-code/", {
+            "email": self.proche_email,
+            "code": self.code,
         })
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        account.refresh_from_db()
+        self.assertTrue(resp.data["valid"])
+
+    def test_invalid_code_returns_400(self):
+        resp = self.client.post("/api/doctors/care-team/validate-proche-code/", {
+            "email": self.proche_email,
+            "code": "XXXXXX",
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_missing_fields_returns_400(self):
+        resp = self.client.post("/api/doctors/care-team/validate-proche-code/", {})
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unknown_email_returns_400(self):
+        resp = self.client.post("/api/doctors/care-team/validate-proche-code/", {
+            "email": "unknown@test.com",
+            "code": self.code,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_endpoint_is_public(self):
+        # Pas de credentials requis (authentication_classes=[])
+        resp = self.client.post("/api/doctors/care-team/validate-proche-code/", {
+            "email": self.proche_email,
+            "code": self.code,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+
+class ActivateProcheTests(TestCase):
+    """Tests pour POST /api/doctors/care-team/activate-proche/ (flow email+code+password)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        Role.objects.get_or_create(name="PATIENT")
+        Role.objects.get_or_create(name="FAMILY")
+        InvitationStatus.objects.get_or_create(label="ACTIVE")
+        InvitationStatus.objects.get_or_create(label="PENDING")
+
+        # Créer un patient et inviter un proche → PENDING entry avec activation_code
+        self.patient = _make_patient("patient_act@test.com")
+        auth_client = APIClient()
+        r = auth_client.post("/api/auth/login/", {"email": "patient_act@test.com", "password": "pass123"})
+        auth_client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
+        auth_client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Proche", "last_name": "Inactif",
+            "email": "proche_act@test.com", "role": "FAMILY",
+        })
+        self.proche_email = "proche_act@test.com"
+        self.code = PatientCareTeam.objects.get(invitation_email=self.proche_email).activation_code
+
+    def test_activate_valid_code_activates_account(self):
+        resp = self.client.post("/api/doctors/care-team/activate-proche/", {
+            "email": self.proche_email,
+            "code": self.code,
+            "password": "NewPass123!",
+        })
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        account = User.objects.get(email=self.proche_email)
         self.assertTrue(account.is_active)
         self.assertTrue(account.check_password("NewPass123!"))
 
-    def test_activate_sets_pending_careteam_to_active(self):
-        patient = _make_patient("patient_act@test.com")
-        proche_account = self._make_pending_proche("proche_act@test.com")
-        role_obj = Role.objects.get(name="FAMILY")
-        member_profile = Profile.objects.create(user=proche_account.user, role=role_obj)
-        patient_profile = patient.user.profiles.filter(role__name="PATIENT").first().patient_profile
-        pending_status = InvitationStatus.objects.get(label="PENDING")
-        PatientCareTeam.objects.create(
-            patient_profile=patient_profile,
-            member_profile=member_profile,
-            role="FAMILY",
-            status=pending_status,
-        )
-
-        uid = urlsafe_base64_encode(force_bytes(proche_account.pk))
-        token = email_verification_token.make_token(proche_account)
+    def test_activate_sets_careteam_status_to_active(self):
         self.client.post("/api/doctors/care-team/activate-proche/", {
-            "uid": uid, "token": token, "password": "NewPass123!",
+            "email": self.proche_email,
+            "code": self.code,
+            "password": "NewPass123!",
         })
-
-        entry = PatientCareTeam.objects.get(member_profile=member_profile)
+        entry = PatientCareTeam.objects.get(invitation_email=self.proche_email)
         self.assertEqual(entry.status.label, "ACTIVE")
+        self.assertIsNone(entry.activation_code)
 
-    def test_activate_invalid_token_returns_400(self):
-        account = self._make_pending_proche()
-        uid = urlsafe_base64_encode(force_bytes(account.pk))
+    def test_activate_invalid_code_returns_400(self):
         resp = self.client.post("/api/doctors/care-team/activate-proche/", {
-            "uid": uid, "token": "badtoken", "password": "x",
+            "email": self.proche_email,
+            "code": "BADCODE",
+            "password": "NewPass123!",
         })
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -199,17 +275,26 @@ class ActivateProcheTests(TestCase):
         resp = self.client.post("/api/doctors/care-team/activate-proche/", {})
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_activate_token_cannot_be_reused(self):
-        account = self._make_pending_proche()
-        uid = urlsafe_base64_encode(force_bytes(account.pk))
-        token = email_verification_token.make_token(account)
+    def test_activate_code_cannot_be_reused(self):
         self.client.post("/api/doctors/care-team/activate-proche/", {
-            "uid": uid, "token": token, "password": "NewPass123!",
+            "email": self.proche_email,
+            "code": self.code,
+            "password": "NewPass123!",
         })
         resp = self.client.post("/api/doctors/care-team/activate-proche/", {
-            "uid": uid, "token": token, "password": "NewPass123!",
+            "email": self.proche_email,
+            "code": self.code,
+            "password": "NewPass123!",
         })
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_endpoint_is_public(self):
+        resp = self.client.post("/api/doctors/care-team/activate-proche/", {
+            "email": self.proche_email,
+            "code": self.code,
+            "password": "NewPass123!",
+        })
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
 
 class UpdateMemberTests(TestCase):
@@ -222,7 +307,6 @@ class UpdateMemberTests(TestCase):
         r = self.client.post("/api/auth/login/", {"email": "patient_upd@test.com", "password": "pass123"})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
 
-        # Ajouter un proche
         resp = self.client.post("/api/doctors/care-team/add-family/", {
             "first_name": "Ancien", "last_name": "Nom",
             "phone_number": "0600000000", "role": "FAMILY", "relation_type": "Frère",
@@ -257,7 +341,7 @@ class UpdateMemberTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_update_member_wrong_patient_returns_404(self):
-        other_patient = _make_patient("other@test.com")
+        _make_patient("other@test.com")
         r = self.client.post("/api/auth/login/", {"email": "other@test.com", "password": "pass123"})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
         resp = self.client.patch("/api/doctors/care-team/update-member/", {
@@ -265,6 +349,65 @@ class UpdateMemberTests(TestCase):
             "first_name": "Hack",
         })
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class MyTeamTests(TestCase):
+    """Tests pour GET /api/doctors/care-team/my-team/ incluant pending_family."""
+
+    def setUp(self):
+        self.client = APIClient()
+        Role.objects.get_or_create(name="PATIENT")
+        Role.objects.get_or_create(name="FAMILY")
+        InvitationStatus.objects.get_or_create(label="ACTIVE")
+        InvitationStatus.objects.get_or_create(label="PENDING")
+        self.patient = _make_patient("patient_team@test.com")
+        r = self.client.post("/api/auth/login/", {"email": "patient_team@test.com", "password": "pass123"})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
+
+    def test_my_team_includes_pending_family_key(self):
+        resp = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn("pending_family", resp.data)
+        self.assertIn("family", resp.data)
+        self.assertIn("doctors", resp.data)
+        self.assertIn("pending_doctor_invites", resp.data)
+
+    def test_pending_family_contains_invited_proche(self):
+        # Inviter un proche avec email → statut PENDING
+        self.client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Pending", "last_name": "Proche",
+            "email": "pending_proche@test.com", "role": "FAMILY",
+        })
+        resp = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data["pending_family"]), 1)
+        self.assertEqual(len(resp.data["family"]), 0)
+
+    def test_active_family_is_separate_from_pending(self):
+        # Proche sans email → ACTIVE immédiatement
+        self.client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Active", "last_name": "Proche", "role": "FAMILY",
+        })
+        # Proche avec email → PENDING
+        self.client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Pend", "last_name": "Proche",
+            "email": "pend2@test.com", "role": "FAMILY",
+        })
+        resp = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(len(resp.data["family"]), 1)
+        self.assertEqual(len(resp.data["pending_family"]), 1)
+
+    def test_serializer_status_returns_string_not_pk(self):
+        # Vérifier que status est "ACTIVE"/"PENDING" (StringRelatedField) et non un entier
+        self.client.post("/api/doctors/care-team/add-family/", {
+            "first_name": "Str", "last_name": "Status", "role": "FAMILY",
+        })
+        resp = self.client.get("/api/doctors/care-team/my-team/")
+        active_family = resp.data["family"]
+        self.assertEqual(len(active_family), 1)
+        status_val = active_family[0]["status"]
+        self.assertIsInstance(status_val, str)
+        self.assertEqual(status_val, "ACTIVE")
 
 
 class ProcheEndpointsTests(TestCase):
@@ -296,11 +439,27 @@ class ProcheEndpointsTests(TestCase):
         self.assertIn("glucose", resp.data)
         self.assertIn("alerts", resp.data)
 
+    def test_proche_medications_returns_list(self):
+        resp = self.client.get("/api/doctors/care-team/proche-medications/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(resp.data, list)
+
+    def test_proche_medications_empty_when_no_intakes(self):
+        resp = self.client.get("/api/doctors/care-team/proche-medications/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data, [])
+
     def test_patient_cannot_access_proche_endpoints(self):
         r = self.client.post("/api/auth/login/", {"email": "pat_proche@test.com", "password": "pass123"})
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
-        resp = self.client.get("/api/doctors/care-team/my-linked-patient/")
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        for url in [
+            "/api/doctors/care-team/my-linked-patient/",
+            "/api/doctors/care-team/proche-glycemia/",
+            "/api/doctors/care-team/proche-dashboard/",
+            "/api/doctors/care-team/proche-medications/",
+        ]:
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN, url)
 
     def test_proche_endpoints_require_authentication(self):
         self.client.credentials()
@@ -308,6 +467,7 @@ class ProcheEndpointsTests(TestCase):
             "/api/doctors/care-team/my-linked-patient/",
             "/api/doctors/care-team/proche-glycemia/",
             "/api/doctors/care-team/proche-dashboard/",
+            "/api/doctors/care-team/proche-medications/",
         ]:
             resp = self.client.get(url)
             self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED, url)
