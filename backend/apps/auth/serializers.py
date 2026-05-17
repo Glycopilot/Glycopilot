@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
 
 import jwt
 from rest_framework import serializers
@@ -73,19 +74,36 @@ class RegisterSerializer(serializers.ModelSerializer):
             )
 
         if data.get("role") == "DOCTOR":
-            if not data.get("license_number"):
+            license_number = (data.get("license_number") or "").strip()
+            specialty = (data.get("specialty") or "").strip()
+
+            if not license_number:
                 raise serializers.ValidationError(
                     {
                         "license_number": "Le numéro RPPS est obligatoire pour les médecins."
                     }
                 )
-            if not data.get("specialty"):
+            if not specialty:
                 raise serializers.ValidationError(
                     {"specialty": "La spécialité est obligatoire."}
                 )
 
+            from apps.doctors.models import DoctorProfile
+
+            if DoctorProfile.objects.filter(license_number=license_number).exists():
+                raise serializers.ValidationError(
+                    {"license_number": "Ce numéro RPPS est déjà utilisé."}
+                )
+
+            data["license_number"] = license_number
+            data["specialty"] = specialty
+            data["medical_center_address"] = (
+                data.get("medical_center_address") or ""
+            ).strip()
+
         return data
 
+    @transaction.atomic
     def create(self, validated_data):
         validated_data.pop("password_confirm")
         password = validated_data.pop("password")
