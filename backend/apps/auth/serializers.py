@@ -196,11 +196,14 @@ class LoginSerializer(serializers.Serializer):
         try:
             account = AuthAccount.objects.get(email__iexact=email)
         except AuthAccount.DoesNotExist:
-            raise serializers.ValidationError({"email": "Identifiants incorrects."})
+            raise serializers.ValidationError(
+                {"non_field_errors": "Identifiants incorrects."}
+            )
 
         if not account.check_password(password):
-            raise serializers.ValidationError({"password": "Identifiants incorrects."})
-
+            raise serializers.ValidationError(
+                {"non_field_errors": "Identifiants incorrects."}
+            )
         if not account.is_active:
             raise serializers.ValidationError({"email": "Ce compte est désactivé."})
 
