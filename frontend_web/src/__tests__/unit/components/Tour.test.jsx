@@ -55,10 +55,13 @@ describe('HelpButton', () => {
 describe('Tour - navigation entre étapes', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    Element.prototype.scrollIntoView = jest.fn();
   });
   afterEach(() => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+    document.querySelectorAll('.sidebar-desktop').forEach((el) => el.remove());
+    delete Element.prototype.scrollIntoView;
   });
 
   async function startTour() {
@@ -139,6 +142,105 @@ describe('Tour - navigation entre étapes', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: /visite guidée/i })).not.toBeInTheDocument()
     );
+  });
+
+  it('flèche droite puis flèche gauche naviguent entre les étapes', async () => {
+    await startTour();
+
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    await waitFor(() => expect(screen.getByText(tourSteps[1].title)).toBeInTheDocument());
+
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    await waitFor(() => expect(screen.getByText(tourSteps[0].title)).toBeInTheDocument());
+  });
+
+  it('positionne le spotlight et le tooltip autour de la cible trouvée', async () => {
+    const target = document.createElement('div');
+    target.className = 'sidebar-desktop';
+    target.getBoundingClientRect = jest.fn(() => ({
+      top: 100,
+      left: 80,
+      width: 120,
+      height: 40,
+      right: 200,
+      bottom: 140,
+    }));
+    document.body.appendChild(target);
+
+    await startTour();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /suivant/i }));
+      await Promise.resolve();
+      jest.advanceTimersByTime(260);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(screen.getByText(tourSteps[1].title)).toBeInTheDocument());
+
+    expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center', inline: 'center' });
+    await waitFor(() =>
+      expect(document.querySelector('.tour-spotlight')).toHaveStyle({ top: '92px', left: '72px', width: '136px', height: '56px' })
+    );
+    expect(document.querySelector('.tour-tooltip')).not.toHaveClass('tour-tooltip-centered');
+  });
+
+  it('recalcule la position au resize et nettoie les listeners au démontage', async () => {
+    const target = document.createElement('div');
+    target.className = 'sidebar-desktop';
+    target.getBoundingClientRect = jest
+      .fn()
+      .mockReturnValueOnce({ top: 100, left: 80, width: 120, height: 40, right: 200, bottom: 140 })
+      .mockReturnValue({ top: 140, left: 110, width: 120, height: 40, right: 230, bottom: 180 });
+    document.body.appendChild(target);
+
+    const view = renderWithProvider(<HelpButton />);
+    fireEvent.click(screen.getByLabelText(/lancer la visite/i));
+    await waitFor(() => expect(screen.getByText(tourSteps[0].title)).toBeInTheDocument());
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /suivant/i }));
+      await Promise.resolve();
+      jest.advanceTimersByTime(260);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.resize(window);
+    });
+    await waitFor(() => expect(document.querySelector('.tour-spotlight')).toHaveStyle({ top: '132px' }));
+
+    view.unmount();
+    expect(document.querySelector('.tour-root')).not.toBeInTheDocument();
+  });
+
+  it('navigue vers la route requise avant de chercher la cible', async () => {
+    const target = document.createElement('div');
+    target.className = 'sidebar-desktop';
+    target.getBoundingClientRect = jest.fn(() => ({
+      top: 100,
+      left: 80,
+      width: 120,
+      height: 40,
+      right: 200,
+      bottom: 140,
+    }));
+    document.body.appendChild(target);
+
+    renderWithProvider(<HelpButton />, { route: '/login' });
+    fireEvent.click(screen.getByLabelText(/lancer la visite/i));
+    await waitFor(() => expect(screen.getByText(tourSteps[0].title)).toBeInTheDocument());
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /suivant/i }));
+      await Promise.resolve();
+      jest.advanceTimersByTime(700);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(screen.getByText(tourSteps[1].title)).toBeInTheDocument());
+    expect(target.scrollIntoView).toHaveBeenCalled();
   });
 });
 
