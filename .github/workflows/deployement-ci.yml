@@ -66,6 +66,8 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
+          AI_ENV_FILE: ${{ secrets.AI_ENV_FILE }}
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/glycopilot_ec2_key
@@ -89,6 +91,11 @@ jobs:
             -e "ssh -i ~/.ssh/glycopilot_ec2_key" \
             ./ "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/"
 
+          printf '%s\n' "$PROD_ENV_FILE" > backend/.env.prod
+          printf '%s\n' "$AI_ENV_FILE" > ai_service/.env.prod
+          scp -i ~/.ssh/glycopilot_ec2_key backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
+          scp -i ~/.ssh/glycopilot_ec2_key ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
+
       - name: Execute deployment on EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -97,10 +104,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/glycopilot-app
-            
-            # Recréation dynamique des .env pour être sûr (optionnel mais robuste)
-            echo "${{ secrets.PROD_ENV_FILE }}" > ./backend/.env.prod
-            echo "${{ secrets.AI_ENV_FILE }}" > ./ai_service/.env.prod
             
             docker compose --profile aws down
             docker compose --profile aws up -d --build
@@ -166,7 +169,7 @@ jobs:
           cd frontend_web
           npm install --legacy-peer-deps
 
-          export REACT_APP_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/api}"
+          export REACT_APP_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/register/api}"
           export REACT_APP_API_TIMEOUT="10000"
 
           npm run build
@@ -230,7 +233,7 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
           cd frontend
-          export EXPO_PUBLIC_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/api}"
+          export EXPO_PUBLIC_API_URL="${PUBLIC_API_URL:-http://${EC2_HOST}/register/api}"
           export EXPO_PUBLIC_WS_URL="${PUBLIC_WS_URL:-ws://${EC2_HOST}}"
           export EXPO_PUBLIC_S3_BUCKET="${S3_BUCKET_MEDIA:-glycopilot-aws-s3-bucket-img-artifacts}"
           node - <<'NODE'
