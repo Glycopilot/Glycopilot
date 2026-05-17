@@ -1,0 +1,14 @@
+[run]
+relative_files = True
+source =
+    api
+    core
+    features
+    models
+    training
+
+[report]
+show_missing = True
+omit =
+    tests/*
+    */tests/*
