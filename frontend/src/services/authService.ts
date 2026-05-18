@@ -31,11 +31,63 @@ const extractApiErrorMessage = (
   fallback: string
 ): string => {
   if (!data) return fallback;
-  if (typeof data === 'string') return data;
-  if ('error' in data && typeof data.error === 'string') return data.error;
-  if ('message' in data && typeof data.message === 'string') return data.message;
-  if ('detail' in data && typeof data.detail === 'string') return data.detail;
-  return JSON.stringify(data);
+  if (typeof data === 'string') {
+    if (data.includes('<!doctype html') || data.includes('<html')) {
+      return "L'API est introuvable. Vérifiez l'adresse du serveur.";
+    }
+    return data;
+  }
+
+  const errorData = data as Record<string, unknown>;
+  const messageKeys = ['error', 'message', 'detail', 'non_field_errors'];
+  for (const key of messageKeys) {
+    const value = errorData[key];
+    const message = normalizeApiErrorValue(value);
+    if (message) return message;
+  }
+
+  const errors = errorData.errors;
+  if (errors && typeof errors === 'object') {
+    const message = normalizeApiErrorValue(errors);
+    if (message) return message;
+  }
+
+  return normalizeApiErrorValue(errorData) || fallback;
+};
+
+const formatFieldName = (field: string): string => {
+  const labels: Record<string, string> = {
+    email: 'Email',
+    first_name: 'Prénom',
+    last_name: 'Nom',
+    password: 'Mot de passe',
+    password_confirm: 'Confirmation du mot de passe',
+    non_field_errors: 'Erreur',
+  };
+
+  return labels[field] || field;
+};
+
+const normalizeApiErrorValue = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return value
+      .map(item => normalizeApiErrorValue(item))
+      .filter(Boolean)
+      .join('\n');
+  }
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([field, fieldValue]) => {
+        const message = normalizeApiErrorValue(fieldValue);
+        return message ? `${formatFieldName(field)} : ${message}` : '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  return String(value);
 };
 
 const authService = {

@@ -1,0 +1,79 @@
+# Virtual environments
+backend/.venv/
+backend/venv/
+backend/*.env
+
+# Python cache
+**/__pycache__/
+*.py[cod]
+
+# Local databases
+backend/db.sqlite3
+
+# Fichiers BDPM volumineux
+backend/data/import/CIS_bdpm.txt
+
+# Environment files
+.env
+.env.*
+
+# SSH keys
+*.pem
+*.key
+infra/ssh/*
+!infra/ssh/.gitkeep
+
+# Test & coverage artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+test_output.txt
+coverage/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Node
+node_modules/
+
+# Security scan reports
+gitleaks-report.json
+
+# macOS metadata
+.DS_Store
+
+# Editor settings
+.idea/
+.vscode/
+
+# Local personal config
+.claude/settings.local.json
+
+# AI service
+ai_service/.venv/
+ai_service/artifacts/patients/
+
+# Caches & fichiers inutiles
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+.cache/
+
+# Local Terraform state and variables
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
