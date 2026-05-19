@@ -21,7 +21,7 @@ describe('Journal screen', () => {
   it('renders main content', async () => {
     const { getByText } = render(<Journal navigation={mockNavigation} />);
     await waitFor(() => {
-      expect(getByText('Journal') || getByText('Glycopilot')).toBeTruthy();
+      expect(getByText('Mon journal')).toBeTruthy();
     });
   });
 });

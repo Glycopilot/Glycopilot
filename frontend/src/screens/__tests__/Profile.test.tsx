@@ -11,6 +11,10 @@ jest.mock('../../hooks/useUser');
 jest.mock('../../hooks/useAuth');
 jest.mock('../../services/authService');
 jest.mock('../../services/doctorService');
+jest.mock('../../services/toastService', () => ({
+    toastSuccess: jest.fn(),
+    toastError: jest.fn(),
+}));
 jest.mock('../../components/profile/LocationModal', () => {
     return function MockLocationModal() { return null; };
 });
@@ -76,7 +80,8 @@ describe('ProfileScreen', () => {
         (doctorService.inviteDoctor as jest.Mock).mockResolvedValue(undefined);
         (doctorService.acceptInvitation as jest.Mock).mockResolvedValue(undefined);
         (doctorService.removeTeamMember as jest.Mock).mockResolvedValue(undefined);
-        (doctorService.addFamilyMember as jest.Mock).mockResolvedValue({ id: 'new-id' });
+        (doctorService.addFamilyMember as jest.Mock).mockResolvedValue({ id: 'new-id', invitation_sent: false });
+        (doctorService.updateFamilyMember as jest.Mock).mockResolvedValue(undefined);
         (authService.updateProfile as jest.Mock).mockResolvedValue(undefined);
     });
 
@@ -363,19 +368,19 @@ describe('ProfileScreen', () => {
 
 
     it('opens add contact modal via Plus button', async () => {
-        const { getByTestId, queryByText } = renderProfile();
-        await waitFor(() => expect(getByTestId('Plus')).toBeTruthy());
+        const { getAllByText, getByPlaceholderText } = renderProfile();
+        await waitFor(() => expect(getAllByText('Ajouter un proche')[0]).toBeTruthy());
 
-        fireEvent.press(getByTestId('Plus'));
+        fireEvent.press(getAllByText('Ajouter un proche')[0]);
 
-        await waitFor(() => expect(queryByText('Ajouter un contact d\'urgence')).toBeTruthy());
+        await waitFor(() => expect(getByPlaceholderText('Ex: Marie Dupont')).toBeTruthy());
     });
 
     it('submits add contact form', async () => {
-        const { getByTestId, getByPlaceholderText, getByText } = renderProfile();
-        await waitFor(() => expect(getByTestId('Plus')).toBeTruthy());
+        const { getAllByText, getByPlaceholderText, getByText } = renderProfile();
+        await waitFor(() => expect(getAllByText('Ajouter un proche')[0]).toBeTruthy());
 
-        fireEvent.press(getByTestId('Plus'));
+        fireEvent.press(getAllByText('Ajouter un proche')[0]);
 
         await waitFor(() => expect(getByPlaceholderText('Ex: Marie Dupont')).toBeTruthy());
 

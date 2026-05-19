@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import type { AxiosError } from 'axios';
 
 export interface DoctorMemberDetails {
   id_user: string;
@@ -26,6 +27,7 @@ export interface FamilyMember {
     first_name: string;
     last_name: string;
     phone_number: string | null;
+    email?: string | null;
   };
   relation_type: string;
   role: string;
@@ -36,6 +38,7 @@ export interface MyTeamResponse {
   doctors: DoctorMember[];
   pending_doctor_invites: DoctorMember[];
   family: FamilyMember[];
+  pending_family: FamilyMember[];
 }
 
 const doctorService = {
@@ -65,13 +68,33 @@ const doctorService = {
     first_name: string;
     last_name: string;
     phone_number?: string;
+    email?: string;
     relation_type: string;
-  }): Promise<{ id: string }> {
-    const response = await apiClient.post<{ id: string }>(
-      '/doctors/care-team/add-family/',
-      { ...data, role: 'FAMILY' }
-    );
-    return response.data;
+  }): Promise<{ id: string; invitation_sent: boolean; status: string }> {
+    try {
+      const response = await apiClient.post<{ id: string; invitation_sent: boolean; status: string }>(
+        '/doctors/care-team/add-family/',
+        { ...data, role: 'FAMILY' }
+      );
+      return response.data;
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; code?: string }>;
+      const msg = axiosErr.response?.data?.error;
+      const code = axiosErr.response?.data?.code;
+      const error = new Error(msg || "Impossible d'ajouter le proche") as Error & { code?: string };
+      error.code = code;
+      throw error;
+    }
+  },
+
+  async updateFamilyMember(data: {
+    id_team_member: string;
+    first_name: string;
+    last_name: string;
+    phone_number?: string;
+    relation_type?: string;
+  }): Promise<void> {
+    await apiClient.patch('/doctors/care-team/update-member/', data);
   },
 };
 

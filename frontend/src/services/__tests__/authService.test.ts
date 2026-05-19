@@ -240,7 +240,7 @@ describe('authService', () => {
 
     describe('register error formats', () => {
         it('should handle string error response', async () => {
-            mock.onPost(/\/auth\/register/).reply(400, { error: "Erreur lors de l'inscription" });
+            mock.onPost(/\/auth\/register/).reply(400, 'Simple error string');
             await expect(authService.register({} as any)).rejects.toThrow("Erreur lors de l'inscription");
         });
     });
