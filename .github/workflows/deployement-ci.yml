@@ -19,6 +19,10 @@ on:
         description: '3. Déployer Frontend Web (S3)'
         type: boolean
         default: false
+      deploy_landing_page:
+        description: '3b. Déployer Site Vitrine (S3 statique)'
+        type: boolean
+        default: false
       deploy_mobile:
         description: '4. Compiler App Mobile (Expo EAS)'
         type: boolean
@@ -28,7 +32,9 @@ env:
   AWS_REGION: eu-west-3
   PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
   PUBLIC_WS_URL: ${{ vars.PUBLIC_WS_URL }}
-  S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND }}
+  S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND || 'glycopilot-web-frontend-958587270787' }}
+  S3_BUCKET_LANDING_PAGE: ${{ vars.S3_BUCKET_LANDING_PAGE || vars.S3_BUCKET_FRONTEND || 'glycopilot-web-frontend-958587270787' }}
+  S3_LANDING_PREFIX: ${{ vars.S3_LANDING_PREFIX || 'landing_page' }}
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
 
 jobs:
@@ -188,6 +194,51 @@ jobs:
             exit 1
           fi
           aws s3 sync ./frontend_web/build/ s3://${S3_BUCKET_FRONTEND}/ --delete
+
+  deploy-landing-page:
+    name: Deploy Landing Page
+    if: ${{ inputs.deploy_landing_page }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare static landing page
+        run: |
+          rm -rf /tmp/glycopilot-landing
+          mkdir -p /tmp/glycopilot-landing/assets
+
+          cp landing_page/index.html /tmp/glycopilot-landing/index.html
+          cp landing_page/styles.css /tmp/glycopilot-landing/styles.css
+          cp landing_page/script.js /tmp/glycopilot-landing/script.js
+
+          cp frontend/assets/favicon.png /tmp/glycopilot-landing/assets/favicon.png
+          cp frontend/assets/glycopilot.png /tmp/glycopilot-landing/assets/glycopilot.png
+
+          sed -i 's#../frontend/assets/#./assets/#g' /tmp/glycopilot-landing/index.html
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync landing page to S3
+        run: |
+          LANDING_BUCKET="${S3_BUCKET_LANDING_PAGE:-$S3_BUCKET_FRONTEND}"
+          LANDING_PREFIX="${S3_LANDING_PREFIX:-landing_page}"
+
+          if [ -z "$LANDING_BUCKET" ]; then
+            echo "S3_BUCKET_LANDING_PAGE or S3_BUCKET_FRONTEND repository variable is required."
+            exit 1
+          fi
+
+          LANDING_PREFIX="${LANDING_PREFIX#/}"
+          LANDING_PREFIX="${LANDING_PREFIX%/}"
+
+          aws s3 sync /tmp/glycopilot-landing/ s3://${LANDING_BUCKET}/${LANDING_PREFIX}/ --delete
+
+          echo "Landing page deployed to s3://${LANDING_BUCKET}/${LANDING_PREFIX}/"
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)

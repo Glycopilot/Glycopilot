@@ -1,9 +1,12 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from apps.meals.models import Meal, UserMeal
+from apps.medications.models import UserMedication
 from apps.users.models import AuthAccount
 
 from .models import UserWidget, UserWidgetLayout, WidgetSize
@@ -106,6 +109,45 @@ class DashboardSummaryAPITest(APITestCase):
         url = reverse("dashboard-summary")
         response = self.client.get(url, {"include[]": ["nutrition"]})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_summary_handles_custom_medication_without_reference(self):
+        UserMedication.objects.create(
+            user=self.user,
+            medication=None,
+            custom_name="Insuline rapide",
+            custom_dosage="4U",
+            start_date=timezone.now().date(),
+            statut=True,
+        )
+
+        url = reverse("dashboard-summary")
+        response = self.client.get(url, {"include[]": ["nutrition"]})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["medication"]["nextDose"]["name"], "Insuline rapide"
+        )
+
+    def test_get_summary_uses_meal_glucides_for_nutrition(self):
+        meal = Meal.objects.create(
+            name="Riz",
+            calories=250,
+            glucides=42.7,
+            glucose=12,
+        )
+        UserMeal.objects.create(
+            user=self.user,
+            meal=meal,
+            taken_at=timezone.now(),
+            meal_type="lunch",
+        )
+
+        url = reverse("dashboard-summary")
+        response = self.client.get(url, {"include[]": ["nutrition"]})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["nutrition"]["calories"]["consumed"], 250)
+        self.assertEqual(response.data["nutrition"]["carbs"]["grams"], 42)
 
 
 class DashboardWidgetsAPITest(APITestCase):

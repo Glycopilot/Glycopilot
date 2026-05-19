@@ -129,7 +129,7 @@ class DashboardSummaryView(APIView):
 
         if next_dose:
             result["nextDose"] = {
-                "name": next_dose.medication.name,
+                "name": next_dose.display_name,
                 "scheduledAt": timezone.now(),
                 "status": "pending",
             }
@@ -146,14 +146,17 @@ class DashboardSummaryView(APIView):
         total_carbs = 0
 
         for user_meal in meals:
-            if user_meal.meal.calories:
-                total_calories += user_meal.meal.calories
-            if user_meal.meal.glucose:
-                total_carbs += int(user_meal.meal.glucose)
+            meal = user_meal.meal
+            if meal.calories:
+                total_calories += meal.calories
+            if meal.glucides:
+                total_carbs += meal.glucides
+            elif meal.glucose:
+                total_carbs += meal.glucose
 
         return {
-            "calories": {"consumed": total_calories, "goal": 1800},
-            "carbs": {"grams": total_carbs, "goal": 200},
+            "calories": {"consumed": int(total_calories), "goal": 1800},
+            "carbs": {"grams": int(total_carbs), "goal": 200},
         }
 
     def _get_activity_data(self, user) -> dict:
