@@ -18,15 +18,20 @@ class JugglucoReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val reading = JugglucoBroadcast.parse(intent) ?: return
-        handler?.invoke(reading)
+        val currentHandler = handler
+        if (currentHandler == null) {
+            JugglucoReadingStore.append(context, reading)
+        } else {
+            currentHandler.invoke(reading)
+        }
     }
 
     companion object {
         /**
          * Set by the Expo module while the JS layer wants to receive readings.
          * Cleared on `stopListening` / activity destroy. If null when a
-         * broadcast arrives, the reading is silently dropped — that's fine,
-         * Juggluco will broadcast again next minute.
+         * broadcast arrives, the reading is persisted and replayed when JS
+         * starts listening again.
          */
         @Volatile
         var handler: ((JugglucoBroadcast.Reading) -> Unit)? = null

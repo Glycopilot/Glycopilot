@@ -8,6 +8,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.libre2cgm.ble.Libre2ForegroundService
 import expo.modules.libre2cgm.juggluco.JugglucoBroadcast
+import expo.modules.libre2cgm.juggluco.JugglucoReadingStore
 import expo.modules.libre2cgm.juggluco.JugglucoReceiver
 
 /**
@@ -44,6 +45,9 @@ class Libre2CgmModule : Module() {
             // Idempotent — re-attaching the same handler is harmless.
             JugglucoReceiver.handler = { reading ->
                 sendEvent(EVENT_GLUCOSE_READING, reading.toBundle())
+            }
+            JugglucoReadingStore.drain(ctx).forEach { bufferedReading ->
+                sendEvent(EVENT_GLUCOSE_READING, bufferedReading.toBundle())
             }
             Libre2ForegroundService.start(ctx)
             sendEvent(EVENT_LISTENING_STATE, Bundle().apply { putBoolean("listening", true) })
