@@ -33,8 +33,6 @@ env:
   PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
   PUBLIC_WS_URL: ${{ vars.PUBLIC_WS_URL }}
   S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND }}
-  S3_BUCKET_LANDING_PAGE: ${{ vars.S3_BUCKET_LANDING_PAGE }}
-  S3_LANDING_PREFIX: ${{ vars.S3_LANDING_PREFIX || 'landing' }}
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
 
 jobs:
@@ -225,20 +223,14 @@ jobs:
 
       - name: Sync landing page to S3
         run: |
-          LANDING_BUCKET="${S3_BUCKET_LANDING_PAGE:-$S3_BUCKET_FRONTEND}"
-          LANDING_PREFIX="${S3_LANDING_PREFIX:-landing}"
-
-          if [ -z "$LANDING_BUCKET" ]; then
-            echo "S3_BUCKET_LANDING_PAGE or S3_BUCKET_FRONTEND repository variable is required."
+          if [ -z "$S3_BUCKET_FRONTEND" ]; then
+            echo "S3_BUCKET_FRONTEND repository variable is required."
             exit 1
           fi
 
-          LANDING_PREFIX="${LANDING_PREFIX#/}"
-          LANDING_PREFIX="${LANDING_PREFIX%/}"
+          aws s3 sync /tmp/glycopilot-landing/ s3://${S3_BUCKET_FRONTEND}/landing_page/ --delete
 
-          aws s3 sync /tmp/glycopilot-landing/ s3://${LANDING_BUCKET}/${LANDING_PREFIX}/ --delete
-
-          echo "Landing page deployed to s3://${LANDING_BUCKET}/${LANDING_PREFIX}/"
+          echo "Landing page deployed to s3://${S3_BUCKET_FRONTEND}/landing_page/"
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)
