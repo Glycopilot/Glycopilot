@@ -3,12 +3,26 @@ import apiClient from '../apiClient';
 import glycemiaService from '../glycemiaService';
 import { GlycemiaEntry } from '../../types/glycemia.types';
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+}));
+
+jest.mock('../../utils/getDeviceLocation', () => ({
+    getDeviceLocation: jest.fn(),
+}));
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDeviceLocation } from '../../utils/getDeviceLocation';
+
 describe('glycemiaService', () => {
     let mock: MockAdapter;
 
     beforeEach(() => {
         mock = new MockAdapter(apiClient);
         jest.clearAllMocks();
+        (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+        (getDeviceLocation as jest.Mock).mockResolvedValue(null);
     });
 
     afterEach(() => {
@@ -95,6 +109,94 @@ describe('glycemiaService', () => {
             mock.onPost('/glycemia/manual-readings/').reply(400);
 
             const result = await glycemiaService.createManualReading({ value: 0, measured_at: '' });
+
+            expect(result).toBeNull();
+        });
+
+        it('should include location coords when value < 70 and location enabled', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
+            (getDeviceLocation as jest.Mock).mockResolvedValue({ lat: 48.8566, lng: 2.3522 });
+            mock.onPost('/glycemia/manual-readings/').reply(201, { id: '1', value: 55 });
+
+            await glycemiaService.createManualReading({ value: 55, measured_at: '2023-01-01T10:00:00Z' });
+
+            const body = JSON.parse(mock.history.post[0].data);
+            expect(body.location_lat).toBe(48.8566);
+            expect(body.location_lng).toBe(2.3522);
+        });
+
+        it('should include location coords when value > 180 and location enabled', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
+            (getDeviceLocation as jest.Mock).mockResolvedValue({ lat: 48.8566, lng: 2.3522 });
+            mock.onPost('/glycemia/manual-readings/').reply(201, { id: '1', value: 250 });
+
+            await glycemiaService.createManualReading({ value: 250, measured_at: '2023-01-01T10:00:00Z' });
+
+            const body = JSON.parse(mock.history.post[0].data);
+            expect(body.location_lat).toBe(48.8566);
+        });
+
+        it('should not include location when value is normal (70–180)', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
+            mock.onPost('/glycemia/manual-readings/').reply(201, { id: '1', value: 120 });
+
+            await glycemiaService.createManualReading({ value: 120, measured_at: '2023-01-01T10:00:00Z' });
+
+            const body = JSON.parse(mock.history.post[0].data);
+            expect(body.location_lat).toBeUndefined();
+            expect(body.location_lng).toBeUndefined();
+            expect(getDeviceLocation).not.toHaveBeenCalled();
+        });
+
+        it('should not include location when location sharing disabled', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('false');
+            mock.onPost('/glycemia/manual-readings/').reply(201, { id: '1', value: 50 });
+
+            await glycemiaService.createManualReading({ value: 50, measured_at: '2023-01-01T10:00:00Z' });
+
+            const body = JSON.parse(mock.history.post[0].data);
+            expect(body.location_lat).toBeUndefined();
+            expect(getDeviceLocation).not.toHaveBeenCalled();
+        });
+
+        it('should not include location when getDeviceLocation returns null', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
+            (getDeviceLocation as jest.Mock).mockResolvedValue(null);
+            mock.onPost('/glycemia/manual-readings/').reply(201, { id: '1', value: 50 });
+
+            await glycemiaService.createManualReading({ value: 50, measured_at: '2023-01-01T10:00:00Z' });
+
+            const body = JSON.parse(mock.history.post[0].data);
+            expect(body.location_lat).toBeUndefined();
+        });
+    });
+
+    describe('createCgmReading', () => {
+        it('should post to cgm-readings endpoint', async () => {
+            const data = { value: 130, measured_at: '2023-01-01T12:00:00Z' };
+            mock.onPost('/glycemia/cgm-readings/').reply(201, { ...data, id: 'cgm-1' });
+
+            const result = await glycemiaService.createCgmReading(data);
+
+            expect(result).not.toBeNull();
+            expect(mock.history.post[0].url).toBe('/glycemia/cgm-readings/');
+        });
+
+        it('should include location for cgm reading when value critical', async () => {
+            (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
+            (getDeviceLocation as jest.Mock).mockResolvedValue({ lat: 48.8566, lng: 2.3522 });
+            mock.onPost('/glycemia/cgm-readings/').reply(201, { id: 'cgm-1', value: 45 });
+
+            await glycemiaService.createCgmReading({ value: 45, measured_at: '2023-01-01T10:00:00Z' });
+
+            const body = JSON.parse(mock.history.post[0].data);
+            expect(body.location_lat).toBe(48.8566);
+        });
+
+        it('should return null on cgm reading error', async () => {
+            mock.onPost('/glycemia/cgm-readings/').reply(500);
+
+            const result = await glycemiaService.createCgmReading({ value: 130, measured_at: '' });
 
             expect(result).toBeNull();
         });

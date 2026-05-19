@@ -1,4 +1,5 @@
 import logging
+import secrets
 
 from django.db import transaction
 
@@ -39,6 +40,8 @@ class CareTeamViewSet(viewsets.ViewSet):
 
     permission_classes = [IsAuthenticated]
 
+    _CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
     @action(detail=False, methods=["post"], url_path="add-family")
     def add_family_member(self, request):
         """
@@ -53,7 +56,7 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         Comportement selon email :
           - Avec email (compte existant) : lien immédiat, statut ACTIVE, email de notification
-          - Avec email (nouveau)         : compte inactif créé, statut PENDING, email d'activation
+          - Avec email (nouveau)         : compte inactif créé, statut PENDING, code d'activation 6 chars
           - Sans email                   : shell vide (pas de login), statut ACTIVE
         """
         from django.contrib.auth.tokens import PasswordResetTokenGenerator
@@ -98,10 +101,33 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         with transaction.atomic():
             if email:
+                if PatientCareTeam.objects.filter(
+                    patient_profile=patient_profile,
+                    invitation_email=email,
+                ).exists():
+                    return Response(
+                        {"error": "Ce proche a déjà été invité ou fait déjà partie de votre équipe."},
+                        status=400,
+                    )
+
                 existing_auth = AuthAccount.objects.filter(email=email).first()
 
-                if existing_auth:
-                    # Proche déjà inscrit → lier directement
+                if existing_auth and existing_auth.is_active:
+                    # Vérifier si ce compte est déjà proche actif d'un autre patient
+                    is_already_proche = PatientCareTeam.objects.filter(
+                        member_profile__user=existing_auth.user,
+                        role__in=["FAMILY", "CAREGIVER", "NURSE"],
+                        status__label="ACTIVE",
+                    ).exists()
+                    if is_already_proche:
+                        return Response(
+                            {
+                                "error": "Cette personne suit déjà un patient sur Glycopilot. Un proche ne peut suivre qu'un seul patient à la fois.",
+                                "code": "already_proche",
+                            },
+                            status=409,
+                        )
+                    # Proche déjà inscrit et actif, pas encore proche → lier directement
                     member_profile, _ = Profile.objects.get_or_create(
                         user=existing_auth.user, role=role_obj
                     )
@@ -114,8 +140,27 @@ class CareTeamViewSet(viewsets.ViewSet):
                         invitation_email=email,
                     )
                     send_care_team_invitation(email, inviter_name, role_name, is_existing_user=True)
+                elif existing_auth and not existing_auth.is_active:
+                    # Compte inactif existant → nouveau code, mise à jour de l'entrée
+                    code = "".join(secrets.choice(self._CODE_CHARS) for _ in range(6))
+                    member_profile, _ = Profile.objects.get_or_create(
+                        user=existing_auth.user, role=role_obj
+                    )
+                    team_member, _ = PatientCareTeam.objects.update_or_create(
+                        patient_profile=patient_profile,
+                        invitation_email=email,
+                        defaults={
+                            "member_profile": member_profile,
+                            "role": role_name,
+                            "relation_type": relation or "",
+                            "status": _get_invitation_status("PENDING"),
+                            "activation_code": code,
+                        },
+                    )
+                    send_proche_invitation(email, inviter_name, code)
                 else:
-                    # Nouveau proche → compte inactif + email d'activation
+                    # Nouveau proche → compte inactif + code d'activation 6 chars
+                    code = "".join(secrets.choice(self._CODE_CHARS) for _ in range(6))
                     user_identity = User.objects.create(
                         first_name=first_name,
                         last_name=last_name,
@@ -138,11 +183,9 @@ class CareTeamViewSet(viewsets.ViewSet):
                         relation_type=relation or "",
                         status=_get_invitation_status("PENDING"),
                         invitation_email=email,
+                        activation_code=code,
                     )
-
-                    uid = urlsafe_base64_encode(force_bytes(auth_account.pk))
-                    token = PasswordResetTokenGenerator().make_token(auth_account)
-                    send_proche_invitation(email, inviter_name, uid, token)
+                    send_proche_invitation(email, inviter_name, code)
 
             else:
                 # Pas d'email → shell vide, pas de login
@@ -174,35 +217,73 @@ class CareTeamViewSet(viewsets.ViewSet):
     @action(
         detail=False,
         methods=["post"],
+        url_path="validate-proche-code",
+        permission_classes=[],
+        authentication_classes=[],
+    )
+    def validate_proche_code(self, request):
+        """
+        POST /api/doctors/care-team/validate-proche-code/
+        Vérifie que le code 6 chars est valide pour cet email.
+
+        Corps JSON : email, code
+        """
+        email = (request.data.get("email") or "").strip().lower()
+        code = (request.data.get("code") or "").strip().upper()
+
+        if not email or not code:
+            return Response({"error": "email et code sont requis."}, status=400)
+
+        entry = PatientCareTeam.objects.filter(
+            invitation_email=email,
+            activation_code=code,
+            status__label="PENDING",
+        ).first()
+
+        if not entry:
+            return Response({"error": "Code invalide ou déjà utilisé."}, status=400)
+
+        return Response({"valid": True}, status=200)
+
+    @action(
+        detail=False,
+        methods=["post"],
         url_path="activate-proche",
         permission_classes=[],
+        authentication_classes=[],
     )
     def activate_proche_account(self, request):
         """
         POST /api/doctors/care-team/activate-proche/
-        Valide le token d'activation, fixe le mot de passe et active le compte proche.
+        Valide le code, fixe le mot de passe et active le compte proche.
 
-        Corps JSON : uid, token, password
+        Corps JSON : email, code, password
         """
-        from django.utils.encoding import force_str
-        from django.utils.http import urlsafe_base64_decode
-
-        uid = request.data.get("uid")
-        token = request.data.get("token")
+        email = (request.data.get("email") or "").strip().lower()
+        code = (request.data.get("code") or "").strip().upper()
         password = request.data.get("password")
 
-        if not uid or not token or not password:
-            return Response({"error": "uid, token et password sont requis."}, status=400)
+        if not email or not code or not password:
+            return Response({"error": "email, code et password sont requis."}, status=400)
 
-        try:
-            auth_id = force_str(urlsafe_base64_decode(uid))
-            auth_account = AuthAccount.objects.get(pk=auth_id)
-        except (TypeError, ValueError, AuthAccount.DoesNotExist):
-            return Response({"error": "Lien invalide."}, status=400)
+        entry = (
+            PatientCareTeam.objects.filter(
+                invitation_email=email,
+                activation_code=code,
+                status__label="PENDING",
+            )
+            .select_related("member_profile__user")
+            .first()
+        )
 
-        from apps.auth.tokens import email_verification_token as _token_gen
-        if not _token_gen.check_token(auth_account, token):
-            return Response({"error": "Lien expiré ou invalide."}, status=400)
+        if not entry:
+            return Response({"error": "Code invalide ou déjà utilisé."}, status=400)
+
+        auth_account = AuthAccount.objects.filter(
+            user=entry.member_profile.user
+        ).first()
+        if not auth_account:
+            return Response({"error": "Compte introuvable."}, status=400)
 
         auth_account.set_password(password)
         auth_account.is_active = True
@@ -210,9 +291,9 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         active_status = _get_invitation_status("ACTIVE")
         PatientCareTeam.objects.filter(
-            member_profile__user=auth_account.user,
-            status__label="PENDING",
-        ).update(status=active_status)
+            invitation_email=email,
+            activation_code=code,
+        ).update(status=active_status, activation_code=None)
 
         return Response({"message": "Compte activé avec succès."}, status=200)
 
@@ -541,10 +622,14 @@ class CareTeamViewSet(viewsets.ViewSet):
         family = team.filter(
             role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="ACTIVE"
         )
+        pending_family = team.filter(
+            role__in=["FAMILY", "CAREGIVER", "NURSE"], status__label="PENDING"
+        )
         data = {
             "doctors": PatientCareTeamSerializer(doctors, many=True).data,
             "pending_doctor_invites": PatientCareTeamSerializer(pending_doctor_invites, many=True).data,
             "family": PatientCareTeamSerializer(family, many=True).data,
+            "pending_family": PatientCareTeamSerializer(pending_family, many=True).data,
         }
         return Response(data)
 
@@ -722,12 +807,26 @@ class CareTeamViewSet(viewsets.ViewSet):
         if profile_obj and hasattr(profile_obj, "patient_profile"):
             patient_profile = profile_obj.patient_profile
 
+        from apps.glycemia.models import GlycemiaHisto
+        last_loc = (
+            GlycemiaHisto.objects
+            .filter(user=patient_auth, location_lat__isnull=False, location_lng__isnull=False)
+            .order_by("-measured_at")
+            .values("location_lat", "location_lng", "measured_at")
+            .first()
+        )
+
         return Response({
             "patient_user_id": str(patient_user.id_user),
             "first_name": patient_user.first_name,
             "last_name": patient_user.last_name,
             "diabetes_type": getattr(patient_profile, "diabetes_type", None),
             "relation_type": entry.relation_type,
+            "last_location": {
+                "lat": last_loc["location_lat"],
+                "lng": last_loc["location_lng"],
+                "measuredAt": last_loc["measured_at"],
+            } if last_loc else None,
         })
 
     @action(detail=False, methods=["get"], url_path="proche-glycemia")
@@ -755,3 +854,88 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         from apps.doctors.services import DoctorPatientDataService
         return Response(DoctorPatientDataService.get_patient_dashboard(patient_auth))
+
+    @action(detail=False, methods=["get"], url_path="proche-alerts")
+    def get_proche_alerts(self, request):
+        """
+        GET /api/doctors/care-team/proche-alerts/
+        Toutes les alertes du patient lié (jusqu'à 100), accessible au proche.
+        """
+        patient_auth, _, error = verify_proche_can_access_patient(request)
+        if error:
+            return error
+
+        from apps.alerts.models import AlertEvent, AlertSeverity
+
+        severity_map = {
+            AlertSeverity.CRITICAL: "critical",
+            AlertSeverity.HIGH: "high",
+            AlertSeverity.MEDIUM: "medium",
+            AlertSeverity.LOW: "low",
+            AlertSeverity.INFO: "info",
+        }
+
+        alerts = (
+            AlertEvent.objects.filter(
+                user=patient_auth, status__in=["TRIGGERED", "SENT"]
+            )
+            .select_related("rule")
+            .order_by("-triggered_at")[:100]
+        )
+
+        result = [
+            {
+                "alertId": str(a.id),
+                "type": a.rule.code.lower(),
+                "severity": severity_map.get(a.rule.severity, "medium"),
+                "triggeredAt": a.triggered_at,
+                "message": getattr(a, "message", None) or a.rule.code,
+            }
+            for a in alerts
+        ]
+        return Response(result)
+
+    @action(detail=False, methods=["get"], url_path="proche-medications")
+    def get_proche_medications(self, request):
+        """
+        GET /api/doctors/care-team/proche-medications/
+        Suivi des médicaments du patient lié (30 derniers jours).
+        """
+        patient_auth, _, error = verify_proche_can_access_patient(request)
+        if error:
+            return error
+
+        from apps.medications.models import MedicationIntake, IntakeStatus
+        from django.utils import timezone
+        from datetime import timedelta
+
+        since = (timezone.now() - timedelta(days=30)).date()
+        intakes = (
+            MedicationIntake.objects.filter(
+                user_medication__user=patient_auth,
+                scheduled_date__gte=since,
+            )
+            .select_related("user_medication__medication")
+            .order_by("-scheduled_date", "-scheduled_time")[:50]
+        )
+
+        result = []
+        for i in intakes:
+            um = i.user_medication
+            if um.medication:
+                name = um.medication.name
+                dosage = um.medication.dosage
+            elif um.custom_name:
+                name = um.custom_name
+                dosage = um.custom_dosage or ""
+            else:
+                continue
+            result.append({
+                "id": str(i.pk),
+                "name": name,
+                "dosage": dosage,
+                "taken": i.status == IntakeStatus.TAKEN,
+                "takenAt": i.taken_at,
+                "scheduledAt": f"{i.scheduled_date}T{i.scheduled_time}",
+            })
+        return Response(result)

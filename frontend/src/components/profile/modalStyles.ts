@@ -78,6 +78,7 @@ export const modalStyles = StyleSheet.create({
   buttons: {
     flexDirection: 'row',
     gap: 12,
+    marginBottom: 30,
   },
   cancelButton: {
     flex: 1,

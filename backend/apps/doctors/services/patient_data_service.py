@@ -76,7 +76,7 @@ class DoctorPatientDataService:
     @staticmethod
     def _get_medication_data(user) -> dict:
         next_dose = (
-            UserMedication.objects.filter(user=user, statut=True, taken_at__isnull=True)
+            UserMedication.objects.filter(user=user, statut=True, taken_at__isnull=True, medication__isnull=False)
             .select_related("medication")
             .order_by("start_date")
             .first()

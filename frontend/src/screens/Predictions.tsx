@@ -210,7 +210,7 @@ export default function PredictionsScreen({ navigation }: PredictionsScreenProps
     : null;
 
   return (
-    <Layout navigation={navigation} currentRoute="Predictions">
+    <Layout navigation={navigation}>
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -234,7 +234,7 @@ export default function PredictionsScreen({ navigation }: PredictionsScreenProps
               <View style={styles.iconCircle}>
                 <Brain size={26} color="#7C3AED" strokeWidth={2} />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.title}>Prédictions IA</Text>
                 <Text style={styles.subtitle}>Glycémie estimée par le modèle</Text>
               </View>
@@ -247,6 +247,12 @@ export default function PredictionsScreen({ navigation }: PredictionsScreenProps
               <RefreshCw size={18} color="#007AFF" />
             </TouchableOpacity>
           </View>
+
+          <Text style={styles.description}>
+            Notre modèle d'intelligence artificielle analyse vos dernières mesures glycémiques,
+            vos repas, médicaments et activités pour estimer votre glycémie future.
+            Ces prédictions sont indicatives et ne remplacent pas l'avis médical.
+          </Text>
 
           {prediction === null ? (
             <View style={styles.emptyCard}>
@@ -417,6 +423,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginHorizontal: 20,
     marginBottom: 12,
+  },
+
+  description: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+    marginHorizontal: 20,
+    marginBottom: 16,
   },
 
   emptyCard: {

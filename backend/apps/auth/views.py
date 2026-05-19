@@ -48,6 +48,22 @@ def _send_verification_link(auth_account) -> None:
     send_verification_email(auth_account.email, link)
 
 
+def _send_verification_link(auth_account) -> None:
+    """Génère un token de vérification et envoie l'email d'activation."""
+    from django.conf import settings
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+
+    from apps.auth.email_smtp import send_verification_email
+    from apps.auth.tokens import email_verification_token
+
+    uid = urlsafe_base64_encode(force_bytes(auth_account.pk))
+    token = email_verification_token.make_token(auth_account)
+    backend_url = getattr(settings, "BACKEND_URL", "http://localhost:8006")
+    link = f"{backend_url}/api/auth/confirm-email?uid={uid}&token={token}"
+    send_verification_email(auth_account.email, link)
+
+
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -61,14 +77,12 @@ def register(request):
     serializer = RegisterSerializer(data=request.data)
 
     if not serializer.is_valid():
-        logger.info("Registration rejected: fields=%s", sorted(serializer.errors.keys()))
         return Response(format_serializer_errors(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
 
     user = serializer.save()
     is_doctor = user.user.profiles.filter(role__name="DOCTOR").exists()
 
     if is_doctor:
-        logger.info("Doctor registration created pending admin validation.")
         return Response(
             {
                 "message": "Votre compte médecin a été créé. Il est en attente de validation par un administrateur."
@@ -80,7 +94,6 @@ def register(request):
     _send_verification_link(user)
 
     tokens = AuthResponseSerializer.get_tokens_for_user(user)
-    logger.info("Patient registration created.")
     return Response(tokens, status=status.HTTP_201_CREATED)
 
 
@@ -94,7 +107,6 @@ def confirm_email(request):
     """
     from django.http import HttpResponse
     from django.utils.encoding import force_str
-    from django.utils.html import format_html
     from django.utils.http import urlsafe_base64_decode
 
     from apps.auth.tokens import email_verification_token
@@ -102,34 +114,32 @@ def confirm_email(request):
     uid = request.query_params.get("uid")
     token = request.query_params.get("token")
 
-    _ERROR_TPL = (
-        '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
-        '<title>Glycopilot</title>'
-        '<style>body{{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5}}'
-        '.card{{background:white;padding:2rem 3rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);text-align:center;max-width:400px}}'
-        'h2{{color:#e53e3e}}p{{color:#555}}</style></head>'
-        '<body><div class="card"><h2>{title}</h2><p>{msg}</p></div></body></html>'
-    )
-
-    def _error_response(title: str, msg: str) -> HttpResponse:
-        return HttpResponse(
-            format_html(_ERROR_TPL, title=title, msg=msg),
-            content_type="text/html", status=400,
-        )
+    error_html = """<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+    <title>Glycopilot</title>
+    <style>body{{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f5f5f5}}
+    .card{{background:white;padding:2rem 3rem;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);text-align:center;max-width:400px}}
+    h2{{color:{color}}}p{{color:#555}}</style></head>
+    <body><div class="card"><h2>{title}</h2><p>{msg}</p></div></body></html>"""
 
     if not uid or not token:
-        return _error_response("Lien invalide", "Ce lien de vérification est incomplet.")
+        return HttpResponse(
+            error_html.format(color="#e53e3e", title="Lien invalide", msg="Ce lien de vérification est incomplet."),
+            content_type="text/html", status=400,
+        )
 
     try:
         auth_id = force_str(urlsafe_base64_decode(uid))
         user = AuthAccount.objects.get(pk=auth_id)
     except (TypeError, ValueError, AuthAccount.DoesNotExist):
-        return _error_response("Lien invalide", "Ce lien de vérification n'est pas valide.")
+        return HttpResponse(
+            error_html.format(color="#e53e3e", title="Lien invalide", msg="Ce lien de vérification n'est pas valide."),
+            content_type="text/html", status=400,
+        )
 
     if not email_verification_token.check_token(user, token):
-        return _error_response(
-            "Lien expiré",
-            "Ce lien a expiré ou a déjà été utilisé. Demandez un nouvel email de vérification depuis l'application.",
+        return HttpResponse(
+            error_html.format(color="#e53e3e", title="Lien expiré", msg="Ce lien a expiré ou a déjà été utilisé. Demandez un nouvel email de vérification depuis l'application."),
+            content_type="text/html", status=400,
         )
 
     if not user.is_active:
@@ -214,6 +224,7 @@ def resend_verification(request):
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([AllowAny])
 @throttle_classes([AuthRateThrottle])
 def login(request):
@@ -254,6 +265,7 @@ def login(request):
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def refresh_token(request):
     """

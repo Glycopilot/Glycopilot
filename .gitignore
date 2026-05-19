@@ -98,4 +98,4 @@ crash.*.log
 override.tf
 override.tf.json
 *_override.tf
-*_override.tf.json
+*_override.tf.json.docker_backend_hash

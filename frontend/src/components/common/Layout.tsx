@@ -20,24 +20,14 @@ export default function Layout({
 }: LayoutProps) {
   return (
     <View style={styles.container}>
-      <Header
-        onNotificationPress={onNotificationPress}
-        navigation={navigation}
-      />
-
+      <Header onNotificationPress={onNotificationPress} navigation={navigation} />
       <View style={styles.content}>{children}</View>
-
       <Navbar navigation={navigation} currentRoute={currentRoute} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F7',
-  },
-  content: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: '#F5F5F7' },
+  content: { flex: 1 },
 });
