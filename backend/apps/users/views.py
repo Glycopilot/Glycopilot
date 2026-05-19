@@ -38,6 +38,22 @@ class UserViewSet(viewsets.ModelViewSet):
             return qs.distinct()
         return User.objects.filter(id_user=user.user.id_user).order_by("id_user")
 
+    @action(detail=False, methods=["post"], url_path="change-password")
+    def change_password(self, request):
+        """POST /api/users/change-password/ — change le mot de passe de l'utilisateur connecté."""
+        current = request.data.get("current_password")
+        new_pwd = request.data.get("new_password")
+        if not current or not new_pwd:
+            return Response({"error": "current_password et new_password sont requis."}, status=400)
+        if len(new_pwd) < 8:
+            return Response({"error": "Le mot de passe doit faire au moins 8 caractères."}, status=400)
+        auth_account = request.user
+        if not auth_account.check_password(current):
+            return Response({"error": "Mot de passe actuel incorrect."}, status=400)
+        auth_account.set_password(new_pwd)
+        auth_account.save(update_fields=["password"])
+        return Response({"message": "Mot de passe mis à jour."}, status=200)
+
     @action(detail=False, methods=["get", "patch"])
     def me(self, request):
         """

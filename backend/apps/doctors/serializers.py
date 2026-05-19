@@ -94,6 +94,8 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             return None
         return SimpleUserSerializer(obj.patient_profile.profile.user).data
 
+    status = serializers.StringRelatedField()
+
     class Meta:
         model = PatientCareTeam
         fields = [

@@ -32,6 +32,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { height: windowHeight } = useWindowDimensions();
 
+  const PROCHE_ROLES = new Set(['FAMILY', 'CAREGIVER', 'NURSE', 'family', 'caregiver', 'nurse']);
+
   const handleLogin = async () => {
     if (!email || !password) {
       toastError('Champs manquants', 'Veuillez remplir tous les champs.');
@@ -41,10 +43,16 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     setIsLoading(true);
     try {
       await authService.login(email, password);
+      const user = await authService.getCurrentUser();
       toastSuccess('Connexion réussie', 'Bienvenue !');
       setEmail('');
       setPassword('');
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      if (user?.role && PROCHE_ROLES.has(user.role)) {
+        navigation.reset?.({ index: 0, routes: [{ name: 'ProcheHome' }] });
+        navigation.navigate('ProcheHome');
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      }
     } catch (error) {
       const err = error as Error;
       toastError(err.message || 'Erreur de connexion', '');
@@ -212,6 +220,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       >
         Pas encore de compte ? Inscrivez-vous
       </Text>
+
+      <TouchableOpacity
+        style={{ marginTop: 12, padding: 10, alignItems: 'center' }}
+        onPress={() => navigation.navigate('ProcheActivation')}
+      >
+        <Text style={{ color: '#6B7280', fontSize: 14 }}>
+          J'ai reçu une invitation proche →
+        </Text>
+      </TouchableOpacity>
 
       <StatusBar style="auto" />
     </View>

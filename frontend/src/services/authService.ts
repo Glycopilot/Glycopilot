@@ -71,12 +71,9 @@ const authService = {
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
-      throw new Error(
-        extractApiErrorMessage(
-          axiosError.response?.data as ApiError | string | Record<string, unknown> | undefined,
-          "Erreur lors de l'inscription"
-        )
-      );
+      const data = axiosError.response?.data;
+      const message = data?.error || data?.message || "Erreur lors de l'inscription";
+      throw new Error(message);
     }
   },
 
@@ -143,6 +140,20 @@ const authService = {
       const axiosError = error as AxiosError<ApiError>;
       throw new Error(
         axiosError.response?.data?.message || 'Erreur lors de la mise à jour du profil'
+      );
+    }
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      await apiClient.post('/users/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+    } catch (error) {
+      const axiosError = error as import('axios').AxiosError<{ error?: string }>;
+      throw new Error(
+        axiosError.response?.data?.error || 'Erreur lors du changement de mot de passe'
       );
     }
   },

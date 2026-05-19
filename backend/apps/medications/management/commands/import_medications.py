@@ -46,6 +46,13 @@ class Command(BaseCommand):
         use_bdpm = options["bdpm"]
         custom_file = options.get("file")
 
+        # Skip si les médicaments sont déjà importés (évite de retourner à chaque démarrage)
+        if Medication.objects.exists():
+            self.stdout.write(self.style.SUCCESS(
+                f"✅ {Medication.objects.count()} médicaments déjà en base, import ignoré."
+            ))
+            return
+
         data_dir = settings.BASE_DIR / "data" / "import"
 
         if custom_file:
