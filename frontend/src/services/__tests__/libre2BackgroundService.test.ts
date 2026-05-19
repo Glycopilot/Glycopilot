@@ -1,5 +1,6 @@
 import MockAdapter from 'axios-mock-adapter';
 import Libre2Cgm from 'libre2-cgm';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../apiClient';
 
 const mockNativeModule = {
@@ -49,6 +50,9 @@ describe('libre2BackgroundService', () => {
     );
     mockApi = new MockAdapter(apiClient);
     mockApi.onPost('/glycemia/cgm-readings/').reply(201, { id: 'reading-1' });
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.setItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(null);
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
   });
@@ -102,5 +106,50 @@ describe('libre2BackgroundService', () => {
       value: 125,
       unit: 'mg/dL',
     });
+  });
+
+  it('stores readings locally when the backend post fails', async () => {
+    mockApi.resetHandlers();
+    mockApi.onPost('/glycemia/cgm-readings/').reply(500);
+
+    await handleLibre2BackgroundReadingForTests({
+      mgdl: 140,
+      timeMs: 1_000_000,
+      serial: 'SN123',
+    } as any);
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      'pending_cgm_readings',
+      JSON.stringify([
+        {
+          measured_at: new Date(1_000_000).toISOString(),
+          value: 140,
+          unit: 'mg/dL',
+          notes: 'Libre serial=SN123',
+        },
+      ])
+    );
+  });
+
+  it('flushes pending readings before posting the current reading', async () => {
+    const pending = [
+      {
+        measured_at: new Date(900_000).toISOString(),
+        value: 111,
+        unit: 'mg/dL',
+      },
+    ];
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(pending));
+
+    await handleLibre2BackgroundReadingForTests({ mgdl: 125, timeMs: 1_000_000 } as any);
+
+    expect(mockApi.history.post).toHaveLength(2);
+    expect(JSON.parse(mockApi.history.post[0].data)).toEqual(pending[0]);
+    expect(JSON.parse(mockApi.history.post[1].data)).toEqual({
+      measured_at: new Date(1_000_000).toISOString(),
+      value: 125,
+      unit: 'mg/dL',
+    });
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('pending_cgm_readings');
   });
 });
