@@ -136,6 +136,3 @@ describe('ProcheMedications Screen', () => {
     expect(await findByText(/2 prises/)).toBeTruthy();
   });
 });
-function expect(arg0: ReactTestInstance) {
-  throw new Error('Function not implemented.');
-}

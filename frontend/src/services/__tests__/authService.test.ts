@@ -130,7 +130,7 @@ describe('authService', () => {
         it('should handle complex registration errors (objects)', async () => {
             mock.onPost(/\/auth\/register/).reply(400, { error: 'Invalid format', errors: { email: 'Invalid format' } });
 
-            await expect(authService.register({} as any)).rejects.toThrow("Erreur lors de l'inscription");
+            await expect(authService.register({} as any)).rejects.toThrow('Invalid format');
         });
     });
 
