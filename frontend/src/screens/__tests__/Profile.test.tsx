@@ -368,19 +368,19 @@ describe('ProfileScreen', () => {
 
 
     it('opens add contact modal via Plus button', async () => {
-        const { getByTestId, queryByText } = renderProfile();
-        await waitFor(() => expect(getByTestId('Plus')).toBeTruthy());
+        const { getAllByText, getByPlaceholderText } = renderProfile();
+        await waitFor(() => expect(getAllByText('Ajouter un proche')[0]).toBeTruthy());
 
-        fireEvent.press(getByTestId('Plus'));
+        fireEvent.press(getAllByText('Ajouter un proche')[0]);
 
-        await waitFor(() => expect(queryByText('Ajouter un contact d\'urgence')).toBeTruthy());
+        await waitFor(() => expect(getByPlaceholderText('Ex: Marie Dupont')).toBeTruthy());
     });
 
     it('submits add contact form', async () => {
-        const { getByTestId, getByPlaceholderText, getByText } = renderProfile();
-        await waitFor(() => expect(getByTestId('Plus')).toBeTruthy());
+        const { getAllByText, getByPlaceholderText, getByText } = renderProfile();
+        await waitFor(() => expect(getAllByText('Ajouter un proche')[0]).toBeTruthy());
 
-        fireEvent.press(getByTestId('Plus'));
+        fireEvent.press(getAllByText('Ajouter un proche')[0]);
 
         await waitFor(() => expect(getByPlaceholderText('Ex: Marie Dupont')).toBeTruthy());
 
