@@ -140,6 +140,10 @@ resource "aws_instance" "web" {
   tags = {
     Name = "glycopilot-ec2-plan-a"
   }
+
+  lifecycle {
+    ignore_changes = [ami]
+  }
 }
 
 resource "aws_eip" "web_eip" {
@@ -154,7 +158,7 @@ resource "aws_eip" "web_eip" {
 }
 
 resource "aws_s3_bucket" "media" {
-  bucket = "glycopilot-aws-s3-bucket-img-artifacts"
+  bucket = var.data_bucket_name
 
   tags = {
     Name = "glycopilot-media"

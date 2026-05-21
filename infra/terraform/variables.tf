@@ -15,3 +15,9 @@ variable "ssh_public_key" {
   type        = string
   default     = ""
 }
+
+variable "data_bucket_name" {
+  description = "Bucket S3 existant utilisé par le socle commun pour les médias, artefacts et backups."
+  type        = string
+  default     = "glycopilot-aws-s3-bucket-img-artifacts"
+}
