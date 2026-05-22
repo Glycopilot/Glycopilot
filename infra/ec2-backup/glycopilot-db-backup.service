@@ -1,0 +1,10 @@
+[Unit]
+Description=Create Glycopilot PostgreSQL backup and upload it to S3
+Wants=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/glycopilot-db-backup
+ExecStart=/usr/local/sbin/glycopilot-db-backup
+User=root
