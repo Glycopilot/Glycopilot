@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 jest.mock('../../services/authService', () => {
@@ -33,7 +33,7 @@ function makeActiveMember(id = '1', firstName = 'Alice', lastName = 'Martin') {
       email: `${firstName.toLowerCase()}@test.com`,
       phone_number: null,
     },
-    status: 2,
+    status: 'ACTIVE',
     role_label: 'Referent Doctor',
     approved_by: 'doc-1',
   };
@@ -507,6 +507,16 @@ describe('PatientsScreen', () => {
     it('s\'ouvre au clic "Ouvrir"', async () => {
       await openDossier();
       expect(screen.getAllByText('Alice Martin').length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('affiche "Actif" dans le modal quand status API est ACTIVE (pas "Inconnu")', async () => {
+      await openDossier();
+      const modal = document.querySelector('.modal-xl');
+      expect(modal).toBeInTheDocument();
+      const header = within(modal).getByText('Alice Martin').closest('.pdm-header');
+      expect(header).toBeTruthy();
+      expect(within(header).getByText('Actif')).toBeInTheDocument();
+      expect(within(header).queryByText('Inconnu')).not.toBeInTheDocument();
     });
 
     it('se ferme au clic sur le X', async () => {
