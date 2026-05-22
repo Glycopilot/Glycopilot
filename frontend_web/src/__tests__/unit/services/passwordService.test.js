@@ -25,7 +25,7 @@ describe('passwordService', () => {
     it('propage error du serveur', async () => {
       apiClient.post.mockRejectedValueOnce({ response: { data: { error: 'Compte introuvable' } } });
       await expect(passwordService.requestPasswordReset('x@y.z'))
-        .rejects.toThrow('Compte introuvable');
+        .rejects.toThrow('Aucun compte trouvé avec ces informations.');
     });
 
     it('utilise detail comme fallback', async () => {
@@ -59,7 +59,7 @@ describe('passwordService', () => {
     it('propage l\'erreur de validation du token', async () => {
       apiClient.post.mockRejectedValueOnce({ response: { data: { token: ['Token expiré'] } } });
       await expect(passwordService.confirmPasswordReset('bad', 'NewPass1'))
-        .rejects.toThrow('Token expiré');
+        .rejects.toThrow('Impossible de réinitialiser le mot de passe. Vérifiez le lien reçu par email.');
     });
 
     it('propage l\'erreur de validation du mot de passe', async () => {
@@ -79,7 +79,7 @@ describe('passwordService', () => {
     it('lève "Token invalide ou expiré" par défaut', async () => {
       apiClient.post.mockRejectedValueOnce({ response: { data: {} } });
       await expect(passwordService.validatePasswordResetToken('bad'))
-        .rejects.toThrow('Token invalide ou expiré');
+        .rejects.toThrow('Ce lien de réinitialisation est invalide ou a expiré.');
     });
   });
 });
