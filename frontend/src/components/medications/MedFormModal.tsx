@@ -18,7 +18,7 @@ import MedicationAutocomplete from './MedicationAutocomplete';
 import { colors } from '../../themes/colors';
 import { toastSuccess, toastError } from '../../services/toastService';
 import type {
-  FdaMedicationResult,
+  ReferenceMedication,
   MealTiming,
   UserMedication,
   CreateUserMedicationPayload,
@@ -61,7 +61,7 @@ export default function MedFormModal({
   onUpdate,
 }: MedFormModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMedRef, setSelectedMedRef] = useState<FdaMedicationResult | null>(null);
+  const [selectedMedRef, setSelectedMedRef] = useState<ReferenceMedication | null>(null);
 
   const [customName, setCustomName] = useState('');
   const [customDosage, setCustomDosage] = useState('');
@@ -121,9 +121,10 @@ export default function MedFormModal({
     onClose();
   }, [resetForm, onClose]);
 
-  const handleSelectFdaMed = useCallback((med: FdaMedicationResult) => {
+  const handleSelectMedication = useCallback((med: ReferenceMedication) => {
     setSelectedMedRef(med);
-    setCustomName(med.brandName);
+    setCustomName(med.name);
+    if (med.dosage) setCustomDosage(med.dosage);
     setSearchQuery('');
   }, []);
 
@@ -184,10 +185,16 @@ export default function MedFormModal({
         })()
       : undefined;
 
+    // Médicament issu de la DB locale : on l'envoie par medication_id (source api),
+    // sauf si l'utilisateur a réédité le nom à la main après sélection.
+    const isDbMed =
+      selectedMedRef !== null && customName.trim() === selectedMedRef.name;
+
     const payload: CreateUserMedicationPayload = {
-      custom_name: customName.trim(),
+      ...(isDbMed
+        ? { medication_id: selectedMedRef.medication_id, source: 'api' }
+        : { custom_name: customName.trim(), source: isPrescribed ? 'prescribed' : 'manual' }),
       custom_dosage: customDosage.trim() || undefined,
-      source: isPrescribed ? 'prescribed' : 'manual',
       start_date: startDate,
       end_date: endDate,
       doses_per_day: dosesPerDay,
@@ -246,12 +253,12 @@ export default function MedFormModal({
             {editingMed ? 'Modifier le traitement' : 'Nouveau médicament'}
           </Text>
 
-          {/* Recherche FDA */}
+          {/* Recherche médicament (base locale BDPM) */}
           <View style={styles.section}>
             <MedicationAutocomplete
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onSelectMedication={handleSelectFdaMed}
+              onSelectMedication={handleSelectMedication}
               label="Rechercher un médicament"
               placeholder="Doliprane, Metformine..."
             />

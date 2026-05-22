@@ -240,6 +240,11 @@ def reset_database():
             Profile.objects.create(user=u, role=role)
             print("  -> Created superadmin@example.com / StrongPass123! (SUPERADMIN)")
 
+    # Import médicaments BDPM (base locale de référence)
+    print("... Import médicaments BDPM ...")
+    execute_from_command_line(["manage.py", "import_medications", "--bdpm"])
+    print("✓ Médicaments importés")
+
     print("=== DATABASE RESET COMPLETE ===")
 
 
