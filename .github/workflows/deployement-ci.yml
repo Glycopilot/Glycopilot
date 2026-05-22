@@ -75,12 +75,18 @@ jobs:
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
           AI_ENV_FILE: ${{ secrets.AI_ENV_FILE }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/glycopilot_ec2_key
-          chmod 600 ~/.ssh/glycopilot_ec2_key
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          set -euo pipefail
 
-          ssh -i ~/.ssh/glycopilot_ec2_key "$EC2_USERNAME@$EC2_HOST" "mkdir -p /home/ubuntu/glycopilot-app"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" | sed 's/\r$//' > ~/.ssh/glycopilot_ec2_key
+          chmod 600 ~/.ssh/glycopilot_ec2_key
+
+          SSH_OPTS="-i $HOME/.ssh/glycopilot_ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30"
+
+          ssh \
+            $SSH_OPTS \
+            "$EC2_USERNAME@$EC2_HOST" \
+            "mkdir -p /home/ubuntu/glycopilot-app"
 
           rsync -az --delete \
             --exclude '.git/' \
@@ -94,13 +100,13 @@ jobs:
             --exclude 'frontend/node_modules/' \
             --exclude 'backend/db.sqlite3' \
             --exclude 'backend/media/' \
-            -e "ssh -i ~/.ssh/glycopilot_ec2_key" \
+            -e "ssh -i ~/.ssh/glycopilot_ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30" \
             ./ "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/"
 
           printf '%s\n' "$PROD_ENV_FILE" > backend/.env.prod
           printf '%s\n' "$AI_ENV_FILE" > ai_service/.env.prod
-          scp -i ~/.ssh/glycopilot_ec2_key backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
-          scp -i ~/.ssh/glycopilot_ec2_key ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
+          scp $SSH_OPTS backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
+          scp $SSH_OPTS ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
 
       - name: Execute deployment on EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -109,12 +115,21 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -eu
             cd /home/ubuntu/glycopilot-app
-            
+
+            sudo install -m 0755 infra/ec2-watchdog/glycopilot-healthcheck.sh /usr/local/sbin/glycopilot-healthcheck
+            sudo install -m 0644 infra/ec2-watchdog/glycopilot-healthcheck.env /etc/default/glycopilot-healthcheck
+            sudo install -m 0644 infra/ec2-watchdog/glycopilot-healthcheck.service /etc/systemd/system/glycopilot-healthcheck.service
+            sudo install -m 0644 infra/ec2-watchdog/glycopilot-healthcheck.timer /etc/systemd/system/glycopilot-healthcheck.timer
+            sudo systemctl daemon-reload
+
             docker compose --profile aws down
             docker compose --profile aws up -d --build
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
+            sudo systemctl start glycopilot-healthcheck.service
+            sudo systemctl enable --now glycopilot-healthcheck.timer
             docker image prune -f
 
   deploy-plan-b:
