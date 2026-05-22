@@ -18,15 +18,15 @@ describe('setupProxy', () => {
     else process.env.API_PROXY_TARGET = originalTarget;
   });
 
-  it('installe le proxy /api avec la cible par défaut', () => {
-    delete process.env.API_PROXY_TARGET;
+  it('installe le proxy /api avec API_PROXY_TARGET', () => {
+    process.env.API_PROXY_TARGET = 'http://127.0.0.1:8006';
     const setupProxy = require('../../setupProxy');
     const app = { use: jest.fn() };
 
     setupProxy(app);
 
     expect(mockCreateProxyMiddleware).toHaveBeenCalledWith({
-      target: 'http://backend_local:8000',
+      target: 'http://127.0.0.1:8006',
       changeOrigin: false,
       pathFilter: '/api',
       logLevel: 'warn',
