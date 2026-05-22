@@ -11,57 +11,18 @@ import {
 } from 'react-native';
 import { Pill, X } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
-import type { FdaMedicationResult } from '../../types/medications.types';
+import medicationService from '../../services/medicationService';
+import type { ReferenceMedication } from '../../types/medications.types';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
 export interface MedicationAutocompleteProps {
   readonly value: string;
   readonly onChangeText: (text: string) => void;
-  readonly onSelectMedication: (medication: FdaMedicationResult) => void;
+  readonly onSelectMedication: (medication: ReferenceMedication) => void;
   readonly placeholder?: string;
   readonly label?: string;
   readonly style?: object;
-}
-
-// ─── OpenFDA helpers ──────────────────────────────────────────────────────────
-
-interface FdaLabelResult {
-  openfda?: {
-    brand_name?: string[];
-    generic_name?: string[];
-  };
-}
-
-interface FdaResponse {
-  results?: FdaLabelResult[];
-}
-
-async function fetchFdaSuggestions(query: string): Promise<FdaMedicationResult[]> {
-  // Encode the query text but append * outside encoding (wildcard for prefix search)
-  const encoded = encodeURIComponent(query.trim());
-  const search = `openfda.brand_name:${encoded}*+openfda.generic_name:${encoded}*`;
-  const baseUrl = process.env.EXPO_PUBLIC_FDA_API_URL;
-  if (!baseUrl) return [];
-  const url = `${baseUrl}?search=${search}&limit=10`;
-  const res = await fetch(url);
-  // OpenFDA returns 404 when no results — treat as empty, not an error
-  if (res.status === 404) return [];
-  if (!res.ok) throw new Error(`FDA API error: ${res.status}`);
-  const json: FdaResponse = await res.json();
-  const seen = new Set<string>();
-  const results: FdaMedicationResult[] = [];
-  for (const item of json.results ?? []) {
-    const brandName = item.openfda?.brand_name?.[0] ?? '';
-    const genericName = item.openfda?.generic_name?.[0] ?? '';
-    if (!brandName) continue;
-    const key = `${brandName}|${genericName}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      results.push({ brandName, genericName });
-    }
-  }
-  return results;
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -74,7 +35,7 @@ export default function MedicationAutocomplete({
   label,
   style,
 }: MedicationAutocompleteProps): React.JSX.Element {
-  const [suggestions, setSuggestions] = useState<FdaMedicationResult[]>([]);
+  const [suggestions, setSuggestions] = useState<ReferenceMedication[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -93,7 +54,7 @@ export default function MedicationAutocomplete({
     setShowSuggestions(true);
     setError(false);
     try {
-      const results = await fetchFdaSuggestions(query);
+      const results = await medicationService.search(query);
       setSuggestions(results);
     } catch {
       setError(true);
@@ -115,9 +76,9 @@ export default function MedicationAutocomplete({
   );
 
   const handleSelect = useCallback(
-    (item: FdaMedicationResult) => {
+    (item: ReferenceMedication) => {
       onSelectMedication(item);
-      onChangeText(item.brandName);
+      onChangeText(item.name);
       setSuggestions([]);
       setShowSuggestions(false);
       setSearched(false);
@@ -183,9 +144,11 @@ export default function MedicationAutocomplete({
                 <Text style={styles.emptyText}>Aucun médicament trouvé</Text>
               </View>
             )}
-            {!error && !isEmpty && suggestions.map((item, index) => (
+            {!error && !isEmpty && suggestions.map((item, index) => {
+              const subtitle = item.form ?? item.dosage;
+              return (
                 <TouchableOpacity
-                  key={`${item.brandName}-${index}`}
+                  key={item.medication_id}
                   style={[
                     styles.suggestionRow,
                     index < suggestions.length - 1 && styles.suggestionRowBorder,
@@ -198,16 +161,17 @@ export default function MedicationAutocomplete({
                   </View>
                   <View style={styles.suggestionText}>
                     <Text style={styles.suggestionName} numberOfLines={1}>
-                      {item.brandName}
+                      {item.name}
                     </Text>
-                    {item.genericName ? (
+                    {subtitle ? (
                       <Text style={styles.suggestionGeneric} numberOfLines={1}>
-                        {item.genericName}
+                        {subtitle}
                       </Text>
                     ) : null}
                   </View>
                 </TouchableOpacity>
-              ))}
+              );
+            })}
           </ScrollView>
         </View>
       )}
