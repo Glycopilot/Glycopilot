@@ -1,5 +1,9 @@
 name: Master Deployment Pipeline
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -67,6 +71,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare container image names
+        id: images
+        run: |
+          REPOSITORY_LC="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          echo "backend_image=ghcr.io/${REPOSITORY_LC}/glycopilot-backend:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "ai_service_image=ghcr.io/${REPOSITORY_LC}/glycopilot-ai-service:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.images.outputs.backend_image }}
+          cache-from: type=gha,scope=glycopilot-backend
+          cache-to: type=gha,mode=max,scope=glycopilot-backend
+
+      - name: Build and push AI service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai_service
+          push: true
+          tags: ${{ steps.images.outputs.ai_service_image }}
+          cache-from: type=gha,scope=glycopilot-ai-service
+          cache-to: type=gha,mode=max,scope=glycopilot-ai-service
+
       - name: Sync repository to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
@@ -74,6 +113,8 @@ jobs:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
           AI_ENV_FILE: ${{ secrets.AI_ENV_FILE }}
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend_image }}
+          AI_SERVICE_IMAGE: ${{ steps.images.outputs.ai_service_image }}
         run: |
           set -euo pipefail
 
@@ -105,15 +146,24 @@ jobs:
 
           printf '%s\n' "$PROD_ENV_FILE" > backend/.env.prod
           printf '%s\n' "$AI_ENV_FILE" > ai_service/.env.prod
+          {
+            printf 'BACKEND_IMAGE=%s\n' "$BACKEND_IMAGE"
+            printf 'AI_SERVICE_IMAGE=%s\n' "$AI_SERVICE_IMAGE"
+          } > .env
           scp $SSH_OPTS backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
           scp $SSH_OPTS ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
+          scp $SSH_OPTS .env "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/.env"
 
       - name: Execute deployment on EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GHCR_USERNAME,GHCR_TOKEN
           script: |
             set -eu
             cd /home/ubuntu/glycopilot-app
@@ -124,8 +174,11 @@ jobs:
             sudo install -m 0644 infra/ec2-watchdog/glycopilot-healthcheck.timer /etc/systemd/system/glycopilot-healthcheck.timer
             sudo systemctl daemon-reload
 
-            docker compose --profile aws down
-            docker compose --profile aws up -d --build
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            docker compose --profile aws pull backend_aws ai_service_aws medication_scheduler_aws nginx
+            docker logout ghcr.io || true
+            docker compose --profile aws up -d --no-build database_aws redis_aws
+            docker compose --profile aws up -d --no-build --force-recreate backend_aws ai_service_aws medication_scheduler_aws nginx
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
             sudo systemctl start glycopilot-healthcheck.service
