@@ -1,0 +1,11 @@
+[run]
+relative_files = True
+source =
+    ai_service
+
+[report]
+show_missing = True
+omit =
+    ai_service/tests/*
+    ai_service/artifacts/*
+    ai_service/training/train_*.py

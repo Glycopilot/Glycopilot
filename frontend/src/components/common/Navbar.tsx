@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { Home, ChartColumn, User, Droplet } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Home, Droplet, BookOpen, User } from 'lucide-react-native';
 import { colors } from '../../themes/colors';
 
 interface Tab {
   name: string;
-  icon: React.ComponentType<any>;
+  label: string;
+  Icon: React.ComponentType<{ size: number; color: string; strokeWidth?: number }>;
 }
 
 interface NavbarProps {
@@ -13,66 +14,42 @@ interface NavbarProps {
   currentRoute?: string;
 }
 
-export default function Navbar({
-  navigation,
-  currentRoute = 'Home',
-}: NavbarProps) {
+const TABS: Tab[] = [
+  { name: 'Home',     label: 'Accueil',  Icon: Home     },
+  { name: 'Glycemia', label: 'Glycémie', Icon: Droplet  },
+  { name: 'Journal',  label: 'Journal',  Icon: BookOpen },
+  { name: 'Profile',  label: 'Profil',   Icon: User     },
+];
+
+export default function Navbar({ navigation, currentRoute = 'Home' }: NavbarProps) {
   const [activeTab, setActiveTab] = useState(currentRoute);
 
   useEffect(() => {
     setActiveTab(currentRoute);
   }, [currentRoute]);
 
-  const tabs: Tab[] = [
-    {
-      name: 'Home',
-      icon: Home,
-    },
-    {
-      name: 'Glycemia',
-      icon: Droplet,
-    },
-    {
-      name: 'Stats',
-      icon: ChartColumn,
-    },
-    {
-      name: 'Profile',
-      icon: User,
-    },
-  ];
-
   const handleTabPress = (tabName: string) => {
     setActiveTab(tabName);
-    if (navigation && navigation.navigate) {
-      navigation.navigate(tabName);
-    }
+    if (navigation?.navigate) navigation.navigate(tabName);
   };
 
   return (
-    <View style={styles.container}>
-      {tabs.map(tab => {
-        const isActive = activeTab === tab.name;
-        const Icon = tab.icon;
+    <View style={styles.bar}>
+      {TABS.map(({ name, label, Icon }) => {
+        const active = activeTab === name;
+        const color = active ? colors.secondary : '#9CA3AF';
         return (
           <TouchableOpacity
-            key={tab.name}
-            style={styles.tabButton}
-            onPress={() => handleTabPress(tab.name)}
+            key={name}
+            style={styles.tab}
+            onPress={() => handleTabPress(name)}
             activeOpacity={0.7}
           >
-            <View
-              style={[
-                styles.iconContainer,
-                isActive && styles.iconContainerActive,
-              ]}
-            >
-              <Icon
-                size={24}
-                color={isActive ? colors.secondary : colors.textSecondary}
-                strokeWidth={isActive ? 2.5 : 2}
-              />
+            <View style={styles.iconWrapper}>
+              <Icon size={22} color={color} strokeWidth={active ? 2.5 : 2} />
             </View>
+            <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+            {active && <View style={styles.indicator} />}
           </TouchableOpacity>
         );
       })}
@@ -81,35 +58,43 @@ export default function Navbar({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    bottom: 15,
-    left: 0,
-    right: 0,
+  bar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingBottom: 10,
+    borderTopColor: '#F3F4F6',
+    paddingBottom: 24,
     paddingTop: 10,
-    paddingHorizontal: 16,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 8,
   },
-  tabButton: {
+  tab: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    gap: 4,
+    position: 'relative',
   },
-  iconContainer: {
-    marginBottom: 2,
+  iconWrapper: {
+    position: 'relative',
   },
-  iconContainerActive: {},
+  label: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  labelActive: {
+    color: colors.secondary,
+    fontWeight: '700',
+  },
+  indicator: {
+    position: 'absolute',
+    bottom: -10,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.secondary,
+  },
 });

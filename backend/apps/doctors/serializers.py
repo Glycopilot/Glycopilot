@@ -96,6 +96,8 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
         data["hba1c"] = obj.patient_profile.hba1c
         return data
 
+    status = serializers.StringRelatedField()
+
     class Meta:
         model = PatientCareTeam
         fields = [

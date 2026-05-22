@@ -26,6 +26,18 @@ const mapToUser = (data: Record<string, any>): User => ({
   diabetesType: data.profiles?.[0]?.patient_details?.diabetes_type,
 });
 
+const extractApiErrorMessage = (
+  data: ApiError | string | Record<string, unknown> | undefined,
+  fallback: string
+): string => {
+  if (!data) return fallback;
+  if (typeof data === 'string') return data;
+  if ('error' in data && typeof data.error === 'string') return data.error;
+  if ('message' in data && typeof data.message === 'string') return data.message;
+  if ('detail' in data && typeof data.detail === 'string') return data.detail;
+  return JSON.stringify(data);
+};
+
 const authService = {
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
@@ -128,6 +140,20 @@ const authService = {
       const axiosError = error as AxiosError<ApiError>;
       throw new Error(
         axiosError.response?.data?.message || 'Erreur lors de la mise à jour du profil'
+      );
+    }
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      await apiClient.post('/users/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+    } catch (error) {
+      const axiosError = error as import('axios').AxiosError<{ error?: string }>;
+      throw new Error(
+        axiosError.response?.data?.error || 'Erreur lors du changement de mot de passe'
       );
     }
   },
