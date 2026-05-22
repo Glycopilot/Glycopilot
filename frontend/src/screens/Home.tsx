@@ -23,6 +23,7 @@ import {
 import { useGlycemiaWebSocket } from '../hooks/useGlycemiaWebSocket';
 import glycemiaService from '../services/glycemiaService';
 import type { GlycemiaEntry } from '../types/glycemia.types';
+import { usePedometer } from '../hooks/usePedometer';
 import { toastError, toastInfo } from '../services/toastService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications } from '../services/pushService';
@@ -41,6 +42,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     });
 
   const { todayIntakes } = useMedications();
+  const { todaySteps, stepGoal } = usePedometer();
 
   // Calcul identique à medicins.tsx
   const medicationSummary = useMemo(() => {
@@ -182,8 +184,8 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               icon={Activity}
               iconColor="#FF9F1C"
               iconBgColor="#FFF9F0"
-              value={activity.steps?.value || 0}
-              subtitle={`/ ${activity.steps?.goal || 8000} pas`}
+              value={todaySteps}
+              subtitle={`/ ${stepGoal.toLocaleString('fr-FR')} pas`}
               onPress={() => console.log('Navigate to Activity')}
             />
           )}

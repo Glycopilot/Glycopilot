@@ -28,7 +28,7 @@ const fillMatchingEmails = (q: ReturnType<typeof render>, email = 'a@test.com') 
     setFieldAll(q, 'user@example.com', 1, email);
 };
 
-const fillMatchingPasswords = (q: ReturnType<typeof render>, pw = 'Password123') => {
+const fillMatchingPasswords = (q: ReturnType<typeof render>, pw = 'Password1234') => {
     setFieldAll(q, '••••••••', 0, pw);
     setFieldAll(q, '••••••••', 1, pw);
 };
@@ -87,7 +87,7 @@ describe('SignIn Screen', () => {
             pressSubmit(q);
             expect(toastError).toHaveBeenCalledWith(
                 'Erreur',
-                'Le mot de passe doit contenir au moins 8 caractères'
+                'Le mot de passe doit contenir au moins 12 caractères'
             );
         });
 
@@ -95,7 +95,7 @@ describe('SignIn Screen', () => {
             const q = renderSignIn();
             fillNames(q);
             fillMatchingEmails(q, 'not-an-email');
-            fillMatchingPasswords(q, 'Password1');
+            fillMatchingPasswords(q, 'Password1234');
             pressSubmit(q);
             expect(toastError).toHaveBeenCalledWith('Erreur', "L'adresse email n'est pas valide");
         });
@@ -116,7 +116,7 @@ describe('SignIn Screen', () => {
             const q = renderSignIn();
             fillNames(q);
             fillMatchingEmails(q);
-            fillMatchingPasswords(q, 'password123');
+            fillMatchingPasswords(q, 'password1234');
             pressSubmit(q);
             expect(toastError).toHaveBeenCalledWith(
                 'Erreur',
