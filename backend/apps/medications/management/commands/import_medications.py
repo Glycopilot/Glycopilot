@@ -14,7 +14,9 @@ import csv
 from pathlib import Path
 
 from django.conf import settings
+from django.core.management.color import no_style
 from django.core.management.base import BaseCommand
+from django.db import connection
 
 from apps.medications.models import Medication
 
@@ -41,17 +43,17 @@ class Command(BaseCommand):
             type=str,
             help="Path to the input file (optional, uses default location if not set)",
         )
+        parser.add_argument(
+            "--min-bdpm-count",
+            type=int,
+            default=10000,
+            help="Skip BDPM import when at least this many medications with CIS code already exist",
+        )
 
     def handle(self, *args, **options):
         use_bdpm = options["bdpm"]
         custom_file = options.get("file")
-
-        # Skip si les médicaments sont déjà importés (évite de retourner à chaque démarrage)
-        if Medication.objects.exists():
-            self.stdout.write(self.style.SUCCESS(
-                f"✅ {Medication.objects.count()} médicaments déjà en base, import ignoré."
-            ))
-            return
+        min_bdpm_count = options["min_bdpm_count"]
 
         data_dir = settings.BASE_DIR / "data" / "import"
 
@@ -61,6 +63,29 @@ class Command(BaseCommand):
             file_path = data_dir / "CIS_bdpm.txt"
         else:
             file_path = data_dir / "medications.csv"
+
+        # Le CSV local reste un seed minimal : s'il existe déjà des médicaments,
+        # on ne le rejoue pas à chaque démarrage.
+        if not use_bdpm and Medication.objects.exists():
+            self.stdout.write(self.style.SUCCESS(
+                f"✅ {Medication.objects.count()} médicaments déjà en base, import ignoré."
+            ))
+            return
+
+        # Le BDPM doit pouvoir compléter un seed local déjà présent. On le skip
+        # seulement quand le catalogue officiel semble déjà chargé.
+        if use_bdpm:
+            bdpm_count = (
+                Medication.objects
+                .exclude(cis_code__isnull=True)
+                .exclude(cis_code="")
+                .count()
+            )
+            if bdpm_count >= min_bdpm_count:
+                self.stdout.write(self.style.SUCCESS(
+                    f"✅ {bdpm_count} médicaments BDPM déjà en base, import ignoré."
+                ))
+                return
 
         self.stdout.write(self.style.MIGRATE_HEADING(
             f"Importing medications from: {file_path} "
@@ -91,6 +116,7 @@ class Command(BaseCommand):
     def _import_bdpm(self, path: Path):
         """Parse le fichier officiel CIS_bdpm.txt (tab-séparé, encodage latin-1)."""
         count_created = count_updated = count_skipped = 0
+        self._reset_medication_sequence()
 
         with open(path, "r", encoding="latin-1") as f:  # NOSONAR - chemin validé avant appel
             for line in f:
@@ -127,6 +153,16 @@ class Command(BaseCommand):
             f"BDPM import terminé : {count_created} créés, "
             f"{count_updated} mis à jour, {count_skipped} ignorés (non commercialisés)"
         ))
+
+    def _reset_medication_sequence(self):
+        """Realigne la séquence AutoField après les seeds historiques avec IDs fixes."""
+        statements = connection.ops.sequence_reset_sql(no_style(), [Medication])
+        if not statements:
+            return
+
+        with connection.cursor() as cursor:
+            for statement in statements:
+                cursor.execute(statement)
 
     def _import_csv(self, path: Path):
         """Parse le CSV local custom (format Glycopilot)."""

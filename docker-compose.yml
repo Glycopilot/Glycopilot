@@ -16,7 +16,7 @@ services:
       - mysql_data:/var/lib/mysql
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "$MYSQL_USER", "--password=$MYSQL_PASSWORD"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $${MYSQL_USER} --password=$${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -120,6 +120,7 @@ services:
   # --- AI Service FastAPI (AWS) ---
   ai_service_aws:
     profiles: ["aws"]
+    image: ${AI_SERVICE_IMAGE:-glycopilot-ai-service:local}
     build:
       context: ./ai_service
       dockerfile: Dockerfile
@@ -194,6 +195,7 @@ services:
   # --- Backend Django (AWS avec Daphne pour WebSocket) ---
   backend_aws:
     profiles: ["aws"]
+    image: ${BACKEND_IMAGE:-glycopilot-backend:local}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -204,8 +206,8 @@ services:
     environment:
       Django_ENV: production
       DB_ENGINE: postgresql
-      DB_HOST: database_aws
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST:-database_aws}
+      DB_PORT: ${DB_PORT:-5432}
     # Daphne au lieu de Gunicorn pour supporter WebSocket
     command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py import_medications --bdpm && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
     volumes:
@@ -224,6 +226,7 @@ services:
   # --- Scheduler rappels médicaments (AWS) ---
   medication_scheduler_aws:
     profiles: ["aws"]
+    image: ${BACKEND_IMAGE:-glycopilot-backend:local}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -234,8 +237,8 @@ services:
     environment:
       Django_ENV: production
       DB_ENGINE: postgresql
-      DB_HOST: database_aws
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST:-database_aws}
+      DB_PORT: ${DB_PORT:-5432}
     depends_on:
       backend_aws:
         condition: service_started
