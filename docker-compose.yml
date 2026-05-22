@@ -120,6 +120,7 @@ services:
   # --- AI Service FastAPI (AWS) ---
   ai_service_aws:
     profiles: ["aws"]
+    image: ${AI_SERVICE_IMAGE:-glycopilot-ai-service:local}
     build:
       context: ./ai_service
       dockerfile: Dockerfile
@@ -194,6 +195,7 @@ services:
   # --- Backend Django (AWS avec Daphne pour WebSocket) ---
   backend_aws:
     profiles: ["aws"]
+    image: ${BACKEND_IMAGE:-glycopilot-backend:local}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -224,6 +226,7 @@ services:
   # --- Scheduler rappels médicaments (AWS) ---
   medication_scheduler_aws:
     profiles: ["aws"]
+    image: ${BACKEND_IMAGE:-glycopilot-backend:local}
     build:
       context: ./backend
       dockerfile: Dockerfile
