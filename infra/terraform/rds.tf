@@ -13,7 +13,7 @@ resource "aws_security_group" "rds" {
   count = var.enable_rds ? 1 : 0
 
   name        = "${var.rds_identifier}-sg"
-  description = "Autorise PostgreSQL uniquement depuis l'EC2 Glycopilot"
+  description = "Autorise PostgreSQL uniquement depuis l EC2 Glycopilot"
   vpc_id      = aws_vpc.main.id
 
   ingress {

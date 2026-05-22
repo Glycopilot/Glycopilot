@@ -11,8 +11,24 @@ from decouple import Csv, config
 # --- BASE DIR ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _security_header_value(name, default=None, allowed_values=None):
+    value = config(name, default=default)
+    if isinstance(value, str):
+        value = value.strip()
+    if value == "":
+        value = default
+    if allowed_values is not None and value not in allowed_values:
+        raise ImproperlyConfigured(
+            f"{name} must be one of {sorted(v for v in allowed_values if v is not None)}"
+            f" or empty."
+        )
+    return value
+
 # --- ENVIRONNEMENT ---
 # "production" or "development"
+
+
 ENV = config("Django_ENV", default=os.getenv("DJANGO_ENV", "development")).lower()
 DEBUG = config("DEBUG", default=False, cast=bool)
 
@@ -339,15 +355,17 @@ if not DEBUG:
     CSRF_COOKIE_SAMESITE = "Strict"
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_CROSS_ORIGIN_OPENER_POLICY = config(
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = _security_header_value(
         "SECURE_CROSS_ORIGIN_OPENER_POLICY",
         default="same-origin",
+        allowed_values={None, "same-origin", "same-origin-allow-popups", "unsafe-none"},
     )
     X_FRAME_OPTIONS = "DENY"
 else:
-    SECURE_CROSS_ORIGIN_OPENER_POLICY = config(
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = _security_header_value(
         "SECURE_CROSS_ORIGIN_OPENER_POLICY",
         default=None,
+        allowed_values={None, "same-origin", "same-origin-allow-popups", "unsafe-none"},
     )
     X_FRAME_OPTIONS = "DENY"
     SECURE_CONTENT_TYPE_NOSNIFF = True

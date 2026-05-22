@@ -14,7 +14,9 @@ import csv
 from pathlib import Path
 
 from django.conf import settings
+from django.core.management.color import no_style
 from django.core.management.base import BaseCommand
+from django.db import connection
 
 from apps.medications.models import Medication
 
@@ -114,6 +116,7 @@ class Command(BaseCommand):
     def _import_bdpm(self, path: Path):
         """Parse le fichier officiel CIS_bdpm.txt (tab-séparé, encodage latin-1)."""
         count_created = count_updated = count_skipped = 0
+        self._reset_medication_sequence()
 
         with open(path, "r", encoding="latin-1") as f:  # NOSONAR - chemin validé avant appel
             for line in f:
@@ -150,6 +153,16 @@ class Command(BaseCommand):
             f"BDPM import terminé : {count_created} créés, "
             f"{count_updated} mis à jour, {count_skipped} ignorés (non commercialisés)"
         ))
+
+    def _reset_medication_sequence(self):
+        """Realigne la séquence AutoField après les seeds historiques avec IDs fixes."""
+        statements = connection.ops.sequence_reset_sql(no_style(), [Medication])
+        if not statements:
+            return
+
+        with connection.cursor() as cursor:
+            for statement in statements:
+                cursor.execute(statement)
 
     def _import_csv(self, path: Path):
         """Parse le CSV local custom (format Glycopilot)."""

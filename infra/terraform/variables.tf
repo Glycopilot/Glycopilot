@@ -61,7 +61,7 @@ variable "rds_allocated_storage" {
 variable "rds_backup_retention_period" {
   description = "Rétention des sauvegardes automatiques RDS en jours."
   type        = number
-  default     = 7
+  default     = 1
 }
 
 variable "rds_multi_az" {
