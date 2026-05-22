@@ -165,7 +165,7 @@ export default function ActivityScreen({ navigation }: ActivityScreenProps): Rea
               <Text style={styles.title}>Activité</Text>
               <Text style={styles.subtitle}>Suivi de vos efforts</Text>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => setShowModal(true)}>
+            <TouchableOpacity testID="add-activity-btn" style={styles.addButton} onPress={() => setShowModal(true)}>
               <Plus size={24} color="#fff" />
             </TouchableOpacity>
           </View>
