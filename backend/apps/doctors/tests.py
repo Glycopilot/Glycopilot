@@ -382,6 +382,58 @@ class DoctorVerificationServiceTests(CareTeamIntegrationTests):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("message", response.data)
 
+        team = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(team.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(team.data["pending_doctor_invites"]), 1)
+        self.assertIn("created_at", team.data["pending_doctor_invites"][0])
+
+        again = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "bob_doctor@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(again.status_code, status.HTTP_200_OK)
+        self.assertTrue(again.data.get("already_exists"))
+
+    def test_admin_accept_doctor_by_profile_id(self):
+        """POST accept avec profile_id (id_profile) au lieu de doctor_id."""
+        doctor_identity = UserIdentity.objects.create(
+            first_name="Carol", last_name="Doc", phone_number="0666666666"
+        )
+        User.objects.create_user(
+            email="carol_doc@test.com",
+            password="pass123",
+            user_identity=doctor_identity,
+        )
+        doc_profile = Profile.objects.create(
+            user=doctor_identity, role=self.doctor_role
+        )
+        doc_prof = doc_profile.doctor_profile
+        doc_prof.verification_status = self.pending_status
+        doc_prof.license_number = "LIC-003"
+        doc_prof.save()
+
+        admin_identity = UserIdentity.objects.create(
+            first_name="Admin2", last_name="Super"
+        )
+        admin_account = User.objects.create_user(
+            email="admin2@test.com", password="admin123", user_identity=admin_identity
+        )
+        admin_account.is_staff = True
+        admin_account.is_superuser = True
+        admin_account.save()
+        admin_role = Role.objects.get(name="SUPERADMIN")
+        Profile.objects.create(user=admin_identity, role=admin_role)
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('admin2@test.com', 'admin123')}"
+        )
+        response = self.client.post(
+            f"/api/doctors/verification/{doc_profile.id_profile}/accept/"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        doc_prof.refresh_from_db()
+        self.assertEqual(doc_prof.verification_status.label, "VERIFIED")
+
     def test_unverified_doctor_cannot_add_patient(self):
         """Un docteur non validé ne peut pas ajouter de patient."""
         doctor_identity = UserIdentity.objects.create(
@@ -621,3 +673,58 @@ class DoctorPatientAccessTests(TestCase):
 
         self.assertIs(patient, patient_account)
         self.assertIsNone(response)
+
+
+class DoctorPatientDataViewsTests(CareTeamIntegrationTests):
+    def test_patient_data_endpoints_return_200_for_active_doctor(self):
+        patient_identity = UserIdentity.objects.create(
+            first_name="Pat", last_name="Data", phone_number="0611111111"
+        )
+        patient_account = User.objects.create_user(
+            email="pat_data@test.com",
+            password="pass123",
+            user_identity=patient_identity,
+        )
+        patient_profile = Profile.objects.create(
+            user=patient_identity, role=self.patient_role
+        ).patient_profile
+
+        doctor_identity = UserIdentity.objects.create(
+            first_name="Doc", last_name="Data", phone_number="0622222222"
+        )
+        User.objects.create_user(
+            email="doc_data@test.com",
+            password="pass123",
+            user_identity=doctor_identity,
+        )
+        doc_profile = Profile.objects.create(
+            user=doctor_identity, role=self.doctor_role
+        )
+        doc_prof = doc_profile.doctor_profile
+        doc_prof.verification_status = self.verified_status
+        doc_prof.license_number = "LIC-DATA"
+        doc_prof.save()
+
+        PatientCareTeam.objects.create(
+            patient_profile=patient_profile,
+            member_profile=doc_profile,
+            role="REFERENT_DOCTOR",
+            status=InvitationStatus.objects.get(label="ACTIVE"),
+        )
+
+        pid = str(patient_identity.id_user)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('doc_data@test.com', 'pass123')}"
+        )
+        for path in (
+            f"/api/doctors/care-team/patient-dashboard/?patient_user_id={pid}",
+            f"/api/doctors/care-team/patient-meals/?patient_user_id={pid}",
+            f"/api/doctors/care-team/patient-medications/?patient_user_id={pid}",
+            f"/api/doctors/care-team/patient-glycemia/?patient_user_id={pid}",
+        ):
+            response = self.client.get(path)
+            self.assertEqual(
+                response.status_code,
+                status.HTTP_200_OK,
+                (path, getattr(response, "data", response.content)),
+            )
