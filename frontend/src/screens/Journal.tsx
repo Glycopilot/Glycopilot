@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Utensils, Pill, Activity, ChevronRight } from 'lucide-react-native';
+import { Utensils, Pill, Activity, ChevronRight, Droplets } from 'lucide-react-native';
 import Layout from '../components/common/Layout';
 import { colors } from '../themes/colors';
 
@@ -9,6 +9,15 @@ interface JournalScreenProps {
 }
 
 const SECTIONS = [
+  {
+    key: 'Glycemie',
+    label: 'Suivi glycémie',
+    description: 'Historique, graphiques et statistiques de votre glycémie',
+    Icon: Droplets,
+    color: '#2563EB',
+    bg: '#DBEAFE',
+    route: 'Stats',
+  },
   {
     key: 'Repas',
     label: 'Repas',
@@ -72,24 +81,10 @@ export default function JournalScreen({ navigation }: JournalScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  heading: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 6,
-  },
-  sub: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 28,
-  },
+  scroll: { flex: 1 },
+  content: { padding: 20, paddingBottom: 40 },
+  heading: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
+  sub: { fontSize: 14, color: colors.textSecondary, marginBottom: 28 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,18 +106,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardText: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
+  cardText: { flex: 1 },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  cardDesc: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
 });
