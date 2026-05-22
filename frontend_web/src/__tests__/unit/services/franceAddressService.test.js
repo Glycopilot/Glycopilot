@@ -1,3 +1,4 @@
+import { ADDRESS_MSG } from '../../../constants/addressMessages';
 import {
   fetchCommunesByPostalCode,
   normalizeCityName,
@@ -15,6 +16,7 @@ function mockJsonFetch(body, ok = true) {
 
 describe('franceAddressService', () => {
   beforeEach(() => {
+    process.env.REACT_APP_API_URL = 'http://test.api/api';
     global.fetch = jest.fn();
   });
 
@@ -33,6 +35,13 @@ describe('franceAddressService', () => {
       expect.stringContaining('/france/communes/?postal_code=75001'),
     );
     expect(communes[0].name).toBe('Paris');
+  });
+
+  it('fetchCommunesByPostalCode signale indisponibilité sans fetch réseau', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('NetworkError'));
+    await expect(fetchCommunesByPostalCode('75001')).rejects.toThrow(
+      ADDRESS_MSG.postalLoadError,
+    );
   });
 
   it('fetchCommunesByPostalCode retourne Thiais pour 94320', async () => {
