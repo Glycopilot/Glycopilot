@@ -75,3 +75,68 @@ variable "rds_deletion_protection" {
   type        = bool
   default     = true
 }
+
+variable "enable_plan_plus" {
+  description = "Active l infrastructure Plan Plus ECS/ALB/Redis. Par défaut désactivé pour éviter tout coût sur le compte source."
+  type        = bool
+  default     = false
+}
+
+variable "plan_plus_desired_count" {
+  description = "Nombre de tâches ECS Plan Plus. Garder 0 tant que Plan A est actif."
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.plan_plus_desired_count >= 0
+    error_message = "plan_plus_desired_count doit être supérieur ou égal à 0."
+  }
+}
+
+variable "plan_plus_backend_image" {
+  description = "Image complète du backend Plan Plus. Obligatoire uniquement si enable_plan_plus=true."
+  type        = string
+  default     = ""
+}
+
+variable "plan_plus_ai_service_image" {
+  description = "Image complète du service IA Plan Plus. Obligatoire uniquement si enable_plan_plus=true."
+  type        = string
+  default     = ""
+}
+
+variable "plan_plus_allowed_hosts" {
+  description = "Valeur Django ALLOWED_HOSTS pour Plan Plus."
+  type        = string
+  default     = "*"
+}
+
+variable "plan_plus_backend_secret_key_value_from" {
+  description = "ARN Secrets Manager, ou ARN avec clé JSON, exposant SECRET_KEY au conteneur backend."
+  type        = string
+  default     = ""
+}
+
+variable "plan_plus_db_password_value_from" {
+  description = "ARN Secrets Manager, ou ARN avec clé JSON, exposant DB_PASSWORD au conteneur backend."
+  type        = string
+  default     = ""
+}
+
+variable "plan_plus_ai_internal_token_value_from" {
+  description = "ARN Secrets Manager, ou ARN avec clé JSON, exposant internal_token au conteneur IA."
+  type        = string
+  default     = ""
+}
+
+variable "plan_plus_cpu" {
+  description = "CPU Fargate pour la task Plan Plus."
+  type        = string
+  default     = "1024"
+}
+
+variable "plan_plus_memory" {
+  description = "Mémoire Fargate pour la task Plan Plus."
+  type        = string
+  default     = "2048"
+}

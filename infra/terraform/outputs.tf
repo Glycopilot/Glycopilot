@@ -78,3 +78,23 @@ output "rds_master_user_secret_arn" {
   value       = var.enable_rds ? aws_db_instance.postgres[0].master_user_secret[0].secret_arn : null
   sensitive   = true
 }
+
+output "plan_plus_enabled" {
+  description = "Indique si l infrastructure Plan Plus est active dans ce plan Terraform."
+  value       = var.enable_plan_plus
+}
+
+output "plan_plus_alb_dns_name" {
+  description = "DNS public de l ALB Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_lb.plan_plus[0].dns_name : null
+}
+
+output "plan_plus_ecs_cluster_name" {
+  description = "Nom du cluster ECS Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_ecs_cluster.plan_plus[0].name : null
+}
+
+output "plan_plus_redis_endpoint" {
+  description = "Endpoint Redis Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_elasticache_cluster.plan_plus_redis[0].cache_nodes[0].address : null
+}
