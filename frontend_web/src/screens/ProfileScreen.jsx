@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import {
   User, Mail, Phone, MapPin, Stethoscope, CreditCard,
   Save, Send, CheckCircle, Pencil, Lock,
@@ -48,7 +47,6 @@ function Field({ label, value, icon, editable = true, onChange, type = 'text', l
 }
 
 export default function ProfileScreen() {
-  const { navigation } = useOutletContext();
   const [doctor,    setDoctor]    = useState({});
   const [form,      setForm]      = useState({});
   const [editing,   setEditing]   = useState(false);

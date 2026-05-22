@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
 import { countReceivedInvites } from '../lib/careTeamInvites';
-import { UiChevronRight, UiClose } from '../components/UiIcon';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
 import DoctorDashboardHeader from '../components/DoctorDashboardHeader';

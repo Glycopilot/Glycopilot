@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   User, Mail, CreditCard, Stethoscope, Building2, Lock, LogIn, UserPlus,
-  Eye, EyeOff, ArrowRight, Check, Send
+  Eye, EyeOff, Check, Send
 } from 'lucide-react';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';

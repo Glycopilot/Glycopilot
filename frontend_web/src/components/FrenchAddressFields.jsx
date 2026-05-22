@@ -69,7 +69,6 @@ export default function FrenchAddressFields({
   const [cities, setCities] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [cityError, setCityError] = useState('');
-  const [cityAutoFilled, setCityAutoFilled] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingAddress, setLoadingAddress] = useState(false);
@@ -84,7 +83,6 @@ export default function FrenchAddressFields({
     if (!postalReady) {
       setCities([]);
       setCityError('');
-      setCityAutoFilled(false);
       if (city) onCityChange('');
       return undefined;
     }
@@ -92,7 +90,6 @@ export default function FrenchAddressFields({
     const timer = setTimeout(async () => {
       setLoadingCities(true);
       setCityError('');
-      setCityAutoFilled(false);
       try {
         const communes = await fetchCommunesByPostalCode(postalCode);
         setCities(communes);
@@ -101,7 +98,6 @@ export default function FrenchAddressFields({
           onCityChange('');
         } else if (communes.length === 1) {
           onCityChange(communes[0].name);
-          setCityAutoFilled(true);
         } else if (!communes.some((c) => c.name === city)) {
           onCityChange('');
         }
@@ -114,6 +110,8 @@ export default function FrenchAddressFields({
     }, 300);
 
     return () => clearTimeout(timer);
+    // postalCode seul : évite une boucle si le parent recrée onCityChange à chaque rendu
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postalCode]);
 
   useEffect(() => {
@@ -166,7 +164,7 @@ export default function FrenchAddressFields({
   const suggestionsList = showSuggestions && suggestions.length > 0 && (
     <ul className="address-suggestions" role="listbox" aria-label="Adresses proposées">
       {suggestions.map((s) => (
-        <li key={s.label} role="option">
+        <li key={s.label} role="option" aria-selected={false}>
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pickSuggestion(s)}>
             {s.label}
           </button>
@@ -225,7 +223,7 @@ export default function FrenchAddressFields({
         loading={loadingCities}
         disabled={disabled}
         postalReady={postalReady}
-        onChange={(v) => { onCityChange(v); setCityAutoFilled(false); }}
+        onChange={onCityChange}
         isAuth
       />
     </div>
@@ -256,7 +254,7 @@ export default function FrenchAddressFields({
         loading={loadingCities}
         disabled={disabled}
         postalReady={postalReady}
-        onChange={(v) => { onCityChange(v); setCityAutoFilled(false); }}
+        onChange={onCityChange}
         isAuth={false}
       />
     </div>

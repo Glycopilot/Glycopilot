@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
 import { dedupeDoctorTeamLists } from '../lib/careTeamInvites';
-import { UiChevronRight, UiClose } from '../components/UiIcon';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
 import DoctorDashboardHeader from '../components/DoctorDashboardHeader';
@@ -990,164 +988,6 @@ function PatientDashboardModal({ member, onClose }) {
   );
 }
 
-/* ─── Card patient ──*/
-function PatientCard({ member, onClick }) {
-  const p = member.patient_details;
-  return (
-    <div className="patient-card" onClick={onClick} style={{ cursor: 'pointer' }}>
-      <div className="card-top">
-        <div className="patient-avatar">{getInitials(p.first_name, p.last_name)}</div>
-        <div className="patient-meta">
-          <h3 className="patient-name">{p.first_name} {p.last_name}</h3>
-          <StatusBadge status={member.status} />
-        </div>
-        <span className="role-badge">{member.role_label}</span>
-      </div>
-      <div className="card-body">
-        <div className="info-row"><AppIcon name="mail" size={14} /><span>{p.email}</span></div>
-        {p.phone_number && <div className="info-row"><AppIcon name="phone" size={14} /><span>{p.phone_number}</span></div>}
-      </div>
-      <div className="card-footer">
-        <button className="card-btn" onClick={onClick}>
-          Voir le dossier <AppIcon name="chevron" size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Invitation envoyée par le médecin → en attente de réponse du patient */
-function SentInviteCard({ invite }) {
-  const p = invite.patient_details;
-  return (
-    <div className="patient-card invite-card invite-sent">
-      <div className="card-top">
-        <div className="patient-avatar invite-avatar-sent"><AppIcon name="send" size={18} /></div>
-        <div className="patient-meta">
-          <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : invite.invitation_email || '—'}</h3>
-          <span className="status-badge badge-pending">Invitation envoyée</span>
-        </div>
-      </div>
-      <div className="card-body" style={{ marginTop: 12 }}>
-        {p?.email && <div className="info-row"><AppIcon name="mail" size={14} /><span>{p.email}</span></div>}
-        {p?.phone_number && <div className="info-row"><AppIcon name="phone" size={14} /><span>{p.phone_number}</span></div>}
-      </div>
-      <div className="invite-waiting">
-        <AppIcon name="clock" size={13} /> En attente de la réponse du patient
-      </div>
-    </div>
-  );
-}
-
-function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
-  const p = invite.patient_details;
-  const [accepting, setAccepting] = useState(false);
-  const [declining, setDeclining] = useState(false);
-  const [showDeclineModal, setShowDeclineModal] = useState(false);
-
-  const handleAccept = async (e) => {
-    if (e) e.stopPropagation();
-    setAccepting(true);
-    try {
-      await apiClient.post('/doctors/care-team/accept-invitation/', {
-        id_team_member: invite.id_team_member,
-      });
-      toastSuccess('Invitation acceptée', `${p?.first_name ?? ''} ${p?.last_name ?? ''} a rejoint votre équipe`);
-      onAccepted();
-    } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
-      toastError('Erreur', msg);
-    } finally {
-      setAccepting(false);
-    }
-  };
-
-  const handleDecline = async (e) => {
-    if (e) e.stopPropagation();
-    setDeclining(true);
-    try {
-      await apiClient.post('/doctors/care-team/decline-invitation/', {
-        id_team_member: invite.id_team_member,
-      });
-      toastSuccess('Demande refusée', `La demande de ${p?.first_name ?? ''} ${p?.last_name ?? ''} a été refusée`);
-      onDeclined?.();
-    } catch (err) {
-      const status = err.response?.status;
-      if (status === 404 || status === 405) {
-        toastError('Bientôt disponible', "Le refus d'invitation n'est pas encore activé côté serveur.");
-      } else {
-        const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
-        toastError('Erreur', msg);
-      }
-    } finally {
-      setDeclining(false);
-      setShowDeclineModal(false);
-    }
-  };
-
-  return (
-    <>
-      <div className="patient-card invite-card">
-        <div className="invite-badge-top">Demande reçue</div>
-        <div className="card-top" style={{ marginTop: 8 }}>
-          <div className="patient-avatar" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-            {getInitials(p?.first_name, p?.last_name)}
-          </div>
-          <div className="patient-meta">
-            <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : '—'}</h3>
-            <span className="status-badge" style={{ background: '#F1F5F9', color: '#64748B' }}>Souhaite que vous deveniez son médecin</span>
-          </div>
-        </div>
-        <div className="card-body" style={{ marginTop: 12 }}>
-          {p?.email && <div className="info-row"><AppIcon name="mail" size={14} /><span>{p.email}</span></div>}
-          {p?.phone_number && <div className="info-row"><AppIcon name="phone" size={14} /><span>{p.phone_number}</span></div>}
-        </div>
-
-        <div className="card-footer card-footer-split">
-          <button
-            className="card-btn-decline"
-            onClick={(e) => { e.stopPropagation(); setShowDeclineModal(true); }}
-            disabled={accepting}
-          >
-            Refuser
-          </button>
-          <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
-            {accepting
-              ? <><span className="mini-spinner-sm" /> En cours…</>
-              : 'Accepter la demande'}
-          </button>
-        </div>
-      </div>
-
-      {showDeclineModal && (
-        <div className="modal-overlay" onClick={() => setShowDeclineModal(false)}>
-          <div className="modal-box modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title-row">
-                <div className="modal-icon-wrap modal-icon-neutral"><AppIcon name="user-x" size={20} /></div>
-                <div>
-                  <h2>Refuser la demande</h2>
-                </div>
-              </div>
-              <button className="modal-close" onClick={() => setShowDeclineModal(false)}><AppIcon name="x" size={20} /></button>
-            </div>
-            <div className="modal-body" style={{ fontSize: 14, color: 'var(--muted)' }}>
-              <p>Êtes-vous sûr de vouloir refuser la demande de <strong>{p?.first_name} {p?.last_name}</strong> ?</p>
-              <p style={{ marginTop: 8 }}>Le patient ne pourra plus vous solliciter tant qu'il n'envoie pas une nouvelle invitation.</p>
-            </div>
-            <div className="modal-footer">
-              <button className="mbt-secondary" onClick={() => setShowDeclineModal(false)} disabled={declining}>Annuler</button>
-              <button type="button" className="mbt-primary mbt-danger" onClick={handleDecline} disabled={declining}>
-                {declining ? <><span className="mini-spinner" /> Refus…</> : 'Confirmer le refus'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
 function PatientTableRow({ member, type, dashboard, onClick, onAccepted, onDeclined }) {
   const p = member.patient_details ?? {};
 
@@ -1397,8 +1237,6 @@ function filterMembers(members, roleFilter, searchQuery) {
 }
 
 export default function PatientsScreen() {
-  const { navigation } = useOutletContext();
-  const [searchParams] = useSearchParams();
   const [data,           setData]           = useState({ active_patients: [], pending_invites: [] });
   const [loading,        setLoading]        = useState(true);
   const [refreshing,     setRefreshing]     = useState(false);
