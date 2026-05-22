@@ -66,6 +66,13 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
     member_details = serializers.SerializerMethodField()
     patient_details = serializers.SerializerMethodField()
     role_label = serializers.CharField(source="get_role_display", read_only=True)
+    invitation_from = serializers.SerializerMethodField()
+
+    def get_invitation_from(self, obj):
+        """patient = demande reçue par le médecin ; doctor = invitation envoyée par le médecin."""
+        if obj.approved_by_id:
+            return "doctor"
+        return "patient"
 
     def get_member_details(self, obj):
         if not obj.member_profile or not obj.member_profile.user:
@@ -117,6 +124,7 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             "status",
             "rejection_reason",
             "approved_by",
+            "invitation_from",
         ]
 
 

@@ -3,6 +3,7 @@ Tests : création compte patient, invitations, admin valide le docteur,
 docteur non validé = indisponible pour le patient, docteur validé peut ajouter un patient.
 """
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import TestCase, override_settings
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -35,6 +36,7 @@ class CareTeamIntegrationTests(TestCase):
         Role.objects.get_or_create(name="SUPERADMIN")
         InvitationStatus.objects.get_or_create(label="ACTIVE")
         InvitationStatus.objects.get_or_create(label="PENDING")
+        InvitationStatus.objects.get_or_create(label="REJECTED")
         self.verified_status, _ = VerificationStatus.objects.get_or_create(
             label="VERIFIED"
         )
@@ -381,6 +383,92 @@ class DoctorVerificationServiceTests(CareTeamIntegrationTests):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("message", response.data)
+
+    @override_settings(
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        FRONTEND_URL="http://localhost:3000",
+    )
+    def test_patient_invite_doctor_dashboard_accept_and_decline(self):
+        """Patient invite un médecin vérifié → visible sur my-team → accepter / refuser."""
+        patient_identity = UserIdentity.objects.create(
+            first_name="Claire", last_name="Patient", phone_number="0610101010"
+        )
+        User.objects.create_user(
+            email="claire_inv@test.com", password="pass123", user_identity=patient_identity
+        )
+        p_profile = Profile.objects.create(user=patient_identity, role=self.patient_role)
+
+        doctor_identity = UserIdentity.objects.create(
+            first_name="Marc", last_name="Médecin", phone_number="0620202020"
+        )
+        User.objects.create_user(
+            email="marc_doc_inv@test.com",
+            password="pass123",
+            user_identity=doctor_identity,
+        )
+        doc_profile = Profile.objects.create(user=doctor_identity, role=self.doctor_role)
+        doc_prof = doc_profile.doctor_profile
+        doc_prof.verification_status = self.verified_status
+        doc_prof.license_number = "LIC-MARC"
+        doc_prof.save()
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('claire_inv@test.com', 'pass123')}"
+        )
+        invite_res = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "marc_doc_inv@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(invite_res.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(invite_res.data.get("email_sent"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Demandes reçues", mail.outbox[0].body)
+        self.assertIn("marc_doc_inv@test.com", mail.outbox[0].to)
+
+        inv_id = invite_res.data["id_team_member"]
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('marc_doc_inv@test.com', 'pass123')}"
+        )
+        team_res = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(team_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(team_res.data["pending_received_count"], 1)
+        self.assertEqual(team_res.data["pending_sent_count"], 0)
+        pending = team_res.data["pending_invites"]
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0]["id_team_member"], inv_id)
+        self.assertEqual(pending[0]["invitation_from"], "patient")
+        self.assertIsNone(pending[0]["approved_by"])
+
+        decline_res = self.client.post(
+            "/api/doctors/care-team/decline-invitation/",
+            {"id_team_member": inv_id, "reason": "Indisponible"},
+        )
+        self.assertEqual(decline_res.status_code, status.HTTP_200_OK)
+        entry = PatientCareTeam.objects.get(id_team_member=inv_id)
+        self.assertEqual(entry.status.label, "REJECTED")
+
+        # Nouvelle invitation puis acceptation
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('claire_inv@test.com', 'pass123')}"
+        )
+        invite2 = self.client.post(
+            "/api/doctors/care-team/invite-doctor/",
+            {"email": "marc_doc_inv@test.com", "role": "REFERENT_DOCTOR"},
+        )
+        self.assertEqual(invite2.status_code, status.HTTP_201_CREATED)
+        inv2_id = invite2.data["id_team_member"]
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {self._token_for('marc_doc_inv@test.com', 'pass123')}"
+        )
+        accept_res = self.client.post(
+            "/api/doctors/care-team/accept-invitation/",
+            {"id_team_member": inv2_id},
+        )
+        self.assertEqual(accept_res.status_code, status.HTTP_200_OK)
+        team_after = self.client.get("/api/doctors/care-team/my-team/")
+        self.assertEqual(len(team_after.data["active_patients"]), 1)
+        self.assertEqual(len(team_after.data["pending_invites"]), 0)
 
     def test_unverified_doctor_cannot_add_patient(self):
         """Un docteur non validé ne peut pas ajouter de patient."""

@@ -14,7 +14,11 @@ from apps.doctors.doctor_patient_access import verify_doctor_can_access_patient,
 from apps.doctors.models import InvitationStatus, PatientCareTeam
 from apps.doctors.serializers import PatientCareTeamSerializer
 from apps.doctors.services import DoctorPatientDataService
-from apps.doctors.utils import send_care_team_invitation, send_proche_invitation
+from apps.doctors.utils import (
+    send_care_team_invitation,
+    send_patient_doctor_invitation_email,
+    send_proche_invitation,
+)
 from apps.notifications.services.push import send_push_to_user
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
@@ -376,10 +380,11 @@ class CareTeamViewSet(viewsets.ViewSet):
                 status=400,
             )
 
-        # Éviter doublon
+        # Éviter doublon (actif ou en attente uniquement)
         if PatientCareTeam.objects.filter(
             patient_profile=patient_profile,
             member_profile=member_profile,
+            status__label__in=["ACTIVE", "PENDING"],
         ).exists():
             return Response(
                 {
@@ -395,12 +400,15 @@ class CareTeamViewSet(viewsets.ViewSet):
             status=pending_status,
         )
         # Email envoyé au DOCTEUR (destinataire = email du médecin)
-        send_care_team_invitation(email, inviter_name, role, is_existing_user=True)
+        email_sent = send_patient_doctor_invitation_email(
+            email, inviter_name, role
+        )
 
         return Response(
             {
                 "message": "Invitation envoyée au médecin.",
                 "id_team_member": str(invitation.id_team_member),
+                "email_sent": email_sent,
             },
             status=201,
         )
@@ -693,10 +701,14 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         active = relations.filter(status__label="ACTIVE")
         pending = relations.filter(status__label="PENDING")
+        pending_received = pending.filter(approved_by__isnull=True)
+        pending_sent = pending.filter(approved_by__isnull=False)
 
         data = {
             "active_patients": PatientCareTeamSerializer(active, many=True).data,
             "pending_invites": PatientCareTeamSerializer(pending, many=True).data,
+            "pending_received_count": pending_received.count(),
+            "pending_sent_count": pending_sent.count(),
         }
         return Response(data)
 
