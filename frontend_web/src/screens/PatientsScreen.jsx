@@ -29,6 +29,13 @@ function formatNextDose(nextDose) {
 }
 
 /** API care-team : status = "ACTIVE" | "PENDING" | "REJECTED" (StringRelatedField). */
+function formatInvitationDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 function normalizeCareTeamStatus(status) {
   if (status == null || status === '') return null;
   if (typeof status === 'number') {
@@ -455,18 +462,39 @@ function PatientDashboardModal({ member, onClose }) {
       try {
         const dates = getPeriodDates();
         const qs = new URLSearchParams({ patient_user_id: patientId, ...dates }).toString();
-        const [d, m, med, g] = await Promise.all([
-          apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`),
-          apiClient.get(`/doctors/care-team/patient-meals/?${qs}`),
-          apiClient.get(`/doctors/care-team/patient-medications/?patient_user_id=${patientId}`),
-          apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`),
-        ]);
-        setDashboard(d.data);
-        setMeals(toArr(m.data, ['results', 'meals', 'data']));
-        setMedications(toArr(med.data, ['results', 'medications', 'data']));
-        setGlycemia(toArr(g.data, ['results', 'glycemia', 'data']));
+        const endpoints = [
+          ['dashboard', apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`)],
+          ['meals', apiClient.get(`/doctors/care-team/patient-meals/?${qs}`)],
+          ['medications', apiClient.get(`/doctors/care-team/patient-medications/?patient_user_id=${patientId}`)],
+          ['glycemia', apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`)],
+        ];
+        const results = await Promise.allSettled(endpoints.map(([, p]) => p));
+        const failed = [];
+        results.forEach((r, i) => {
+          const key = endpoints[i][0];
+          if (r.status === 'rejected') {
+            failed.push(key);
+            return;
+          }
+          const data = r.value.data;
+          if (key === 'dashboard') setDashboard(data);
+          else if (key === 'meals') setMeals(toArr(data, ['results', 'meals', 'data']));
+          else if (key === 'medications') setMedications(toArr(data, ['results', 'medications', 'data']));
+          else if (key === 'glycemia') setGlycemia(toArr(data, ['results', 'glycemia', 'data']));
+        });
+        if (failed.length === endpoints.length) {
+          const first = results.find(r => r.status === 'rejected');
+          const msg = first?.reason?.response?.data?.error
+            || first?.reason?.response?.data?.detail
+            || first?.reason?.message
+            || 'Impossible de charger les données du patient';
+          throw new Error(msg);
+        }
+        if (failed.length > 0) {
+          toastError('Avertissement', `Certaines données n'ont pas pu être chargées : ${failed.join(', ')}`);
+        }
       } catch (err) {
-        toastError('Erreur', 'Impossible de charger les données du patient');
+        toastError('Erreur', err.message || 'Impossible de charger les données du patient');
       } finally {
         setLoadingData(false);
       }
@@ -1071,6 +1099,11 @@ function PatientTableRow({ member, type, dashboard, onClick, onAccepted, onDecli
           )}
         </td>
         <td>
+          <span className="pt-invite-date" title={member.created_at || undefined}>
+            {formatInvitationDate(member.created_at)}
+          </span>
+        </td>
+        <td>
           {type === 'active' && score != null ? (
             <span className="pt-score-text">{score}/100</span>
           ) : <span className="pt-muted">—</span>}
@@ -1146,6 +1179,7 @@ function PatientsDataTable({ rows, dashboards, onOpenPatient, onAccepted, onDecl
           <tr>
             <th>Patient</th>
             <th>Statut</th>
+            <th>Date d&apos;invitation</th>
             <th>Score santé</th>
             <th>Dernière glycémie</th>
             <th className="th-actions">Actions</th>
