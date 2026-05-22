@@ -380,16 +380,24 @@ class CareTeamViewSet(viewsets.ViewSet):
                 status=400,
             )
 
-        # Éviter doublon (actif ou en attente uniquement)
-        if PatientCareTeam.objects.filter(
+        existing = PatientCareTeam.objects.filter(
             patient_profile=patient_profile,
             member_profile=member_profile,
             status__label__in=["ACTIVE", "PENDING"],
-        ).exists():
+        ).first()
+        if existing:
+            if existing.status.label == "PENDING":
+                return Response(
+                    {
+                        "message": "Invitation déjà en attente.",
+                        "id_team_member": str(existing.id_team_member),
+                        "status": "PENDING",
+                        "already_exists": True,
+                    },
+                    status=200,
+                )
             return Response(
-                {
-                    "error": "Ce médecin fait déjà partie de votre équipe ou a déjà une invitation en attente."
-                },
+                {"error": "Ce médecin fait déjà partie de votre équipe."},
                 status=400,
             )
 
