@@ -102,12 +102,22 @@ describe('authService', () => {
 
     describe('register', () => {
         it('should successfully register and store tokens', async () => {
-            const registerData = {
+            // Le backend retourne le format AuthAccountSerializer
+            const backendResponse = {
                 access: 'access-token',
                 refresh: 'refresh-token',
-                user: { id: '1', email: 'test@example.com' },
+                user: {
+                    id_auth: 'uuid-123',
+                    email: 'test@example.com',
+                    identity: {
+                        first_name: 'Test',
+                        last_name: 'User',
+                        profiles: [{ role_name: 'PATIENT', patient_details: null }],
+                    },
+                    created_at: '2026-01-01',
+                },
             };
-            mock.onPost(/\/auth\/register/).reply(200, registerData);
+            mock.onPost(/\/auth\/register/).reply(201, backendResponse);
 
             const result = await authService.register({
                 email: 'test@example.com',
@@ -117,7 +127,14 @@ describe('authService', () => {
                 passwordConfirm: 'password123'
             });
 
-            expect(result).toEqual(registerData);
+            // Le service mappe vers le format User attendu par le frontend
+            expect(result.access).toBe('access-token');
+            expect(result.refresh).toBe('refresh-token');
+            expect(result.user.id).toBe('uuid-123');
+            expect(result.user.email).toBe('test@example.com');
+            expect(result.user.firstName).toBe('Test');
+            expect(result.user.lastName).toBe('User');
+            expect(result.user.role).toBe('PATIENT');
             expect(AsyncStorage.setItem).toHaveBeenCalledWith('access_token', 'access-token');
         });
 
