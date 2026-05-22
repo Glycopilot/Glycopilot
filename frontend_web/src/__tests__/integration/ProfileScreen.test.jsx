@@ -20,12 +20,20 @@ jest.mock('../../services/toastService', () => ({
   toastError: jest.fn(),
   toastSuccess: jest.fn(),
 }));
-jest.mock('../../components/Sidebar', () => ({
-  __esModule: true,
-  default: ({ activePage }) => <div data-testid="sidebar" data-page={activePage} />,
+jest.mock('../../services/franceAddressService', () => ({
+  validateFrenchAddress: jest.fn(() => Promise.resolve({ valid: true })),
+  fetchCommunesByPostalCode: jest.fn(() => Promise.resolve([{ code: '75101', name: 'Paris' }])),
+  isValidPostalCodeFormat: jest.fn((code) => /^\d{5}$/.test(String(code || '').trim())),
+  searchStreetAddresses: jest.fn(() => Promise.resolve([])),
+}));
+jest.mock('../../services/doctorProfileService', () => ({
+  validateDoctorProfileForm: jest.fn(() => Promise.resolve(null)),
+  saveDoctorProfile: jest.fn(),
+  buildDoctorProfilePayload: jest.requireActual('../../services/doctorProfileService').buildDoctorProfilePayload,
 }));
 
 import ProfileScreen from '../../screens/ProfileScreen';
+import { saveDoctorProfile, buildDoctorProfilePayload } from '../../services/doctorProfileService';
 import authService from '../../services/authService';
 import passwordService from '../../services/passwordService';
 import { toastError, toastSuccess } from '../../services/toastService';
@@ -47,8 +55,8 @@ function authMeResponse(overrides = {}) {
             doctor_id: 'd-1',
             license_number: '10001234567',
             verification_status: 'VERIFIED',
-            specialty: 'Cardiologue',
-            medical_center_name: 'Hôpital Test',
+            specialty: 'Médecin',
+            medical_center_name: 'Hôpital',
             medical_center_address: '1 rue Test, Paris',
             medical_center_postal_code: '75001',
             medical_center_city: 'Paris',
@@ -61,14 +69,19 @@ function authMeResponse(overrides = {}) {
   };
 }
 
-const navigation = { navigate: jest.fn() };
-const renderProfile = () => render(<ProfileScreen navigation={navigation} />);
+const renderProfile = () => render(<ProfileScreen />);
 
 describe('ProfileScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGet.mockResolvedValue({ data: authMeResponse() });
+    const me = authMeResponse();
+    mockGet.mockResolvedValue({ data: me });
     mockPatch.mockResolvedValue({ data: {} });
+    mockGet.mockImplementation(() => Promise.resolve({ data: me }));
+    saveDoctorProfile.mockImplementation(async (apiClient, form) => {
+      await apiClient.patch('/users/me/', buildDoctorProfilePayload(form));
+      return me;
+    });
   });
 
   describe('Chargement', () => {
@@ -83,25 +96,24 @@ describe('ProfileScreen', () => {
       await waitFor(() => expect(mockGet).toHaveBeenCalledWith('/auth/me/'));
     });
 
-    it('sidebar montée avec activePage="profile"', async () => {
+    it('affiche le titre Mon profil', async () => {
       renderProfile();
       await waitFor(() =>
-        expect(screen.getByTestId('sidebar')).toHaveAttribute('data-page', 'profile')
+        expect(screen.getByRole('heading', { name: 'Mon profil' })).toBeInTheDocument()
       );
     });
   });
 
   describe('Affichage des infos', () => {
-    it('affiche le nom complet en tête', async () => {
+    it('affiche le nom dans les champs', async () => {
       renderProfile();
-      await waitFor(() =>
-        expect(screen.getByRole('heading', { name: 'Jean Dupont' })).toBeInTheDocument()
-      );
+      await waitFor(() => expect(screen.getByDisplayValue('Jean')).toBeInTheDocument());
+      expect(screen.getByDisplayValue('Dupont')).toBeInTheDocument();
     });
 
-    it('affiche la spécialité et l\'email', async () => {
+    it('affiche la spécialité dans le sous-titre', async () => {
       renderProfile();
-      await waitFor(() => screen.getByText(/Cardiologue · doctor@example\.com/));
+      await waitFor(() => screen.getByText(/Médecin · Hôpital/));
     });
 
     it('affiche le badge "Compte vérifié" quand status = VERIFIED', async () => {
@@ -121,23 +133,23 @@ describe('ProfileScreen', () => {
       renderProfile();
       await waitFor(() => screen.getByDisplayValue('+33612345678'));
       expect(screen.getByDisplayValue('+33612345678')).toBeDisabled();
-      expect(screen.getByDisplayValue('Cardiologue')).toBeDisabled();
+      expect(screen.getByDisplayValue('Médecin')).toBeDisabled();
     });
   });
 
   describe('Mode édition', () => {
-    it('clic "Modifier le profil" active les champs', async () => {
+    it('clic "Modifier" active les champs', async () => {
       renderProfile();
-      await waitFor(() => screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /modifier le profil/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
       expect(screen.getByDisplayValue('+33612345678')).not.toBeDisabled();
-      expect(screen.getByDisplayValue('Cardiologue')).not.toBeDisabled();
+      expect(screen.getByDisplayValue('Médecin')).not.toBeDisabled();
     });
 
     it('"Annuler" restaure les valeurs initiales', async () => {
       renderProfile();
-      await waitFor(() => screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /modifier le profil/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
       const phoneInput = screen.getByDisplayValue('+33612345678');
       await userEvent.clear(phoneInput);
       await userEvent.type(phoneInput, '+33700000000');
@@ -147,37 +159,37 @@ describe('ProfileScreen', () => {
 
     it('"Sauvegarder" appelle PATCH /users/me/ avec les champs modifiables', async () => {
       renderProfile();
-      await waitFor(() => screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /modifier le profil/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+      await waitFor(() => expect(screen.getByDisplayValue('+33612345678')).not.toBeDisabled());
       const phoneInput = screen.getByDisplayValue('+33612345678');
       await userEvent.clear(phoneInput);
       await userEvent.type(phoneInput, '+33700000000');
-      fireEvent.click(screen.getByRole('button', { name: /sauvegarder/i }));
-      await waitFor(() =>
-        expect(mockPatch).toHaveBeenCalledWith('/users/me/', expect.objectContaining({
-          phone_number: '+33700000000',
-          first_name: 'Jean',
-          last_name: 'Dupont',
-        }))
-      );
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() => expect(saveDoctorProfile).toHaveBeenCalled());
+      expect(mockPatch).toHaveBeenCalledWith('/users/me/', expect.objectContaining({
+        phone_number: '+33700000000',
+        first_name: 'Jean',
+        last_name: 'Dupont',
+      }));
     });
 
     it('toastSuccess après sauvegarde réussie', async () => {
       renderProfile();
-      await waitFor(() => screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /sauvegarder/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(document.querySelector('.btn-save'));
       await waitFor(() =>
         expect(toastSuccess).toHaveBeenCalledWith('Profil mis à jour', expect.any(String))
       );
     });
 
     it('toastError si PATCH /users/me/ échoue', async () => {
-      mockPatch.mockRejectedValueOnce({ response: { data: { error: 'Téléphone invalide' } } });
+      saveDoctorProfile.mockRejectedValueOnce({ response: { data: { error: 'Téléphone invalide' } } });
       renderProfile();
-      await waitFor(() => screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /sauvegarder/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
       await waitFor(() =>
         expect(toastError).toHaveBeenCalledWith('Erreur', 'Téléphone invalide')
       );
@@ -185,11 +197,11 @@ describe('ProfileScreen', () => {
 
     it('sort du mode édition après sauvegarde réussie', async () => {
       renderProfile();
-      await waitFor(() => screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /modifier le profil/i }));
-      fireEvent.click(screen.getByRole('button', { name: /sauvegarder/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^modifier$/i }));
+      fireEvent.click(document.querySelector('.btn-save'));
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /modifier le profil/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^modifier$/i })).toBeInTheDocument()
       );
     });
   });
@@ -229,10 +241,10 @@ describe('ProfileScreen', () => {
   describe('Fallback en cas d\'échec /auth/me/', () => {
     it('utilise getStoredUser quand /auth/me/ échoue', async () => {
       mockGet.mockRejectedValueOnce(new Error('401'));
-      authService.getStoredUser.mockReturnValueOnce(authMeResponse());
+      authService.getStoredUser.mockReturnValue(authMeResponse());
       renderProfile();
       await waitFor(() =>
-        expect(screen.getByRole('heading', { name: 'Jean Dupont' })).toBeInTheDocument()
+        expect(screen.getByDisplayValue('doctor@example.com')).toBeInTheDocument()
       );
     });
   });
