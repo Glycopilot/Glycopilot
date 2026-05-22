@@ -8,6 +8,7 @@ jest.mock('../../../services/authService', () => {
     default: {
       getApiClient:  () => apiClient,
       getStoredUser: () => ({ first_name: 'Jean', last_name: 'Dupont' }),
+      isAuthenticated: jest.fn(() => true),
       logout:        jest.fn(),
     },
   };
@@ -46,10 +47,9 @@ describe('Sidebar', () => {
     expect(active[0].textContent).toMatch(/mes patients/i);
   });
 
-  it('affiche les initiales et le nom du médecin', () => {
+  it('affiche le logo GlycoPilot', () => {
     renderSidebar();
-    expect(screen.getAllByText('JD').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Dr. Dupont').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByAltText('GlycoPilot').length).toBeGreaterThanOrEqual(1);
   });
 
   it('clic Dashboard → navigate("/home")', () => {
