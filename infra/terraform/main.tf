@@ -27,6 +27,28 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
+resource "aws_subnet" "private_db_1" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.10.0/24"
+  map_public_ip_on_launch = false
+  availability_zone       = "${var.aws_region}a"
+
+  tags = {
+    Name = "glycopilot_private_db_subnet_1"
+  }
+}
+
+resource "aws_subnet" "private_db_2" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.11.0/24"
+  map_public_ip_on_launch = false
+  availability_zone       = "${var.aws_region}b"
+
+  tags = {
+    Name = "glycopilot_private_db_subnet_2"
+  }
+}
+
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
 
@@ -140,6 +162,10 @@ resource "aws_instance" "web" {
   tags = {
     Name = "glycopilot-ec2-plan-a"
   }
+
+  lifecycle {
+    ignore_changes = [ami]
+  }
 }
 
 resource "aws_eip" "web_eip" {
@@ -154,7 +180,7 @@ resource "aws_eip" "web_eip" {
 }
 
 resource "aws_s3_bucket" "media" {
-  bucket = "glycopilot-aws-s3-bucket-img-artifacts"
+  bucket = var.data_bucket_name
 
   tags = {
     Name = "glycopilot-media"

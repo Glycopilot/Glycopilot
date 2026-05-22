@@ -1,0 +1,9 @@
+[Unit]
+Description=Glycopilot application healthcheck
+Wants=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/glycopilot-healthcheck
+ExecStart=/usr/local/sbin/glycopilot-healthcheck
