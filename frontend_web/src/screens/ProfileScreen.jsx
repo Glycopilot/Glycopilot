@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   User, Mail, Phone, MapPin, Stethoscope, CreditCard,
   Save, Send, CheckCircle, Pencil, Lock,
@@ -9,7 +10,7 @@ import { flattenAuthMe } from '../lib/utils';
 import { saveDoctorProfile } from '../services/doctorProfileService';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
-import Sidebar from '../components/Sidebar';
+import DoctorDashboardHeader from '../components/DoctorDashboardHeader';
 import ProfileSelectField from '../components/ProfileSelectField';
 import FrenchAddressFields from '../components/FrenchAddressFields';
 import { DOCTOR_SPECIALTY_OPTIONS, DOCTOR_STRUCTURE_OPTIONS } from '../constants/doctorOptions';
@@ -46,7 +47,8 @@ function Field({ label, value, icon, editable = true, onChange, type = 'text', l
   );
 }
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen() {
+  const { navigation } = useOutletContext();
   const [doctor,    setDoctor]    = useState({});
   const [form,      setForm]      = useState({});
   const [editing,   setEditing]   = useState(false);
@@ -123,60 +125,50 @@ export default function ProfileScreen({ navigation }) {
   /* ── Rendu ──────────────────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="profile-root">
-        <Sidebar activePage="profile" navigation={navigation} />
-        <main className="profile-main profile-loading-center">
-          <span className="mini-spinner" />
-        </main>
-      </div>
+      <main className="profile-main dash-main">
+          <DoctorDashboardHeader title="Mon profil" subtitle="Chargement de vos informations…" />
+          <div className="dash-content profile-loading-center">
+            <span className="mini-spinner" />
+          </div>
+      </main>
     );
   }
 
   const display = editing ? form : doctor;
 
-  return (
-    <div className="profile-root">
-      <Sidebar activePage="profile" navigation={navigation} />
+  const profileSubtitle = [
+    [doctor.specialty, doctor.medical_center_name].filter(Boolean).join(' · '),
+    doctor.verification_status === 'VERIFIED' ? 'Compte vérifié' : null,
+  ].filter(Boolean).join(' — ') || 'Informations professionnelles et coordonnées';
 
-      <main className="profile-main">
-        {/* Header */}
-        <div className="profile-header">
-          <div className="profile-hero">
-            <div className="profile-big-avatar">
-              {(doctor.first_name?.[0] || '') + (doctor.last_name?.[0] || '')}
-            </div>
-            <div>
-              <h1>{doctor.first_name} {doctor.last_name}</h1>
-              <p>
-                {[doctor.specialty, doctor.medical_center_name].filter(Boolean).join(' · ') || 'Médecin'}
-                {' · '}{doctor.email}
-              </p>
-              {doctor.verification_status === 'VERIFIED' && (
-                <span className="verified-badge"><CheckCircle size={13} /> Compte vérifié</span>
+  return (
+    <main className="profile-main dash-main">
+        <DoctorDashboardHeader
+          title="Mon profil"
+          subtitle={profileSubtitle}
+          actions={(
+            <div className="profile-actions">
+              {!editing ? (
+                <button type="button" className="btn-edit" onClick={startEdit}>
+                  <Pencil size={15} /> Modifier
+                </button>
+              ) : (
+                <>
+                  <button type="button" className="btn-cancel" onClick={cancelEdit}>
+                    <UiClose size={15} /> Annuler
+                  </button>
+                  <button type="button" className="btn-save" onClick={handleSave} disabled={saving}>
+                    {saving
+                      ? <><span className="mini-spinner" /> Sauvegarde…</>
+                      : <><Save size={15} /> Enregistrer</>}
+                  </button>
+                </>
               )}
             </div>
-          </div>
+          )}
+        />
 
-          <div className="profile-actions">
-            {!editing ? (
-              <button className="btn-edit" onClick={startEdit}>
-                <Pencil size={15} /> Modifier le profil
-              </button>
-            ) : (
-              <>
-                <button className="btn-cancel" onClick={cancelEdit}>
-                  <UiClose size={15} /> Annuler
-                </button>
-                <button className="btn-save" onClick={handleSave} disabled={saving}>
-                  {saving
-                    ? <><span className="mini-spinner" /> Sauvegarde…</>
-                    : <><Save size={15} /> Sauvegarder</>}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
+        <div className="dash-content">
         <div className="profile-grid">
           {/* ── Informations personnelles ── */}
           <section className="pcard">
@@ -294,7 +286,7 @@ export default function ProfileScreen({ navigation }) {
             )}
           </section>
         </div>
-      </main>
-    </div>
+        </div>
+    </main>
   );
 }
