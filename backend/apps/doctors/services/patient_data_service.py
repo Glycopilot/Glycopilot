@@ -57,15 +57,20 @@ class DoctorPatientDataService:
             AlertSeverity.INFO: "info",
         }
 
-        return [
-            {
+        result = []
+        for alert in alerts:
+            rule = alert.rule
+            code = (getattr(rule, "code", None) or "alert") if rule else "alert"
+            severity = (
+                severity_map.get(rule.severity, "medium") if rule else "medium"
+            )
+            result.append({
                 "alertId": str(alert.id),
-                "type": alert.rule.code.lower(),
-                "severity": severity_map.get(alert.rule.severity, "medium"),
+                "type": str(code).lower(),
+                "severity": severity,
                 "triggeredAt": alert.triggered_at,
-            }
-            for alert in alerts
-        ]
+            })
+        return result
 
     @staticmethod
     def _get_medication_data(patient_account) -> dict:
@@ -103,10 +108,13 @@ class DoctorPatientDataService:
         total_carbs = 0
 
         for user_meal in meals:
-            if user_meal.meal.calories:
-                total_calories += user_meal.meal.calories
-            if user_meal.meal.glucose:
-                total_carbs += int(user_meal.meal.glucose)
+            meal = user_meal.meal
+            if not meal:
+                continue
+            if meal.calories:
+                total_calories += meal.calories
+            if meal.glucose:
+                total_carbs += int(meal.glucose)
 
         return {
             "calories": {"consumed": total_calories, "goal": 1800},
@@ -181,16 +189,18 @@ class DoctorPatientDataService:
             .select_related("meal")
             .order_by("-taken_at")[:limit]
         )
-        return [
-            {
+        result = []
+        for m in meals:
+            if not m.meal:
+                continue
+            result.append({
                 "name": m.meal.name,
                 "calories": m.meal.calories,
                 "carbs": m.meal.glucose,
                 "takenAt": m.taken_at,
                 "photo": m.meal.link_photo,
-            }
-            for m in meals
-        ]
+            })
+        return result
 
     @staticmethod
     def get_medications_history(patient_account, limit=50) -> list:
