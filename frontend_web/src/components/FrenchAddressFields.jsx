@@ -110,9 +110,7 @@ export default function FrenchAddressFields({
     }, 300);
 
     return () => clearTimeout(timer);
-    // postalCode seul : évite une boucle si le parent recrée onCityChange à chaque rendu
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postalCode]);
+  }, [postalCode, postalReady, city, onCityChange]);
 
   useEffect(() => {
     if (!canSearchAddress) {

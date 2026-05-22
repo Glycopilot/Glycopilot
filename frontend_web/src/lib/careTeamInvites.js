@@ -1,4 +1,3 @@
-/** Invitation en attente initiée par le patient (demande reçue côté médecin). */
 export function isReceivedByDoctor(inv) {
   if (inv?.invitation_from === 'patient') return true;
   if (inv?.invitation_from === 'doctor') return false;
@@ -16,7 +15,6 @@ export function countReceivedInvites(pendingInvites = [], activePatients = []) {
   }).receivedInvites.length;
 }
 
-/** Clé stable pour reconnaître le même patient entre actif et invitation. */
 export function patientIdentityKey(member) {
   const p = member?.patient_details;
   if (p?.id_user != null) return `user:${p.id_user}`;
@@ -53,9 +51,6 @@ function uniqueByTeamId(list) {
   });
 }
 
-/**
- * Construit les listes sans doublon : un patient actif n'apparaît plus en « demande reçue ».
- */
 export function dedupeDoctorTeamLists({ active_patients = [], pending_invites = [] } = {}) {
   const active = uniqueByTeamId(active_patients ?? []);
   const pending = uniqueByTeamId(pending_invites ?? []);

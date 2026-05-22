@@ -1,8 +1,5 @@
 import authService from '../services/authService';
 import { getInitials } from '../lib/utils';
-/**
- * En-tête unifié du portail médecin (home, patients, profil).
- */
 export default function DoctorDashboardHeader({ title, subtitle, actions }) {
   const user = authService.getStoredUser() ?? {};
   const firstName = user.first_name ?? user.identity?.first_name ?? '';
