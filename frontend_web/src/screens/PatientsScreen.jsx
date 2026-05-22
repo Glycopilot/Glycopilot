@@ -28,13 +28,26 @@ function formatNextDose(nextDose) {
   return label || time || null;
 }
 
+/** API care-team : status = "ACTIVE" | "PENDING" | "REJECTED" (StringRelatedField). */
+function normalizeCareTeamStatus(status) {
+  if (status == null || status === '') return null;
+  if (typeof status === 'number') {
+    const legacy = { 0: 'INACTIVE', 1: 'PENDING', 2: 'ACTIVE' };
+    return legacy[status] ?? null;
+  }
+  return String(status).toUpperCase().trim();
+}
+
 function StatusBadge({ status }) {
+  const key = normalizeCareTeamStatus(status);
   const map = {
-    2: { label: 'Actif',       cls: 'badge-active' },
-    1: { label: 'En attente',  cls: 'badge-pending' },
-    0: { label: 'Inactif',     cls: 'badge-inactive' },
+    ACTIVE:   { label: 'Actif',      cls: 'badge-active' },
+    PENDING:  { label: 'En attente', cls: 'badge-pending' },
+    REJECTED: { label: 'Refusé',     cls: 'badge-inactive' },
+    DECLINED: { label: 'Refusé',     cls: 'badge-inactive' },
+    INACTIVE: { label: 'Inactif',    cls: 'badge-inactive' },
   };
-  const { label, cls } = map[status] || { label: 'Inconnu', cls: 'badge-inactive' };
+  const { label, cls } = map[key] || { label: 'Inconnu', cls: 'badge-inactive' };
   return <span className={`status-badge ${cls}`}>{label}</span>;
 }
 
