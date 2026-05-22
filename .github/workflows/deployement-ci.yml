@@ -11,20 +11,16 @@ on:
         description: '1. Déployer Backend sur Plan A (EC2)'
         type: boolean
         default: false
-      deploy_plan_b:
-        description: '2. Déployer Backend sur Plan B (ECS/RDS)'
-        type: boolean
-        default: false
       deploy_front_web:
-        description: '3. Déployer Frontend Web (S3)'
+        description: '2. Déployer Frontend Web (S3)'
         type: boolean
         default: false
       deploy_landing_page:
-        description: '3b. Déployer Site Vitrine (S3 statique)'
+        description: '2b. Déployer Site Vitrine (S3 statique)'
         type: boolean
         default: false
       deploy_mobile:
-        description: '4. Compiler App Mobile (Expo EAS)'
+        description: '3. Compiler App Mobile (Expo EAS)'
         type: boolean
         default: false
 
@@ -185,17 +181,6 @@ jobs:
             sudo systemctl start glycopilot-healthcheck.service
             sudo systemctl enable --now glycopilot-healthcheck.timer
             docker image prune -f
-
-  deploy-plan-b:
-    name: Deploy Plan B (disabled)
-    if: ${{ inputs.deploy_plan_b }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Stop legacy Plan B deployment
-        run: |
-          echo "Plan B legacy deployment is intentionally disabled."
-          echo "Use the Terraform Common Foundation job for infra/terraform."
-          exit 1
 
   deploy-front-web:
     name: Deploy Frontend Web
