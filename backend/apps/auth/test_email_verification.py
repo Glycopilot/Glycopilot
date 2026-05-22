@@ -54,6 +54,47 @@ def _register(api, email="user@test.com", extra=None):
 # register()
 # ---------------------------------------------------------------------------
 
+@patch(
+    "apps.doctors.france_address.validate_street_address_in_ban",
+    return_value="1 rue de Test",
+)
+@patch(
+    "apps.doctors.france_address.validate_postal_city_match",
+    return_value="Paris",
+)
+@patch("apps.auth.serializers._verify_email_domain")
+@pytest.mark.django_db
+def test_register_doctor_is_not_affected_by_email_verification(
+    _mock_verify, _mock_postal, _mock_street, api
+):
+    """Les médecins gardent leur flow existant (bloqués par verification_status)."""
+    from apps.doctors.models import VerificationStatus
+    import uuid
+
+    VerificationStatus.objects.get_or_create(label="PENDING")
+    VerificationStatus.objects.get_or_create(label="VERIFIED")
+    VerificationStatus.objects.get_or_create(label="REJECTED")
+
+    data = {
+        "email": f"doc-{uuid.uuid4().hex[:8]}@test.com",
+        "password": "StrongPass123!",
+        "password_confirm": "StrongPass123!",
+        "first_name": "Dr",
+        "last_name": "Test",
+        "role": "DOCTOR",
+        "license_number": f"RPPS-{uuid.uuid4().hex[:8]}",
+        "specialty": "Médecin",
+        "medical_center_name": "Cabinets",
+        "medical_center_postal_code": "75001",
+        "medical_center_city": "Paris",
+        "medical_center_address": "1 rue de Test",
+    }
+    resp = api.post("/api/auth/register/", data)
+    assert resp.status_code == status.HTTP_201_CREATED, getattr(resp, "data", resp.content)
+    account = AuthAccount.objects.get(email=data["email"])
+    assert account.is_active is True
+
+
 @pytest.mark.django_db
 def test_register_returns_message_not_jwt(api):
     with patch("apps.auth.views._send_verification_link"):
@@ -78,41 +119,6 @@ def test_register_sends_verification_email(api, mailoutbox):
     mail = mailoutbox[0]
     assert mail.to == ["verif@test.com"]
     assert "confirm-email" in mail.body
-
-
-@pytest.mark.django_db
-def test_register_doctor_is_not_affected_by_email_verification(api):
-    """Les médecins gardent leur flow existant (bloqués par verification_status)."""
-    from apps.doctors.models import VerificationStatus
-    VerificationStatus.objects.get_or_create(label="PENDING")
-    VerificationStatus.objects.get_or_create(label="VERIFIED")
-    VerificationStatus.objects.get_or_create(label="REJECTED")
-    data = {
-        "email": "doc@test.com",
-        "password": "StrongPass123!",
-        "password_confirm": "StrongPass123!",
-        "first_name": "Dr",
-        "last_name": "Test",
-        "role": "DOCTOR",
-        "license_number": "RPPS-123",
-        "specialty": "Médecin",
-        "medical_center_name": "Cabinets",
-        "medical_center_postal_code": "75001",
-        "medical_center_city": "Paris",
-        "medical_center_address": "1 rue de Test",
-    }
-    with patch("apps.auth.serializers._verify_email_domain"), patch(
-        "apps.doctors.france_address.validate_postal_city_match",
-        return_value="Paris",
-    ), patch(
-        "apps.doctors.france_address.validate_street_address_in_ban",
-        return_value="1 rue de Test",
-    ):
-        resp = api.post("/api/auth/register/", data)
-    assert resp.status_code == status.HTTP_201_CREATED
-    # Médecin : is_active reste True, bloqué différemment (verification_status)
-    account = AuthAccount.objects.get(email="doc@test.com")
-    assert account.is_active is True
 
 
 # ---------------------------------------------------------------------------
@@ -222,8 +228,15 @@ def test_verify_email_domain_accepts_valid_domain():
 def test_verify_email_domain_rejects_nonexistent_domain():
     from rest_framework import serializers as drf_serializers
     from apps.auth.serializers import _verify_email_domain
-    with pytest.raises(drf_serializers.ValidationError):
-        _verify_email_domain("user@domaine-inexistant-xyzabc999.com")
+
+    dns = pytest.importorskip("dns")
+    with patch.object(
+        dns.resolver.Resolver,
+        "resolve",
+        side_effect=dns.resolver.NXDOMAIN(),
+    ):
+        with pytest.raises(drf_serializers.ValidationError):
+            _verify_email_domain("user@domaine-inexistant-xyzabc999.com")
 
 
 @pytest.mark.django_db
@@ -244,5 +257,11 @@ def test_register_with_fake_domain_returns_400(api):
         "last_name": "Test",
         "role": "PATIENT",
     }
-    resp = api.post("/api/auth/register/", data)
+    dns = pytest.importorskip("dns")
+    with patch.object(
+        dns.resolver.Resolver,
+        "resolve",
+        side_effect=dns.resolver.NXDOMAIN(),
+    ):
+        resp = api.post("/api/auth/register/", data)
     assert resp.status_code == status.HTTP_400_BAD_REQUEST
