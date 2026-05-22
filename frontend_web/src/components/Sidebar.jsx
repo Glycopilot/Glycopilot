@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import authService from '../services/authService';
+import { countReceivedInvites } from '../lib/careTeamInvites';
 import { devWarn } from '../lib/logger';
-import { getInitials } from '../lib/utils';
 import logo from '../assets/glycopilot.png';
 import { LayoutDashboard, LogOut, UserCircle, Users } from 'lucide-react';
 import { UiMenu, UiClose } from './UiIcon';
@@ -10,20 +10,32 @@ import HelpButton from './tour/HelpButton';
 const apiClient = authService.getApiClient();
 
 export default function Sidebar({ activePage, navigation }) {
-  const stored = authService.getStoredUser();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [receivedInviteCount, setReceivedInviteCount] = useState(0);
 
-  const firstName = stored?.first_name ?? stored?.identity?.first_name;
-  const lastName  = stored?.last_name  ?? stored?.identity?.last_name;
+  useEffect(() => {
+    if (!authService.isAuthenticated()) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiClient.get('/doctors/care-team/my-team/');
+        if (cancelled) return;
+        const count = res.data.pending_received_count
+          ?? countReceivedInvites(res.data.pending_invites, res.data.active_patients);
+        setReceivedInviteCount(count);
+      } catch {
+        if (!cancelled) setReceivedInviteCount(0);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activePage]);
 
-  // Ferme le menu si on redimensionne vers desktop
   useEffect(() => {
     const onResize = () => { if (window.innerWidth > 860) setMobileOpen(false); };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Bloque le scroll du body quand le menu est ouvert
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -52,36 +64,32 @@ export default function Sidebar({ activePage, navigation }) {
     { id: 'profile',  label: 'Mon profil',   icon: <UserCircle {...navIcon} />,      path: '/profile' },
   ];
 
-  const SidebarContent = () => (
+  const SidebarNav = () => (
     <>
-      <div className="sb-logo">
-        <img src={logo} alt="GlycoPilot" />
-      </div>
-
       <nav className="sb-nav">
         {links.map(l => (
           <button
             key={l.id}
+            type="button"
             className={`sb-item ${activePage === l.id ? 'sb-active' : ''}`}
             onClick={() => navigate(l.path)}
           >
             {l.icon}
             <span>{l.label}</span>
+            {l.id === 'patients' && receivedInviteCount > 0 && (
+              <span className="sb-badge" aria-label={`${receivedInviteCount} demande(s) reçue(s)`}>
+                {receivedInviteCount}
+              </span>
+            )}
           </button>
         ))}
       </nav>
 
       <div className="sb-footer">
-        <div className="sb-doctor">
-          <div className="sb-avatar">{getInitials(firstName, lastName)}</div>
-          <div className="sb-doc-text">
-            <span className="sb-doc-name">Dr. {lastName}</span>
-            <span className="sb-doc-role">Médecin</span>
-          </div>
-        </div>
         <HelpButton />
-        <button className="sb-logout" onClick={handleLogout} title="Se déconnecter">
-          <LogOut size={16} strokeWidth={2} aria-hidden />
+        <button type="button" className="sb-logout" onClick={handleLogout} title="Se déconnecter">
+          <LogOut size={18} strokeWidth={2} aria-hidden />
+          <span>Déconnexion</span>
         </button>
       </div>
     </>
@@ -89,30 +97,55 @@ export default function Sidebar({ activePage, navigation }) {
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
-      <aside className="sidebar sidebar-desktop">
-        <SidebarContent />
+      <aside className="sidebar sidebar-desktop" aria-label="Navigation principale">
+        <div className="sb-logo">
+          <img src={logo} alt="GlycoPilot" />
+        </div>
+        <SidebarNav />
       </aside>
 
-      {/* ── Mobile topbar ── */}
-      <div className="mobile-topbar">
-        <img src={logo} alt="GlycoPilot" className="mobile-logo" />
-        <button className="hamburger-btn" onClick={() => setMobileOpen(true)} aria-label="Ouvrir le menu">
+      <header className="mobile-topbar" aria-label="Barre de navigation mobile">
+        <img src={logo} alt="GlycoPilot" className="mobile-topbar-logo" />
+        <button
+          type="button"
+          className="hamburger-btn"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Ouvrir le menu"
+          aria-expanded={mobileOpen}
+        >
           <UiMenu size={22} />
         </button>
-      </div>
+      </header>
 
-      {/* ── Mobile drawer overlay ── */}
       {mobileOpen && (
-        <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />
+        <div
+          className="mobile-overlay"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
       )}
 
-      {/* ── Mobile drawer ── */}
-      <aside className={`sidebar sidebar-mobile ${mobileOpen ? 'sidebar-mobile-open' : ''}`}>
-        <button className="sb-close" onClick={() => setMobileOpen(false)} aria-label="Fermer le menu">
-          <UiClose size={20} />
-        </button>
-        <SidebarContent />
+      <aside
+        className={`sidebar sidebar-mobile ${mobileOpen ? 'sidebar-mobile-open' : ''}`}
+        aria-label="Menu"
+        aria-hidden={!mobileOpen}
+      >
+        <div className="sb-mobile-header">
+          <div className="sb-mobile-brand">
+            <img src={logo} alt="GlycoPilot" className="sb-mobile-drawer-logo" />
+          </div>
+          <button
+            type="button"
+            className="sb-close"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Fermer le menu"
+          >
+            <UiClose size={22} />
+          </button>
+        </div>
+        <div className="sb-mobile-body">
+          <SidebarNav />
+        </div>
       </aside>
     </>
   );
