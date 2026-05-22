@@ -7,7 +7,7 @@ Couvre :
   - resend_verification() renvoie l'email
   - _verify_email_domain() rejette les domaines sans MX
 """
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -54,18 +54,34 @@ def _register(api, email="user@test.com", extra=None):
 # register()
 # ---------------------------------------------------------------------------
 
-@patch(
-    "apps.doctors.france_address.validate_street_address_in_ban",
-    return_value="1 rue de Test",
-)
-@patch(
-    "apps.doctors.france_address.validate_postal_city_match",
-    return_value="Paris",
-)
+def _mock_france_gov_apis(url, *args, **kwargs):
+    """Réponses BAN/geo fictives pour éviter les appels réseau en CI."""
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    url_str = str(url)
+    if "geo.api.gouv.fr" in url_str:
+        response.json.return_value = [{"nom": "Paris"}]
+    else:
+        response.json.return_value = {
+            "features": [
+                {
+                    "properties": {
+                        "label": "1 rue de Test, 75001 Paris",
+                        "name": "1 rue de Test",
+                        "postcode": "75001",
+                        "city": "Paris",
+                    }
+                }
+            ]
+        }
+    return response
+
+
+@patch("apps.doctors.france_address.requests.get", side_effect=_mock_france_gov_apis)
 @patch("apps.auth.serializers._verify_email_domain")
 @pytest.mark.django_db
 def test_register_doctor_is_not_affected_by_email_verification(
-    _mock_verify, _mock_postal, _mock_street, api
+    _mock_verify, _mock_requests_get, api
 ):
     """Les médecins gardent leur flow existant (bloqués par verification_status)."""
     from apps.doctors.models import VerificationStatus
