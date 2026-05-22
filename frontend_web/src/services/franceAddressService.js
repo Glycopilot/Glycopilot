@@ -1,8 +1,5 @@
-/**
- * Adresses France via l'API Django (/api/france/…) — fiable en Docker et en prod.
- * (Le proxy CRA /geo-api renvoie souvent du HTML hors dev local.)
- */
-const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:8006/api').replace(/\/$/, '');
+import { getApiBase } from '../config/apiBase';
+import { ADDRESS_MSG } from '../constants/addressMessages';
 
 export function normalizeCityName(name) {
   return (name || '')
@@ -33,17 +30,14 @@ export async function fetchCommunesByPostalCode(postalCode) {
   const postal = (postalCode || '').trim();
   if (!isValidPostalCodeFormat(postal)) return [];
 
-  const url = `${API_BASE}/france/communes/?postal_code=${encodeURIComponent(postal)}`;
+  const url = `${getApiBase()}/france/communes/?postal_code=${encodeURIComponent(postal)}`;
   let res;
   try {
     res = await fetch(url);
   } catch {
-    throw new Error('Service adresse temporairement indisponible. Vérifiez votre connexion.');
+    throw new Error(ADDRESS_MSG.postalLoadError);
   }
-  const data = await parseJsonResponse(
-    res,
-    'Impossible de charger les villes pour ce code postal.',
-  );
+  const data = await parseJsonResponse(res, ADDRESS_MSG.postalApiError);
 
   if (!Array.isArray(data)) return [];
 
@@ -57,15 +51,15 @@ export async function validatePostalCityMatch(postalCode, cityName) {
   const city = (cityName || '').trim();
 
   if (!isValidPostalCodeFormat(postal)) {
-    return { valid: false, error: 'Le code postal doit contenir 5 chiffres.', communes: [] };
+    return { valid: false, error: ADDRESS_MSG.postalInvalidFormat, communes: [] };
   }
   if (!city) {
-    return { valid: false, error: 'Veuillez sélectionner une ville.', communes: [] };
+    return { valid: false, error: ADDRESS_MSG.cityRequired, communes: [] };
   }
 
   const communes = await fetchCommunesByPostalCode(postal);
   if (communes.length === 0) {
-    return { valid: false, error: 'Code postal inconnu en France.', communes: [] };
+    return { valid: false, error: ADDRESS_MSG.postalUnknown, communes: [] };
   }
 
   const normCity = normalizeCityName(city);
@@ -73,7 +67,7 @@ export async function validatePostalCityMatch(postalCode, cityName) {
   return {
     valid: match,
     communes,
-    error: match ? null : 'La ville ne correspond pas à ce code postal.',
+    error: match ? null : ADDRESS_MSG.cityMismatch,
   };
 }
 
@@ -89,8 +83,13 @@ export async function searchStreetAddresses({ query, postalCode, city, limit = 8
   });
   if (city?.trim()) params.set('city', city.trim());
 
-  const res = await fetch(`${API_BASE}/france/addresses/search/?${params}`);
-  const data = await parseJsonResponse(res, 'Service adresse indisponible.');
+  let res;
+  try {
+    res = await fetch(`${getApiBase()}/france/addresses/search/?${params}`);
+  } catch {
+    throw new Error(ADDRESS_MSG.addressServiceError);
+  }
+  const data = await parseJsonResponse(res, ADDRESS_MSG.addressServiceError);
   const postal = postalCode.trim();
 
   return (data.features || [])
@@ -120,11 +119,10 @@ function addressMatchesBanResult(input, result) {
   );
 }
 
-/** Vérifie que l'adresse existe dans la Base Adresse Nationale. */
 export async function validateAddressInBan({ postalCode, city, address }) {
   const addr = (address || '').trim();
   if (addr.length < 3) {
-    return { valid: false, error: 'Adresse trop courte (min. 3 caractères).' };
+    return { valid: false, error: ADDRESS_MSG.addressTooShort };
   }
 
   try {
@@ -137,25 +135,25 @@ export async function validateAddressInBan({ postalCode, city, address }) {
     if (results.length === 0) {
       return {
         valid: false,
-        error: 'Adresse introuvable. Choisissez une adresse proposée sous le champ.',
+        error: ADDRESS_MSG.addressNotFound,
       };
     }
     const ok = results.some((r) => addressMatchesBanResult(addr, r));
     if (!ok) {
       return {
         valid: false,
-        error: 'Adresse non reconnue. Cliquez sur une adresse dans la liste déroulante.',
+        error: ADDRESS_MSG.addressNotRecognized,
       };
     }
     return { valid: true, error: null, suggestions: results };
   } catch {
-    return { valid: false, error: 'Service adresse indisponible, réessayez.' };
+    return { valid: false, error: ADDRESS_MSG.addressServiceError };
   }
 }
 
 export async function validateFrenchAddress({ postalCode, city, address }) {
   const postalErr = !isValidPostalCodeFormat(postalCode)
-    ? 'Le code postal doit contenir 5 chiffres.'
+    ? ADDRESS_MSG.postalInvalidFormat
     : null;
   if (postalErr) return { valid: false, error: postalErr };
 
@@ -163,7 +161,7 @@ export async function validateFrenchAddress({ postalCode, city, address }) {
   if (!match.valid) return match;
 
   if (!(address || '').trim()) {
-    return { valid: false, error: 'Veuillez saisir une adresse.' };
+    return { valid: false, error: ADDRESS_MSG.addressRequired };
   }
 
   const ban = await validateAddressInBan({ postalCode, city, address });
