@@ -15,9 +15,10 @@ jest.mock('../../services/toastService', () => ({
   toastError: jest.fn(),
   toastSuccess: jest.fn(),
 }));
-jest.mock('../../components/Sidebar', () => ({
-  __esModule: true,
-  default: ({ activePage }) => <div data-testid="sidebar" data-page={activePage} />,
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  useOutletContext: () => ({ navigation: { navigate: mockNavigate } }),
 }));
 
 import HomeScreen from '../../screens/HomeScreen';
@@ -64,13 +65,12 @@ function setupMocks({ patients = [], dashboards = {}, glycemiaMap = {} } = {}) {
   });
 }
 
-const navigation = { navigate: jest.fn() };
-const renderHome = () => render(<HomeScreen navigation={navigation} />);
+const renderHome = () => render(<HomeScreen />);
 
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    navigation.navigate.mockClear();
+    mockNavigate.mockClear();
   });
 
   describe('Chargement', () => {
@@ -80,13 +80,12 @@ describe('HomeScreen', () => {
       expect(screen.getByText('Chargement du tableau de bord…')).toBeInTheDocument();
     });
 
-    it('affiche le greeting avec le prénom du médecin', async () => {
+    it('affiche le prénom du médecin', async () => {
       setupMocks();
       renderHome();
       await waitFor(() =>
-        expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+        expect(screen.getByText(/Dr\.\s*Jean\s+Dupont/)).toBeInTheDocument()
       );
-      expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Jean/);
     });
 
     it('toastError si /my-team/ échoue', async () => {
@@ -97,11 +96,11 @@ describe('HomeScreen', () => {
       );
     });
 
-    it('sidebar montée avec activePage="home"', async () => {
+    it('affiche le titre du tableau de bord', async () => {
       setupMocks();
       renderHome();
       await waitFor(() =>
-        expect(screen.getByTestId('sidebar')).toHaveAttribute('data-page', 'home')
+        expect(screen.getByRole('heading', { name: 'Tableau de bord' })).toBeInTheDocument()
       );
     });
   });
@@ -255,7 +254,7 @@ describe('HomeScreen', () => {
       renderHome();
       await waitFor(() => screen.getByText(/voir tous/i));
       fireEvent.click(screen.getByText(/voir tous/i));
-      expect(navigation.navigate).toHaveBeenCalledWith('/patients');
+      expect(mockNavigate).toHaveBeenCalledWith('/patients');
     });
   });
 });
