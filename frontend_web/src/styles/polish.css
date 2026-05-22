@@ -58,13 +58,10 @@ input, textarea, select {
 }
 *::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.55); background-clip: content-box; }
 
-/* Animation d'entrée des écrans (déclenchée par AppRoutes via la key location.pathname) */
-.route-shell {
-  animation: route-enter var(--dur-slow) var(--ease-out) both;
-}
-@keyframes route-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Pas d'animation globale entre pages (sidebar fixe via DoctorLayout) */
+.App {
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Apparition douce générale (utilisable ponctuellement) */
@@ -97,49 +94,80 @@ input, textarea, select {
 }
 
 /* ErrorBoundary fallback */
-/* ErrorBoundary fallback */
 .error-boundary-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   padding: var(--space-4);
-  background: var(--bg, #F8FAFC);
+  background: linear-gradient(160deg, #f0f6fc 0%, #f8fafc 55%, #eef4fb 100%);
 }
 .error-boundary-fallback {
   width: 100%;
-  max-width: 480px;
-  padding: var(--space-8);
+  max-width: 440px;
+  padding: var(--space-8) var(--space-7);
   background: var(--surface, #fff);
   border: 1px solid var(--border, #E2E8F0);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(26, 43, 69, 0.08);
   font-family: 'DM Sans', sans-serif;
   color: var(--dark, #1A2B45);
   text-align: center;
 }
-.eb-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  margin: 0 auto var(--space-5);
-  border-radius: 50%;
-  background: #FEF2F2;
+.eb-brand {
+  margin-bottom: var(--space-5);
+}
+.eb-logo {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.92;
 }
 .error-boundary-fallback h1 {
   font-family: 'Sora', sans-serif;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   margin: 0 0 var(--space-3);
   color: var(--dark, #1A2B45);
+  letter-spacing: -0.02em;
 }
-.error-boundary-fallback p {
+.error-boundary-fallback > p {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.65;
   margin: 0 0 var(--space-6);
-  color: var(--mid, #475569);
+  color: var(--mid, #64748B);
+}
+.eb-support-hint {
+  margin: var(--space-5) 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+.eb-dev-block {
+  margin-bottom: var(--space-5);
+  text-align: left;
+}
+.eb-dev-toggle {
+  border: none;
+  background: none;
+  color: var(--blue, #2563EB);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.eb-dev-pre {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #475569;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .error-boundary-actions {
   display: flex;
