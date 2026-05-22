@@ -154,6 +154,10 @@ def reset_database():
         InvitationStatus.objects.get_or_create(label=s)
     print("✓ InvitationStatus created")
 
+    # Activities
+    execute_from_command_line(["manage.py", "import_activities"])
+    print("✓ Activities imported")
+
     # Alert Rules
     from apps.alerts.models import AlertRule, AlertSeverity
 
