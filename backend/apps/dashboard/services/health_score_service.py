@@ -44,7 +44,7 @@ class HealthScoreService:
         readings = Glycemia.objects.filter(user=user, measured_at__gte=since)
 
         if not readings.exists():
-            return 50.0
+            return 70.0  # Neutre — pas de données ne signifie pas mauvaise glycémie
 
         total = readings.count()
         in_range = readings.filter(
@@ -57,25 +57,40 @@ class HealthScoreService:
     @classmethod
     def _calculate_adherence_score(cls, user) -> float:
         """
-        Score basé sur l'observance médicamenteuse.
+        Score basé sur l'observance médicamenteuse via MedicationIntake.
         """
-        from apps.medications.models import UserMedication
+        from django.db.models import Q
+        from apps.medications.models import IntakeStatus, MedicationIntake, UserMedication
 
-        since = timezone.now() - timedelta(days=7)
-        medications = UserMedication.objects.filter(
-            user=user, start_date__lte=timezone.now().date(), statut=True
-        )
+        today = timezone.now().date()
+        since = today - timedelta(days=7)
 
-        if not medications.exists():
+        active_meds = UserMedication.objects.filter(
+            user=user,
+            start_date__lte=today,
+            statut=True,
+        ).filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
+
+        if not active_meds.exists():
             return 100.0
 
-        taken = medications.filter(taken_at__gte=since).count()
-        total = medications.count() * 7
+        expected = MedicationIntake.objects.filter(
+            user_medication__in=active_meds,
+            scheduled_date__gte=since,
+            scheduled_date__lte=today,
+        ).count()
 
-        if total == 0:
+        if expected == 0:
             return 100.0
 
-        return min(100, (taken / total) * 100)
+        taken = MedicationIntake.objects.filter(
+            user_medication__in=active_meds,
+            scheduled_date__gte=since,
+            scheduled_date__lte=today,
+            status=IntakeStatus.TAKEN,
+        ).count()
+
+        return min(100.0, (taken / expected) * 100)
 
     @classmethod
     def _calculate_nutrition_score(cls, user) -> float:
@@ -88,7 +103,7 @@ class HealthScoreService:
         meals = UserMeal.objects.filter(user=user, taken_at__gte=since)
 
         if not meals.exists():
-            return 50.0
+            return 70.0  # Neutre — pas de données ne signifie pas mauvaise nutrition
 
         meals_per_day = meals.count() / 7
         ideal_meals = 3
@@ -110,7 +125,7 @@ class HealthScoreService:
         activities = UserActivity.objects.filter(user=user, start__gte=since)
 
         if not activities.exists():
-            return 30.0
+            return 60.0  # Neutre — pas de données ne signifie pas sédentarité
 
         total_minutes = 0
         for activity in activities:
