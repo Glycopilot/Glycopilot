@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from apps.doctors.models import DoctorProfile, VerificationStatus
 from apps.doctors.serializers import DoctorSerializer
 from apps.doctors.utils import send_doctor_verification_result_email
+from apps.doctors.verification_service import get_verified_status, verify_doctor_profile
 
 
 def _is_staff_or_superuser(user):
@@ -72,30 +73,14 @@ class DoctorVerificationViewSet(viewsets.ViewSet):
                 {"error": "Profil docteur introuvable."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        try:
-            verified_status = VerificationStatus.objects.get(label="VERIFIED")
-        except VerificationStatus.DoesNotExist:
-            verified_status, _ = VerificationStatus.objects.get_or_create(
-                label="VERIFIED", defaults={"label": "VERIFIED"}
-            )
-        if doctor.verification_status.label == "VERIFIED":
+        verified_status = get_verified_status()
+        if doctor.verification_status_id == verified_status.pk:
             return Response(
                 {"error": "Ce docteur est déjà validé."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         with transaction.atomic():
-            doctor.verification_status = verified_status
-            doctor.verified_by_user = request.user
-            doctor.verified_at = timezone.now()
-            doctor.rejection_reason = None
-            doctor.save(
-                update_fields=[
-                    "verification_status",
-                    "verified_by_user",
-                    "verified_at",
-                    "rejection_reason",
-                ]
-            )
+            verify_doctor_profile(doctor, verified_by=request.user)
 
         # Notification Email
         try:

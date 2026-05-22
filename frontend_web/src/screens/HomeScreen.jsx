@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import GlycoIcon from '../components/GlycoIcon';
+import AppIcon from '../components/AppIcon';
 import { UiChevronRight, UiClose } from '../components/UiIcon';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
@@ -79,7 +79,7 @@ function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
           <span className="alert-patient">{patientName}</span>
           {glycLabel && (
             <span className="alert-glyc-badge" style={{ background: cfg.color }}>
-              <GlycoIcon size={12} alt="" />
+              <AppIcon name="droplets" size={12} />
               {glycLabel}
             </span>
           )}
@@ -90,7 +90,7 @@ function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
           {timeLabel && <span className="alert-time">{timeLabel}</span>}
         </div>
       </div>
-      <GlycoIcon size={15} alt="" />
+      <AppIcon name="chevron" size={15} />
     </div>
   );
 }
@@ -113,7 +113,7 @@ function ActivityRow({ patient, dashboard }) {
           <span className="act-pct">{pct}%</span>
         </div>
         <div className="act-sub">
-          <GlycoIcon size={12} alt="" /> {steps?.value?.toLocaleString() ?? '—'} / {steps?.goal?.toLocaleString() ?? '—'} pas
+          <AppIcon name="footsteps" size={12} /> {steps?.value?.toLocaleString() ?? '—'} / {steps?.goal?.toLocaleString() ?? '—'} pas
         </div>
       </div>
       <div className={`act-score ${dashboard.healthScore >= 70 ? 'score-good' : dashboard.healthScore >= 40 ? 'score-mid' : 'score-low'}`}>
@@ -258,7 +258,7 @@ export default function HomeScreen({ navigation }) {
           <>
             <div className="kpi-row">
               <div className="kpi-card">
-                <div className="kpi-icon kpi-blue"><GlycoIcon size={22} alt="" /></div>
+                <div className="kpi-icon kpi-blue"><AppIcon name="users" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{activeCount}</div>
                   <div className="kpi-label">Patients suivis</div>
@@ -266,7 +266,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-red"><GlycoIcon size={22} alt="" /></div>
+                <div className="kpi-icon kpi-red"><AppIcon name="alert" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{allAlerts.length}</div>
                   <div className="kpi-label">Alertes enregistrées</div>
@@ -277,7 +277,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-green"><GlycoIcon size={22} alt="" /></div>
+                <div className="kpi-icon kpi-green"><AppIcon name="heart" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{avgScore ?? '—'}</div>
                   <div className="kpi-label">Score santé moyen</div>
@@ -285,7 +285,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-teal"><GlycoIcon size={22} alt="" /></div>
+                <div className="kpi-icon kpi-teal"><AppIcon name="activity" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">
                     {allDashes.filter(d => d.healthScore >= 70).length}
@@ -299,7 +299,7 @@ export default function HomeScreen({ navigation }) {
               {/* Score moyen */}
               <div className="hcard hcard-score">
                 <div className="hcard-header">
-                  <div className="hcard-title"><GlycoIcon size={16} alt="" /> Score de santé moyen</div>
+                  <div className="hcard-title"><AppIcon name="heart" size={16} /> Score de santé moyen</div>
                 </div>
                 {avgScore !== null
                   ? <ScoreGauge score={avgScore} />
@@ -329,12 +329,12 @@ export default function HomeScreen({ navigation }) {
               {/* Alertes glycémiques */}
               <div className="hcard hcard-alerts">
                 <div className="hcard-header">
-                  <div className="hcard-title"><GlycoIcon size={16} alt="" /> Alertes glycémiques</div>
+                  <div className="hcard-title"><AppIcon name="alert" size={16} /> Alertes glycémiques</div>
                   {allAlerts.length > 0 && <span className="alert-count-badge">{allAlerts.length}</span>}
                 </div>
                 {allAlerts.length === 0 ? (
                   <div className="empty-mini">
-                    <GlycoIcon size={32} alt="" />
+                    <AppIcon name="alert" size={32} />
                     <p>Aucune alerte active</p>
                   </div>
                 ) : (
@@ -355,14 +355,14 @@ export default function HomeScreen({ navigation }) {
               {/* Activité récente */}
               <div className="hcard hcard-activity">
                 <div className="hcard-header">
-                  <div className="hcard-title"><GlycoIcon size={16} alt="" /> Activité récente des patients</div>
+                  <div className="hcard-title"><AppIcon name="activity" size={16} /> Activité récente des patients</div>
                   <button className="see-all-btn" onClick={() => navigation.navigate('/patients')}>
-                    Voir tous <GlycoIcon size={13} alt="" />
+                    Voir tous <AppIcon name="chevron" size={13} />
                   </button>
                 </div>
                 {sortedByActivity.length === 0 ? (
                   <div className="empty-mini">
-                    <GlycoIcon size={32} alt="" />
+                    <AppIcon name="alert" size={32} />
                     <p>Aucune donnée d'activité</p>
                   </div>
                 ) : (

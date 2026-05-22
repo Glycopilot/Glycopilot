@@ -10,6 +10,7 @@ export interface DoctorMemberDetails {
   specialty?: string | null;
   medical_center_name?: string | null;
   medical_center_address?: string | null;
+  medical_center_postal_code?: string | null;
 }
 
 export interface DoctorMember {

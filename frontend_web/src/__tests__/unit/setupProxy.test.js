@@ -31,7 +31,15 @@ describe('setupProxy', () => {
       pathFilter: '/api',
       logLevel: 'warn',
     });
-    expect(app.use).toHaveBeenCalledWith({ proxy: true, config: expect.any(Object) });
+    expect(mockCreateProxyMiddleware).toHaveBeenCalledWith(expect.objectContaining({
+      target: 'https://geo.api.gouv.fr',
+      changeOrigin: true,
+    }));
+    expect(mockCreateProxyMiddleware).toHaveBeenCalledWith(expect.objectContaining({
+      target: 'https://api-adresse.data.gouv.fr',
+      changeOrigin: true,
+    }));
+    expect(app.use).toHaveBeenCalledTimes(3);
   });
 
   it('respecte API_PROXY_TARGET si défini', () => {

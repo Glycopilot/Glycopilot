@@ -70,8 +70,9 @@ class JWTAuthenticationDualKey(JWTAuthentication):
                 return AuthToken(raw_token)
             except InvalidToken:
                 pass
-            except Exception as e:
-                logger.warning("Unexpected error during token validation: %s", type(e).__name__)
+            except Exception:
+                # Jeton signé avec une autre clé (ex. admin) : on tente SECRET_KEY_ADMIN ensuite
+                pass
 
         # Si SECRET_KEY_ADMIN est défini, tenter validation avec cette clé (admin, superadmin)
         admin_key = getattr(settings, "SECRET_KEY_ADMIN", None)

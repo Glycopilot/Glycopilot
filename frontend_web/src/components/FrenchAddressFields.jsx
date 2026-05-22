@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import InputField from './InputField';
+import { ADDRESS_MSG } from '../constants/addressMessages';
 import {
   fetchCommunesByPostalCode,
   isValidPostalCodeFormat,
@@ -20,11 +21,16 @@ function CitySelect({ label, value, cities, loading, disabled, postalReady, onCh
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={!canPick}
-          autoComplete="address-level2"
+          autoComplete="off"
         >
-          {!postalReady && <option value="">—</option>}
-          {postalReady && loading && <option value="">…</option>}
-          {postalReady && !loading && cities.length === 0 && <option value="">—</option>}
+          {!postalReady && <option value="">{ADDRESS_MSG.selectPostalFirst}</option>}
+          {postalReady && loading && <option value="">{ADDRESS_MSG.selectLoading}</option>}
+          {postalReady && !loading && cities.length === 0 && (
+            <option value="">{ADDRESS_MSG.selectNoCity}</option>
+          )}
+          {postalReady && !loading && cities.length > 1 && !value && (
+            <option value="">{ADDRESS_MSG.selectPickCity}</option>
+          )}
           {cities.map((c) => (
             <option key={c.code} value={c.name}>{c.name}</option>
           ))}
@@ -37,6 +43,17 @@ function CitySelect({ label, value, cities, loading, disabled, postalReady, onCh
     return <div className="input-field">{field}</div>;
   }
   return <div className="pfield">{field}</div>;
+}
+
+function HintLine({ children, variant = 'info', isAuth }) {
+  const cls = isAuth ? 'password-hint' : 'pfield-hint';
+  if (variant === 'error') {
+    return <p className={`${cls} field-error`}>{children}</p>;
+  }
+  if (variant === 'success') {
+    return <p className={`${cls} address-hint-success`}>{children}</p>;
+  }
+  return <p className={cls}>{children}</p>;
 }
 
 export default function FrenchAddressFields({
@@ -52,17 +69,22 @@ export default function FrenchAddressFields({
   const [cities, setCities] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [cityError, setCityError] = useState('');
+  const [cityAutoFilled, setCityAutoFilled] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingAddress, setLoadingAddress] = useState(false);
+  const [addressSearched, setAddressSearched] = useState(false);
   const wrapRef = useRef(null);
   const isAuth = variant === 'auth';
   const postalReady = isValidPostalCodeFormat(postalCode);
   const postalLen = (postalCode || '').replace(/\D/g, '').length;
+  const canSearchAddress = postalReady && !!city && !disabled && (address || '').length >= 3;
 
   useEffect(() => {
     if (!postalReady) {
       setCities([]);
       setCityError('');
+      setCityAutoFilled(false);
       if (city) onCityChange('');
       return undefined;
     }
@@ -70,19 +92,21 @@ export default function FrenchAddressFields({
     const timer = setTimeout(async () => {
       setLoadingCities(true);
       setCityError('');
+      setCityAutoFilled(false);
       try {
         const communes = await fetchCommunesByPostalCode(postalCode);
         setCities(communes);
         if (communes.length === 0) {
-          setCityError('Aucune ville pour ce code postal.');
+          setCityError(ADDRESS_MSG.postalNoCity);
           onCityChange('');
         } else if (communes.length === 1) {
           onCityChange(communes[0].name);
+          setCityAutoFilled(true);
         } else if (!communes.some((c) => c.name === city)) {
           onCityChange('');
         }
-      } catch {
-        setCityError('Impossible de charger les villes.');
+      } catch (err) {
+        setCityError(err?.message || ADDRESS_MSG.postalLoadError);
         setCities([]);
       } finally {
         setLoadingCities(false);
@@ -93,22 +117,35 @@ export default function FrenchAddressFields({
   }, [postalCode]);
 
   useEffect(() => {
-    if (disabled || !address || address.length < 3 || !city || !postalReady) {
+    if (!canSearchAddress) {
       setSuggestions([]);
+      setAddressSearched(false);
+      setLoadingAddress(false);
       return undefined;
     }
 
     const timer = setTimeout(async () => {
+      setLoadingAddress(true);
       try {
-        const results = await searchStreetAddresses({ query: address, postalCode, city, limit: 6 });
+        const results = await searchStreetAddresses({
+          query: address,
+          postalCode,
+          city,
+          limit: 8,
+        });
         setSuggestions(results);
+        setAddressSearched(true);
+        if (results.length > 0) setShowSuggestions(true);
       } catch {
         setSuggestions([]);
+        setAddressSearched(true);
+      } finally {
+        setLoadingAddress(false);
       }
-    }, 400);
+    }, 350);
 
     return () => clearTimeout(timer);
-  }, [address, city, postalCode, disabled]);
+  }, [address, city, postalCode, disabled, canSearchAddress]);
 
   useEffect(() => {
     const onDocClick = (e) => {
@@ -119,41 +156,65 @@ export default function FrenchAddressFields({
   }, []);
 
   const pickSuggestion = (item) => {
-    onAddressChange(item.street || item.label);
+    onAddressChange(item.label);
     if (item.postcode) onPostalCodeChange(item.postcode);
     if (item.city) onCityChange(item.city);
     setShowSuggestions(false);
+    setAddressSearched(false);
   };
+
+  const suggestionsList = showSuggestions && suggestions.length > 0 && (
+    <ul className="address-suggestions" role="listbox" aria-label="Adresses proposées">
+      {suggestions.map((s) => (
+        <li key={s.label} role="option">
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pickSuggestion(s)}>
+            {s.label}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
 
   const addressBlock = (
     <div className="address-autocomplete address-field-block" ref={wrapRef}>
       <InputField
         label="Adresse (n° et rue) *"
         value={address}
-        onChangeText={(v) => { onAddressChange(v); setShowSuggestions(true); }}
-        icon={<MapPin size={16} />}
-        placeholder="15 rue de Paris"
+        onChangeText={(v) => {
+          onAddressChange(v);
+          setShowSuggestions(true);
+          setAddressSearched(false);
+        }}
+        icon={<MapPin size={16} strokeWidth={1.75} />}
+        placeholder={ADDRESS_MSG.addressPlaceholder(city)}
+        autoComplete="off"
+        name="medical-center-address"
       />
-      {showSuggestions && suggestions.length > 0 && (
-        <ul className="address-suggestions">
-          {suggestions.map((s) => (
-            <li key={s.label}>
-              <button type="button" onClick={() => pickSuggestion(s)}>{s.label}</button>
-            </li>
-          ))}
-        </ul>
+      {!city && postalReady && !loadingCities && (
+        <HintLine isAuth={isAuth}>{ADDRESS_MSG.cityPick}</HintLine>
       )}
+      {city && (address || '').length > 0 && (address || '').length < 3 && (
+        <HintLine isAuth={isAuth}>{ADDRESS_MSG.addressTypeHint}</HintLine>
+      )}
+      {loadingAddress && <HintLine isAuth={isAuth}>{ADDRESS_MSG.addressSearching}</HintLine>}
+      {canSearchAddress && addressSearched && !loadingAddress && suggestions.length === 0 && (
+        <HintLine isAuth={isAuth} variant="error">{ADDRESS_MSG.addressNoResult}</HintLine>
+      )}
+      {canSearchAddress && suggestions.length > 0 && !showSuggestions && (
+        <HintLine isAuth={isAuth}>{ADDRESS_MSG.addressPickHint}</HintLine>
+      )}
+      {suggestionsList}
     </div>
   );
 
   const postalCityRow = isAuth ? (
     <div className="row-2 french-address-row">
       <InputField
-        label="Code postal"
+        label="Code postal *"
         value={postalCode}
         onChangeText={(v) => onPostalCodeChange(v.replace(/\D/g, '').slice(0, 5))}
-        icon={<MapPin size={16} />}
-        placeholder="75001"
+        icon={<MapPin size={16} strokeWidth={1.75} />}
+        placeholder="Ex. 94320"
         maxLength={5}
         inputMode="numeric"
       />
@@ -164,7 +225,7 @@ export default function FrenchAddressFields({
         loading={loadingCities}
         disabled={disabled}
         postalReady={postalReady}
-        onChange={onCityChange}
+        onChange={(v) => { onCityChange(v); setCityAutoFilled(false); }}
         isAuth
       />
     </div>
@@ -180,7 +241,7 @@ export default function FrenchAddressFields({
             onChange={(e) => onPostalCodeChange(e.target.value.replace(/\D/g, '').slice(0, 5))}
             disabled={disabled}
             maxLength={5}
-            placeholder="75001"
+            placeholder="Ex. 94320"
             inputMode="numeric"
             autoComplete="postal-code"
             autoCorrect="off"
@@ -195,7 +256,7 @@ export default function FrenchAddressFields({
         loading={loadingCities}
         disabled={disabled}
         postalReady={postalReady}
-        onChange={onCityChange}
+        onChange={(v) => { onCityChange(v); setCityAutoFilled(false); }}
         isAuth={false}
       />
     </div>
@@ -204,58 +265,25 @@ export default function FrenchAddressFields({
   const postalCityHints = (
     <>
       {postalLen > 0 && postalLen < 5 && (
-        <p className={isAuth ? 'password-hint' : 'pfield-hint'}>
-          Code postal incomplet : {postalLen}/5 chiffres (ex. 75001).
-        </p>
+        <HintLine isAuth={isAuth}>{ADDRESS_MSG.postalIncomplete(postalLen)}</HintLine>
       )}
       {loadingCities && postalReady && (
-        <p className={isAuth ? 'password-hint' : 'pfield-hint'}>Chargement des villes…</p>
+        <HintLine isAuth={isAuth}>{ADDRESS_MSG.postalLoading}</HintLine>
       )}
-      {cityError && (
-        <p className={`${isAuth ? 'password-hint' : 'pfield-hint'} field-error`}>{cityError}</p>
+      {cityError && <HintLine isAuth={isAuth} variant="error">{cityError}</HintLine>}
+
+      {postalReady && !loadingCities && !cityError && cities.length > 1 && !city && (
+        <HintLine isAuth={isAuth}>{ADDRESS_MSG.cityPick}</HintLine>
       )}
     </>
   );
 
-  if (isAuth) {
-    return (
-      <div className="french-address-fields">
-        {postalCityRow}
-        {postalCityHints}
-        {addressBlock}
-      </div>
-    );
-  }
-
   return (
     <div className="french-address-fields">
+      {isAuth && <p className="address-intro">{ADDRESS_MSG.intro}</p>}
       {postalCityRow}
       {postalCityHints}
-      <div className="pfield address-field-block" ref={wrapRef}>
-        <label className="pfield-label">Adresse (n° et rue) *</label>
-        <div className={`pfield-input ${disabled ? 'pfield-disabled' : ''}`}>
-          <span className="pfield-icon"><MapPin size={15} /></span>
-          <input
-            type="text"
-            value={address ?? ''}
-            onChange={(e) => { onAddressChange(e.target.value); setShowSuggestions(true); }}
-            disabled={disabled}
-            placeholder="Ex. 15 rue de Paris"
-            autoComplete="street-address"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-        </div>
-        {showSuggestions && !disabled && suggestions.length > 0 && (
-          <ul className="address-suggestions">
-            {suggestions.map((s) => (
-              <li key={s.label}>
-                <button type="button" onClick={() => pickSuggestion(s)}>{s.label}</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {addressBlock}
     </div>
   );
 }

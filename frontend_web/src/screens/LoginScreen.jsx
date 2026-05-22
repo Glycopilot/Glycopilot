@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Send, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Send, Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, LogIn, UserPlus } from 'lucide-react';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
 import InputField from '../components/InputField';
@@ -31,6 +31,8 @@ export default function LoginScreen({ navigation }) {
     } catch (err) {
       if (err.code === 'ACCOUNT_PENDING') {
         setPendingEmail(email);
+      } else if (err.message?.includes('administrateur') || err.message?.includes('validé')) {
+        toastError("Désolé, votre compte n'a pas encore été validé par un administrateur.");
       } else {
         toastError('Erreur de connexion', err.message);
       }
@@ -222,37 +224,55 @@ export default function LoginScreen({ navigation }) {
               <button className="submit-btn" onClick={handleLogin} disabled={loading}>
                 {loading
                   ? <span className="btn-loading"><span className="spinner"/>Connexion…</span>
-                  : <><span>Se connecter</span> <ArrowRight size={18} strokeWidth={2} aria-hidden /></>}
+                  : <><span>Se connecter</span> <LogIn size={18} strokeWidth={2} aria-hidden /></>}
               </button>
               {/* Lien inscription visible uniquement sur mobile */}
               <p className="auth-mobile-switch">
                 Pas encore de compte ?{' '}
                 <button type="button" className="auth-mobile-switch-btn" onClick={goToSignin}>
-                  <span>S&apos;inscrire</span> <ArrowRight size={14} strokeWidth={2} aria-hidden />
+                  <span>S&apos;inscrire</span> <UserPlus size={14} strokeWidth={2} aria-hidden />
                 </button>
               </p>
             </>
           ) : (
-            <>
-              <div className="form-header">
+            <div className="auth-forgot-panel">
+              <div className="form-header form-header-forgot">
                 <h2>Mot de passe oublié ?</h2>
-                <p>Un lien de réinitialisation sera envoyé à votre adresse email</p>
+                <div className="form-header-note" role="note">
+                  <span className="form-header-note-icon" aria-hidden>
+                    <Mail size={18} strokeWidth={1.75} />
+                  </span>
+                  <p className="form-header-note-text">
+                    Un lien de réinitialisation sera envoyé à votre adresse email.
+                  </p>
+                </div>
               </div>
-              <section className="form-section">
+              <section className="form-section form-section-forgot">
                 <InputField
-                  label="Votre email" value={resetEmail} onChangeText={setResetEmail}
-                  icon={<Mail size={16} />} placeholder="medecin@exemple.com" type="email"
+                  label="Votre email"
+                  name="reset-email"
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                  icon={<Mail size={16} strokeWidth={1.75} />}
+                  placeholder="medecin@exemple.com"
+                  type="email"
+                  autoComplete="email"
                 />
               </section>
-              <button className="submit-btn" onClick={handlePasswordReset} disabled={isResettingPassword}>
+              <button type="button" className="submit-btn" onClick={handlePasswordReset} disabled={isResettingPassword}>
                 {isResettingPassword
                   ? <span className="btn-loading"><span className="spinner"/>Envoi en cours…</span>
-                  : <><span>Envoyer le lien</span> <Send size={18} /></>}
+                  : <><span>Envoyer le lien</span> <Send size={18} strokeWidth={2} aria-hidden /></>}
               </button>
-              <button type="button" className="back-link" onClick={() => { setIsPasswordResetMode(false); setResetEmail(''); }}>
-                ← Retour à la connexion
+              <button
+                type="button"
+                className="back-link"
+                onClick={() => { setIsPasswordResetMode(false); setResetEmail(''); }}
+              >
+                <ArrowLeft size={16} strokeWidth={2} aria-hidden />
+                <span>Retour à la connexion</span>
               </button>
-            </>
+            </div>
           )}
         </div>
       </main>

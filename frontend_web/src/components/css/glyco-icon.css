@@ -5,6 +5,21 @@
   vertical-align: middle;
 }
 
+/* Icônes Lucide (portail médecin) */
+.app-icon {
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  color: currentColor;
+}
+
+.sidebar .app-icon,
+.sb-item .app-icon,
+.sb-logout .app-icon,
+.tour-help-btn .app-icon {
+  color: inherit;
+}
+
 .glyco-icon-s11 { width: 11px; height: 11px; }
 .glyco-icon-s12 { width: 12px; height: 12px; }
 .glyco-icon-s13 { width: 13px; height: 13px; }

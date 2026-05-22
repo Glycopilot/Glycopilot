@@ -5,7 +5,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
 import jwt
+from django.db import IntegrityError
 from rest_framework import serializers
+from utils.api_messages import EMAIL_ALREADY_USED
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -87,8 +89,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         value = value.lower()
-        if AuthAccount.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Cet email est déjà utilisé.")
+        if AuthAccount.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(EMAIL_ALREADY_USED)
         _verify_email_domain(value)
         return value
 
@@ -134,7 +136,10 @@ class RegisterSerializer(serializers.ModelSerializer):
                     {"medical_center_city": "La ville est obligatoire."}
                 )
 
-            from apps.doctors.france_address import validate_postal_city_match
+            from apps.doctors.france_address import (
+                validate_postal_city_match,
+                validate_street_address_in_ban,
+            )
             from apps.doctors.validators import (
                 normalize_postal_code,
                 validate_doctor_specialty,
@@ -149,6 +154,15 @@ class RegisterSerializer(serializers.ModelSerializer):
                 data["medical_center_postal_code"] = postal
                 data["medical_center_city"] = validate_postal_city_match(
                     postal, data["medical_center_city"]
+                )
+                if not data.get("medical_center_address"):
+                    raise serializers.ValidationError(
+                        {"medical_center_address": "L'adresse est obligatoire."}
+                    )
+                data["medical_center_address"] = validate_street_address_in_ban(
+                    postal,
+                    data["medical_center_city"],
+                    data["medical_center_address"],
                 )
             except DRFValidationError as exc:
                 raise serializers.ValidationError(exc.detail)
@@ -177,11 +191,16 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=last_name,
         )
 
-        account = AuthAccount.objects.create_user(
-            email=email,
-            password=password,
-            user_identity=user_identity,
-        )
+        try:
+            account = AuthAccount.objects.create_user(
+                email=email,
+                password=password,
+                user_identity=user_identity,
+            )
+        except IntegrityError as exc:
+            if "email" in str(exc).lower() or "auth_accounts" in str(exc).lower():
+                raise serializers.ValidationError({"email": EMAIL_ALREADY_USED}) from exc
+            raise
 
         role_obj = Role.objects.get(name=role_name)
         # Ceci déclenche le signal qui crée DoctorProfile avec un license_number TEMP
@@ -235,8 +254,8 @@ class CreateAdminAccountSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         value = value.lower()
-        if AuthAccount.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Cet email est déjà utilisé.")
+        if AuthAccount.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(EMAIL_ALREADY_USED)
         return value
 
     def validate(self, data):
@@ -268,16 +287,22 @@ class LoginSerializer(serializers.Serializer):
         if not account.is_active:
             raise serializers.ValidationError({"email": "Ce compte est désactivé."})
 
-        # Médecin : connexion bloquée tant que la licence n'est pas validée par un admin
-        user_profile = account.user.profiles.filter(role__name="DOCTOR").first()
+        # Médecin : connexion bloquée tant que verification_status = VERIFIED
+        # (cocher « actif » sur AuthAccount / Profile ne suffit pas)
+        user_profile = (
+            account.user.profiles.filter(role__name="DOCTOR")
+            .select_related("doctor_profile__verification_status")
+            .first()
+        )
 
         if user_profile and hasattr(user_profile, "doctor_profile"):
             doctor_profile = user_profile.doctor_profile
-            # Par défaut, si status est manquant, on bloque par sécurité
-            if (
-                not doctor_profile.verification_status
-                or doctor_profile.verification_status.label != "VERIFIED"
-            ):
+            status_label = (
+                doctor_profile.verification_status.label
+                if doctor_profile.verification_status_id
+                else None
+            )
+            if status_label != "VERIFIED":
                 raise serializers.ValidationError(
                     {
                         "non_field_errors": "Votre compte médecin n'a pas encore été validé par un administrateur."

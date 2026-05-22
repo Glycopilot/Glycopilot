@@ -214,7 +214,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "200/hour",
         "user": "300/minute",
-        "auth": "5/minute",
+        # Dev : évite les 429 lors des tests manuels (inscription + logins multiples)
+        "auth": "60/minute" if DEBUG else "5/minute",
     },
 }
 

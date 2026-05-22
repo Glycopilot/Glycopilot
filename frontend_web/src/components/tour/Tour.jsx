@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTour } from './TourProvider';
-import GlycoIcon from '../GlycoIcon';
+import { HelpCircle } from 'lucide-react';
 import { UiClose, UiChevronLeft, UiChevronRight } from '../UiIcon';
 import { tourSteps } from './tour-steps';
 import './tour.css';
@@ -186,7 +186,7 @@ export default function Tour() {
         </button>
 
         <div className="tour-pill">
-          <GlycoIcon size={12} alt="" />
+          <HelpCircle size={12} strokeWidth={2} aria-hidden />
           <span>Étape {stepIndex + 1} sur {total}</span>
         </div>
 

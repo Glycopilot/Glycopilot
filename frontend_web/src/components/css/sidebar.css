@@ -25,6 +25,11 @@
   gap: 4px;
 }
 
+.sb-item svg {
+  flex-shrink: 0;
+  color: inherit;
+}
+
 .sb-item {
   display: flex;
   align-items: center;

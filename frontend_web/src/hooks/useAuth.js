@@ -18,7 +18,11 @@ export const useAuth = () => {
       const result = await authService.login(email, password);
       return result;
     } catch (err) {
-      setError(err.message);
+      if (err.message?.includes('administrateur') || err.message?.includes('validé')) {
+        setError("Désolé, votre compte n'a pas encore été validé par un administrateur.");
+      } else {
+        setError(err.message);
+      }
       throw err;
     } finally {
       setLoading(false);

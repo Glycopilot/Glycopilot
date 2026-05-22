@@ -31,7 +31,9 @@
 .auth-root {
   display: flex;
   height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
   text-align: left;
   font-family: 'DM Sans', sans-serif;
 }
@@ -192,10 +194,18 @@
 .auth-main {
   flex: 1;
   background: #ffffff;
+  overflow-x: hidden;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   padding: 48px 32px;
+}
+
+.form-section,
+.french-address-fields,
+.address-autocomplete,
+.address-field-block {
+  overflow: visible;
 }
 
 .auth-form-wrapper {
@@ -229,6 +239,116 @@
   color: var(--mid);
   line-height: 1.5;
   margin: 0;
+}
+
+/* Mot de passe oublié */
+.auth-forgot-panel {
+  width: 100%;
+}
+
+.form-header-forgot {
+  margin-bottom: 28px;
+}
+
+.form-header-forgot h2 {
+  margin-bottom: 12px;
+}
+
+.form-header-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--blue-pale);
+  border: 1px solid rgba(74, 144, 226, 0.22);
+  border-radius: 10px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.form-header-note-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--blue);
+  box-shadow: 0 1px 3px rgba(74, 144, 226, 0.15);
+}
+
+.form-header-note-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+.form-header-note-text {
+  flex: 1;
+  margin: 0;
+  padding: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--mid);
+  font-weight: 400;
+}
+
+.form-section-forgot {
+  margin-bottom: 24px;
+}
+
+.form-section-forgot .input-field {
+  margin-bottom: 0;
+}
+
+.auth-root .form-header-note::selection,
+.auth-root .form-header-note-text::selection,
+.auth-root .input-field label::selection {
+  background: transparent;
+}
+
+.auth-root label {
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+}
+
+.auth-root label:focus,
+.auth-root label:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.auth-root .input-wrapper input {
+  -webkit-appearance: none;
+  appearance: none;
+  caret-color: var(--blue);
+}
+
+.auth-root .back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mid);
+  width: 100%;
+}
+
+.auth-root .back-link svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke: var(--blue);
+}
+
+.auth-root .back-link:hover {
+  color: var(--blue);
 }
 
 /* ── Sections ──────────────────────────────── */
@@ -511,12 +631,15 @@
   border: none;
   color: var(--muted);
   font-size: 14px;
+  font-family: inherit;
   cursor: pointer;
   margin-top: 14px;
-  display: block;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  transition: color .2s;
+  transition: color 0.2s;
 }
 .back-link:hover { color: var(--blue); }
 
@@ -751,6 +874,7 @@
   font-size: 13px;
   color: #92400E;
   line-height: 1.5;
+  margin: 0;
 }
 .verif-notice strong { color: #78350F; }
 .notice-icon {
@@ -863,6 +987,25 @@
   .form-header p {
     color: var(--mid);
     font-size: 14px;
+  }
+
+  .form-header-note {
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .form-header-note-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .form-header-note-text {
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+
+  .auth-forgot-panel .submit-btn {
+    margin-top: 8px;
   }
 
   .auth-form-centered {
@@ -1046,11 +1189,6 @@
   margin-bottom: 0;
 }
 
-.french-address-fields .address-field-block {
-  position: relative;
-  margin-bottom: 0;
-}
-
 .french-address-fields .address-field-block .input-field {
   margin-bottom: 0;
 }
@@ -1071,30 +1209,62 @@
 }
 
 /* Ville : pas de flèche / icône de sélection */
-.select-no-chevron select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+.input-wrapper.select-no-chevron select,
+.pfield-input.select-no-chevron select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
   background-image: none !important;
   padding-right: 0;
 }
 
-.address-autocomplete { position: relative; }
+.address-autocomplete {
+  position: relative;
+  z-index: 1;
+}
+
+.address-intro {
+  font-size: 13.5px;
+  color: var(--mid);
+  line-height: 1.55;
+  margin: 0 0 16px;
+}
+
+.address-hint-success {
+  color: #15803d !important;
+}
+
+.address-field-hint {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.address-field-block {
+  position: relative;
+  margin-bottom: 20px;
+  z-index: 2;
+}
+
+.address-field-block:focus-within,
+.address-autocomplete:focus-within {
+  z-index: 50;
+}
+
 .address-suggestions {
   list-style: none;
-  margin: 0;
-  padding: 8px 0;
+  margin: 4px 0 0;
+  padding: 6px 0;
   border: 1px solid #E5E7EB;
   border-radius: 8px;
   background: #fff;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  max-height: 250px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  max-height: 260px;
   overflow-y: auto;
   position: absolute;
-  top: calc(100% - 16px); /* Accounts for the 20px margin-bottom of InputField */
+  top: 100%;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: 200;
 }
 .address-suggestions li button {
   width: 100%;

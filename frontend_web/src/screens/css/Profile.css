@@ -462,6 +462,17 @@
   color: #B91C1C !important;
 }
 
+.address-intro {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.address-hint-success {
+  color: #15803d !important;
+}
+
 .profile-loading-center {
   display: flex;
   align-items: center;

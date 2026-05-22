@@ -284,7 +284,7 @@ describe('SignInScreen', () => {
       await fillValidForm();
       clickSubmit();
       await waitFor(() =>
-        expect(toastError).toHaveBeenCalledWith('Erreur inscription', 'Email déjà utilisé')
+        expect(toastError).toHaveBeenCalledWith('Inscription impossible', 'Email déjà utilisé')
       );
     });
 

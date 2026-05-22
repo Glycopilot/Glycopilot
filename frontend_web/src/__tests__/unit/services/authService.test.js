@@ -144,12 +144,12 @@ describe('authService', () => {
         .rejects.toMatchObject({ code: 'ACCOUNT_PENDING', message: 'Licence en attente' });
     });
 
-    it('lève une erreur classique avec le message du serveur', async () => {
+    it('humanise un message technique identifiants invalides', async () => {
       apiClient.post.mockRejectedValueOnce({
         response: { data: { error: 'Identifiants invalides' } },
       });
       await expect(authService.login('x@y.z', 'bad'))
-        .rejects.toThrow('Identifiants invalides');
+        .rejects.toThrow('Email ou mot de passe incorrect.');
     });
 
     it('utilise detail comme fallback', async () => {
@@ -163,7 +163,7 @@ describe('authService', () => {
     it('message générique si aucune information serveur', async () => {
       apiClient.post.mockRejectedValueOnce({ response: { data: {} } });
       await expect(authService.login('x@y.z', 'bad'))
-        .rejects.toThrow('Erreur de connexion');
+        .rejects.toThrow('Connexion impossible');
     });
   });
 
@@ -231,11 +231,16 @@ describe('authService', () => {
       await expect(authService.register(baseUserData)).rejects.toThrow('Email déjà utilisé');
     });
 
-    it('sérialise un payload de validation complexe en string', async () => {
+    it('extrait le message email du backend formaté', async () => {
       apiClient.post.mockRejectedValueOnce({
-        response: { data: { email: ['Cet email existe déjà'] } },
+        response: {
+          data: {
+            error: 'Cette adresse email est déjà associée à un compte. Connectez-vous ou utilisez une autre adresse.',
+            errors: { email: 'Cette adresse email est déjà associée à un compte.' },
+          },
+        },
       });
-      await expect(authService.register(baseUserData)).rejects.toThrow(/Cet email existe déjà/);
+      await expect(authService.register(baseUserData)).rejects.toThrow(/déjà associée à un compte/);
     });
 
     it('utilise le message string renvoyé par le serveur', async () => {

@@ -1,9 +1,29 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
+from apps.doctors.verification_service import verify_doctors_for_auth_accounts
 from apps.profiles.models import Profile
 
 from .models import AuthAccount, User
+
+
+@admin.action(
+    description="Valider la licence médecin (VERIFIED) — requis pour la connexion au portail"
+)
+def validate_doctor_licenses(modeladmin, request, queryset):
+    count = verify_doctors_for_auth_accounts(queryset, verified_by=request.user)
+    if count:
+        modeladmin.message_user(
+            request,
+            f"{count} compte(s) médecin validé(s) (statut VERIFIED).",
+            level=messages.SUCCESS,
+        )
+    else:
+        modeladmin.message_user(
+            request,
+            "Aucun profil médecin à valider dans la sélection (déjà VERIFIED ou pas médecin).",
+            level=messages.WARNING,
+        )
 
 
 class ProfileInline(admin.TabularInline):
@@ -74,3 +94,4 @@ class AuthAccountAdmin(BaseUserAdmin):
     )
 
     readonly_fields = ("created_at", "last_login")
+    actions = [validate_doctor_licenses]

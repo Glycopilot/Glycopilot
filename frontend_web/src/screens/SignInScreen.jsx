@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  User, Mail, CreditCard, Stethoscope, Building2, Lock, LogIn,
+  User, Mail, CreditCard, Stethoscope, Building2, Lock, LogIn, UserPlus,
   Eye, EyeOff, ArrowRight, Check, Send
 } from 'lucide-react';
 import authService from '../services/authService';
@@ -63,7 +63,7 @@ export default function SignInScreen({ navigation }) {
       });
       setRegisteredEmail(email);
     } catch (error) {
-      toastError('Erreur inscription', error.message);
+      toastError('Inscription impossible', error.message);
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +76,7 @@ export default function SignInScreen({ navigation }) {
         <div className="auth-mobile-topbar">
           <img src={logo} alt="GlycoPilot" />
           <button type="button" className="auth-mobile-topbar-link" onClick={goToLogin}>
-            <span>Se connecter</span> <ArrowRight size={14} strokeWidth={2} aria-hidden />
+            <span>Se connecter</span> <LogIn size={14} strokeWidth={2} aria-hidden />
           </button>
         </div>
 
@@ -94,7 +94,7 @@ export default function SignInScreen({ navigation }) {
           </div>
           <div className="aside-bottom">
             <span>Déjà vérifié ?</span>
-            <button className="aside-link" onClick={goToLogin}>Se connecter →</button>
+            <button className="aside-link" onClick={goToLogin}>Se connecter <LogIn size={14} strokeWidth={2} aria-hidden style={{ marginLeft: 4 }} /></button>
           </div>
 
         </aside>
@@ -147,7 +147,7 @@ export default function SignInScreen({ navigation }) {
                 <p>Un email de confirmation vous a été envoyé à <strong>{registeredEmail}</strong>. Vérifiez aussi vos spams.</p>
               </div>
               <button className="submit-btn" onClick={goToLogin}>
-                Aller à la page de connexion <ArrowRight size={18} strokeWidth={2} />
+                <span>Se connecter</span> <LogIn size={18} strokeWidth={2} />
               </button>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function SignInScreen({ navigation }) {
       <div className="auth-mobile-topbar">
         <img src={logo} alt="GlycoPilot" />
         <button type="button" className="auth-mobile-topbar-link" onClick={goToLogin}>
-          <span>Se connecter</span> <ArrowRight size={14} strokeWidth={2} aria-hidden />
+          <span>Se connecter</span> <LogIn size={14} strokeWidth={2} aria-hidden />
         </button>
       </div>
 
@@ -240,14 +240,14 @@ export default function SignInScreen({ navigation }) {
           <button className="submit-btn" onClick={handleSignIn} disabled={isLoading}>
             {isLoading
               ? <span className="btn-loading"><span className="spinner"/>Inscription en cours…</span>
-              : <><span>Créer mon compte</span> <ArrowRight size={18} strokeWidth={2} aria-hidden /></>}
+              : <><span>Créer mon compte</span> <UserPlus size={18} strokeWidth={2} aria-hidden /></>}
           </button>
 
           {/* Lien connexion visible uniquement sur mobile */}
           <p className="auth-mobile-switch">
             Déjà inscrit ?{' '}
             <button type="button" className="auth-mobile-switch-btn" onClick={goToLogin}>
-              <span>Se connecter</span> <ArrowRight size={14} strokeWidth={2} aria-hidden />
+              <span>Se connecter</span> <LogIn size={14} strokeWidth={2} aria-hidden />
             </button>
           </p>
         </div>

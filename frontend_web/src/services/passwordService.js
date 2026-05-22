@@ -1,3 +1,4 @@
+import { parseApiError } from '../lib/apiErrors';
 import authService from './authService';
 
 const apiClient = authService.getApiClient();
@@ -21,12 +22,9 @@ const passwordService = {
 
       return response.data;
     } catch (error) {
-      const message =
-        error.response?.data?.error ||
-        error.response?.data?.detail ||
-        error.response?.data?.email?.[0] ||
-        'Erreur lors de la demande de réinitialisation';
-      throw new Error(message);
+      throw new Error(
+        parseApiError(error, 'Impossible d\'envoyer l\'email de réinitialisation. Réessayez plus tard.'),
+      );
     }
   },
 
@@ -45,13 +43,9 @@ const passwordService = {
 
       return response.data;
     } catch (error) {
-      const message =
-        error.response?.data?.error ||
-        error.response?.data?.detail ||
-        error.response?.data?.token?.[0] ||
-        error.response?.data?.password?.[0] ||
-        'Erreur lors de la réinitialisation du mot de passe';
-      throw new Error(message);
+      throw new Error(
+        parseApiError(error, 'Impossible de réinitialiser le mot de passe. Vérifiez le lien reçu par email.'),
+      );
     }
   },
 
@@ -68,11 +62,9 @@ const passwordService = {
 
       return response.data;
     } catch (error) {
-      const message =
-        error.response?.data?.error ||
-        error.response?.data?.detail ||
-        'Token invalide ou expiré';
-      throw new Error(message);
+      throw new Error(
+        parseApiError(error, 'Ce lien de réinitialisation est invalide ou a expiré.'),
+      );
     }
   },
 };

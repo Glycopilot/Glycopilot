@@ -41,7 +41,15 @@ class AuthAccount(AbstractBaseUser, PermissionsMixin):
         related_name="auth_account",
         db_column="id_user",
     )
-    email = models.EmailField(unique=True)
+    email = models.EmailField(
+        unique=True,
+        error_messages={
+            "unique": _(
+                "Cette adresse email est déjà associée à un compte. "
+                "Connectez-vous ou utilisez une autre adresse."
+            ),
+        },
+    )
     password_algo = models.CharField(max_length=50, default="argon2id")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

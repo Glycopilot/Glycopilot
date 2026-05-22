@@ -3,7 +3,7 @@ import authService from '../services/authService';
 import { devWarn } from '../lib/logger';
 import { getInitials } from '../lib/utils';
 import logo from '../assets/glycopilot.png';
-import GlycoIcon from './GlycoIcon';
+import { LayoutDashboard, LogOut, UserCircle, Users } from 'lucide-react';
 import { UiMenu, UiClose } from './UiIcon';
 import HelpButton from './tour/HelpButton';
 
@@ -45,10 +45,11 @@ export default function Sidebar({ activePage, navigation }) {
     navigation.navigate(path);
   };
 
+  const navIcon = { size: 18, strokeWidth: 2, 'aria-hidden': true };
   const links = [
-    { id: 'home',     label: 'Dashboard',   icon: <GlycoIcon size={18} />, path: '/home' },
-    { id: 'patients', label: 'Mes patients', icon: <GlycoIcon size={18} />, path: '/patients' },
-    { id: 'profile',  label: 'Mon profil',   icon: <GlycoIcon size={18} />, path: '/profile' },
+    { id: 'home',     label: 'Dashboard',    icon: <LayoutDashboard {...navIcon} />, path: '/home' },
+    { id: 'patients', label: 'Mes patients', icon: <Users {...navIcon} />,           path: '/patients' },
+    { id: 'profile',  label: 'Mon profil',   icon: <UserCircle {...navIcon} />,      path: '/profile' },
   ];
 
   const SidebarContent = () => (
@@ -80,7 +81,7 @@ export default function Sidebar({ activePage, navigation }) {
         </div>
         <HelpButton />
         <button className="sb-logout" onClick={handleLogout} title="Se déconnecter">
-          <GlycoIcon size={16} alt="" />
+          <LogOut size={16} strokeWidth={2} aria-hidden />
         </button>
       </div>
     </>

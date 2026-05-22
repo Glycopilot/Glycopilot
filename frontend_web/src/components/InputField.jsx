@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 export default function InputField({
   label,
   value,
@@ -10,18 +12,23 @@ export default function InputField({
   maxLength,
   inputMode,
   spellCheck = false,
+  name,
 }) {
+  const fieldId = useId();
   const inferredAutoComplete =
-    autoComplete ??
-    (type === 'password' ? 'current-password' : type === 'email' ? 'email' : 'off');
+    autoComplete !== undefined
+      ? autoComplete
+      : (type === 'password' ? 'current-password' : type === 'email' ? 'email' : 'off');
   const inputType = type === 'email' ? 'text' : type;
 
   return (
     <div className="input-field">
-      <label>{label}</label>
+      <label htmlFor={fieldId}>{label}</label>
       <div className="input-wrapper">
-        {icon && <span className="input-icon">{icon}</span>}
+        {icon && <span className="input-icon" aria-hidden>{icon}</span>}
         <input
+          id={fieldId}
+          name={name ?? fieldId}
           type={inputType}
           value={value}
           onChange={(e) => onChangeText(e.target.value)}

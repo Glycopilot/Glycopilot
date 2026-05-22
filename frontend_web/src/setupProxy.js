@@ -11,4 +11,24 @@ module.exports = function (app) {
       logLevel: 'warn',
     })
   );
+
+  app.use(
+    '/geo-api',
+    createProxyMiddleware({
+      target: 'https://geo.api.gouv.fr',
+      changeOrigin: true,
+      pathRewrite: { '^/geo-api': '' },
+      logLevel: 'warn',
+    })
+  );
+
+  app.use(
+    '/adresse-api',
+    createProxyMiddleware({
+      target: 'https://api-adresse.data.gouv.fr',
+      changeOrigin: true,
+      pathRewrite: { '^/adresse-api': '' },
+      logLevel: 'warn',
+    })
+  );
 };

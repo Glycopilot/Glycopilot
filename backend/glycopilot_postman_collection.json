@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "b3e3e4a1-8d2b-4e4a-9b1e-2e5a7b6c8d9e",
         "name": "Glycopilot API",
-        "description": "API collection for Glycopilot backend.",
+        "description": "API Glycopilot.\n\nErreurs API : { \"error\": \"message principal\", \"errors\": { \"champ\": \"détail\" } }.\n\nMédecin : inscription → PENDING (pas de JWT) → admin VERIFIED → login.\nAdresses médecin : CP + ville + rue BAN (voir dossier France).\nSpécialités : Infirmier, Médecin, Pharmacien, … — Structures : Cabinets, Hôpital, …",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -1079,10 +1079,10 @@
                                         ""
                                     ]
                                 },
-                                "description": "Registers a new doctor. The account is created with PENDING status and requires manual validation by an ADMIN.",
+                                "description": "Inscription médecin. Réponse 201 : { \"message\": \"…en attente de validation…\" } — pas de access/refresh.\nChamps obligatoires : license_number, specialty (liste API), medical_center_name (structure), medical_center_postal_code (5 chiffres), medical_center_city (cohérente avec le CP), medical_center_address (rue existante BAN).\nEnsuite : Admin → Liste PENDING → Accepter (VERIFIED) → Login (Doctor).",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Médecin\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"DOCTOR\",\n    \"license_number\": \"00000000001\",\n    \"specialty\": \"Cardiologue\",\n    \"medical_center_address\": \"1 rue Exemple, 75000 Paris\"\n}",
+                            "raw": "{\n    \"email\": \"doctor.new@example.com\",\n    \"first_name\": \"Jean\",\n    \"last_name\": \"Médecin\",\n    \"password\": \"StrongPass123!\",\n    \"password_confirm\": \"StrongPass123!\",\n    \"role\": \"DOCTOR\",\n    \"license_number\": \"12345678901\",\n    \"specialty\": \"Médecin\",\n    \"medical_center_name\": \"Cabinets\",\n    \"medical_center_postal_code\": \"75001\",\n    \"medical_center_city\": \"Paris\",\n    \"medical_center_address\": \"1 Rue de Rivoli\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1097,13 +1097,16 @@
                                     "script": {
                                         "exec": [
                                             "var jsonData = pm.response.json();",
-                                            "if (jsonData.access) {",
-                                            "    pm.collectionVariables.set(\"doctor_token\", jsonData.access);",
-                                            "    pm.collectionVariables.set(\"token\", jsonData.access);",
-                                            "}",
-                                            "if (jsonData.refresh) {",
-                                            "    pm.collectionVariables.set(\"doctor_refresh_token\", jsonData.refresh);",
-                                            "    pm.collectionVariables.set(\"refresh_token\", jsonData.refresh);",
+                                            "pm.test('Inscription médecin 201', function () { pm.response.to.have.status(201); });",
+                                            "if (pm.response.code === 201) {",
+                                            "    pm.test('Pas de JWT tant que non validé', function () {",
+                                            "        pm.expect(jsonData.message).to.include('attente');",
+                                            "        pm.expect(jsonData.access).to.be.undefined;",
+                                            "    });",
+                                            "    try {",
+                                            "        var body = JSON.parse(pm.request.body.raw);",
+                                            "        if (body.email) pm.collectionVariables.set('doctor_email', body.email);",
+                                            "    } catch (e) {}",
                                             "}"
                                         ],
                                         "type": "text/javascript"
@@ -1134,10 +1137,10 @@
                                         ""
                                     ]
                                 },
-                                "description": "Login for doctors. Requires the account to be VERIFIED by an admin.",
+                                "description": "Connexion médecin. Le compte doit être VERIFIED (validation admin), pas seulement is_active.\nSi PENDING : 400 { \"error\": \"Votre compte médecin n'a pas encore été validé par un administrateur.\", \"errors\": { \"non_field_errors\": \"…\" } }.\nEmail déjà utilisé : message lisible (pas d'erreur Django ORM).",
                                 "body": {
                                     "mode": "raw",
-                            "raw": "{\n    \"email\": \"doctor@example.com\",\n    \"password\": \"StrongPass123!\"\n}",
+                            "raw": "{\n    \"email\": \"{{doctor_email}}\",\n    \"password\": \"StrongPass123!\"\n}",
                                     "options": {
                                         "raw": {
                                             "language": "json"
@@ -1757,6 +1760,49 @@
             ]
         },
         {
+            "name": "France (adresses)",
+            "description": "Proxy adresses France (portail médecin). Public, sans auth.",
+            "item": [
+                {
+                    "name": "Communes par code postal",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/france/communes/?postal_code=75001",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "france", "communes", ""],
+                            "query": [
+                                {"key": "postal_code", "value": "75001", "description": "5 chiffres"}
+                            ]
+                        },
+                        "description": "Villes pour un code postal (geo.api.gouv.fr)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Recherche adresse BAN",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/france/addresses/search/?q=1 rue de rivoli&postcode=75001&city=Paris&limit=8",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "france", "addresses", "search", ""],
+                            "query": [
+                                {"key": "q", "value": "1 rue de rivoli", "description": "min. 3 caractères"},
+                                {"key": "postcode", "value": "75001"},
+                                {"key": "city", "value": "Paris"},
+                                {"key": "limit", "value": "8"}
+                            ]
+                        },
+                        "description": "Suggestions rue (api-adresse.data.gouv.fr). Utiliser une feature.label comme medical_center_address à l'inscription."
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
             "name": "Admin (Validation Docteurs)",
             "event": [
                 {
@@ -1953,7 +1999,7 @@
                                 ""
                             ]
                         },
-                        "description": "Liste des docteurs en attente de validation (is_staff ou is_superuser requis). Enregistre automatiquement doctor_id du premier résultat pour Accepter/Refuser Docteur."
+                        "description": "GET liste des médecins PENDING (is_staff ou is_superuser). Token superadmin (SECRET_KEY_ADMIN).\nRenseigne doctor_id (priorité : doctor_email de la collection, sinon premier résultat).\nAlternative Django admin : action « Valider la licence médecin (VERIFIED) » sur Auth accounts ou Doctor profiles."
                     },
                     "response": [],
                     "event": [
@@ -2185,7 +2231,12 @@
         },
         {
             "key": "doctor_email",
-            "value": "doctor@example.com",
+            "value": "doctor.new@example.com",
+            "type": "string"
+        },
+        {
+            "key": "e2e_password",
+            "value": "StrongPass123!",
             "type": "string"
         }
     ]
