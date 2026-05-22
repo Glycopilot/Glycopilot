@@ -10,6 +10,27 @@ export function extractValue(field) {
   return field;
 }
 
+/** Glycémie dashboard : évite `typeof null === 'object'` puis lecture de `.value`. */
+export function parseDashboardGlucose(glucose) {
+  if (glucose == null) {
+    return { value: null, unit: 'mg/dL', recordedAt: null };
+  }
+  if (typeof glucose === 'number' && !Number.isNaN(glucose)) {
+    return { value: glucose, unit: 'mg/dL', recordedAt: null };
+  }
+  if (typeof glucose === 'object') {
+    const raw = glucose.value;
+    const num = raw == null || raw === '' ? null : Number(raw);
+    const value = num != null && !Number.isNaN(num) ? num : null;
+    return {
+      value,
+      unit: glucose.unit || 'mg/dL',
+      recordedAt: glucose.recordedAt ?? glucose.recorded_at ?? null,
+    };
+  }
+  return { value: null, unit: 'mg/dL', recordedAt: null };
+}
+
 export function getInitials(firstName, lastName) {
   return `${(firstName || '')[0] || ''}${(lastName || '')[0] || ''}`.toUpperCase();
 }
