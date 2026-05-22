@@ -10,6 +10,7 @@ It also fires an async AI prediction request (fire-and-forget thread).
 import logging
 import threading
 
+from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -19,6 +20,13 @@ from channels.layers import get_channel_layer
 from .models import GlycemiaHisto
 
 logger = logging.getLogger(__name__)
+
+
+def _start_background_thread(target, args=()):
+    if getattr(settings, "TESTING", False):
+        return
+    threading.Thread(target=target, args=args, daemon=True).start()
+
 
 # Thresholds for glycemia alerts (mg/dL)
 HYPO_THRESHOLD = 70
@@ -61,11 +69,10 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
         try:
             from apps.alerts.services.notify_proches import notify_proches_of_alert
 
-            threading.Thread(
-                target=notify_proches_of_alert,
+            _start_background_thread(
+                notify_proches_of_alert,
                 args=(instance.user, events),
-                daemon=True,
-            ).start()
+            )
         except Exception as e:
             logger.error(f"Failed to start proche alert notification thread: {e}")
 
@@ -135,10 +142,6 @@ def broadcast_glycemia_update(sender, instance, created, **kwargs):
     try:
         from apps.glycemia.services.ia_client import request_prediction
 
-        threading.Thread(
-            target=request_prediction,
-            args=(instance,),
-            daemon=True,
-        ).start()
+        _start_background_thread(request_prediction, args=(instance,))
     except Exception as e:
         logger.error(f"Failed to start AI prediction thread: {e}")

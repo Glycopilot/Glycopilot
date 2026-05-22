@@ -95,9 +95,19 @@ def test_register_doctor_is_not_affected_by_email_verification(api):
         "last_name": "Test",
         "role": "DOCTOR",
         "license_number": "RPPS-123",
-        "specialty": "Généraliste",
+        "specialty": "Médecin",
+        "medical_center_name": "Cabinets",
+        "medical_center_postal_code": "75001",
+        "medical_center_city": "Paris",
+        "medical_center_address": "1 rue de Test",
     }
-    with patch("apps.auth.serializers._verify_email_domain"):
+    with patch("apps.auth.serializers._verify_email_domain"), patch(
+        "apps.doctors.france_address.validate_postal_city_match",
+        return_value="Paris",
+    ), patch(
+        "apps.doctors.france_address.validate_street_address_in_ban",
+        return_value="1 rue de Test",
+    ):
         resp = api.post("/api/auth/register/", data)
     assert resp.status_code == status.HTTP_201_CREATED
     # Médecin : is_active reste True, bloqué différemment (verification_status)
