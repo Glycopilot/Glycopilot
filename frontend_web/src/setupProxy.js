@@ -1,6 +1,6 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-const API_TARGET = process.env.API_PROXY_TARGET || 'http://backend_local:8000';
+const API_TARGET = process.env.API_PROXY_TARGET;
 
 module.exports = function (app) {
   app.use(
