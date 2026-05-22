@@ -206,8 +206,8 @@ services:
     environment:
       Django_ENV: production
       DB_ENGINE: postgresql
-      DB_HOST: database_aws
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST:-database_aws}
+      DB_PORT: ${DB_PORT:-5432}
     # Daphne au lieu de Gunicorn pour supporter WebSocket
     command: sh -c "python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py import_medications --bdpm && daphne -b 0.0.0.0 -p 8000 core.asgi:application"
     volumes:
@@ -237,8 +237,8 @@ services:
     environment:
       Django_ENV: production
       DB_ENGINE: postgresql
-      DB_HOST: database_aws
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST:-database_aws}
+      DB_PORT: ${DB_PORT:-5432}
     depends_on:
       backend_aws:
         condition: service_started
