@@ -33,6 +33,7 @@ class UserActivitySerializer(serializers.ModelSerializer):
             "end",
             "duration_minutes",
             "intensity",
+            "steps",
             "total_calories_burned",
             "total_sugar_used",
         ]

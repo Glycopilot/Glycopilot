@@ -1,5 +1,9 @@
 name: Master Deployment Pipeline
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   workflow_dispatch:
     inputs:
@@ -19,6 +23,10 @@ on:
         description: '3. Déployer Frontend Web (S3)'
         type: boolean
         default: false
+      deploy_landing_page:
+        description: '3b. Déployer Site Vitrine (S3 statique)'
+        type: boolean
+        default: false
       deploy_mobile:
         description: '4. Compiler App Mobile (Expo EAS)'
         type: boolean
@@ -28,7 +36,9 @@ env:
   AWS_REGION: eu-west-3
   PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
   PUBLIC_WS_URL: ${{ vars.PUBLIC_WS_URL }}
-  S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND }}
+  S3_BUCKET_FRONTEND: ${{ vars.S3_BUCKET_FRONTEND || 'glycopilot-web-frontend-958587270787' }}
+  S3_BUCKET_LANDING_PAGE: ${{ vars.S3_BUCKET_LANDING_PAGE || vars.S3_BUCKET_FRONTEND || 'glycopilot-web-frontend-958587270787' }}
+  S3_LANDING_PREFIX: ${{ vars.S3_LANDING_PREFIX || 'landing_page' }}
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
 
 jobs:
@@ -61,6 +71,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare container image names
+        id: images
+        run: |
+          REPOSITORY_LC="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          echo "backend_image=ghcr.io/${REPOSITORY_LC}/glycopilot-backend:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "ai_service_image=ghcr.io/${REPOSITORY_LC}/glycopilot-ai-service:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.images.outputs.backend_image }}
+          cache-from: type=gha,scope=glycopilot-backend
+          cache-to: type=gha,mode=max,scope=glycopilot-backend
+
+      - name: Build and push AI service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai_service
+          push: true
+          tags: ${{ steps.images.outputs.ai_service_image }}
+          cache-from: type=gha,scope=glycopilot-ai-service
+          cache-to: type=gha,mode=max,scope=glycopilot-ai-service
+
       - name: Sync repository to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
@@ -68,13 +113,41 @@ jobs:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
           PROD_ENV_FILE: ${{ secrets.PROD_ENV_FILE }}
           AI_ENV_FILE: ${{ secrets.AI_ENV_FILE }}
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend_image }}
+          AI_SERVICE_IMAGE: ${{ steps.images.outputs.ai_service_image }}
+          RUNTIME_DB_HOST: ${{ vars.RUNTIME_DB_HOST || secrets.RUNTIME_DB_HOST }}
+          RUNTIME_DB_PORT: ${{ vars.RUNTIME_DB_PORT || secrets.RUNTIME_DB_PORT }}
+          RUNTIME_DB_NAME: ${{ vars.RUNTIME_DB_NAME || secrets.RUNTIME_DB_NAME }}
+          RUNTIME_DB_USER: ${{ vars.RUNTIME_DB_USER || secrets.RUNTIME_DB_USER }}
+          RUNTIME_DB_PASSWORD: ${{ secrets.RUNTIME_DB_PASSWORD }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/glycopilot_ec2_key
-          chmod 600 ~/.ssh/glycopilot_ec2_key
-          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+          set -euo pipefail
 
-          ssh -i ~/.ssh/glycopilot_ec2_key "$EC2_USERNAME@$EC2_HOST" "mkdir -p /home/ubuntu/glycopilot-app"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" | sed 's/\r$//' > ~/.ssh/glycopilot_ec2_key
+          chmod 600 ~/.ssh/glycopilot_ec2_key
+
+          SSH_OPTS="-i $HOME/.ssh/glycopilot_ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30"
+
+          runtime_db_values=0
+          runtime_db_missing=""
+          if [ -n "${RUNTIME_DB_HOST:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_HOST"; fi
+          if [ -n "${RUNTIME_DB_PORT:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_PORT"; fi
+          if [ -n "${RUNTIME_DB_NAME:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_NAME"; fi
+          if [ -n "${RUNTIME_DB_USER:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_USER"; fi
+          if [ -n "${RUNTIME_DB_PASSWORD:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_PASSWORD"; fi
+
+          if [ "$runtime_db_values" -ne 0 ] && [ "$runtime_db_values" -ne 5 ]; then
+            echo "RDS runtime configuration is incomplete."
+            echo "Set all of RUNTIME_DB_HOST, RUNTIME_DB_PORT, RUNTIME_DB_NAME, RUNTIME_DB_USER and RUNTIME_DB_PASSWORD, or set none."
+            echo "Missing values:${runtime_db_missing}"
+            exit 1
+          fi
+
+          ssh \
+            $SSH_OPTS \
+            "$EC2_USERNAME@$EC2_HOST" \
+            "mkdir -p /home/ubuntu/glycopilot-app"
 
           rsync -az --delete \
             --exclude '.git/' \
@@ -88,67 +161,67 @@ jobs:
             --exclude 'frontend/node_modules/' \
             --exclude 'backend/db.sqlite3' \
             --exclude 'backend/media/' \
-            -e "ssh -i ~/.ssh/glycopilot_ec2_key" \
+            -e "ssh -i ~/.ssh/glycopilot_ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30" \
             ./ "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/"
 
           printf '%s\n' "$PROD_ENV_FILE" > backend/.env.prod
+          {
+            if [ -n "${RUNTIME_DB_NAME:-}" ]; then printf 'DB_NAME=%s\n' "$RUNTIME_DB_NAME"; fi
+            if [ -n "${RUNTIME_DB_USER:-}" ]; then printf 'DB_USER=%s\n' "$RUNTIME_DB_USER"; fi
+            if [ -n "${RUNTIME_DB_PASSWORD:-}" ]; then printf 'DB_PASSWORD=%s\n' "$RUNTIME_DB_PASSWORD"; fi
+          } >> backend/.env.prod
           printf '%s\n' "$AI_ENV_FILE" > ai_service/.env.prod
-          scp -i ~/.ssh/glycopilot_ec2_key backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
-          scp -i ~/.ssh/glycopilot_ec2_key ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
+          {
+            printf 'BACKEND_IMAGE=%s\n' "$BACKEND_IMAGE"
+            printf 'AI_SERVICE_IMAGE=%s\n' "$AI_SERVICE_IMAGE"
+            if [ -n "${RUNTIME_DB_HOST:-}" ]; then printf 'DB_HOST=%s\n' "$RUNTIME_DB_HOST"; fi
+            if [ -n "${RUNTIME_DB_PORT:-}" ]; then printf 'DB_PORT=%s\n' "$RUNTIME_DB_PORT"; fi
+          } > .env
+          scp $SSH_OPTS backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
+          scp $SSH_OPTS ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
+          scp $SSH_OPTS .env "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/.env"
 
       - name: Execute deployment on EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GHCR_USERNAME,GHCR_TOKEN
           script: |
+            set -eu
             cd /home/ubuntu/glycopilot-app
-            
-            docker compose --profile aws down
-            docker compose --profile aws up -d --build
+
+            sudo install -m 0755 infra/ec2-watchdog/glycopilot-healthcheck.sh /usr/local/sbin/glycopilot-healthcheck
+            sudo install -m 0644 infra/ec2-watchdog/glycopilot-healthcheck.env /etc/default/glycopilot-healthcheck
+            sudo install -m 0644 infra/ec2-watchdog/glycopilot-healthcheck.service /etc/systemd/system/glycopilot-healthcheck.service
+            sudo install -m 0644 infra/ec2-watchdog/glycopilot-healthcheck.timer /etc/systemd/system/glycopilot-healthcheck.timer
+            sudo systemctl daemon-reload
+
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            docker compose --profile aws pull backend_aws ai_service_aws medication_scheduler_aws nginx
+            docker logout ghcr.io || true
+            docker compose --profile aws up -d --no-build database_aws redis_aws
+            docker compose --profile aws up -d --no-build --force-recreate backend_aws ai_service_aws medication_scheduler_aws nginx
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
+            sudo systemctl start glycopilot-healthcheck.service
+            sudo systemctl enable --now glycopilot-healthcheck.timer
             docker image prune -f
 
   deploy-plan-b:
-    name: Deploy Plan B (Enterprise)
+    name: Deploy Plan B (disabled)
     if: ${{ inputs.deploy_plan_b }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build & Push Backend
+      - name: Stop legacy Plan B deployment
         run: |
-          cd backend
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest
-
-      - name: Build & Push AI Service
-        run: |
-          cd ai_service
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest
-
-      - name: Setup Terraform & Apply
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ">= 1.5.0"
-      - run: |
-          cd infra/terraform-plan-b
-          terraform init
-          terraform apply -auto-approve
+          echo "Plan B legacy deployment is intentionally disabled."
+          echo "Use the Terraform Common Foundation job for infra/terraform."
+          exit 1
 
   deploy-front-web:
     name: Deploy Frontend Web
@@ -188,6 +261,51 @@ jobs:
             exit 1
           fi
           aws s3 sync ./frontend_web/build/ s3://${S3_BUCKET_FRONTEND}/ --delete
+
+  deploy-landing-page:
+    name: Deploy Landing Page
+    if: ${{ inputs.deploy_landing_page }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare static landing page
+        run: |
+          rm -rf /tmp/glycopilot-landing
+          mkdir -p /tmp/glycopilot-landing/assets
+
+          cp landing_page/index.html /tmp/glycopilot-landing/index.html
+          cp landing_page/styles.css /tmp/glycopilot-landing/styles.css
+          cp landing_page/script.js /tmp/glycopilot-landing/script.js
+
+          cp frontend/assets/favicon.png /tmp/glycopilot-landing/assets/favicon.png
+          cp frontend/assets/glycopilot.png /tmp/glycopilot-landing/assets/glycopilot.png
+
+          sed -i 's#../frontend/assets/#./assets/#g' /tmp/glycopilot-landing/index.html
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync landing page to S3
+        run: |
+          LANDING_BUCKET="${S3_BUCKET_LANDING_PAGE:-$S3_BUCKET_FRONTEND}"
+          LANDING_PREFIX="${S3_LANDING_PREFIX:-landing_page}"
+
+          if [ -z "$LANDING_BUCKET" ]; then
+            echo "S3_BUCKET_LANDING_PAGE or S3_BUCKET_FRONTEND repository variable is required."
+            exit 1
+          fi
+
+          LANDING_PREFIX="${LANDING_PREFIX#/}"
+          LANDING_PREFIX="${LANDING_PREFIX%/}"
+
+          aws s3 sync /tmp/glycopilot-landing/ s3://${LANDING_BUCKET}/${LANDING_PREFIX}/ --delete
+
+          echo "Landing page deployed to s3://${LANDING_BUCKET}/${LANDING_PREFIX}/"
 
   deploy-mobile:
     name: Build Mobile App (Expo EAS)

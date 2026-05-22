@@ -154,6 +154,10 @@ def reset_database():
         InvitationStatus.objects.get_or_create(label=s)
     print("✓ InvitationStatus created")
 
+    # Activities
+    execute_from_command_line(["manage.py", "import_activities"])
+    print("✓ Activities imported")
+
     # Alert Rules
     from apps.alerts.models import AlertRule, AlertSeverity
 
@@ -239,6 +243,11 @@ def reset_database():
             role = Role.objects.get(name="SUPERADMIN")
             Profile.objects.create(user=u, role=role)
             print("  -> Created superadmin@example.com / StrongPass123! (SUPERADMIN)")
+
+    # Import médicaments BDPM (base locale de référence)
+    print("... Import médicaments BDPM ...")
+    execute_from_command_line(["manage.py", "import_medications", "--bdpm"])
+    print("✓ Médicaments importés")
 
     print("=== DATABASE RESET COMPLETE ===")
 

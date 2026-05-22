@@ -147,6 +147,10 @@ if not AuthAccount.objects.filter(email="superadmin@example.com").exists():
 
 print('Seed data complete!')
 SEEDEOF
+
+    echo "Importing medications (BDPM)..."
+    python manage.py import_medications --bdpm
+    echo "Medications imported."
 }
 
 if [ "$ENV" != "production" ]; then

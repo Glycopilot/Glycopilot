@@ -26,6 +26,7 @@ class UserActivity(models.Model):
     start = models.DateTimeField()
     end = models.DateTimeField()
     intensity = models.CharField(max_length=50, blank=True, null=True)
+    steps = models.PositiveIntegerField(blank=True, null=True)
 
     class Meta:
         db_table = "user_activity"
