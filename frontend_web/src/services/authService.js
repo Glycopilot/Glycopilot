@@ -4,8 +4,10 @@ import { devError } from '../lib/logger';
 import { triggerAuthRedirect } from '../lib/auth-redirect';
 import { flattenAuthMe } from '../lib/utils';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8006/api';
-const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '10000', 10);
+import { getApiBase } from '../config/apiBase';
+
+const API_URL = getApiBase();
+const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT, 10);
 
 const STORAGE_KEYS = ['access_token', 'refresh_token', 'user_id', 'user_email', 'user'];
 
