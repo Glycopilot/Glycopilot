@@ -24,28 +24,29 @@ def _verify_email_domain(email: str) -> None:
     Lève ValidationError si le domaine n'existe pas ou ne peut pas recevoir d'emails.
     En cas d'erreur réseau (timeout, DNS indisponible), laisse passer sans bloquer.
     """
+    domain = email.split("@")[1]
+    if "." not in domain:
+        raise serializers.ValidationError(
+            "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
+        )
+
     try:
         import dns.resolver
         import dns.exception
-
-        domain = email.split("@")[1]
-        if "." not in domain:
-            raise serializers.ValidationError(
-                "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
-            )
-        try:
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
-            resolver.resolve(domain, "MX", lifetime=3.0)
-        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
-            raise serializers.ValidationError(
-                "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
-            )
-        except (dns.resolver.Timeout, dns.exception.DNSException):
-            # Réseau indisponible ou timeout → on laisse passer pour ne pas bloquer l'inscription
-            logger.warning(f"DNS lookup timeout for domain: {email.split('@')[1]}")
     except ImportError:
         logger.warning("dnspython not installed, skipping MX check")
+        return
+
+    try:
+        resolver = dns.resolver.Resolver()
+        resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+        resolver.resolve(domain, "MX", lifetime=3.0)
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
+        raise serializers.ValidationError(
+            "Cette adresse email n'existe pas ou son domaine ne peut pas recevoir d'emails."
+        )
+    except (dns.resolver.Timeout, dns.exception.DNSException):
+        logger.warning(f"DNS lookup timeout for domain: {domain}")
 
 
 class RegisterSerializer(serializers.ModelSerializer):
