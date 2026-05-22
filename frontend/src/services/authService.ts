@@ -59,16 +59,24 @@ const authService = {
     userData: RegisterData & { passwordConfirm: string }
   ): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post<LoginResponse>('/auth/register', {
+      const response = await apiClient.post<Record<string, any>>('/auth/register', {
         email: userData.email,
         first_name: userData.firstName,
         last_name: userData.lastName,
         password: userData.password,
         password_confirm: userData.passwordConfirm,
       });
-      const { access, refresh, user } = response.data;
+      const { access, refresh, user: rawUser } = response.data;
+      const user: import('../types/auth.types').User = {
+        id: rawUser?.id_auth,
+        email: rawUser?.email,
+        firstName: rawUser?.identity?.first_name,
+        lastName: rawUser?.identity?.last_name,
+        role: rawUser?.identity?.profiles?.[0]?.role_name,
+        diabetesType: rawUser?.identity?.profiles?.[0]?.patient_details?.diabetes_type,
+      };
       await storeAuthData(access, refresh, user);
-      return response.data;
+      return { access, refresh, user };
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
       const data = axiosError.response?.data;

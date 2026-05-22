@@ -185,3 +185,13 @@ jest.mock('expo-location', () => ({
         remove: jest.fn(),
     }),
 }));
+
+// Mock expo-sensors (Pedometer) — le module natif n'est pas chargeable en test
+jest.mock('expo-sensors', () => ({
+    Pedometer: {
+        requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: false }),
+        isAvailableAsync: jest.fn().mockResolvedValue(false),
+        getStepCountAsync: jest.fn().mockResolvedValue({ steps: 0 }),
+        watchStepCount: jest.fn(() => ({ remove: jest.fn() })),
+    },
+}));

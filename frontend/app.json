@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Glycopilot",
-    "slug": "frontend",
+    "slug": "glycopilot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/glycopilot.png",
@@ -16,6 +16,7 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Cette application nécessite votre localisation pour vous fournir des services basés sur votre position.",
+        "NSMotionUsageDescription": "Glycopilot utilise le podomètre pour compter vos pas et suivre vos activités physiques.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.glycopilot.app"
@@ -41,7 +42,8 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.ACTIVITY_RECOGNITION"
       ],
       "package": "glycopilot.app"
     },
