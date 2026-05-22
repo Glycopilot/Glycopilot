@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Users, Clock, Search, ChevronRight,
-  Mail, Phone, AlertCircle, Plus, X,
-  Activity, Utensils, Pill, Droplets, Heart, Footprints,
-  Flame, AlertTriangle, CheckCircle, Send, UserPlus,
-  Pencil, TrendingUp, XCircle
-} from 'lucide-react';
+import GlycoIcon from '../components/GlycoIcon';
+import { UiChevronRight, UiClose } from '../components/UiIcon';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
@@ -13,41 +8,6 @@ import { getInitials, extractValue, toArr, hba1cBand } from '../lib/utils';
 import './css/patients.css';
 
 const apiClient = authService.getApiClient();
-
-const HBA1C_CACHE_PREFIX = 'hba1c-cache:';
-
-function readHba1cCache(patientId) {
-  if (!patientId) return null;
-  try {
-    const raw = localStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.value === 'number') {
-      return {
-        value: parsed.value,
-        unit: parsed.unit || '%',
-        measuredAt: parsed.measuredAt || null,
-      };
-    }
-  } catch (_e) {
-    return null;
-  }
-  return null;
-}
-
-function writeHba1cCache(patientId, value, measuredAt) {
-  if (!patientId || typeof value !== 'number') return;
-  try {
-    const payload = {
-      value,
-      unit: '%',
-      measuredAt: measuredAt || new Date().toISOString(),
-    };
-    localStorage.setItem(`${HBA1C_CACHE_PREFIX}${patientId}`, JSON.stringify(payload));
-  } catch (_e) {
-    // ignore storage failures
-  }
-}
 
 function formatNextDose(nextDose) {
   if (!nextDose) return null;
@@ -102,20 +62,20 @@ function AddPatientModal({ onClose, onSuccess }) {
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title-row">
-            <div className="modal-icon-wrap"><Plus size={20} /></div>
+            <div className="modal-icon-wrap"><GlycoIcon size={20} alt="" /></div>
             <div>
               <h2>Ajouter un patient</h2>
               <p>Invitez un patient à rejoindre votre équipe de soins</p>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose}><GlycoIcon size={20} alt="" /></button>
         </div>
 
         <div className="modal-body">
           <div className="mfield">
             <label>Email du patient <span className="required">*</span></label>
             <div className="minput-wrap">
-              <Mail size={15} />
+              <GlycoIcon size={15} alt="" />
               <input
                 type="email"
                 placeholder="patient@exemple.com"
@@ -128,7 +88,7 @@ function AddPatientModal({ onClose, onSuccess }) {
           <div className="mfield">
             <label>Téléphone <span className="optional">(optionnel)</span></label>
             <div className="minput-wrap">
-              <Phone size={15} />
+              <GlycoIcon size={15} alt="" />
               <input
                 type="tel"
                 placeholder="+33 6 00 00 00 00"
@@ -272,7 +232,7 @@ function AlertCard({ alert, index }) {
         <div className="alert-card-bar" style={{ background: c.bar }} />
         <div className="alert-card-body">
           <div className="alert-card-title" style={{ color: c.text }}>
-            <AlertTriangle size={13} /> {alert}
+            <GlycoIcon size={13} alt="" /> {alert}
           </div>
         </div>
       </div>
@@ -294,7 +254,7 @@ function AlertCard({ alert, index }) {
       <div className="alert-card-bar" style={{ background: c.bar }} />
       <div className="alert-card-body">
         <div className="alert-card-title" style={{ color: c.text }}>
-          <AlertTriangle size={13} />
+          <GlycoIcon size={13} alt="" />
           <span>{message}</span>
         </div>
         {alert.type && alert.message && (
@@ -328,7 +288,6 @@ function HealthScore({ score }) {
   );
 }
 
-/* ─── Carte HbA1c (lecture + édition) ─── */
 function HbA1cCard({ value, unit, measuredAt, onSave }) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState('');
@@ -355,8 +314,8 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
     try {
       await onSave(parsed);
       setEditing(false);
-    } catch (_e) {
-      /* l'erreur est déjà signalée à l'utilisateur en amont */
+    } catch {
+      // toast déjà affiché par onSave
     } finally {
       setSaving(false);
     }
@@ -365,7 +324,7 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
   return (
     <div className="hba1c-card" data-testid="hba1c-card">
       <div className="hba1c-top">
-        <div className="hba1c-icon"><TrendingUp size={18} /></div>
+        <div className="hba1c-icon"><GlycoIcon size={18} alt="" /></div>
         <div className="hba1c-meta">
           <span className="hba1c-label">HbA1c (3 derniers mois)</span>
           {measuredAt && (
@@ -380,7 +339,7 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
             onClick={startEdit}
             aria-label={value != null ? "Modifier l'HbA1c" : "Renseigner l'HbA1c"}
           >
-            <Pencil size={14} /> {value != null ? 'Modifier' : 'Renseigner'}
+            <GlycoIcon size={14} alt="" /> {value != null ? 'Modifier' : 'Renseigner'}
           </button>
         )}
       </div>
@@ -468,7 +427,6 @@ function PatientDashboardModal({ member, onClose }) {
   }, [patientId]);
 
   useEffect(() => {
-    // Pour 'custom', n'envoie la requête que si les deux dates sont remplies
     if (period === 'custom' && (!customStart || !customEnd)) return;
     const load = async () => {
       setLoadingData(true);
@@ -497,18 +455,9 @@ function PatientDashboardModal({ member, onClose }) {
 
   const handleSaveHba1c = async (newValue) => {
     try {
-      const res = await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
+      await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
       toastSuccess('HbA1c mis à jour', `Nouvelle valeur : ${newValue.toFixed(1)} %`);
-      const savedValue = res.data?.patient_details?.hba1c ?? newValue;
-      const measuredAt = new Date().toISOString();
-      writeHba1cCache(patientId, Number(savedValue), measuredAt);
-      try { await refreshDashboard(); } catch (_e) { /* no-op */ }
-      // Le backend patient-dashboard ne renvoie pas hba1c → on l'injecte localement
-      // pour que la valeur reste visible dans la modale après la sauvegarde.
-      setDashboard((prev) => ({
-        ...(prev ?? {}),
-        hba1c: { value: savedValue, unit: '%', measuredAt },
-      }));
+      await refreshDashboard();
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
       toastError('Erreur', msg);
@@ -517,19 +466,15 @@ function PatientDashboardModal({ member, onClose }) {
   };
 
   const tabs = [
-    { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <Heart size={15} /> },
-    { id: 'glycemia',    label: 'Glycémie',         icon: <Droplets size={15} /> },
-    { id: 'meals',       label: 'Repas',            icon: <Utensils size={15} /> },
-    { id: 'medications', label: 'Traitements',      icon: <Pill size={15} /> },
+    { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <GlycoIcon size={15} alt="" /> },
+    { id: 'glycemia',    label: 'Glycémie',         icon: <GlycoIcon size={15} alt="" /> },
+    { id: 'meals',       label: 'Repas',            icon: <GlycoIcon size={15} alt="" /> },
+    { id: 'medications', label: 'Traitements',      icon: <GlycoIcon size={15} alt="" /> },
   ];
 
-  /* Statistiques glycémie */
   const glycValues = glycemia.map(g => parseFloat(g.value)).filter(v => !isNaN(v));
   const glycAvg    = glycValues.length ? (glycValues.reduce((a, b) => a + b, 0) / glycValues.length).toFixed(2) : null;
 
-  /* ── Extraction sécurisée des champs dashboard ──
-     L'API peut renvoyer un scalaire OU un objet { value, unit, trend, recordedAt, … }
-     pour chaque champ. On normalise ici une seule fois. */
   const dash = dashboard ? {
     healthScore: extractValue(dashboard.healthScore) ?? dashboard.healthScore ?? 0,
     alerts:      dashboard.alerts ?? [],
@@ -558,16 +503,14 @@ function PatientDashboardModal({ member, onClose }) {
     },
     hba1c: (() => {
       const fromApi = extractValue(dashboard.hba1c);
-      if (fromApi != null) {
-        return {
-          value: fromApi,
-          unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
-          measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
-        };
+      if (fromApi == null) {
+        return { value: null, unit: '%', measuredAt: null };
       }
-      const cached = readHba1cCache(patientId);
-      if (cached) return cached;
-      return { value: null, unit: '%', measuredAt: null };
+      return {
+        value: fromApi,
+        unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
+        measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
+      };
     })(),
   } : null;
 
@@ -582,13 +525,13 @@ function PatientDashboardModal({ member, onClose }) {
             <div>
               <h2 className="pdm-name">{p.first_name} {p.last_name}</h2>
               <div className="pdm-meta">
-                {p.email && <span><Mail size={12} /> {p.email}</span>}
-                {p.phone_number && <span><Phone size={12} /> {p.phone_number}</span>}
+                {p.email && <span><GlycoIcon size={12} alt="" /> {p.email}</span>}
+                {p.phone_number && <span><GlycoIcon size={12} alt="" /> {p.phone_number}</span>}
                 <StatusBadge status={member.status} />
               </div>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose}><GlycoIcon size={20} alt="" /></button>
         </div>
 
         {/* ── Tabs + sélecteur période ── */}
@@ -662,9 +605,9 @@ function PatientDashboardModal({ member, onClose }) {
                     <HealthScore score={dash.healthScore} />
 
                     <div className="pdm-alerts-block">
-                      <div className="pdm-section-title"><AlertTriangle size={14} /> Alertes récentes</div>
+                      <div className="pdm-section-title"><GlycoIcon size={14} alt="" /> Alertes récentes</div>
                       {(!dash.alerts || dash.alerts.length === 0) ? (
-                        <div className="pdm-no-alert"><CheckCircle size={16} /> Aucune alerte active</div>
+                        <div className="pdm-no-alert"><GlycoIcon size={16} alt="" /> Aucune alerte active</div>
                       ) : (
                         <div className="pdm-alerts-list">
                           {dash.alerts.map((a, i) => <AlertCard key={i} alert={a} index={i} />)}
@@ -674,10 +617,10 @@ function PatientDashboardModal({ member, onClose }) {
                   </div>
 
                   {/* Ligne 2 : métriques */}
-                  <div className="pdm-section-title" style={{ marginTop: 20 }}><Activity size={14} /> Métriques du jour</div>
+                  <div className="pdm-section-title" style={{ marginTop: 20 }}><GlycoIcon size={14} alt="" /> Métriques du jour</div>
                   <div className="pdm-metrics-grid">
                     <MetricCard
-                      icon={<Droplets size={18} />}
+                      icon={<GlycoIcon size={18} alt="" />}
                       label="Glycémie actuelle"
                       value={dash.glucose != null ? dash.glucose : '—'}
                       unit={dash.glucose != null ? ` ${dash.glucoseUnit}` : ''}
@@ -689,7 +632,7 @@ function PatientDashboardModal({ member, onClose }) {
                           : null}
                     />
                     <MetricCard
-                      icon={<Flame size={18} />}
+                      icon={<GlycoIcon size={18} alt="" />}
                       label="Calories"
                       value={dash.nutrition.calories.consumed}
                       unit=" kcal"
@@ -697,7 +640,7 @@ function PatientDashboardModal({ member, onClose }) {
                       color="#EA580C" colorBg="#FFF7ED"
                     />
                     <MetricCard
-                      icon={<Utensils size={18} />}
+                      icon={<GlycoIcon size={18} alt="" />}
                       label="Glucides"
                       value={dash.nutrition.carbs.grams}
                       unit=" g"
@@ -705,7 +648,7 @@ function PatientDashboardModal({ member, onClose }) {
                       color="#16A34A" colorBg="#F0FDF4"
                     />
                     <MetricCard
-                      icon={<Footprints size={18} />}
+                      icon={<GlycoIcon size={18} alt="" />}
                       label="Pas"
                       value={dash.activity.steps.value != null
                         ? Number(dash.activity.steps.value).toLocaleString('fr-FR')
@@ -714,7 +657,7 @@ function PatientDashboardModal({ member, onClose }) {
                       color="#7C3AED" colorBg="#F5F3FF"
                     />
                     <MetricCard
-                      icon={<Activity size={18} />}
+                      icon={<GlycoIcon size={18} alt="" />}
                       label="Minutes actives"
                       value={dash.activity.activeMinutes}
                       unit=" min"
@@ -722,7 +665,7 @@ function PatientDashboardModal({ member, onClose }) {
                       goalLabel="Objectif : 30 min/jour"
                     />
                     <MetricCard
-                      icon={<Pill size={18} />}
+                      icon={<GlycoIcon size={18} alt="" />}
                       label="Prochain médicament"
                       value={dash.medication.nextDose ?? '—'}
                       color="#15803D" colorBg="#F0FDF4"
@@ -736,7 +679,7 @@ function PatientDashboardModal({ member, onClose }) {
               {activeTab === 'glycemia' && (
                 glycemia.length === 0 ? (
                   <div className="empty-state">
-                    <Droplets size={40} strokeWidth={1} />
+                    <GlycoIcon size={40} alt="" />
                     <p>Aucune mesure de glycémie enregistrée</p>
                   </div>
                 ) : (
@@ -817,7 +760,7 @@ function PatientDashboardModal({ member, onClose }) {
                           </strong>
                         </span>
                         <button className="gly-filter-clear" onClick={() => setGlycFilter('all')}>
-                          <X size={12} /> Effacer le filtre
+                          <GlycoIcon size={12} alt="" /> Effacer le filtre
                         </button>
                       </div>
                     )}
@@ -859,15 +802,15 @@ function PatientDashboardModal({ member, onClose }) {
                                 <td>
                                   {isHigh ? (
                                     <span className="gly-status-badge gly-status-high">
-                                      <AlertTriangle size={11} /> Hyperglycémie
+                                      <GlycoIcon size={11} alt="" /> Hyperglycémie
                                     </span>
                                   ) : isLow ? (
                                     <span className="gly-status-badge gly-status-low">
-                                      <AlertTriangle size={11} /> Hypoglycémie
+                                      <GlycoIcon size={11} alt="" /> Hypoglycémie
                                     </span>
                                   ) : (
                                     <span className="gly-status-badge gly-status-normal">
-                                      <CheckCircle size={11} /> Normal
+                                      <GlycoIcon size={11} alt="" /> Normal
                                     </span>
                                   )}
                                 </td>
@@ -886,7 +829,7 @@ function PatientDashboardModal({ member, onClose }) {
                       if (glycFilter==='normal') return !high&&!low; return true;
                     }).length === 0 && (
                       <div className="gly-empty-filter">
-                        <CheckCircle size={20} style={{ color: '#16A34A' }} />
+                        <GlycoIcon size={20} alt="" />
                         Aucune mesure de ce type
                       </div>
                     )}
@@ -898,7 +841,7 @@ function PatientDashboardModal({ member, onClose }) {
               {activeTab === 'meals' && (
                 meals.length === 0 ? (
                   <div className="empty-state">
-                    <Utensils size={40} strokeWidth={1} />
+                    <GlycoIcon size={40} alt="" />
                     <p>Aucun repas enregistré</p>
                   </div>
                 ) : (
@@ -906,13 +849,13 @@ function PatientDashboardModal({ member, onClose }) {
                     {/* Résumé nutrition */}
                     <div className="meals-summary">
                       <div className="meals-sum-item">
-                        <Flame size={16} style={{ color: '#EA580C' }} />
+                        <GlycoIcon size={16} alt="" />
                         <span className="meals-sum-val">{meals.reduce((acc, m) => acc + (m.calories ?? m.total_calories ?? m.kcal ?? m.energy ?? 0), 0)}</span>
                         <span className="meals-sum-lbl">kcal totales</span>
                       </div>
                       <div className="meals-sum-sep" />
                       <div className="meals-sum-item">
-                        <Utensils size={16} style={{ color: '#16A34A' }} />
+                        <GlycoIcon size={16} alt="" />
                         <span className="meals-sum-val">{meals.reduce((acc, m) => acc + (m.carbs ?? m.carbohydrates ?? m.glucides ?? m.carb_grams ?? 0), 0)} g</span>
                         <span className="meals-sum-lbl">Glucides totaux</span>
                       </div>
@@ -959,7 +902,7 @@ function PatientDashboardModal({ member, onClose }) {
               {activeTab === 'medications' && (
                 medications.length === 0 ? (
                   <div className="empty-state">
-                    <Pill size={40} strokeWidth={1} />
+                    <GlycoIcon size={40} alt="" />
                     <p>Aucun médicament enregistré</p>
                   </div>
                 ) : (
@@ -1000,7 +943,7 @@ function PatientDashboardModal({ member, onClose }) {
                             <tr key={i}>
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div className="med-icon-sm"><Pill size={13} /></div>
+                                  <div className="med-icon-sm"><GlycoIcon size={13} alt="" /></div>
                                   <div>
                                     <strong>{medName || '—'}</strong>
                                     {medStart && (
@@ -1050,12 +993,12 @@ function PatientCard({ member, onClick }) {
         <span className="role-badge">{member.role_label}</span>
       </div>
       <div className="card-body">
-        <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>
-        {p.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
+        <div className="info-row"><GlycoIcon size={14} alt="" /><span>{p.email}</span></div>
+        {p.phone_number && <div className="info-row"><GlycoIcon size={14} alt="" /><span>{p.phone_number}</span></div>}
       </div>
       <div className="card-footer">
         <button className="card-btn" onClick={onClick}>
-          Voir le dossier <ChevronRight size={14} />
+          Voir le dossier <GlycoIcon size={14} alt="" />
         </button>
       </div>
     </div>
@@ -1068,18 +1011,18 @@ function SentInviteCard({ invite }) {
   return (
     <div className="patient-card invite-card invite-sent">
       <div className="card-top">
-        <div className="patient-avatar invite-avatar-sent"><Send size={18} /></div>
+        <div className="patient-avatar invite-avatar-sent"><GlycoIcon size={18} alt="" /></div>
         <div className="patient-meta">
           <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : invite.invitation_email || '—'}</h3>
           <span className="status-badge badge-pending">Invitation envoyée</span>
         </div>
       </div>
       <div className="card-body" style={{ marginTop: 12 }}>
-        {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
-        {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
+        {p?.email && <div className="info-row"><GlycoIcon size={14} alt="" /><span>{p.email}</span></div>}
+        {p?.phone_number && <div className="info-row"><GlycoIcon size={14} alt="" /><span>{p.phone_number}</span></div>}
       </div>
       <div className="invite-waiting">
-        <Clock size={13} /> En attente de la réponse du patient
+        <GlycoIcon size={13} alt="" /> En attente de la réponse du patient
       </div>
     </div>
   );
@@ -1135,7 +1078,7 @@ function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
   return (
     <div className="patient-card invite-card invite-received">
       <div className="invite-received-banner">
-        <UserPlus size={13} /> Demande reçue d'un patient
+        <GlycoIcon size={13} alt="" /> Demande reçue d'un patient
       </div>
       <div className="card-top" style={{ marginTop: 12 }}>
         <div className="patient-avatar invite-avatar-received">
@@ -1147,14 +1090,14 @@ function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
         </div>
       </div>
       <div className="card-body" style={{ marginTop: 12 }}>
-        {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
-        {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
+        {p?.email && <div className="info-row"><GlycoIcon size={14} alt="" /><span>{p.email}</span></div>}
+        {p?.phone_number && <div className="info-row"><GlycoIcon size={14} alt="" /><span>{p.phone_number}</span></div>}
       </div>
 
       {confirmingDecline ? (
         <div className="invite-decline-confirm" role="alertdialog" aria-label="Confirmer le refus">
           <p className="invite-decline-msg">
-            <AlertTriangle size={14} /> Refuser cette demande ? Le patient ne pourra plus vous solliciter
+            <GlycoIcon size={14} alt="" /> Refuser cette demande ? Le patient ne pourra plus vous solliciter
             tant qu'il n'envoie pas une nouvelle invitation.
           </p>
           <div className="invite-decline-actions">
@@ -1168,7 +1111,7 @@ function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
             <button className="card-btn-decline-confirm" onClick={handleDecline} disabled={declining}>
               {declining
                 ? <><span className="mini-spinner-sm" /> Refus en cours…</>
-                : <><XCircle size={14} /> Confirmer le refus</>}
+                : <><GlycoIcon size={14} alt="" /> Confirmer le refus</>}
             </button>
           </div>
         </div>
@@ -1179,12 +1122,12 @@ function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
             onClick={(e) => { e.stopPropagation(); setConfirmingDecline(true); }}
             disabled={accepting}
           >
-            <X size={14} /> Refuser
+            <GlycoIcon size={14} alt="" /> Refuser
           </button>
           <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
             {accepting
               ? <><span className="mini-spinner-sm" /> Acceptation…</>
-              : <><CheckCircle size={14} /> Accepter la demande</>}
+              : <><GlycoIcon size={14} alt="" /> Accepter la demande</>}
           </button>
         </div>
       )}
@@ -1249,7 +1192,7 @@ export default function PatientsScreen({ navigation }) {
             <p>Gérez votre équipe de soins et suivez vos patients</p>
           </div>
           <button className="add-btn" onClick={() => setShowAddModal(true)}>
-            <Plus size={16} /> Ajouter un patient
+            <GlycoIcon size={16} alt="" /> Ajouter un patient
           </button>
         </header>
 
@@ -1269,7 +1212,7 @@ export default function PatientsScreen({ navigation }) {
             </button>
           </div>
           <div className="search-wrapper">
-            <Search size={15} />
+            <GlycoIcon size={15} alt="" />
             <input
               type="text"
               placeholder="Rechercher un patient…"
@@ -1284,12 +1227,12 @@ export default function PatientsScreen({ navigation }) {
             <div className="state-center"><div className="big-spinner" /><p>Chargement des patients…</p></div>
           )}
           {!loading && error && (
-            <div className="state-center state-error"><AlertCircle size={40} /><p>{error}</p></div>
+            <div className="state-center state-error"><GlycoIcon size={40} alt="" /><p>{error}</p></div>
           )}
 
           {!loading && !error && tab === 'active' && (
             filtered.length === 0
-              ? <div className="state-center"><Users size={48} strokeWidth={1} /><p>{search ? 'Aucun résultat.' : 'Aucun patient actif pour le moment.'}</p></div>
+              ? <div className="state-center"><GlycoIcon size={48} alt="" /><p>{search ? 'Aucun résultat.' : 'Aucun patient actif pour le moment.'}</p></div>
               : <div className="cards-grid">
                   {filtered.map(m => (
                     <PatientCard key={m.id_team_member} member={m} onClick={() => setSelectedMember(m)} />
@@ -1300,7 +1243,7 @@ export default function PatientsScreen({ navigation }) {
 
           {!loading && !error && tab === 'sent' && (
             sentInvites.length === 0
-              ? <div className="state-center"><Send size={48} strokeWidth={1} /><p>Aucune invitation envoyée en attente.</p></div>
+              ? <div className="state-center"><GlycoIcon size={48} alt="" /><p>Aucune invitation envoyée en attente.</p></div>
               : <div className="cards-grid">
                   {sentInvites.map(inv => <SentInviteCard key={inv.id_team_member} invite={inv} />)}
                 </div>
@@ -1308,7 +1251,7 @@ export default function PatientsScreen({ navigation }) {
 
           {!loading && !error && tab === 'received' && (
             receivedInvites.length === 0
-              ? <div className="state-center"><UserPlus size={48} strokeWidth={1} /><p>Aucune demande reçue.</p></div>
+              ? <div className="state-center"><GlycoIcon size={48} alt="" /><p>Aucune demande reçue.</p></div>
               : <div className="cards-grid">
                   {receivedInvites.map(inv => (
                     <ReceivedInviteCard

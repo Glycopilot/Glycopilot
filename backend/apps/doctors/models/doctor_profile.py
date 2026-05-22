@@ -43,6 +43,18 @@ class DoctorProfile(models.Model):
         null=True,
         verbose_name="Adresse du Cabinet / Hôpital",
     )
+    medical_center_postal_code = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        verbose_name="Code postal du Cabinet / Hôpital",
+    )
+    medical_center_city = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        verbose_name="Ville du centre médical",
+    )
 
     specialty = models.ForeignKey(
         "doctors.Specialty",

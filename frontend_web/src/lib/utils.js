@@ -37,10 +37,18 @@ export function validatePassword(pw) {
   return null;
 }
 
+export function validatePostalCode(code) {
+  const postal = (code || '').trim();
+  if (!postal) return 'Le code postal est obligatoire';
+  if (!/^\d{5}$/.test(postal)) return 'Le code postal doit contenir 5 chiffres';
+  return null;
+}
+
 export function flattenAuthMe(data) {
   const identity = data?.identity ?? {};
-  const profile = identity?.profiles?.[0] ?? {};
-  const doctor = profile?.doctor_details ?? {};
+  const profiles = identity?.profiles ?? [];
+  const doctorProfile = profiles.find((p) => p?.doctor_details) ?? profiles[0] ?? {};
+  const doctor = doctorProfile?.doctor_details ?? {};
   const user = doctor?.user_details ?? {};
 
   return {
@@ -56,5 +64,7 @@ export function flattenAuthMe(data) {
     specialty: doctor?.specialty,
     medical_center_name: doctor?.medical_center_name,
     medical_center_address: doctor?.medical_center_address,
+    medical_center_postal_code: doctor?.medical_center_postal_code,
+    medical_center_city: doctor?.medical_center_city,
   };
 }

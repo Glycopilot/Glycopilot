@@ -1,4 +1,4 @@
-import { HelpCircle } from 'lucide-react';
+import GlycoIcon from '../GlycoIcon';
 import { useTour } from './TourProvider';
 
 export default function HelpButton({ className = '', label = 'Lancer la visite guidée' }) {
@@ -11,7 +11,7 @@ export default function HelpButton({ className = '', label = 'Lancer la visite g
       title={label}
       aria-label={label}
     >
-      <HelpCircle size={16} />
+      <GlycoIcon size={16} alt="" />
     </button>
   );
 }

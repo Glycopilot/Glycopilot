@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useTour } from './TourProvider';
+import GlycoIcon from '../GlycoIcon';
+import { UiClose, UiChevronLeft, UiChevronRight } from '../UiIcon';
 import { tourSteps } from './tour-steps';
 import './tour.css';
 
@@ -181,11 +182,11 @@ export default function Tour() {
           aria-label="Fermer la visite guidée"
           type="button"
         >
-          <X size={16} />
+          <UiClose size={16} />
         </button>
 
         <div className="tour-pill">
-          <Sparkles size={12} />
+          <GlycoIcon size={12} alt="" />
           <span>Étape {stepIndex + 1} sur {total}</span>
         </div>
 
@@ -217,7 +218,7 @@ export default function Tour() {
           <div className="tour-actions-right">
             {!isFirst && (
               <button type="button" className="tour-btn tour-btn-ghost" onClick={prev}>
-                <ChevronLeft size={14} /> Précédent
+                <UiChevronLeft size={14} /> Précédent
               </button>
             )}
             {isLast ? (
@@ -226,7 +227,7 @@ export default function Tour() {
               </button>
             ) : (
               <button type="button" className="tour-btn tour-btn-primary" onClick={next}>
-                Suivant <ChevronRight size={14} />
+                Suivant <UiChevronRight size={14} />
               </button>
             )}
           </div>

@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
-import {
-  Users, Heart, Activity, AlertTriangle,
-  TrendingUp, ArrowRight, Footprints,
-  Bell, CheckCircle, Droplets
-} from 'lucide-react';
+import GlycoIcon from '../components/GlycoIcon';
+import { UiChevronRight, UiClose } from '../components/UiIcon';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
@@ -82,7 +79,7 @@ function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
           <span className="alert-patient">{patientName}</span>
           {glycLabel && (
             <span className="alert-glyc-badge" style={{ background: cfg.color }}>
-              <Droplets size={12} />
+              <GlycoIcon size={12} alt="" />
               {glycLabel}
             </span>
           )}
@@ -93,7 +90,7 @@ function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
           {timeLabel && <span className="alert-time">{timeLabel}</span>}
         </div>
       </div>
-      <AlertTriangle size={15} className="alert-icon" style={{ color: cfg.color }} />
+      <GlycoIcon size={15} alt="" />
     </div>
   );
 }
@@ -116,7 +113,7 @@ function ActivityRow({ patient, dashboard }) {
           <span className="act-pct">{pct}%</span>
         </div>
         <div className="act-sub">
-          <Footprints size={12} /> {steps?.value?.toLocaleString() ?? '—'} / {steps?.goal?.toLocaleString() ?? '—'} pas
+          <GlycoIcon size={12} alt="" /> {steps?.value?.toLocaleString() ?? '—'} / {steps?.goal?.toLocaleString() ?? '—'} pas
         </div>
       </div>
       <div className={`act-score ${dashboard.healthScore >= 70 ? 'score-good' : dashboard.healthScore >= 40 ? 'score-mid' : 'score-low'}`}>
@@ -261,7 +258,7 @@ export default function HomeScreen({ navigation }) {
           <>
             <div className="kpi-row">
               <div className="kpi-card">
-                <div className="kpi-icon kpi-blue"><Users size={22} /></div>
+                <div className="kpi-icon kpi-blue"><GlycoIcon size={22} alt="" /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{activeCount}</div>
                   <div className="kpi-label">Patients suivis</div>
@@ -269,7 +266,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-red"><AlertTriangle size={22} /></div>
+                <div className="kpi-icon kpi-red"><GlycoIcon size={22} alt="" /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{allAlerts.length}</div>
                   <div className="kpi-label">Alertes enregistrées</div>
@@ -280,7 +277,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-green"><Heart size={22} /></div>
+                <div className="kpi-icon kpi-green"><GlycoIcon size={22} alt="" /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{avgScore ?? '—'}</div>
                   <div className="kpi-label">Score santé moyen</div>
@@ -288,7 +285,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-teal"><CheckCircle size={22} /></div>
+                <div className="kpi-icon kpi-teal"><GlycoIcon size={22} alt="" /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">
                     {allDashes.filter(d => d.healthScore >= 70).length}
@@ -302,7 +299,7 @@ export default function HomeScreen({ navigation }) {
               {/* Score moyen */}
               <div className="hcard hcard-score">
                 <div className="hcard-header">
-                  <div className="hcard-title"><TrendingUp size={16} /> Score de santé moyen</div>
+                  <div className="hcard-title"><GlycoIcon size={16} alt="" /> Score de santé moyen</div>
                 </div>
                 {avgScore !== null
                   ? <ScoreGauge score={avgScore} />
@@ -332,12 +329,12 @@ export default function HomeScreen({ navigation }) {
               {/* Alertes glycémiques */}
               <div className="hcard hcard-alerts">
                 <div className="hcard-header">
-                  <div className="hcard-title"><Bell size={16} /> Alertes glycémiques</div>
+                  <div className="hcard-title"><GlycoIcon size={16} alt="" /> Alertes glycémiques</div>
                   {allAlerts.length > 0 && <span className="alert-count-badge">{allAlerts.length}</span>}
                 </div>
                 {allAlerts.length === 0 ? (
                   <div className="empty-mini">
-                    <CheckCircle size={32} strokeWidth={1} />
+                    <GlycoIcon size={32} alt="" />
                     <p>Aucune alerte active</p>
                   </div>
                 ) : (
@@ -358,14 +355,14 @@ export default function HomeScreen({ navigation }) {
               {/* Activité récente */}
               <div className="hcard hcard-activity">
                 <div className="hcard-header">
-                  <div className="hcard-title"><Activity size={16} /> Activité récente des patients</div>
+                  <div className="hcard-title"><GlycoIcon size={16} alt="" /> Activité récente des patients</div>
                   <button className="see-all-btn" onClick={() => navigation.navigate('/patients')}>
-                    Voir tous <ArrowRight size={13} />
+                    Voir tous <GlycoIcon size={13} alt="" />
                   </button>
                 </div>
                 {sortedByActivity.length === 0 ? (
                   <div className="empty-mini">
-                    <Footprints size={32} strokeWidth={1} />
+                    <GlycoIcon size={32} alt="" />
                     <p>Aucune donnée d'activité</p>
                   </div>
                 ) : (

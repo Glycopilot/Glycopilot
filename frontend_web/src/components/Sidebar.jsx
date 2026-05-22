@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, User, LogOut, Menu, X } from 'lucide-react';
 import authService from '../services/authService';
 import { devWarn } from '../lib/logger';
 import { getInitials } from '../lib/utils';
 import logo from '../assets/glycopilot.png';
+import GlycoIcon from './GlycoIcon';
+import { UiMenu, UiClose } from './UiIcon';
 import HelpButton from './tour/HelpButton';
 
 const apiClient = authService.getApiClient();
@@ -45,9 +46,9 @@ export default function Sidebar({ activePage, navigation }) {
   };
 
   const links = [
-    { id: 'home',     label: 'Dashboard',   icon: <LayoutDashboard size={18} />, path: '/home' },
-    { id: 'patients', label: 'Mes patients', icon: <Users size={18} />,           path: '/patients' },
-    { id: 'profile',  label: 'Mon profil',   icon: <User size={18} />,            path: '/profile' },
+    { id: 'home',     label: 'Dashboard',   icon: <GlycoIcon size={18} />, path: '/home' },
+    { id: 'patients', label: 'Mes patients', icon: <GlycoIcon size={18} />, path: '/patients' },
+    { id: 'profile',  label: 'Mon profil',   icon: <GlycoIcon size={18} />, path: '/profile' },
   ];
 
   const SidebarContent = () => (
@@ -79,7 +80,7 @@ export default function Sidebar({ activePage, navigation }) {
         </div>
         <HelpButton />
         <button className="sb-logout" onClick={handleLogout} title="Se déconnecter">
-          <LogOut size={16} />
+          <GlycoIcon size={16} alt="" />
         </button>
       </div>
     </>
@@ -96,7 +97,7 @@ export default function Sidebar({ activePage, navigation }) {
       <div className="mobile-topbar">
         <img src={logo} alt="GlycoPilot" className="mobile-logo" />
         <button className="hamburger-btn" onClick={() => setMobileOpen(true)} aria-label="Ouvrir le menu">
-          <Menu size={22} />
+          <UiMenu size={22} />
         </button>
       </div>
 
@@ -108,7 +109,7 @@ export default function Sidebar({ activePage, navigation }) {
       {/* ── Mobile drawer ── */}
       <aside className={`sidebar sidebar-mobile ${mobileOpen ? 'sidebar-mobile-open' : ''}`}>
         <button className="sb-close" onClick={() => setMobileOpen(false)} aria-label="Fermer le menu">
-          <X size={20} />
+          <UiClose size={20} />
         </button>
         <SidebarContent />
       </aside>

@@ -589,6 +589,7 @@ class CareTeamViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="decline-invitation")
     def decline_invitation(self, request):
+        """Refuse une invitation en attente (médecin ou patient). Notifie le patient si le médecin refuse."""
         id_team_member = request.data.get("id_team_member")
         reason = request.data.get("reason", "Aucun motif spécifié.")
 
@@ -794,12 +795,15 @@ class CareTeamViewSet(viewsets.ViewSet):
         Accessible uniquement aux médecins avec une relation ACTIVE.
         """
         patient_user_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_user_id)
+        patient_auth, error_response = self._verify_doctor_access(
+            request, patient_user_id
+        )
         if error_response:
             return error_response
 
-        data = DoctorPatientDataService.get_patient_dashboard(user)
-        return Response(data)
+        return Response(
+            DoctorPatientDataService.get_patient_dashboard(patient_auth)
+        )
 
     def _verify_doctor_access(self, request, patient_user_id):
         return verify_doctor_can_access_patient(request, patient_user_id)
@@ -807,38 +811,31 @@ class CareTeamViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"], url_path="patient-meals")
     def get_patient_meals(self, request):
         patient_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_id)
+        patient_auth, error_response = self._verify_doctor_access(request, patient_id)
         if error_response:
             return error_response
 
-        from apps.doctors.services import DoctorPatientDataService
-
-        data = DoctorPatientDataService.get_meals_history(user)
-        return Response(data)
+        return Response(DoctorPatientDataService.get_meals_history(patient_auth))
 
     @action(detail=False, methods=["get"], url_path="patient-medications")
     def get_patient_medications(self, request):
         patient_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_id)
+        patient_auth, error_response = self._verify_doctor_access(request, patient_id)
         if error_response:
             return error_response
 
-        from apps.doctors.services import DoctorPatientDataService
-
-        data = DoctorPatientDataService.get_medications_history(user)
-        return Response(data)
+        return Response(
+            DoctorPatientDataService.get_medications_history(patient_auth)
+        )
 
     @action(detail=False, methods=["get"], url_path="patient-glycemia")
     def get_patient_glycemia(self, request):
         patient_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_id)
+        patient_auth, error_response = self._verify_doctor_access(request, patient_id)
         if error_response:
             return error_response
 
-        from apps.doctors.services import DoctorPatientDataService
-
-        data = DoctorPatientDataService.get_glycemia_history(user)
-        return Response(data)
+        return Response(DoctorPatientDataService.get_glycemia_history(patient_auth))
 
     # ------------------------------------------------------------------ #
     #  Endpoints Proche                                                    #
@@ -892,7 +889,6 @@ class CareTeamViewSet(viewsets.ViewSet):
         if error:
             return error
 
-        from apps.doctors.services import DoctorPatientDataService
         return Response(DoctorPatientDataService.get_glycemia_history(patient_auth))
 
     @action(detail=False, methods=["get"], url_path="proche-dashboard")
@@ -905,7 +901,6 @@ class CareTeamViewSet(viewsets.ViewSet):
         if error:
             return error
 
-        from apps.doctors.services import DoctorPatientDataService
         return Response(DoctorPatientDataService.get_patient_dashboard(patient_auth))
 
     @action(detail=False, methods=["get"], url_path="proche-alerts")

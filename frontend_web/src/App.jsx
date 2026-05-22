@@ -21,6 +21,7 @@ import { registerAuthRedirect } from './lib/auth-redirect';
 import './styles/tokens.css';
 import './styles/polish.css';
 import './components/css/sidebar.css';
+import './components/css/glyco-icon.css';
 import './App.css';
 
 function RequireAuth({ children }) {

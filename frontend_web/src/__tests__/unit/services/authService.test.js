@@ -177,7 +177,10 @@ describe('authService', () => {
       role: 'DOCTOR',
       licenseNumber: '10001234567',
       specialty: 'Cardiologue',
+      medicalCenterName: 'Hôpital',
       medicalCenterAddress: '1 rue Test',
+      medicalCenterPostalCode: '75001',
+      medicalCenterCity: 'Paris',
     };
 
     it('mappe camelCase → snake_case pour le payload', async () => {
@@ -192,7 +195,10 @@ describe('authService', () => {
         role: 'DOCTOR',
         license_number: '10001234567',
         specialty: 'Cardiologue',
+        medical_center_name: 'Hôpital',
         medical_center_address: '1 rue Test',
+        medical_center_postal_code: '75001',
+        medical_center_city: 'Paris',
       }));
     });
 

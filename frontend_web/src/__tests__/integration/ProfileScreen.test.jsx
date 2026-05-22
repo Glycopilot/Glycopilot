@@ -50,6 +50,8 @@ function authMeResponse(overrides = {}) {
             specialty: 'Cardiologue',
             medical_center_name: 'Hôpital Test',
             medical_center_address: '1 rue Test, Paris',
+            medical_center_postal_code: '75001',
+            medical_center_city: 'Paris',
             user_details: { phone_number: '+33612345678' },
           },
         },

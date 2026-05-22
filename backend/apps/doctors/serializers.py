@@ -45,6 +45,8 @@ class DoctorSerializer(serializers.ModelSerializer):
             "rejection_reason",
             "medical_center_name",
             "medical_center_address",
+            "medical_center_postal_code",
+            "medical_center_city",
             "specialty",
             "user_details",
             "valide",
@@ -80,6 +82,8 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
                     "verification_status": doc.verification_status.label,
                     "medical_center_name": doc.medical_center_name,
                     "medical_center_address": doc.medical_center_address,
+                    "medical_center_postal_code": doc.medical_center_postal_code,
+                    "medical_center_city": doc.medical_center_city,
                     "license_number": doc.license_number,
                     "verified_at": doc.verified_at,
                 }

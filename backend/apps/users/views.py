@@ -1,8 +1,13 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from apps.doctors.services.profile_update import (
+    get_doctor_profile_for_user,
+    update_doctor_profile_for_user,
+)
 
 from apps.profiles.models import Profile
 
@@ -67,6 +72,24 @@ class UserViewSet(viewsets.ModelViewSet):
             data = request.data.copy()
             medical_id = data.pop("medical_id", None)
             patient_details = data.pop("patient_details", None)
+
+            doctor_fields = {
+                "specialty": data.pop("specialty", None),
+                "medical_center_name": data.pop("medical_center_name", None),
+                "medical_center_address": data.pop("medical_center_address", None),
+                "medical_center_postal_code": data.pop("medical_center_postal_code", None),
+                "medical_center_city": data.pop("medical_center_city", None),
+            }
+            if any(v is not None for v in doctor_fields.values()):
+                if not get_doctor_profile_for_user(user_identity):
+                    return Response(
+                        {"error": "Ces champs sont réservés au profil médecin."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                try:
+                    update_doctor_profile_for_user(user_identity, doctor_fields)
+                except ValidationError as exc:
+                    return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
 
             # Mise à jour patient_details (diabète, date diagnostic)
             if patient_details:

@@ -137,7 +137,10 @@ const authService = {
       if (payload.role === 'DOCTOR') {
         payload.license_number = userData.licenseNumber;
         payload.specialty = userData.specialty;
-        payload.medical_center_address = userData.medicalCenterAddress;
+        payload.medical_center_name = userData.medicalCenterName;
+        payload.medical_center_address = userData.medicalCenterAddress || '';
+        payload.medical_center_postal_code = userData.medicalCenterPostalCode;
+        payload.medical_center_city = userData.medicalCenterCity;
       }
 
       const response = await apiClient.post('/auth/register/', payload);
@@ -145,7 +148,7 @@ const authService = {
 
       if (access) localStorage.setItem('access_token', access);
       if (refresh) localStorage.setItem('refresh_token', refresh);
-      persistUser(user);
+      if (user) persistUser(user);
 
       return response.data;
     } catch (error) {
