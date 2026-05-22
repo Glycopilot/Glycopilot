@@ -31,18 +31,6 @@ on:
         description: '4. Compiler App Mobile (Expo EAS)'
         type: boolean
         default: false
-      terraform_common:
-        description: '5. Terraform socle commun: plan/apply infra/terraform'
-        type: boolean
-        default: false
-      terraform_common_apply:
-        description: '5b. Appliquer le plan Terraform socle commun'
-        type: boolean
-        default: false
-      terraform_common_enable_rds:
-        description: '5c. Inclure RDS dans le socle commun'
-        type: boolean
-        default: false
 
 env:
   AWS_REGION: eu-west-3
@@ -54,42 +42,6 @@ env:
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
 
 jobs:
-  terraform-common:
-    name: Terraform Common Foundation
-    if: ${{ inputs.terraform_common || inputs.terraform_common_apply }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.14.0"
-
-      - name: Terraform init
-        working-directory: infra/terraform
-        run: terraform init
-
-      - name: Terraform validate
-        working-directory: infra/terraform
-        run: terraform validate
-
-      - name: Terraform plan
-        working-directory: infra/terraform
-        run: terraform plan -var="enable_rds=${{ inputs.terraform_common_enable_rds }}" -out=tfplan
-
-      - name: Terraform apply
-        if: ${{ inputs.terraform_common_apply }}
-        working-directory: infra/terraform
-        run: terraform apply -auto-approve tfplan
-
   db-migrate-plan-a:
     name: Run DB Migrations (EC2)
     if: ${{ inputs.deploy_db_migrations }}
