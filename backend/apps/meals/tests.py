@@ -140,7 +140,13 @@ class TestMealModel:
             "barcode",
             "source",
         } <= meal_columns
-        assert "meal_type" in user_meal_columns
+        assert {
+            "meal_type",
+            "portion_g",
+            "notes",
+            "input_mode",
+            "session_key",
+        } <= user_meal_columns
 
 
 @pytest.mark.django_db
