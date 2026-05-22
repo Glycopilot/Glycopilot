@@ -56,8 +56,8 @@ export default function SignInScreen({ navigation }: SignInScreenProps) {
       toastError('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
-    if (password.length < 8) {
-      toastError('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
+    if (password.length < 12) {
+      toastError('Erreur', 'Le mot de passe doit contenir au moins 12 caractères');
       return;
     }
     if (!/^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,63}$/.test(email)) {
