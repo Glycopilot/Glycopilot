@@ -7,10 +7,6 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      deploy_db_migrations:
-        description: '0. Executer les migrations DB (EC2 - Plan A)'
-        type: boolean
-        default: false
       deploy_plan_a:
         description: '1. Déployer Backend sur Plan A (EC2)'
         type: boolean
@@ -42,28 +38,6 @@ env:
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
 
 jobs:
-  db-migrate-plan-a:
-    name: Run DB Migrations (EC2)
-    if: ${{ inputs.deploy_db_migrations }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Execute migrations on EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/glycopilot-app
-            docker compose --profile aws up -d
-            docker compose --profile aws exec -T backend_aws python manage.py migrate --noinput
-            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
-            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
-            docker compose --profile aws exec -T backend_aws python manage.py import_medications
-            if [ -f data/import/CIS_bdpm.txt ]; then
-              docker compose --profile aws exec -T backend_aws python manage.py import_medications --bdpm
-            fi
-
   deploy-plan-a:
     name: Deploy Plan A (EC2)
     if: ${{ inputs.deploy_plan_a }}
