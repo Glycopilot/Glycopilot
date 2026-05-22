@@ -49,9 +49,9 @@ DB_PASSWORD="${DB_PASSWORD:-${POSTGRES_PASSWORD:-}}"
 if [ -f backend/.env.prod ]; then
   while IFS='=' read -r key value; do
     case "$key" in
-      DB_NAME) DB_NAME="${DB_NAME:-$value}" ;;
-      DB_USER) DB_USER="${DB_USER:-$value}" ;;
-      DB_PASSWORD) DB_PASSWORD="${DB_PASSWORD:-$value}" ;;
+      DB_NAME) DB_NAME="$value" ;;
+      DB_USER) DB_USER="$value" ;;
+      DB_PASSWORD) DB_PASSWORD="$value" ;;
       POSTGRES_DB) DB_NAME="${DB_NAME:-$value}" ;;
       POSTGRES_USER) DB_USER="${DB_USER:-$value}" ;;
       POSTGRES_PASSWORD) DB_PASSWORD="${DB_PASSWORD:-$value}" ;;
@@ -61,6 +61,11 @@ fi
 
 DB_NAME="${DB_NAME:-glycopilot_prod_db}"
 DB_USER="${DB_USER:-glycopilot_prod_user}"
+DB_SSLMODE="${DB_SSLMODE:-prefer}"
+
+if [ "$DB_HOST" != "database_aws" ] && [ "$DB_SSLMODE" = "prefer" ]; then
+  DB_SSLMODE="require"
+fi
 
 require_value DB_HOST "$DB_HOST"
 require_value DB_PORT "$DB_PORT"
@@ -72,6 +77,7 @@ log "starting backup host=${DB_HOST} db=${DB_NAME} user=${DB_USER}"
 
 docker compose --profile aws exec -T \
   -e PGPASSWORD="$DB_PASSWORD" \
+  -e PGSSLMODE="$DB_SSLMODE" \
   "$DB_CLIENT_SERVICE" \
   pg_dump \
     -h "$DB_HOST" \
