@@ -115,10 +115,10 @@ jobs:
           AI_ENV_FILE: ${{ secrets.AI_ENV_FILE }}
           BACKEND_IMAGE: ${{ steps.images.outputs.backend_image }}
           AI_SERVICE_IMAGE: ${{ steps.images.outputs.ai_service_image }}
-          RUNTIME_DB_HOST: ${{ vars.RUNTIME_DB_HOST }}
-          RUNTIME_DB_PORT: ${{ vars.RUNTIME_DB_PORT }}
-          RUNTIME_DB_NAME: ${{ vars.RUNTIME_DB_NAME }}
-          RUNTIME_DB_USER: ${{ vars.RUNTIME_DB_USER }}
+          RUNTIME_DB_HOST: ${{ vars.RUNTIME_DB_HOST || secrets.RUNTIME_DB_HOST }}
+          RUNTIME_DB_PORT: ${{ vars.RUNTIME_DB_PORT || secrets.RUNTIME_DB_PORT }}
+          RUNTIME_DB_NAME: ${{ vars.RUNTIME_DB_NAME || secrets.RUNTIME_DB_NAME }}
+          RUNTIME_DB_USER: ${{ vars.RUNTIME_DB_USER || secrets.RUNTIME_DB_USER }}
           RUNTIME_DB_PASSWORD: ${{ secrets.RUNTIME_DB_PASSWORD }}
         run: |
           set -euo pipefail
@@ -130,15 +130,17 @@ jobs:
           SSH_OPTS="-i $HOME/.ssh/glycopilot_ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30"
 
           runtime_db_values=0
-          for value in "${RUNTIME_DB_HOST:-}" "${RUNTIME_DB_PORT:-}" "${RUNTIME_DB_NAME:-}" "${RUNTIME_DB_USER:-}" "${RUNTIME_DB_PASSWORD:-}"; do
-            if [ -n "$value" ]; then
-              runtime_db_values=$((runtime_db_values + 1))
-            fi
-          done
+          runtime_db_missing=""
+          if [ -n "${RUNTIME_DB_HOST:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_HOST"; fi
+          if [ -n "${RUNTIME_DB_PORT:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_PORT"; fi
+          if [ -n "${RUNTIME_DB_NAME:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_NAME"; fi
+          if [ -n "${RUNTIME_DB_USER:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_USER"; fi
+          if [ -n "${RUNTIME_DB_PASSWORD:-}" ]; then runtime_db_values=$((runtime_db_values + 1)); else runtime_db_missing="${runtime_db_missing} RUNTIME_DB_PASSWORD"; fi
 
           if [ "$runtime_db_values" -ne 0 ] && [ "$runtime_db_values" -ne 5 ]; then
             echo "RDS runtime configuration is incomplete."
             echo "Set all of RUNTIME_DB_HOST, RUNTIME_DB_PORT, RUNTIME_DB_NAME, RUNTIME_DB_USER and RUNTIME_DB_PASSWORD, or set none."
+            echo "Missing values:${runtime_db_missing}"
             exit 1
           fi
 
