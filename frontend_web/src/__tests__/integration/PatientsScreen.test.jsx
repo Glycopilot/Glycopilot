@@ -39,17 +39,18 @@ function makeActiveMember(id = '1', firstName = 'Alice', lastName = 'Martin') {
   };
 }
 
-function makeSentInvite(id = 'inv-s1', email = 'invite@test.com') {
+function makeSentInvite(id = 'inv-s1', email = 'invite@test.com', createdAt = '2026-03-15T14:30:00Z') {
   return {
     id_team_member: id,
     patient_details: { first_name: null, last_name: null, email },
     invitation_email: email,
     status: 1,
     approved_by: 'doc-1',
+    created_at: createdAt,
   };
 }
 
-function makeReceivedInvite(id = 'inv-r1', firstName = 'Bob', lastName = 'Durand') {
+function makeReceivedInvite(id = 'inv-r1', firstName = 'Bob', lastName = 'Durand', createdAt = '2026-04-01T09:00:00Z') {
   return {
     id_team_member: id,
     patient_details: {
@@ -61,6 +62,7 @@ function makeReceivedInvite(id = 'inv-r1', firstName = 'Bob', lastName = 'Durand
     },
     status: 1,
     approved_by: null,
+    created_at: createdAt,
   };
 }
 
@@ -279,6 +281,13 @@ describe('PatientsScreen', () => {
       await waitFor(() =>
         expect(screen.getAllByText('nouveau@test.com').length).toBeGreaterThanOrEqual(1)
       );
+    });
+
+    it('affiche la date d\'invitation', async () => {
+      setupDefaultMocks({ pendingInvites: [makeSentInvite('inv-s1', 'nouveau@test.com')] });
+      renderPatients();
+      await pickStatusFilter(/invitations envoyées/i);
+      await waitFor(() => expect(screen.getByText('15 mars 2026')).toBeInTheDocument());
     });
   });
 
