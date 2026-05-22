@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
+from django.db import connection
 from django.utils.timezone import now
 from rest_framework.test import APIClient
 
@@ -115,6 +116,37 @@ class TestMealModel:
         assert m.ingredients is None
         assert m.recipe is None
         assert m.link_photo is None
+
+    def test_database_schema_contains_current_meal_fields(self, db):
+        with connection.cursor() as cursor:
+            meal_columns = {
+                column.name
+                for column in connection.introspection.get_table_description(
+                    cursor, "meals"
+                )
+            }
+            user_meal_columns = {
+                column.name
+                for column in connection.introspection.get_table_description(
+                    cursor, "users_meals"
+                )
+            }
+
+        assert {
+            "glucides",
+            "proteines",
+            "lipides",
+            "link_photo",
+            "barcode",
+            "source",
+        } <= meal_columns
+        assert {
+            "meal_type",
+            "portion_g",
+            "notes",
+            "input_mode",
+            "session_key",
+        } <= user_meal_columns
 
 
 @pytest.mark.django_db
