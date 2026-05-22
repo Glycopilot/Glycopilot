@@ -17,11 +17,6 @@ jest.mock('../../services/toastService', () => ({
   toastError: jest.fn(),
   toastSuccess: jest.fn(),
 }));
-jest.mock('../../components/Sidebar', () => ({
-  __esModule: true,
-  default: ({ activePage }) => <div data-testid="sidebar" data-page={activePage} />,
-}));
-
 import PatientsScreen from '../../screens/PatientsScreen';
 import authService from '../../services/authService';
 import { toastError, toastSuccess } from '../../services/toastService';
@@ -113,13 +108,16 @@ function setupDefaultMocks({
   });
 }
 
-const navigation = { navigate: jest.fn() };
-const renderPatients = () => render(<PatientsScreen navigation={navigation} />);
+const renderPatients = () => render(<PatientsScreen />);
+
+async function pickStatusFilter(name) {
+  fireEvent.click(screen.getByRole('button', { name: /filtrer par statut/i }));
+  fireEvent.click(await screen.findByRole('option', { name }));
+}
 
 describe('PatientsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    navigation.navigate.mockClear();
     mockPost.mockResolvedValue({ data: {} });
     mockPatch.mockResolvedValue({ data: {} });
   });
@@ -128,7 +126,7 @@ describe('PatientsScreen', () => {
     it('affiche le spinner pendant le fetch', () => {
       mockGet.mockReturnValue(new Promise(() => {}));
       renderPatients();
-      expect(screen.getByText('Chargement des patients…')).toBeInTheDocument();
+      expect(screen.getByText('Chargement…')).toBeInTheDocument();
     });
 
     it('affiche le header "Mes patients" après chargement', async () => {
@@ -147,52 +145,38 @@ describe('PatientsScreen', () => {
       );
     });
 
-    it('monte la sidebar avec activePage="patients"', async () => {
-      setupDefaultMocks();
-      renderPatients();
-      await waitFor(() =>
-        expect(screen.getByTestId('sidebar')).toHaveAttribute('data-page', 'patients')
-      );
-    });
   });
 
-  describe('Onglets et compteurs', () => {
-    const tabCount = (tabName) =>
-      screen.getByRole('button', { name: tabName }).querySelector('.tab-count')?.textContent.trim();
-
-    it('compteur Mes patients', async () => {
+  describe('Statistiques', () => {
+    it('compteur patients actifs', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1'), makeActiveMember('2')] });
       renderPatients();
-      await waitFor(() => screen.getByRole('button', { name: /mes patients/i }));
-      expect(tabCount(/mes patients/i)).toBe('2');
+      await waitFor(() => {
+        const stat = screen.getByText('Patients actifs').closest('.patients-stat');
+        expect(stat.querySelector('.patients-stat-value').textContent).toBe('2');
+      });
     });
 
-    it('compteur Invitations envoyées', async () => {
-      setupDefaultMocks({ pendingInvites: [makeSentInvite()] });
-      renderPatients();
-      await waitFor(() => screen.getByRole('button', { name: /invitations envoyées/i }));
-      expect(tabCount(/invitations envoyées/i)).toBe('1');
-    });
-
-    it('compteur Demandes reçues', async () => {
+    it('compteur demandes à traiter', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite()] });
       renderPatients();
-      await waitFor(() => screen.getByRole('button', { name: /demandes reçues/i }));
-      expect(tabCount(/demandes reçues/i)).toBe('1');
+      await waitFor(() => {
+        const stat = screen.getAllByText('Demandes à traiter')[0].closest('.patients-stat');
+        expect(stat.querySelector('.patients-stat-value').textContent).toBe('1');
+      });
     });
 
-    it('3 onglets présents', async () => {
-      setupDefaultMocks();
+    it('compteur invitations envoyées', async () => {
+      setupDefaultMocks({ pendingInvites: [makeSentInvite()] });
       renderPatients();
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /mes patients/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /invitations envoyées/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /demandes reçues/i })).toBeInTheDocument();
+        const stat = screen.getByText('Invitations envoyées').closest('.patients-stat');
+        expect(stat.querySelector('.patients-stat-value').textContent).toBe('1');
       });
     });
   });
 
-  describe('Onglet Actifs', () => {
+  describe('Liste patients actifs', () => {
     it('affiche le nom du patient', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1', 'Alice', 'Martin')] });
       renderPatients();
@@ -215,15 +199,15 @@ describe('PatientsScreen', () => {
       setupDefaultMocks();
       renderPatients();
       await waitFor(() =>
-        expect(screen.getByText('Aucun patient actif pour le moment.')).toBeInTheDocument()
+        expect(screen.getByText('Aucun patient pour le moment.')).toBeInTheDocument()
       );
     });
 
-    it('bouton "Voir le dossier" par patient', async () => {
+    it('bouton "Ouvrir" par patient', async () => {
       setupDefaultMocks({ activePatients: [makeActiveMember('1')] });
       renderPatients();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /voir le dossier/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^ouvrir$/i })).toBeInTheDocument()
       );
     });
   });
@@ -241,7 +225,7 @@ describe('PatientsScreen', () => {
     it('filtre sur le prénom (insensible à la casse)', async () => {
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'ALICE');
+      await userEvent.type(screen.getByPlaceholderText(/Rechercher par nom ou email/i), 'ALICE');
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument();
     });
@@ -249,7 +233,7 @@ describe('PatientsScreen', () => {
     it('filtre sur le nom', async () => {
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'durand');
+      await userEvent.type(screen.getByPlaceholderText(/Rechercher par nom ou email/i), 'durand');
       expect(screen.getByText('Bob Durand')).toBeInTheDocument();
       expect(screen.queryByText('Alice Martin')).not.toBeInTheDocument();
     });
@@ -257,7 +241,7 @@ describe('PatientsScreen', () => {
     it('filtre sur l\'email', async () => {
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'alice@');
+      await userEvent.type(screen.getByPlaceholderText(/Rechercher par nom ou email/i), 'alice@');
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
       expect(screen.queryByText('Bob Durand')).not.toBeInTheDocument();
     });
@@ -265,14 +249,14 @@ describe('PatientsScreen', () => {
     it('"Aucun résultat" si aucune correspondance', async () => {
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      await userEvent.type(screen.getByPlaceholderText(/rechercher un patient/i), 'zzzzz');
-      expect(screen.getByText('Aucun résultat.')).toBeInTheDocument();
+      await userEvent.type(screen.getByPlaceholderText(/Rechercher par nom ou email/i), 'zzzzz');
+      expect(screen.getByText('Aucun résultat pour cette recherche.')).toBeInTheDocument();
     });
 
     it('restaure tout après avoir vidé le champ', async () => {
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      const searchInput = screen.getByPlaceholderText(/rechercher un patient/i);
+      const searchInput = screen.getByPlaceholderText(/Rechercher par nom ou email/i);
       await userEvent.type(searchInput, 'Alice');
       await userEvent.clear(searchInput);
       expect(screen.getByText('Alice Martin')).toBeInTheDocument();
@@ -280,77 +264,53 @@ describe('PatientsScreen', () => {
     });
   });
 
-  describe('Onglet Envoyées', () => {
-    it('affiche le badge "Invitation envoyée"', async () => {
+  describe('Invitations envoyées', () => {
+    it('affiche le badge "En attente"', async () => {
       setupDefaultMocks({ pendingInvites: [makeSentInvite('inv-s1', 'invite@test.com')] });
       renderPatients();
-      await waitFor(() => screen.getByRole('button', { name: /envoyées/i }));
-      fireEvent.click(screen.getByRole('button', { name: /envoyées/i }));
-      await waitFor(() =>
-        expect(screen.getByText('Invitation envoyée')).toBeInTheDocument()
-      );
-    });
-
-    it('affiche "En attente de la réponse du patient"', async () => {
-      setupDefaultMocks({ pendingInvites: [makeSentInvite()] });
-      renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /envoyées/i }));
-      await waitFor(() =>
-        expect(screen.getByText('En attente de la réponse du patient')).toBeInTheDocument()
-      );
-    });
-
-    it('message si aucune invitation envoyée', async () => {
-      setupDefaultMocks();
-      renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /envoyées/i }));
-      await waitFor(() =>
-        expect(screen.getByText('Aucune invitation envoyée en attente.')).toBeInTheDocument()
-      );
+      await pickStatusFilter(/invitations envoyées/i);
+      await waitFor(() => expect(screen.getByText('En attente')).toBeInTheDocument());
     });
 
     it('affiche l\'email de l\'invitation', async () => {
       setupDefaultMocks({ pendingInvites: [makeSentInvite('inv-s1', 'nouveau@test.com')] });
       renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /invitations envoyées/i }));
+      await pickStatusFilter(/invitations envoyées/i);
       await waitFor(() =>
         expect(screen.getAllByText('nouveau@test.com').length).toBeGreaterThanOrEqual(1)
       );
     });
   });
 
-  describe('Onglet Reçues', () => {
+  describe('Demandes reçues', () => {
     it('affiche le nom du patient', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1', 'Bob', 'Durand')] });
       renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() => expect(screen.getByText('Bob Durand')).toBeInTheDocument());
     });
 
-    it('bouton "Accepter la demande" présent', async () => {
+    it('bouton "Accepter" présent', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite()] });
       renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /accepter la demande/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^accepter$/i })).toBeInTheDocument()
       );
     });
 
-    it('message si aucune demande reçue', async () => {
-      setupDefaultMocks();
+    it('message si filtre reçues vide', async () => {
+      setupDefaultMocks({ activePatients: [makeActiveMember('1')] });
       renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
+      await pickStatusFilter(/demandes reçues/i);
       await waitFor(() =>
-        expect(screen.getByText('Aucune demande reçue.')).toBeInTheDocument()
+        expect(screen.getByText('Aucun patient pour le moment.')).toBeInTheDocument()
       );
     });
 
     it('POST /accept-invitation au clic', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
       renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
-      await waitFor(() => screen.getByRole('button', { name: /accepter la demande/i }));
-      fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^accepter$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^accepter$/i }));
       await waitFor(() =>
         expect(mockPost).toHaveBeenCalledWith('/doctors/care-team/accept-invitation/', {
           id_team_member: 'inv-r1',
@@ -361,19 +321,17 @@ describe('PatientsScreen', () => {
     it('toastSuccess après acceptation', async () => {
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
       renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
-      await waitFor(() => screen.getByRole('button', { name: /accepter la demande/i }));
-      fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^accepter$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^accepter$/i }));
       await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     });
 
     it('toastError si acceptation échoue', async () => {
-      mockPost.mockRejectedValue({ response: { data: { error: 'Déjà membre' } } });
+      mockPost.mockRejectedValue(new Error('Déjà membre'));
       setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
       renderPatients();
-      fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
-      await waitFor(() => screen.getByRole('button', { name: /accepter la demande/i }));
-      fireEvent.click(screen.getByRole('button', { name: /accepter la demande/i }));
+      await waitFor(() => screen.getByRole('button', { name: /^accepter$/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^accepter$/i }));
       await waitFor(() =>
         expect(toastError).toHaveBeenCalledWith('Erreur', 'Déjà membre')
       );
@@ -382,24 +340,22 @@ describe('PatientsScreen', () => {
     describe('Refus d\'une demande', () => {
       async function goToReceived() {
         renderPatients();
-        fireEvent.click(await screen.findByRole('button', { name: /reçues/i }));
         await waitFor(() => screen.getByRole('button', { name: /^refuser$/i }));
       }
 
-      it('bouton "Refuser" présent à côté de "Accepter la demande"', async () => {
+      it('bouton "Refuser" présent à côté de "Accepter"', async () => {
         setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
         await goToReceived();
         expect(screen.getByRole('button', { name: /^refuser$/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /accepter la demande/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^accepter$/i })).toBeInTheDocument();
       });
 
-      it('clic "Refuser" affiche la confirmation et masque les boutons initiaux', async () => {
+      it('clic "Refuser" affiche la confirmation', async () => {
         setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
         await goToReceived();
         fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
-        expect(screen.getByRole('alertdialog', { name: /confirmer le refus/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /refuser la demande/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /confirmer le refus/i })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /accepter la demande/i })).not.toBeInTheDocument();
       });
 
       it('"Annuler" referme la confirmation sans POST', async () => {
@@ -407,8 +363,7 @@ describe('PatientsScreen', () => {
         await goToReceived();
         fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
         fireEvent.click(screen.getByRole('button', { name: /^annuler$/i }));
-        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /accepter la demande/i })).toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: /refuser la demande/i })).not.toBeInTheDocument();
         expect(mockPost).not.toHaveBeenCalledWith(
           '/doctors/care-team/decline-invitation/',
           expect.anything()
@@ -440,22 +395,8 @@ describe('PatientsScreen', () => {
         );
       });
 
-      it('404 → message "Bientôt disponible" (route backend non encore activée)', async () => {
-        mockPost.mockRejectedValueOnce({ response: { status: 404, data: {} } });
-        setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
-        await goToReceived();
-        fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
-        fireEvent.click(screen.getByRole('button', { name: /confirmer le refus/i }));
-        await waitFor(() =>
-          expect(toastError).toHaveBeenCalledWith(
-            'Bientôt disponible',
-            expect.stringMatching(/n'est pas encore activé/i)
-          )
-        );
-      });
-
-      it('autre erreur → toastError standard', async () => {
-        mockPost.mockRejectedValueOnce({ response: { status: 500, data: { error: 'Boom' } } });
+      it('erreur → toastError standard', async () => {
+        mockPost.mockRejectedValueOnce(new Error('Boom'));
         setupDefaultMocks({ pendingInvites: [makeReceivedInvite('inv-r1')] });
         await goToReceived();
         fireEvent.click(screen.getByRole('button', { name: /^refuser$/i }));
@@ -557,13 +498,13 @@ describe('PatientsScreen', () => {
     async function openDossier() {
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^ouvrir$/i }));
       await waitFor(() =>
         expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
       );
     }
 
-    it('s\'ouvre au clic "Voir le dossier"', async () => {
+    it('s\'ouvre au clic "Ouvrir"', async () => {
       await openDossier();
       expect(screen.getAllByText('Alice Martin').length).toBeGreaterThanOrEqual(1);
     });
@@ -592,7 +533,7 @@ describe('PatientsScreen', () => {
 
     it('affiche la glycémie actuelle', async () => {
       await openDossier();
-      expect(screen.getByText('170')).toBeInTheDocument();
+      expect(screen.getAllByText('170').length).toBeGreaterThanOrEqual(1);
     });
 
     it('affiche "Aucune alerte active" si pas d\'alerte', async () => {
@@ -647,7 +588,7 @@ describe('PatientsScreen', () => {
     async function openGlycemiaTab() {
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^ouvrir$/i }));
       await waitFor(() =>
         expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
       );
@@ -724,7 +665,7 @@ describe('PatientsScreen', () => {
       });
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^ouvrir$/i }));
       await waitFor(() =>
         expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
       );
@@ -741,7 +682,7 @@ describe('PatientsScreen', () => {
       });
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^ouvrir$/i }));
       await waitFor(() =>
         expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
       );
@@ -757,7 +698,7 @@ describe('PatientsScreen', () => {
       });
       renderPatients();
       await waitFor(() => screen.getByText('Alice Martin'));
-      fireEvent.click(screen.getByRole('button', { name: /voir le dossier/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^ouvrir$/i }));
       await waitFor(() =>
         expect(screen.queryByText('Chargement des données…')).not.toBeInTheDocument()
       );
