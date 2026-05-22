@@ -31,6 +31,18 @@ on:
         description: '4. Compiler App Mobile (Expo EAS)'
         type: boolean
         default: false
+      terraform_common:
+        description: '5. Terraform socle commun: plan/apply infra/terraform'
+        type: boolean
+        default: false
+      terraform_common_apply:
+        description: '5b. Appliquer le plan Terraform socle commun'
+        type: boolean
+        default: false
+      terraform_common_enable_rds:
+        description: '5c. Inclure RDS dans le socle commun'
+        type: boolean
+        default: false
 
 env:
   AWS_REGION: eu-west-3
@@ -42,6 +54,42 @@ env:
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
 
 jobs:
+  terraform-common:
+    name: Terraform Common Foundation
+    if: ${{ inputs.terraform_common || inputs.terraform_common_apply }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+
+      - name: Terraform init
+        working-directory: infra/terraform
+        run: terraform init
+
+      - name: Terraform validate
+        working-directory: infra/terraform
+        run: terraform validate
+
+      - name: Terraform plan
+        working-directory: infra/terraform
+        run: terraform plan -var="enable_rds=${{ inputs.terraform_common_enable_rds }}" -out=tfplan
+
+      - name: Terraform apply
+        if: ${{ inputs.terraform_common_apply }}
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve tfplan
+
   db-migrate-plan-a:
     name: Run DB Migrations (EC2)
     if: ${{ inputs.deploy_db_migrations }}
@@ -186,43 +234,15 @@ jobs:
             docker image prune -f
 
   deploy-plan-b:
-    name: Deploy Plan B (Enterprise)
+    name: Deploy Plan B (disabled)
     if: ${{ inputs.deploy_plan_b }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build & Push Backend
+      - name: Stop legacy Plan B deployment
         run: |
-          cd backend
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-backend:latest
-
-      - name: Build & Push AI Service
-        run: |
-          cd ai_service
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest .
-          docker push ${{ steps.login-ecr.outputs.registry }}/glycopilot-ai-service:latest
-
-      - name: Setup Terraform & Apply
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ">= 1.5.0"
-      - run: |
-          cd infra/terraform-plan-b
-          terraform init
-          terraform apply -auto-approve
+          echo "Plan B legacy deployment is intentionally disabled."
+          echo "Use the Terraform Common Foundation job for infra/terraform."
+          exit 1
 
   deploy-front-web:
     name: Deploy Frontend Web

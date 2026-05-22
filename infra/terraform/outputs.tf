@@ -23,6 +23,11 @@ output "common_public_subnet_id" {
   value       = aws_subnet.public_subnet.id
 }
 
+output "common_private_db_subnet_ids" {
+  description = "Subnets privés réservés à RDS et aux futures dépendances privées."
+  value       = [aws_subnet.private_db_1.id, aws_subnet.private_db_2.id]
+}
+
 output "common_public_route_table_id" {
   description = "Route table publique du socle commun."
   value       = aws_route_table.public_rt.id
@@ -41,4 +46,35 @@ output "common_ec2_instance_id" {
 output "ssh_connection_string" {
   description = "Commande pour se connecter au serveur en SSH (avec clé projet)"
   value       = "ssh -i infra/ssh/glycopilot_deploy_key ubuntu@${aws_eip.web_eip.public_ip}"
+}
+
+output "rds_endpoint" {
+  description = "Endpoint RDS PostgreSQL. Null tant que enable_rds=false."
+  value       = var.enable_rds ? aws_db_instance.postgres[0].endpoint : null
+}
+
+output "rds_address" {
+  description = "Adresse DNS RDS sans le port. Null tant que enable_rds=false."
+  value       = var.enable_rds ? aws_db_instance.postgres[0].address : null
+}
+
+output "rds_database_name" {
+  description = "Nom de la base RDS initiale. Null tant que enable_rds=false."
+  value       = var.enable_rds ? aws_db_instance.postgres[0].db_name : null
+}
+
+output "rds_master_username" {
+  description = "Utilisateur master RDS. Null tant que enable_rds=false."
+  value       = var.enable_rds ? aws_db_instance.postgres[0].username : null
+}
+
+output "rds_security_group_id" {
+  description = "Security group RDS autorisant PostgreSQL depuis l'EC2. Null tant que enable_rds=false."
+  value       = var.enable_rds ? aws_security_group.rds[0].id : null
+}
+
+output "rds_master_user_secret_arn" {
+  description = "ARN du secret AWS-managed contenant le mot de passe master RDS. Null tant que enable_rds=false."
+  value       = var.enable_rds ? aws_db_instance.postgres[0].master_user_secret[0].secret_arn : null
+  sensitive   = true
 }
