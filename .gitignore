@@ -83,6 +83,10 @@ ai_service/artifacts/patients/
 *.tfstate
 *.tfstate.*
 
+# Terraform plans can contain sensitive values from variables and provider data
+*.tfplan
+*.tfplan.json
+
 # Crash log files
 crash.log
 crash.*.log

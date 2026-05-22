@@ -7,6 +7,10 @@ locals {
     var.plan_plus_ai_internal_token_value_from,
   ])
 
+  plan_plus_secret_policy_resources = distinct([
+    for ref in local.plan_plus_secret_refs : join(":", slice(split(":", ref), 0, 7))
+  ])
+
   plan_plus_tags = {
     Environment = "PLAN_PLUS"
   }
@@ -272,7 +276,7 @@ resource "aws_iam_role_policy" "plan_plus_secret_read" {
       {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
-        Resource = local.plan_plus_secret_refs
+        Resource = local.plan_plus_secret_policy_resources
       }
     ]
   })
