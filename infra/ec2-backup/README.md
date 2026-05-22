@@ -9,6 +9,10 @@ Le script lit :
 - `backend/.env.prod` pour `DB_NAME`, `DB_USER`, `DB_PASSWORD` ou les variables
   `POSTGRES_*`.
 
+Si `backend/.env.prod` contient plusieurs fois une variable `DB_*`, la dernière
+valeur gagne, comme au runtime Django. Quand `DB_HOST` pointe hors du conteneur
+`database_aws`, le script force `PGSSLMODE=require` pour RDS.
+
 Il n'affiche jamais le mot de passe.
 
 ## Installation manuelle
