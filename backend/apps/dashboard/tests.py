@@ -4,6 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from apps.medications.models import UserMedication
 from apps.users.models import AuthAccount
 
 from .models import UserWidget, UserWidgetLayout, WidgetSize
@@ -107,6 +108,23 @@ class DashboardSummaryAPITest(APITestCase):
         response = self.client.get(url, {"include[]": ["nutrition"]})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_get_summary_with_manual_medication_without_reference(self):
+        UserMedication.objects.create(
+            user=self.user,
+            custom_name="Traitement manuel",
+            start_date="2026-05-22",
+            statut=True,
+        )
+
+        url = reverse("dashboard-summary")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["medication"]["nextDose"]["name"],
+            "Traitement manuel",
+        )
+
 
 class DashboardWidgetsAPITest(APITestCase):
     def setUp(self):
@@ -137,6 +155,14 @@ class DashboardWidgetLayoutAPITest(APITestCase):
             email="test@example.com", password="testpass123"
         )
         self.client.force_authenticate(user=self.user)
+
+    def test_get_layout_default(self):
+        url = reverse("dashboard-widgets-layout")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("layout", response.data)
+        self.assertTrue(len(response.data["layout"]) > 0)
 
     def test_update_layout_valid(self):
         url = reverse("dashboard-widgets-layout")

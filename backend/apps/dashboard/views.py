@@ -128,8 +128,9 @@ class DashboardSummaryView(APIView):
         }
 
         if next_dose:
+            medication_name = next_dose.display_name
             result["nextDose"] = {
-                "name": next_dose.medication.name,
+                "name": medication_name or "Traitement",
                 "scheduledAt": timezone.now(),
                 "status": "pending",
             }
@@ -233,6 +234,36 @@ class DashboardWidgetLayoutView(APIView):
     """
 
     permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        layouts = UserWidgetLayout.objects.filter(user=user).order_by("column", "row")
+
+        response_layout = [
+            {
+                "widgetId": item.widget_id,
+                "column": item.column,
+                "row": item.row,
+                "size": item.size,
+                "pinned": item.pinned,
+            }
+            for item in layouts
+        ]
+
+        if not response_layout:
+            for index, widget_id in enumerate(WidgetCatalog.get_default_widgets()):
+                widget_def = WidgetCatalog.get_widget(widget_id)
+                response_layout.append(
+                    {
+                        "widgetId": widget_id,
+                        "column": index % 2,
+                        "row": index // 2,
+                        "size": widget_def.default_size if widget_def else "compact",
+                        "pinned": False,
+                    }
+                )
+
+        return Response({"layout": response_layout})
 
     def patch(self, request):
         user = request.user
