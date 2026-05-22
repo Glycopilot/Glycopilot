@@ -125,6 +125,7 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             "rejection_reason",
             "approved_by",
             "invitation_from",
+            "created_at",
         ]
 
 
