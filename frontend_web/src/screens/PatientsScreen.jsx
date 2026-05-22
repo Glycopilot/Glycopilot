@@ -1,13 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import AppIcon from '../components/AppIcon';
+import { dedupeDoctorTeamLists } from '../lib/careTeamInvites';
 import { UiChevronRight, UiClose } from '../components/UiIcon';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
-import Sidebar from '../components/Sidebar';
-import { getInitials, extractValue, toArr, hba1cBand } from '../lib/utils';
+import DoctorDashboardHeader from '../components/DoctorDashboardHeader';
+import { getInitials, extractValue, toArr, hba1cBand, parseDashboardGlucose } from '../lib/utils';
+
 import './css/patients.css';
 
 const apiClient = authService.getApiClient();
+
+function healthScoreOf(dash) {
+  const raw = extractValue(dash?.healthScore) ?? dash?.healthScore;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
 
 function formatNextDose(nextDose) {
   if (!nextDose) return null;
@@ -475,12 +485,13 @@ function PatientDashboardModal({ member, onClose }) {
   const glycValues = glycemia.map(g => parseFloat(g.value)).filter(v => !isNaN(v));
   const glycAvg    = glycValues.length ? (glycValues.reduce((a, b) => a + b, 0) / glycValues.length).toFixed(2) : null;
 
+  const glucoseParsed = parseDashboardGlucose(dashboard?.glucose);
   const dash = dashboard ? {
     healthScore: extractValue(dashboard.healthScore) ?? dashboard.healthScore ?? 0,
     alerts:      dashboard.alerts ?? [],
-    glucose:     extractValue(dashboard.glucose),
-    glucoseUnit: typeof dashboard.glucose === 'object' ? (dashboard.glucose?.unit ?? 'mg/dL') : 'mg/dL',
-    glucoseDate: typeof dashboard.glucose === 'object' ? dashboard.glucose?.recordedAt : null,
+    glucose:     glucoseParsed.value,
+    glucoseUnit: glucoseParsed.unit,
+    glucoseDate: glucoseParsed.recordedAt,
     nutrition: {
       calories: {
         consumed: extractValue(dashboard.nutrition?.calories?.consumed ?? dashboard.nutrition?.calories),
@@ -1028,15 +1039,14 @@ function SentInviteCard({ invite }) {
   );
 }
 
-/** Invitation reçue par le médecin → il peut l'accepter */
 function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
   const p = invite.patient_details;
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
-  const [confirmingDecline, setConfirmingDecline] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
 
   const handleAccept = async (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setAccepting(true);
     try {
       await apiClient.post('/doctors/care-team/accept-invitation/', {
@@ -1053,7 +1063,7 @@ function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
   };
 
   const handleDecline = async (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setDeclining(true);
     try {
       await apiClient.post('/doctors/care-team/decline-invitation/', {
@@ -1071,88 +1081,369 @@ function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
       }
     } finally {
       setDeclining(false);
-      setConfirmingDecline(false);
+      setShowDeclineModal(false);
     }
   };
 
   return (
-    <div className="patient-card invite-card invite-received">
-      <div className="invite-received-banner">
-        <AppIcon name="inbox" size={13} /> Demande reçue d'un patient
-      </div>
-      <div className="card-top" style={{ marginTop: 12 }}>
-        <div className="patient-avatar invite-avatar-received">
-          {getInitials(p?.first_name, p?.last_name)}
-        </div>
-        <div className="patient-meta">
-          <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : '—'}</h3>
-          <span className="status-badge badge-received">Souhaite que vous deveniez son médecin référent</span>
-        </div>
-      </div>
-      <div className="card-body" style={{ marginTop: 12 }}>
-        {p?.email && <div className="info-row"><AppIcon name="mail" size={14} /><span>{p.email}</span></div>}
-        {p?.phone_number && <div className="info-row"><AppIcon name="phone" size={14} /><span>{p.phone_number}</span></div>}
-      </div>
-
-      {confirmingDecline ? (
-        <div className="invite-decline-confirm" role="alertdialog" aria-label="Confirmer le refus">
-          <p className="invite-decline-msg">
-            <AppIcon name="user-x" size={14} /> Refuser cette demande ? Le patient ne pourra plus vous solliciter
-            tant qu'il n'envoie pas une nouvelle invitation.
-          </p>
-          <div className="invite-decline-actions">
-            <button
-              className="card-btn-cancel"
-              onClick={(e) => { e.stopPropagation(); setConfirmingDecline(false); }}
-              disabled={declining}
-            >
-              Annuler
-            </button>
-            <button className="card-btn-decline-confirm" onClick={handleDecline} disabled={declining}>
-              {declining
-                ? <><span className="mini-spinner-sm" /> Refus en cours…</>
-                : <><AppIcon name="user-x" size={14} /> Confirmer le refus</>}
-            </button>
+    <>
+      <div className="patient-card invite-card">
+        <div className="invite-badge-top">Demande reçue</div>
+        <div className="card-top" style={{ marginTop: 8 }}>
+          <div className="patient-avatar" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+            {getInitials(p?.first_name, p?.last_name)}
+          </div>
+          <div className="patient-meta">
+            <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : '—'}</h3>
+            <span className="status-badge" style={{ background: '#F1F5F9', color: '#64748B' }}>Souhaite que vous deveniez son médecin</span>
           </div>
         </div>
-      ) : (
+        <div className="card-body" style={{ marginTop: 12 }}>
+          {p?.email && <div className="info-row"><AppIcon name="mail" size={14} /><span>{p.email}</span></div>}
+          {p?.phone_number && <div className="info-row"><AppIcon name="phone" size={14} /><span>{p.phone_number}</span></div>}
+        </div>
+
         <div className="card-footer card-footer-split">
           <button
             className="card-btn-decline"
-            onClick={(e) => { e.stopPropagation(); setConfirmingDecline(true); }}
+            onClick={(e) => { e.stopPropagation(); setShowDeclineModal(true); }}
             disabled={accepting}
           >
-            <AppIcon name="user-x" size={14} /> Refuser
+            Refuser
           </button>
           <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
             {accepting
-              ? <><span className="mini-spinner-sm" /> Acceptation…</>
-              : <><AppIcon name="user-check" size={14} /> Accepter la demande</>}
+              ? <><span className="mini-spinner-sm" /> En cours…</>
+              : 'Accepter la demande'}
           </button>
         </div>
+      </div>
+
+      {showDeclineModal && (
+        <div className="modal-overlay" onClick={() => setShowDeclineModal(false)}>
+          <div className="modal-box modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-row">
+                <div className="modal-icon-wrap modal-icon-neutral"><AppIcon name="user-x" size={20} /></div>
+                <div>
+                  <h2>Refuser la demande</h2>
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => setShowDeclineModal(false)}><AppIcon name="x" size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ fontSize: 14, color: 'var(--muted)' }}>
+              <p>Êtes-vous sûr de vouloir refuser la demande de <strong>{p?.first_name} {p?.last_name}</strong> ?</p>
+              <p style={{ marginTop: 8 }}>Le patient ne pourra plus vous solliciter tant qu'il n'envoie pas une nouvelle invitation.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="mbt-secondary" onClick={() => setShowDeclineModal(false)} disabled={declining}>Annuler</button>
+              <button type="button" className="mbt-primary mbt-danger" onClick={handleDecline} disabled={declining}>
+                {declining ? <><span className="mini-spinner" /> Refus…</> : 'Confirmer le refus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function PatientTableRow({ member, type, dashboard, onClick, onAccepted, onDeclined }) {
+  const p = member.patient_details ?? {};
+
+  const score = type === 'active' ? healthScoreOf(dashboard) : null;
+  const { value: glucoseVal, unit: glucoseUnit } = parseDashboardGlucose(dashboard?.glucose);
+
+
+  const [accepting, setAccepting] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+
+  const handleAccept = async (e) => {
+    if (e) e.stopPropagation();
+    setAccepting(true);
+    try {
+      await authService.getApiClient().post('/doctors/care-team/accept-invitation/', {
+        id_team_member: member.id_team_member,
+      });
+      toastSuccess('Demande validée', `${p?.first_name ?? ''} ${p?.last_name ?? ''} a rejoint votre équipe`);
+      onAccepted?.();
+    } catch (err) {
+      toastError('Erreur', err.message);
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  const handleDecline = async (e) => {
+    if (e) e.stopPropagation();
+    setDeclining(true);
+    try {
+      await authService.getApiClient().post('/doctors/care-team/decline-invitation/', {
+        id_team_member: member.id_team_member,
+      });
+      toastSuccess('Demande refusée', `La demande de ${p?.first_name ?? ''} ${p?.last_name ?? ''} a été refusée`);
+      onDeclined?.();
+    } catch (err) {
+      toastError('Erreur', err.message);
+    } finally {
+      setDeclining(false);
+      setShowDeclineModal(false);
+    }
+  };
+
+  return (
+    <>
+      <tr className={`patient-tr pt-row-${type}`} onClick={type === 'active' ? onClick : undefined} style={{ cursor: type === 'active' ? 'pointer' : 'default' }}>
+        <td>
+          <div className="pt-name-cell">
+            <div className={`patient-avatar pt-avatar pt-av-${type}`}>
+              {type === 'sent' ? <AppIcon name="send" size={16} /> : getInitials(p.first_name, p.last_name)}
+            </div>
+            <div>
+              <div className="pt-name">
+                {type === 'sent' && !p?.first_name ? (member.invitation_email || '—') : `${p?.first_name || ''} ${p?.last_name || ''}`.trim() || '—'}
+              </div>
+              <div className="pt-email">{p.email || '—'}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          {type === 'active' ? (
+            <span className="tb-status-badge tb-active">Actif</span>
+          ) : type === 'sent' ? (
+            <span className="tb-status-badge tb-sent">En attente</span>
+          ) : (
+            <span className="tb-status-badge tb-pending">À valider</span>
+          )}
+        </td>
+        <td>
+          {type === 'active' && score != null ? (
+            <span className="pt-score-text">{score}/100</span>
+          ) : <span className="pt-muted">—</span>}
+        </td>
+        <td>
+          {type === 'active' && glucoseVal != null ? (
+            <div className="pt-glucose">
+               <span className="pt-glucose-val">{glucoseVal}</span>
+               <span className="pt-glucose-unit">{glucoseUnit}</span>
+            </div>
+          ) : <span className="pt-muted">—</span>}
+        </td>
+        <td>
+          <div className="pt-actions-col">
+            {type === 'active' && (
+              <button className="pt-action-btn" onClick={(e) => { e.stopPropagation(); onClick(); }}>
+                <AppIcon name="eye" size={14} /> Ouvrir
+              </button>
+            )}
+            {type === 'sent' && (
+              <span className="pt-muted">—</span>
+            )}
+            {type === 'received' && (
+              <div className="pt-actions-row">
+                <button type="button" className="pt-btn-accept" onClick={handleAccept} disabled={accepting || declining}>
+                  {accepting ? '…' : <><AppIcon name="check" size={14} /> Accepter</>}
+                </button>
+                <button type="button" className="pt-btn-decline" onClick={(e) => { e.stopPropagation(); setShowDeclineModal(true); }} disabled={declining}>
+                  <AppIcon name="x" size={14} /> Refuser
+                </button>
+              </div>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {showDeclineModal && createPortal(
+        <div className="modal-overlay" onClick={() => setShowDeclineModal(false)}>
+          <div className="modal-box modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-row">
+                <div className="modal-icon-wrap modal-icon-neutral"><AppIcon name="user-x" size={20} /></div>
+                <div>
+                  <h2>Refuser la demande</h2>
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => setShowDeclineModal(false)}><AppIcon name="x" size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ fontSize: 14, color: 'var(--muted)' }}>
+              <p>Êtes-vous sûr de vouloir refuser la demande de <strong>{p?.first_name} {p?.last_name}</strong> ?</p>
+            </div>
+            <div className="modal-footer">
+              <button className="mbt-secondary" onClick={() => setShowDeclineModal(false)} disabled={declining}>Annuler</button>
+              <button type="button" className="mbt-primary mbt-danger" onClick={handleDecline} disabled={declining}>
+                {declining ? 'Refus…' : 'Confirmer le refus'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function PatientsDataTable({ rows, dashboards, onOpenPatient, onAccepted, onDeclined }) {
+  if (!rows.length) return null;
+
+  return (
+    <div className="patients-table-wrap">
+      <table className="patients-table">
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Statut</th>
+            <th>Score santé</th>
+            <th>Dernière glycémie</th>
+            <th className="th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((m) => (
+            <PatientTableRow
+              key={m.id_team_member}
+              member={m}
+              type={m._type}
+              dashboard={dashboards[m.patient_details?.id_user]}
+              onClick={() => onOpenPatient(m)}
+              onAccepted={onAccepted}
+              onDeclined={onDeclined}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PatientsStatusFilter({ value, onChange, receivedCount }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  const options = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'active', label: 'Actifs' },
+    {
+      value: 'received',
+      label: receivedCount > 0 ? `Demandes reçues (${receivedCount})` : 'Demandes reçues',
+    },
+    { value: 'sent', label: 'Invitations envoyées' },
+  ];
+
+  const selected = options.find((o) => o.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const close = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [isOpen]);
+
+  return (
+    <div className="patients-status-filter" ref={rootRef}>
+      <button
+        type="button"
+        className={`patients-filter-trigger ${isOpen ? 'is-open' : ''}`}
+        onClick={() => setIsOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label="Filtrer par statut"
+      >
+        <span className="patients-filter-value">{selected.label}</span>
+        <AppIcon name="chevron" size={14} className={`patients-filter-chevron ${isOpen ? 'open' : ''}`} />
+      </button>
+      {isOpen && (
+        <ul className="patients-filter-dropdown" role="listbox" aria-label="Statuts">
+          {options.map((opt) => (
+            <li key={opt.value} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={opt.value === value}
+                className={`patients-filter-option ${opt.value === value ? 'selected' : ''}`}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
 }
 
-export default function PatientsScreen({ navigation }) {
+function filterMembers(members, roleFilter, searchQuery) {
+  let list = members;
+  if (roleFilter !== 'all') {
+    list = list.filter((m) => m._type === roleFilter);
+  }
+  const q = searchQuery.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter((m) => {
+    const p = m.patient_details ?? {};
+    return (
+      p.first_name?.toLowerCase().includes(q) ||
+      p.last_name?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) ||
+      m.invitation_email?.toLowerCase().includes(q)
+    );
+  });
+}
+
+export default function PatientsScreen() {
+  const { navigation } = useOutletContext();
+  const [searchParams] = useSearchParams();
   const [data,           setData]           = useState({ active_patients: [], pending_invites: [] });
   const [loading,        setLoading]        = useState(true);
+  const [refreshing,     setRefreshing]     = useState(false);
   const [error,          setError]          = useState(null);
   const [search,         setSearch]         = useState('');
-  const [tab,            setTab]            = useState('active');
+  const [roleFilter,     setRoleFilter]     = useState('all');
   const [showAddModal,   setShowAddModal]   = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [dashboards,     setDashboards]     = useState({});
 
-  const fetchTeam = useCallback(async () => {
+  const fetchTeam = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    setError(null);
     try {
       const res = await apiClient.get('/doctors/care-team/my-team/');
-      setData(res.data);
+      const teamData = res.data ?? {};
+      const pending = teamData.pending_invites ?? [];
+      const active = teamData.active_patients ?? [];
+      setData({ ...teamData, pending_invites: pending, active_patients: active });
+
+      const activeIds = active
+        .map(m => m.patient_details?.id_user)
+        .filter(Boolean);
+      if (activeIds.length > 0) {
+        const dashPromises = activeIds.map(pid =>
+          apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${pid}`)
+            .then(r => ({ pid, data: r.data }))
+            .catch(() => ({ pid, data: null }))
+        );
+        const results = await Promise.all(dashPromises);
+        const dashMap = {};
+        results.forEach(r => {
+          if (r.data) dashMap[r.pid] = r.data;
+        });
+        setDashboards(dashMap);
+      } else {
+        setDashboards({});
+      }
     } catch (err) {
       setError('Impossible de charger la liste des patients.');
       toastError('Erreur', err.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -1164,107 +1455,143 @@ export default function PatientsScreen({ navigation }) {
     fetchTeam();
   };
 
-  const filtered = data.active_patients.filter(m => {
-    const p = m.patient_details;
-    const q = search.toLowerCase();
-    return (
-      p.first_name?.toLowerCase().includes(q) ||
-      p.last_name?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q)
-    );
-  });
+  const team = dedupeDoctorTeamLists(data);
+  const receivedCount = team.receivedInvites.length;
+  const activeCount = team.activePatients.length;
+  const sentCount = team.sentInvites.length;
 
-  const sentInvites     = data.pending_invites.filter(inv => inv.approved_by !== null);
-  const receivedInvites = data.pending_invites.filter(inv => inv.approved_by === null);
+  const refreshAfterInviteAction = () => fetchTeam({ silent: true });
 
-  const activeCount    = data.active_patients.length;
-  const sentCount      = sentInvites.length;
-  const receivedCount  = receivedInvites.length;
+  const pendingRows = filterMembers(
+    team.receivedInvites.map((m) => ({ ...m, _type: 'received' })),
+    roleFilter,
+    search
+  );
+  const activeRows = filterMembers(
+    team.activePatients.map((m) => ({ ...m, _type: 'active' })),
+    roleFilter,
+    search
+  );
+  const sentRows = filterMembers(
+    team.sentInvites.map((m) => ({ ...m, _type: 'sent' })),
+    roleFilter,
+    search
+  );
+  const rosterRows = [...activeRows, ...sentRows];
+  const showPendingSection = roleFilter === 'all' || roleFilter === 'received';
+  const showRosterSection = roleFilter === 'all' || roleFilter === 'active' || roleFilter === 'sent';
+  const hasAnyRow = pendingRows.length + rosterRows.length > 0;
 
   return (
-    <div className="patients-root">
-      <Sidebar activePage="patients" navigation={navigation} />
+    <main className="patients-main dash-main">
+        <DoctorDashboardHeader
+          title="Mes patients"
+          subtitle="Gérez votre équipe de soins, les invitations et les dossiers patients."
+          actions={(
+            <button type="button" className="dash-btn-primary" onClick={() => setShowAddModal(true)}>
+              <AppIcon name="user-plus" size={16} /> Ajouter un patient
+            </button>
+          )}
+        />
 
-      <main className="patients-main">
-        <header className="patients-header">
-          <div>
-            <h1>Mes patients</h1>
-            <p>Gérez votre équipe de soins et suivez vos patients</p>
+        <div className="dash-content">
+        <div className="patients-stats">
+          <div className="patients-stat">
+            <span className="patients-stat-value">{activeCount}</span>
+            <span className="patients-stat-label">Patients actifs</span>
           </div>
-          <button className="add-btn" onClick={() => setShowAddModal(true)}>
-            <AppIcon name="user-plus" size={16} /> Ajouter un patient
-          </button>
-        </header>
+          <div className="patients-stat">
+            <span className="patients-stat-value">{receivedCount}</span>
+            <span className="patients-stat-label">Demandes à traiter</span>
+          </div>
+          <div className="patients-stat">
+            <span className="patients-stat-value">{sentCount}</span>
+            <span className="patients-stat-label">Invitations envoyées</span>
+          </div>
+        </div>
 
-        <div className="toolbar">
-          <div className="tabs">
-            <button className={`tab ${tab === 'active'   ? 'tab-active' : ''}`} onClick={() => setTab('active')}>
-              Mes patients <span className="tab-count">{activeCount}</span>
-            </button>
-            <button className={`tab ${tab === 'sent'     ? 'tab-active' : ''}`} onClick={() => setTab('sent')}>
-              Invitations envoyées <span className="tab-count">{sentCount}</span>
-            </button>
-            <button className={`tab tab-received ${tab === 'received' ? 'tab-active' : ''}`} onClick={() => setTab('received')}>
-              Demandes reçues
-              {receivedCount > 0
-                ? <span className="tab-count tab-count-received">{receivedCount}</span>
-                : <span className="tab-count">{receivedCount}</span>}
-            </button>
-          </div>
+        <div className="toolbar tb-users">
           <div className="search-wrapper">
             <AppIcon name="search" size={15} />
             <input
               type="text"
-              placeholder="Rechercher un patient…"
+              placeholder="Rechercher par nom ou email…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+          <PatientsStatusFilter
+            value={roleFilter}
+            onChange={setRoleFilter}
+            receivedCount={receivedCount}
+          />
         </div>
 
         <div className="patients-content">
           {loading && (
-            <div className="state-center"><div className="big-spinner" /><p>Chargement des patients…</p></div>
+            <div className="state-center"><div className="big-spinner" /><p>Chargement…</p></div>
           )}
           {!loading && error && (
             <div className="state-center state-error"><AppIcon name="alert-circle" size={40} /><p>{error}</p></div>
           )}
 
-          {!loading && !error && tab === 'active' && (
-            filtered.length === 0
-              ? <div className="state-center"><AppIcon name="users" size={48} /><p>{search ? 'Aucun résultat.' : 'Aucun patient actif pour le moment.'}</p></div>
-              : <div className="cards-grid">
-                  {filtered.map(m => (
-                    <PatientCard key={m.id_team_member} member={m} onClick={() => setSelectedMember(m)} />
-                  ))}
-                </div>
+          {!loading && !error && !hasAnyRow && (
+            <div className="state-center">
+              <AppIcon name="users" size={48} />
+              <p>{search ? 'Aucun résultat pour cette recherche.' : 'Aucun patient pour le moment.'}</p>
+            </div>
           )}
 
+          {!loading && !error && hasAnyRow && (
+            <>
+              {showPendingSection && pendingRows.length > 0 && (
+                <section className="patients-section patients-section-pending">
+                  <div className="patients-section-head">
+                    <h2>Demandes à traiter</h2>
+                    <span className="patients-section-badge">{pendingRows.length}</span>
+                  </div>
+                  <p className="patients-section-desc">
+                    Demandes d&apos;ajout à votre équipe de soins.
+                  </p>
+                  <PatientsDataTable
+                    rows={pendingRows}
+                    dashboards={dashboards}
+                    onOpenPatient={setSelectedMember}
+                    onAccepted={refreshAfterInviteAction}
+                    onDeclined={refreshAfterInviteAction}
+                  />
+                </section>
+              )}
 
-          {!loading && !error && tab === 'sent' && (
-            sentInvites.length === 0
-              ? <div className="state-center"><AppIcon name="users" size={48} /><p>Aucune invitation envoyée en attente.</p></div>
-              : <div className="cards-grid">
-                  {sentInvites.map(inv => <SentInviteCard key={inv.id_team_member} invite={inv} />)}
-                </div>
-          )}
+              {showRosterSection && rosterRows.length > 0 && (
+                <section className="patients-section">
+                  <div className="patients-section-head">
+                    <h2>{roleFilter === 'sent' ? 'Invitations en attente' : 'Patients suivis'}</h2>
+                    <span className="patients-section-badge patients-section-badge-muted">{rosterRows.length}</span>
+                  </div>
+                  <PatientsDataTable
+                    rows={rosterRows}
+                    dashboards={dashboards}
+                    onOpenPatient={setSelectedMember}
+                    onAccepted={refreshAfterInviteAction}
+                    onDeclined={refreshAfterInviteAction}
+                  />
+                </section>
+              )}
 
-          {!loading && !error && tab === 'received' && (
-            receivedInvites.length === 0
-              ? <div className="state-center"><AppIcon name="users" size={48} /><p>Aucune demande reçue.</p></div>
-              : <div className="cards-grid">
-                  {receivedInvites.map(inv => (
-                    <ReceivedInviteCard
-                      key={inv.id_team_member}
-                      invite={inv}
-                      onAccepted={() => { setLoading(true); fetchTeam(); }}
-                      onDeclined={() => { setLoading(true); fetchTeam(); }}
-                    />
-                  ))}
+              {showPendingSection && roleFilter === 'received' && pendingRows.length === 0 && (
+                <div className="state-center state-empty-section">
+                  <AppIcon name="inbox" size={40} />
+                  <p>Aucune demande en attente.</p>
                 </div>
+              )}
+            </>
           )}
         </div>
-      </main>
+        </div>
+      {refreshing && !loading && (
+        <div className="patients-refresh-hint" aria-live="polite">Mise à jour…</div>
+      )}
 
       {showAddModal && (
         <AddPatientModal
@@ -1278,6 +1605,6 @@ export default function PatientsScreen({ navigation }) {
           onClose={() => setSelectedMember(null)}
         />
       )}
-    </div>
+    </main>
   );
 }
