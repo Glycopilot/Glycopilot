@@ -80,6 +80,22 @@ variable "enable_plan_plus" {
   description = "Active l infrastructure Plan Plus ECS/ALB/Redis. Par défaut désactivé pour éviter tout coût sur le compte source."
   type        = bool
   default     = false
+
+  validation {
+    condition     = !var.enable_plan_plus || var.enable_rds
+    error_message = "enable_plan_plus=true requiert enable_rds=true pour réutiliser la RDS canonique du socle."
+  }
+
+  validation {
+    condition = !var.enable_plan_plus || (
+      var.plan_plus_backend_image != "" &&
+      var.plan_plus_ai_service_image != "" &&
+      var.plan_plus_backend_secret_key_value_from != "" &&
+      var.plan_plus_db_password_value_from != "" &&
+      var.plan_plus_ai_internal_token_value_from != ""
+    )
+    error_message = "enable_plan_plus=true requiert les images backend/IA et les références Secrets Manager Plan Plus."
+  }
 }
 
 variable "plan_plus_desired_count" {

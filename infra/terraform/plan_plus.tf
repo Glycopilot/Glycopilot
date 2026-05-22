@@ -6,6 +6,10 @@ locals {
     var.plan_plus_db_password_value_from,
     var.plan_plus_ai_internal_token_value_from,
   ])
+
+  plan_plus_tags = {
+    Environment = "PLAN_PLUS"
+  }
 }
 
 resource "aws_subnet" "plan_plus_public_2" {
@@ -16,9 +20,9 @@ resource "aws_subnet" "plan_plus_public_2" {
   map_public_ip_on_launch = true
   availability_zone       = "${var.aws_region}b"
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot_plan_plus_public_subnet_2"
-  }
+  })
 }
 
 resource "aws_route_table_association" "plan_plus_public_2_assoc" {
@@ -58,9 +62,9 @@ resource "aws_security_group" "plan_plus_alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot-plan-plus-alb-sg"
-  }
+  })
 }
 
 resource "aws_security_group" "plan_plus_ecs" {
@@ -85,9 +89,9 @@ resource "aws_security_group" "plan_plus_ecs" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot-plan-plus-ecs-sg"
-  }
+  })
 }
 
 resource "aws_security_group" "plan_plus_redis" {
@@ -112,9 +116,9 @@ resource "aws_security_group" "plan_plus_redis" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot-plan-plus-redis-sg"
-  }
+  })
 }
 
 resource "aws_security_group_rule" "rds_from_plan_plus" {
@@ -134,6 +138,8 @@ resource "aws_elasticache_subnet_group" "plan_plus_redis" {
 
   name       = "glycopilot-plan-plus-redis-subnet-group"
   subnet_ids = [aws_subnet.private_db_1.id, aws_subnet.private_db_2.id]
+
+  tags = local.plan_plus_tags
 }
 
 resource "aws_elasticache_cluster" "plan_plus_redis" {
@@ -150,9 +156,9 @@ resource "aws_elasticache_cluster" "plan_plus_redis" {
   subnet_group_name  = aws_elasticache_subnet_group.plan_plus_redis[0].name
   security_group_ids = [aws_security_group.plan_plus_redis[0].id]
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot-plan-plus-redis"
-  }
+  })
 }
 
 resource "aws_lb" "plan_plus" {
@@ -164,9 +170,9 @@ resource "aws_lb" "plan_plus" {
   security_groups    = [aws_security_group.plan_plus_alb[0].id]
   subnets            = [aws_subnet.public_subnet.id, aws_subnet.plan_plus_public_2[0].id]
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot-plan-plus-alb"
-  }
+  })
 }
 
 resource "aws_lb_target_group" "plan_plus_backend" {
@@ -187,9 +193,9 @@ resource "aws_lb_target_group" "plan_plus_backend" {
     matcher             = "200"
   }
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot-plan-plus-tg"
-  }
+  })
 }
 
 resource "aws_lb_listener" "plan_plus_http" {
@@ -198,6 +204,8 @@ resource "aws_lb_listener" "plan_plus_http" {
   load_balancer_arn = aws_lb.plan_plus[0].arn
   port              = 80
   protocol          = "HTTP"
+
+  tags = local.plan_plus_tags
 
   default_action {
     type             = "forward"
@@ -210,9 +218,9 @@ resource "aws_ecs_cluster" "plan_plus" {
 
   name = "glycopilot-plan-plus-cluster"
 
-  tags = {
+  tags = merge(local.plan_plus_tags, {
     Name = "glycopilot-plan-plus-cluster"
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "plan_plus" {
@@ -220,6 +228,8 @@ resource "aws_cloudwatch_log_group" "plan_plus" {
 
   name              = "/ecs/glycopilot-plan-plus"
   retention_in_days = 7
+
+  tags = local.plan_plus_tags
 }
 
 resource "aws_iam_role" "plan_plus_ecs_execution" {
@@ -239,6 +249,8 @@ resource "aws_iam_role" "plan_plus_ecs_execution" {
       }
     ]
   })
+
+  tags = local.plan_plus_tags
 }
 
 resource "aws_iam_role_policy_attachment" "plan_plus_ecs_execution" {
@@ -283,6 +295,8 @@ resource "aws_iam_role" "plan_plus_ecs_task" {
       }
     ]
   })
+
+  tags = local.plan_plus_tags
 }
 
 resource "aws_iam_role_policy" "plan_plus_media_bucket" {
@@ -323,6 +337,8 @@ resource "aws_ecs_task_definition" "plan_plus" {
   execution_role_arn       = aws_iam_role.plan_plus_ecs_execution[0].arn
   task_role_arn            = aws_iam_role.plan_plus_ecs_task[0].arn
 
+  tags = local.plan_plus_tags
+
   container_definitions = jsonencode([
     {
       name      = "backend"
@@ -352,7 +368,8 @@ resource "aws_ecs_task_definition" "plan_plus" {
       ]
       secrets = [
         { name = "SECRET_KEY", valueFrom = var.plan_plus_backend_secret_key_value_from },
-        { name = "DB_PASSWORD", valueFrom = var.plan_plus_db_password_value_from }
+        { name = "DB_PASSWORD", valueFrom = var.plan_plus_db_password_value_from },
+        { name = "AI_SERVICE_TOKEN", valueFrom = var.plan_plus_ai_internal_token_value_from }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -376,7 +393,8 @@ resource "aws_ecs_task_definition" "plan_plus" {
         }
       ]
       environment = [
-        { name = "django_url", value = "http://127.0.0.1:8000" }
+        { name = "django_url", value = "http://127.0.0.1:8000" },
+        { name = "django_internal_token", value = "" }
       ]
       secrets = [
         { name = "internal_token", valueFrom = var.plan_plus_ai_internal_token_value_from }
@@ -401,6 +419,8 @@ resource "aws_ecs_service" "plan_plus" {
   task_definition = aws_ecs_task_definition.plan_plus[0].arn
   desired_count   = var.plan_plus_desired_count
   launch_type     = "FARGATE"
+
+  tags = local.plan_plus_tags
 
   network_configuration {
     subnets          = [aws_subnet.public_subnet.id, aws_subnet.plan_plus_public_2[0].id]
