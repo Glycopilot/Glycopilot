@@ -11,7 +11,7 @@ export default function HelpButton({ className = '', label = 'Lancer la visite g
       title={label}
       aria-label={label}
     >
-      <HelpCircle size={16} />
+      <HelpCircle size={16} strokeWidth={2} aria-hidden />
     </button>
   );
 }

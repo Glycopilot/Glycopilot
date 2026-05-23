@@ -1,9 +1,9 @@
 import logging
-from datetime import datetime, timezone
 
 from django.contrib import admin, messages
 
 from apps.auth.email_smtp import send_doctor_validation_email
+from apps.doctors.verification_service import verify_doctor_profile
 
 from .models import (
     DoctorProfile,
@@ -16,33 +16,22 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-@admin.action(description="Valider les médecins sélectionnés et les notifier par email")
+@admin.action(
+    description="Valider la licence médecin (VERIFIED) — requis pour la connexion au portail"
+)
 def validate_doctors(modeladmin, request, queryset):
-    try:
-        verified_status = VerificationStatus.objects.get(label="VERIFIED")
-    except VerificationStatus.DoesNotExist:
-        modeladmin.message_user(
-            request,
-            "Statut VERIFIED introuvable en base.",
-            level=messages.ERROR,
-        )
-        return
-
-    now = datetime.now(tz=timezone.utc)
     count = 0
-    for doctor in queryset.select_related("profile__user__user"):
-        if doctor.verification_status == verified_status:
+    for doctor in queryset.select_related(
+        "profile__user__auth_account", "verification_status"
+    ):
+        if not verify_doctor_profile(doctor, verified_by=request.user):
             continue
-        doctor.verification_status = verified_status
-        doctor.verified_by_user = request.user
-        doctor.verified_at = now
-        doctor.save(update_fields=["verification_status", "verified_by_user", "verified_at"])
 
         try:
-            auth = doctor.profile.user
-            identity = auth.user
-            name = f"{identity.first_name} {identity.last_name}".strip() or auth.email
-            send_doctor_validation_email(user_email=auth.email, doctor_name=name)
+            account = doctor.profile.user.auth_account
+            identity = doctor.profile.user
+            name = f"{identity.first_name} {identity.last_name}".strip() or account.email
+            send_doctor_validation_email(user_email=account.email, doctor_name=name)
         except Exception:
             logger.exception("Failed to send validation email for doctor %s", doctor.pk)
 
@@ -50,7 +39,7 @@ def validate_doctors(modeladmin, request, queryset):
 
     modeladmin.message_user(
         request,
-        f"{count} médecin(s) validé(s) et notifié(s) par email.",
+        f"{count} médecin(s) validé(s) (statut VERIFIED). Ils peuvent se connecter au portail.",
         level=messages.SUCCESS,
     )
 

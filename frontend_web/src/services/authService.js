@@ -1,10 +1,13 @@
 import axios from 'axios';
+import { parseApiError } from '../lib/apiErrors';
 import { devError } from '../lib/logger';
 import { triggerAuthRedirect } from '../lib/auth-redirect';
 import { flattenAuthMe } from '../lib/utils';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8006/api';
-const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '10000', 10);
+import { getApiBase } from '../config/apiBase';
+
+const API_URL = getApiBase();
+const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT, 10);
 
 const STORAGE_KEYS = ['access_token', 'refresh_token', 'user_id', 'user_email', 'user'];
 
@@ -112,14 +115,18 @@ const authService = {
       return response.data;
     } catch (error) {
       const data = error.response?.data;
-      const nonFieldErr = data?.non_field_errors?.[0];
-      if (nonFieldErr) {
-        const err = new Error(nonFieldErr);
+      const rawPending =
+        data?.errors?.non_field_errors
+        ?? (Array.isArray(data?.non_field_errors) ? data.non_field_errors[0] : null)
+        ?? (typeof data?.error === 'string' && /validé par un administrateur/i.test(data.error)
+          ? data.error
+          : null);
+      if (rawPending) {
+        const err = new Error(rawPending);
         err.code = 'ACCOUNT_PENDING';
         throw err;
       }
-      const message = data?.error || data?.detail || 'Erreur de connexion';
-      throw new Error(message);
+      throw new Error(parseApiError(error, 'Connexion impossible. Vérifiez votre email et votre mot de passe.'));
     }
   },
 
@@ -137,7 +144,10 @@ const authService = {
       if (payload.role === 'DOCTOR') {
         payload.license_number = userData.licenseNumber;
         payload.specialty = userData.specialty;
-        payload.medical_center_address = userData.medicalCenterAddress;
+        payload.medical_center_name = userData.medicalCenterName;
+        payload.medical_center_address = userData.medicalCenterAddress || '';
+        payload.medical_center_postal_code = userData.medicalCenterPostalCode;
+        payload.medical_center_city = userData.medicalCenterCity;
       }
 
       const response = await apiClient.post('/auth/register/', payload);
@@ -145,20 +155,13 @@ const authService = {
 
       if (access) localStorage.setItem('access_token', access);
       if (refresh) localStorage.setItem('refresh_token', refresh);
-      persistUser(user);
+      if (user) persistUser(user);
 
       return response.data;
     } catch (error) {
-      let message = "Erreur lors de l'inscription";
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') message = error.response.data;
-        else if (error.response.data.error) message = error.response.data.error;
-        else {
-          try { message = JSON.stringify(error.response.data); }
-          catch (_e) { message = "Erreur lors de l'inscription"; }
-        }
-      }
-      throw new Error(message);
+      throw new Error(
+        parseApiError(error, "Impossible de créer le compte. Vérifiez les informations saisies."),
+      );
     }
   },
 

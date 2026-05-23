@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react';
-import {
-  Users, Heart, Activity, AlertTriangle,
-  TrendingUp, ArrowRight, Footprints,
-  Bell, CheckCircle, Droplets
-} from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import AppIcon from '../components/AppIcon';
+import { countReceivedInvites } from '../lib/careTeamInvites';
 import authService from '../services/authService';
 import { toastError } from '../services/toastService';
-import Sidebar from '../components/Sidebar';
-import { getInitials, toArr } from '../lib/utils';
+import DoctorDashboardHeader from '../components/DoctorDashboardHeader';
+import { extractValue, getInitials, toArr } from '../lib/utils';
 import './css/HomeScreen.css';
 
 const apiClient = authService.getApiClient();
+
+function healthScoreOf(dash) {
+  const raw = extractValue(dash?.healthScore) ?? dash?.healthScore;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
 
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Bonjour';
   if (h < 18) return 'Bon après-midi';
   return 'Bonsoir';
+}
+
+function getHomeSubtitle() {
+  return `${getGreeting()}. Vue d'ensemble de la santé et de l'activité de vos patients.`;
 }
 
 function ScoreGauge({ score }) {
@@ -82,7 +90,7 @@ function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
           <span className="alert-patient">{patientName}</span>
           {glycLabel && (
             <span className="alert-glyc-badge" style={{ background: cfg.color }}>
-              <Droplets size={12} />
+              <AppIcon name="droplets" size={12} />
               {glycLabel}
             </span>
           )}
@@ -93,15 +101,17 @@ function AlertItem({ alert, patientName, triggerValue, triggerUnit }) {
           {timeLabel && <span className="alert-time">{timeLabel}</span>}
         </div>
       </div>
-      <AlertTriangle size={15} className="alert-icon" style={{ color: cfg.color }} />
+      <AppIcon name="chevron" size={15} />
     </div>
   );
 }
 
 function ActivityRow({ patient, dashboard }) {
   if (!dashboard) return null;
-  const steps = dashboard.activity?.steps;
-  const pct   = steps?.goal > 0 ? Math.min(100, Math.round((steps.value / steps.goal) * 100)) : 0;
+  const stepsVal = extractValue(dashboard.activity?.steps?.value ?? dashboard.activity?.steps) ?? 0;
+  const stepsGoal = extractValue(dashboard.activity?.steps?.goal) ?? 0;
+  const pct = stepsGoal > 0 ? Math.min(100, Math.round((stepsVal / stepsGoal) * 100)) : 0;
+  const score = healthScoreOf(dashboard);
   const name  = `${patient.first_name} ${patient.last_name}`;
 
   return (
@@ -116,17 +126,18 @@ function ActivityRow({ patient, dashboard }) {
           <span className="act-pct">{pct}%</span>
         </div>
         <div className="act-sub">
-          <Footprints size={12} /> {steps?.value?.toLocaleString() ?? '—'} / {steps?.goal?.toLocaleString() ?? '—'} pas
+          <AppIcon name="footsteps" size={12} /> {Number(stepsVal).toLocaleString('fr-FR')} / {Number(stepsGoal).toLocaleString('fr-FR')} pas
         </div>
       </div>
-      <div className={`act-score ${dashboard.healthScore >= 70 ? 'score-good' : dashboard.healthScore >= 40 ? 'score-mid' : 'score-low'}`}>
-        {dashboard.healthScore}
+      <div className={`act-score ${score >= 70 ? 'score-good' : score >= 40 ? 'score-mid' : 'score-low'}`}>
+        {score}
       </div>
     </div>
   );
 }
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen() {
+  const { navigation } = useOutletContext();
   const doctor = authService.getStoredUser();
   const [team,        setTeam]        = useState({ active_patients: [], pending_invites: [] });
   const [dashboards,  setDashboards]  = useState({});
@@ -205,9 +216,11 @@ export default function HomeScreen({ navigation }) {
   };
 
   const activeCount = team.active_patients.length;
+  const receivedInviteCount = team.pending_received_count
+    ?? countReceivedInvites(team.pending_invites, team.active_patients);
   const allDashes   = Object.values(dashboards);
   const avgScore    = allDashes.length
-    ? Math.round(allDashes.reduce((s, d) => s + (d.healthScore || 0), 0) / allDashes.length)
+    ? Math.round(allDashes.reduce((s, d) => s + healthScoreOf(d), 0) / allDashes.length)
     : null;
 
   // Dédupliquer par (pid, type) pour n'avoir qu'une alerte par type par patient
@@ -239,19 +252,13 @@ export default function HomeScreen({ navigation }) {
     .slice(0, 5);
 
   return (
-    <div className="home-root">
-      <Sidebar activePage="home" navigation={navigation} />
+    <main className="home-main dash-main">
+        <DoctorDashboardHeader
+          title="Tableau de bord"
+          subtitle={getHomeSubtitle()}
+        />
 
-      <main className="home-main">
-        <div className="home-greeting">
-          <div>
-            <h1>{getGreeting()} {doctor?.first_name}</h1>
-            <p>Voici un aperçu de l'état de santé de vos patients aujourd'hui</p>
-          </div>
-          <div className="home-date">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-          </div>
-        </div>
+        <div className="home-content dash-content">
 
         {loading ? (
           <div className="home-loading">
@@ -259,9 +266,32 @@ export default function HomeScreen({ navigation }) {
           </div>
         ) : (
           <>
+            {receivedInviteCount > 0 && (
+              <div className="home-invite-banner" role="status">
+                <div className="home-invite-banner-text">
+                  <AppIcon name="inbox" size={18} />
+                  <div>
+                    <strong>
+                      {receivedInviteCount === 1
+                        ? '1 nouvelle demande patient'
+                        : `${receivedInviteCount} nouvelles demandes patients`}
+                    </strong>
+                    <p>Des patients souhaitent vous ajouter à leur équipe de soins.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="home-invite-banner-btn"
+                  onClick={() => navigation.navigate('/patients?tab=received')}
+                >
+                  Voir les demandes
+                </button>
+              </div>
+            )}
+
             <div className="kpi-row">
               <div className="kpi-card">
-                <div className="kpi-icon kpi-blue"><Users size={22} /></div>
+                <div className="kpi-icon kpi-blue"><AppIcon name="users" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{activeCount}</div>
                   <div className="kpi-label">Patients suivis</div>
@@ -269,7 +299,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-red"><AlertTriangle size={22} /></div>
+                <div className="kpi-icon kpi-red"><AppIcon name="alert" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{allAlerts.length}</div>
                   <div className="kpi-label">Alertes enregistrées</div>
@@ -280,7 +310,7 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-green"><Heart size={22} /></div>
+                <div className="kpi-icon kpi-green"><AppIcon name="heart" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">{avgScore ?? '—'}</div>
                   <div className="kpi-label">Score santé moyen</div>
@@ -288,10 +318,10 @@ export default function HomeScreen({ navigation }) {
               </div>
 
               <div className="kpi-card">
-                <div className="kpi-icon kpi-teal"><CheckCircle size={22} /></div>
+                <div className="kpi-icon kpi-teal"><AppIcon name="activity" size={22} /></div>
                 <div className="kpi-body">
                   <div className="kpi-value">
-                    {allDashes.filter(d => d.healthScore >= 70).length}
+                    {allDashes.filter(d => healthScoreOf(d) >= 70).length}
                   </div>
                   <div className="kpi-label">Patients en bonne santé</div>
                 </div>
@@ -299,91 +329,109 @@ export default function HomeScreen({ navigation }) {
             </div>
 
             <div className="home-grid">
-              {/* Score moyen */}
-              <div className="hcard hcard-score">
-                <div className="hcard-header">
-                  <div className="hcard-title"><TrendingUp size={16} /> Score de santé moyen</div>
-                </div>
-                {avgScore !== null
-                  ? <ScoreGauge score={avgScore} />
-                  : <div className="empty-mini">Aucune donnée disponible</div>
-                }
-                <div className="score-legend">
-                  <span className="leg-good">● Bon (≥70)</span>
-                  <span className="leg-mid">● Moyen (40–69)</span>
-                  <span className="leg-low">● Faible (&lt;40)</span>
-                </div>
-                {allDashes.length > 0 && (
-                  <div className="score-dist">
-                    {[
-                      { label: 'Bon',    count: allDashes.filter(d => d.healthScore >= 70).length,                              cls: 'dist-good' },
-                      { label: 'Moyen',  count: allDashes.filter(d => d.healthScore >= 40 && d.healthScore < 70).length,        cls: 'dist-mid'  },
-                      { label: 'Faible', count: allDashes.filter(d => d.healthScore < 40).length,                               cls: 'dist-low'  },
-                    ].map(({ label, count, cls }) => (
-                      <div key={label} className={`dist-item ${cls}`}>
-                        <div className="dist-count">{count}</div>
-                        <div className="dist-label">{label}</div>
-                      </div>
-                    ))}
+              {/* --- COLONNE GAUCHE --- */}
+              <div className="home-col-left">
+                {/* Carte profil style EdSquare */}
+                <div className="hcard hcard-doc-profile">
+                  <div className="doc-prof-title">Informations praticien</div>
+                  <div className="doc-prof-body">
+                    <div className="doc-prof-avatar">{getInitials(doctor?.first_name, doctor?.last_name)}</div>
+                    <div className="doc-prof-info">
+                      <div className="doc-prof-name">Dr. {doctor?.first_name} {doctor?.last_name}</div>
+                      <div className="doc-prof-badge">Diabétologue</div>
+                    </div>
                   </div>
-                )}
+                </div>
+
+                {/* Score moyen */}
+                <div className="hcard hcard-score">
+                  <div className="hcard-header">
+                    <div className="hcard-title"><AppIcon name="heart" size={16} /> Score de santé moyen</div>
+                  </div>
+                  {avgScore !== null
+                    ? <ScoreGauge score={avgScore} />
+                    : <div className="empty-mini">Aucune donnée disponible</div>
+                  }
+                  <div className="score-legend">
+                    <span className="leg-good">● Bon (≥70)</span>
+                    <span className="leg-mid">● Moyen (40–69)</span>
+                    <span className="leg-low">● Faible (&lt;40)</span>
+                  </div>
+                  {allDashes.length > 0 && (
+                    <div className="score-dist">
+                      {[
+                      { label: 'Bon',    count: allDashes.filter(d => healthScoreOf(d) >= 70).length,                              cls: 'dist-good' },
+                      { label: 'Moyen',  count: allDashes.filter(d => healthScoreOf(d) >= 40 && healthScoreOf(d) < 70).length,        cls: 'dist-mid'  },
+                      { label: 'Faible', count: allDashes.filter(d => healthScoreOf(d) < 40).length,                               cls: 'dist-low'  },
+                      ].map(({ label, count, cls }) => (
+                        <div key={label} className={`dist-item ${cls}`}>
+                          <div className="dist-count">{count}</div>
+                          <div className="dist-label">{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Alertes glycémiques */}
-              <div className="hcard hcard-alerts">
-                <div className="hcard-header">
-                  <div className="hcard-title"><Bell size={16} /> Alertes glycémiques</div>
-                  {allAlerts.length > 0 && <span className="alert-count-badge">{allAlerts.length}</span>}
+              {/* --- COLONNE DROITE --- */}
+              <div className="home-col-right">
+                {/* Alertes glycémiques */}
+                <div className="hcard hcard-alerts">
+                  <div className="hcard-header">
+                    <div className="hcard-title"><AppIcon name="alert" size={16} /> Alertes glycémiques récentes</div>
+                    {allAlerts.length > 0 && <span className="alert-count-badge">{allAlerts.length}</span>}
+                  </div>
+                  {allAlerts.length === 0 ? (
+                    <div className="empty-mini">
+                      <AppIcon name="alert" size={32} />
+                      <p>Aucune alerte active</p>
+                    </div>
+                  ) : (
+                    <div className="alerts-list">
+                      {allAlerts.map((item, i) => (
+                        <AlertItem
+                          key={i}
+                          alert={item.alert}
+                          patientName={`${item.patient.first_name} ${item.patient.last_name}`}
+                          triggerValue={item.triggerValue}
+                          triggerUnit={item.triggerUnit}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {allAlerts.length === 0 ? (
-                  <div className="empty-mini">
-                    <CheckCircle size={32} strokeWidth={1} />
-                    <p>Aucune alerte active</p>
-                  </div>
-                ) : (
-                  <div className="alerts-list">
-                    {allAlerts.map((item, i) => (
-                      <AlertItem
-                        key={i}
-                        alert={item.alert}
-                        patientName={`${item.patient.first_name} ${item.patient.last_name}`}
-                        triggerValue={item.triggerValue}
-                        triggerUnit={item.triggerUnit}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* Activité récente */}
-              <div className="hcard hcard-activity">
-                <div className="hcard-header">
-                  <div className="hcard-title"><Activity size={16} /> Activité récente des patients</div>
-                  <button className="see-all-btn" onClick={() => navigation.navigate('/patients')}>
-                    Voir tous <ArrowRight size={13} />
-                  </button>
+                {/* Activité récente */}
+                <div className="hcard hcard-activity">
+                  <div className="hcard-header">
+                    <div className="hcard-title"><AppIcon name="activity" size={16} /> Activité récente des patients</div>
+                    <button className="see-all-btn" onClick={() => navigation.navigate('/patients')}>
+                      Voir tous <AppIcon name="chevron" size={13} />
+                    </button>
+                  </div>
+                  {sortedByActivity.length === 0 ? (
+                    <div className="empty-mini">
+                      <AppIcon name="alert" size={32} />
+                      <p>Aucune donnée d'activité</p>
+                    </div>
+                  ) : (
+                    <div className="activity-list">
+                      {sortedByActivity.map(m => (
+                        <ActivityRow
+                          key={m.id_team_member}
+                          patient={m.patient_details}
+                          dashboard={dashboards[m.patient_details.id_user]}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {sortedByActivity.length === 0 ? (
-                  <div className="empty-mini">
-                    <Footprints size={32} strokeWidth={1} />
-                    <p>Aucune donnée d'activité</p>
-                  </div>
-                ) : (
-                  <div className="activity-list">
-                    {sortedByActivity.map(m => (
-                      <ActivityRow
-                        key={m.id_team_member}
-                        patient={m.patient_details}
-                        dashboard={dashboards[m.patient_details.id_user]}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </>
         )}
-      </main>
-    </div>
+        </div>
+    </main>
   );
 }

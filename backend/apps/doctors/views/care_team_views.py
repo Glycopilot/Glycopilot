@@ -14,7 +14,12 @@ from apps.doctors.doctor_patient_access import verify_doctor_can_access_patient,
 from apps.doctors.models import InvitationStatus, PatientCareTeam
 from apps.doctors.serializers import PatientCareTeamSerializer
 from apps.doctors.services import DoctorPatientDataService
-from apps.doctors.utils import send_care_team_invitation, send_proche_invitation
+from apps.doctors.utils import (
+    send_care_team_invitation,
+    send_patient_doctor_invitation_email,
+    send_proche_invitation,
+)
+from apps.notifications.services.push import send_push_to_user
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 
@@ -375,15 +380,24 @@ class CareTeamViewSet(viewsets.ViewSet):
                 status=400,
             )
 
-        # Éviter doublon
-        if PatientCareTeam.objects.filter(
+        existing = PatientCareTeam.objects.filter(
             patient_profile=patient_profile,
             member_profile=member_profile,
-        ).exists():
+            status__label__in=["ACTIVE", "PENDING"],
+        ).first()
+        if existing:
+            if existing.status.label == "PENDING":
+                return Response(
+                    {
+                        "message": "Invitation déjà en attente.",
+                        "id_team_member": str(existing.id_team_member),
+                        "status": "PENDING",
+                        "already_exists": True,
+                    },
+                    status=200,
+                )
             return Response(
-                {
-                    "error": "Ce médecin fait déjà partie de votre équipe ou a déjà une invitation en attente."
-                },
+                {"error": "Ce médecin fait déjà partie de votre équipe."},
                 status=400,
             )
 
@@ -394,12 +408,15 @@ class CareTeamViewSet(viewsets.ViewSet):
             status=pending_status,
         )
         # Email envoyé au DOCTEUR (destinataire = email du médecin)
-        send_care_team_invitation(email, inviter_name, role, is_existing_user=True)
+        email_sent = send_patient_doctor_invitation_email(
+            email, inviter_name, role
+        )
 
         return Response(
             {
                 "message": "Invitation envoyée au médecin.",
                 "id_team_member": str(invitation.id_team_member),
+                "email_sent": email_sent,
             },
             status=201,
         )
@@ -586,6 +603,59 @@ class CareTeamViewSet(viewsets.ViewSet):
             {"message": "Invitation acceptée.", "status": "ACTIVE"}, status=200
         )
 
+    @action(detail=False, methods=["post"], url_path="decline-invitation")
+    def decline_invitation(self, request):
+        """Refuse une invitation en attente (médecin ou patient). Notifie le patient si le médecin refuse."""
+        id_team_member = request.data.get("id_team_member")
+        reason = request.data.get("reason", "Aucun motif spécifié.")
+
+        if not id_team_member:
+            return Response({"error": "id_team_member requis."}, status=400)
+
+        try:
+            entry = PatientCareTeam.objects.get(
+                id_team_member=id_team_member, status__label="PENDING"
+            )
+        except PatientCareTeam.DoesNotExist:
+            return Response({"error": "Invitation introuvable."}, status=404)
+
+        current_identity = _get_identity(request.user)
+        if not current_identity:
+            return Response({"error": "Utilisateur non identifié."}, status=403)
+
+        is_doctor = bool(
+            entry.member_profile and entry.member_profile.user == current_identity
+        )
+        is_patient = bool(
+            entry.patient_profile
+            and entry.patient_profile.profile.user == current_identity
+        )
+
+        if not is_doctor and not is_patient:
+            return Response({"error": "Action non autorisée."}, status=403)
+
+        rejected_status = _get_invitation_status("REJECTED")
+
+        with transaction.atomic():
+            entry.status = rejected_status
+            entry.rejection_reason = reason
+            entry.save(update_fields=["status", "rejection_reason", "updated_at"])
+
+            if is_doctor:
+                patient_auth = AuthAccount.objects.filter(
+                    user=entry.patient_profile.profile.user
+                ).first()
+                if patient_auth:
+                    doctor_name = f"Dr. {current_identity.last_name}"
+                    send_push_to_user(
+                        patient_auth,
+                        title="Invitation refusée",
+                        body=f"Désolé, le {doctor_name} a refusé votre invitation. Motif : {reason}",
+                        data={"type": "INVITATION_REJECTED", "id": str(id_team_member)},
+                    )
+
+        return Response({"message": "Invitation déclinée.", "status": "REJECTED"})
+
     @action(detail=False, methods=["get"], url_path="my-team")
     def my_team(self, request):
         """
@@ -639,10 +709,14 @@ class CareTeamViewSet(viewsets.ViewSet):
 
         active = relations.filter(status__label="ACTIVE")
         pending = relations.filter(status__label="PENDING")
+        pending_received = pending.filter(approved_by__isnull=True)
+        pending_sent = pending.filter(approved_by__isnull=False)
 
         data = {
             "active_patients": PatientCareTeamSerializer(active, many=True).data,
             "pending_invites": PatientCareTeamSerializer(pending, many=True).data,
+            "pending_received_count": pending_received.count(),
+            "pending_sent_count": pending_sent.count(),
         }
         return Response(data)
 
@@ -741,12 +815,15 @@ class CareTeamViewSet(viewsets.ViewSet):
         Accessible uniquement aux médecins avec une relation ACTIVE.
         """
         patient_user_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_user_id)
+        patient_auth, error_response = self._verify_doctor_access(
+            request, patient_user_id
+        )
         if error_response:
             return error_response
 
-        data = DoctorPatientDataService.get_patient_dashboard(user)
-        return Response(data)
+        return Response(
+            DoctorPatientDataService.get_patient_dashboard(patient_auth)
+        )
 
     def _verify_doctor_access(self, request, patient_user_id):
         return verify_doctor_can_access_patient(request, patient_user_id)
@@ -754,38 +831,31 @@ class CareTeamViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"], url_path="patient-meals")
     def get_patient_meals(self, request):
         patient_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_id)
+        patient_auth, error_response = self._verify_doctor_access(request, patient_id)
         if error_response:
             return error_response
 
-        from apps.doctors.services import DoctorPatientDataService
-
-        data = DoctorPatientDataService.get_meals_history(user)
-        return Response(data)
+        return Response(DoctorPatientDataService.get_meals_history(patient_auth))
 
     @action(detail=False, methods=["get"], url_path="patient-medications")
     def get_patient_medications(self, request):
         patient_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_id)
+        patient_auth, error_response = self._verify_doctor_access(request, patient_id)
         if error_response:
             return error_response
 
-        from apps.doctors.services import DoctorPatientDataService
-
-        data = DoctorPatientDataService.get_medications_history(user)
-        return Response(data)
+        return Response(
+            DoctorPatientDataService.get_medications_history(patient_auth)
+        )
 
     @action(detail=False, methods=["get"], url_path="patient-glycemia")
     def get_patient_glycemia(self, request):
         patient_id = request.query_params.get("patient_user_id")
-        user, error_response = self._verify_doctor_access(request, patient_id)
+        patient_auth, error_response = self._verify_doctor_access(request, patient_id)
         if error_response:
             return error_response
 
-        from apps.doctors.services import DoctorPatientDataService
-
-        data = DoctorPatientDataService.get_glycemia_history(user)
-        return Response(data)
+        return Response(DoctorPatientDataService.get_glycemia_history(patient_auth))
 
     # ------------------------------------------------------------------ #
     #  Endpoints Proche                                                    #
@@ -839,7 +909,6 @@ class CareTeamViewSet(viewsets.ViewSet):
         if error:
             return error
 
-        from apps.doctors.services import DoctorPatientDataService
         return Response(DoctorPatientDataService.get_glycemia_history(patient_auth))
 
     @action(detail=False, methods=["get"], url_path="proche-dashboard")
@@ -852,7 +921,6 @@ class CareTeamViewSet(viewsets.ViewSet):
         if error:
             return error
 
-        from apps.doctors.services import DoctorPatientDataService
         return Response(DoctorPatientDataService.get_patient_dashboard(patient_auth))
 
     @action(detail=False, methods=["get"], url_path="proche-alerts")

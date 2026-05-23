@@ -10,6 +10,49 @@ from django.core.mail import send_mail
 
 logger = logging.getLogger(__name__)
 
+_ROLE_LABELS_FR = {
+    "REFERENT_DOCTOR": "médecin référent",
+    "SPECIALIST": "spécialiste",
+    "FAMILY": "proche",
+    "CAREGIVER": "aidant",
+    "NURSE": "infirmier(ère)",
+}
+
+
+def _role_label_fr(role):
+    return _ROLE_LABELS_FR.get(role, role.replace("_", " ").lower())
+
+
+def send_patient_doctor_invitation_email(to_email, patient_name, role):
+    """
+    Email au médecin lorsqu'un patient l'invite (invitation en attente d'acceptation).
+    """
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    role_fr = _role_label_fr(role)
+    patients_url = f"{frontend_url}/patients?tab=received"
+    subject = f"Glycopilot - {patient_name} souhaite vous ajouter à son équipe"
+    message_body = (
+        f"Bonjour,\n\n"
+        f"{patient_name} vous a envoyé une demande pour devenir son {role_fr} sur Glycopilot.\n\n"
+        f"Connectez-vous à votre espace médecin : {frontend_url}/login\n"
+        f"Puis ouvrez l'onglet « Demandes reçues » : {patients_url}\n\n"
+        f"Vous pourrez accepter ou refuser la demande depuis votre tableau de bord.\n"
+    )
+    try:
+        send_mail(
+            subject=subject,
+            message=message_body,
+            from_email=settings.DEFAULT_FROM_EMAIL or "noreply@glycopilot.com",
+            recipient_list=[to_email],
+            fail_silently=False,
+        )
+        if settings.DEBUG:
+            logger.debug("Patient→doctor invitation email sent.")
+        return True
+    except Exception:
+        logger.exception("Patient→doctor invitation email failed.")
+        return False
+
 
 def send_care_team_invitation(to_email, inviter_name, role, is_existing_user=False):
     """

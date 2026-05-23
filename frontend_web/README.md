@@ -40,6 +40,6 @@ Un fichier `.env` à la racine du module fournit les valeurs par défaut pour le
 - React 18
 - react-scripts 5 (CRA)
 - axios pour les appels HTTP
-- lucide-react pour les icônes
+- Icônes GlycoPilot (`src/assets/icon.png`, `glycopilot.png`) via `GlycoIcon`
 - react-toastify pour les notifications
 - Testing Library + Jest pour les tests

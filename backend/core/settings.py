@@ -28,7 +28,6 @@ def _security_header_value(name, default=None, allowed_values=None):
 # --- ENVIRONNEMENT ---
 # "production" or "development"
 
-
 ENV = config("Django_ENV", default=os.getenv("DJANGO_ENV", "development")).lower()
 DEBUG = config("DEBUG", default=False, cast=bool)
 
@@ -98,8 +97,18 @@ ROOT_URLCONF = "core.urls"
 APPEND_SLASH = False
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+def _running_tests():
+    """pytest, manage.py test, ou CI (TESTING=true) → SQLite mémoire."""
+    if os.getenv("TESTING", "").lower() in ("1", "true", "yes"):
+        return True
+    if "test" in sys.argv:
+        return True
+    return any("pytest" in str(arg) for arg in sys.argv)
+
+
 # --- DATABASES ---
-if "test" in sys.argv or "pytest" in sys.argv[0]:
+if _running_tests():
     # Base de test en mémoire (rapide et isolée)
     DATABASES = {
         "default": {
@@ -230,7 +239,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "200/hour",
         "user": "300/minute",
-        "auth": "5/minute",
+        # Dev : évite les 429 lors des tests manuels (inscription + logins multiples)
+        "auth": "60/minute" if DEBUG else "5/minute",
     },
 }
 

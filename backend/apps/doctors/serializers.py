@@ -45,6 +45,8 @@ class DoctorSerializer(serializers.ModelSerializer):
             "rejection_reason",
             "medical_center_name",
             "medical_center_address",
+            "medical_center_postal_code",
+            "medical_center_city",
             "specialty",
             "user_details",
             "valide",
@@ -64,6 +66,13 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
     member_details = serializers.SerializerMethodField()
     patient_details = serializers.SerializerMethodField()
     role_label = serializers.CharField(source="get_role_display", read_only=True)
+    invitation_from = serializers.SerializerMethodField()
+
+    def get_invitation_from(self, obj):
+        """patient = demande reçue par le médecin ; doctor = invitation envoyée par le médecin."""
+        if obj.approved_by_id:
+            return "doctor"
+        return "patient"
 
     def get_member_details(self, obj):
         if not obj.member_profile or not obj.member_profile.user:
@@ -80,6 +89,8 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
                     "verification_status": doc.verification_status.label,
                     "medical_center_name": doc.medical_center_name,
                     "medical_center_address": doc.medical_center_address,
+                    "medical_center_postal_code": doc.medical_center_postal_code,
+                    "medical_center_city": doc.medical_center_city,
                     "license_number": doc.license_number,
                     "verified_at": doc.verified_at,
                 }
@@ -92,7 +103,9 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             return None
         if not obj.patient_profile.profile.user:
             return None
-        return SimpleUserSerializer(obj.patient_profile.profile.user).data
+        data = SimpleUserSerializer(obj.patient_profile.profile.user).data
+        data["hba1c"] = obj.patient_profile.hba1c
+        return data
 
     status = serializers.StringRelatedField()
 
@@ -109,7 +122,10 @@ class PatientCareTeamSerializer(serializers.ModelSerializer):
             "role_label",
             "relation_type",
             "status",
+            "rejection_reason",
             "approved_by",
+            "invitation_from",
+            "created_at",
         ]
 
 

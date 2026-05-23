@@ -58,13 +58,10 @@ input, textarea, select {
 }
 *::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.55); background-clip: content-box; }
 
-/* Animation d'entrée des écrans (déclenchée par AppRoutes via la key location.pathname) */
-.route-shell {
-  animation: route-enter var(--dur-slow) var(--ease-out) both;
-}
-@keyframes route-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Pas d'animation globale entre pages (sidebar fixe via DoctorLayout) */
+.App {
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Apparition douce générale (utilisable ponctuellement) */
@@ -97,48 +94,114 @@ input, textarea, select {
 }
 
 /* ErrorBoundary fallback */
+.error-boundary-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: linear-gradient(160deg, #f0f6fc 0%, #f8fafc 55%, #eef4fb 100%);
+}
 .error-boundary-fallback {
-  max-width: 560px;
-  margin: 80px auto;
-  padding: var(--space-8);
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-8) var(--space-7);
   background: var(--surface, #fff);
   border: 1px solid var(--border, #E2E8F0);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(26, 43, 69, 0.08);
   font-family: 'DM Sans', sans-serif;
   color: var(--dark, #1A2B45);
+  text-align: center;
+}
+.eb-brand {
+  margin-bottom: var(--space-5);
+}
+.eb-logo {
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+  opacity: 0.92;
 }
 .error-boundary-fallback h1 {
   font-family: 'Sora', sans-serif;
   font-size: 20px;
+  font-weight: 700;
   margin: 0 0 var(--space-3);
+  color: var(--dark, #1A2B45);
+  letter-spacing: -0.02em;
 }
-.error-boundary-fallback p { margin: 0 0 var(--space-4); color: var(--mid, #334155); }
-.error-boundary-fallback pre {
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  color: #B91C1C;
-  padding: var(--space-3);
-  border-radius: var(--radius-sm);
+.error-boundary-fallback > p {
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0 0 var(--space-6);
+  color: var(--mid, #64748B);
+}
+.eb-support-hint {
+  margin: var(--space-5) 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+.eb-dev-block {
+  margin-bottom: var(--space-5);
+  text-align: left;
+}
+.eb-dev-toggle {
+  border: none;
+  background: none;
+  color: var(--blue, #2563EB);
   font-size: 12px;
-  overflow-x: auto;
-  margin: 0 0 var(--space-4);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
 }
-.error-boundary-actions { display: flex; gap: var(--space-3); }
-.error-boundary-actions button {
-  padding: 10px 16px;
+.eb-dev-pre {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #475569;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.error-boundary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.eb-btn-primary, .eb-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
   border-radius: var(--radius-sm);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
-  transition: transform var(--dur-fast), box-shadow var(--dur-fast);
-  border: 1px solid var(--border, #E2E8F0);
-  background: #fff;
-  color: var(--mid, #334155);
+  transition: all 0.2s;
+  border: 1px solid transparent;
 }
-.error-boundary-actions button:first-child {
-  background: #4A90E2;
-  border-color: #4A90E2;
+.eb-btn-primary {
+  background: var(--blue, #2563EB);
   color: #fff;
 }
-.error-boundary-actions button:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.eb-btn-primary:hover {
+  background: var(--blue-dark, #1D4ED8);
+  box-shadow: var(--shadow-md);
+}
+.eb-btn-secondary {
+  background: #fff;
+  border-color: var(--border, #E2E8F0);
+  color: var(--mid, #475569);
+}
+.eb-btn-secondary:hover {
+  background: #F1F5F9;
+  color: var(--dark, #1E293B);
+}

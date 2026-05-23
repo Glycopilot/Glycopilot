@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { Send, Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, LogIn, UserPlus } from 'lucide-react';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
 import InputField from '../components/InputField';
@@ -31,6 +31,8 @@ export default function LoginScreen({ navigation }) {
     } catch (err) {
       if (err.code === 'ACCOUNT_PENDING') {
         setPendingEmail(email);
+      } else if (err.message?.includes('administrateur') || err.message?.includes('validé')) {
+        toastError("Désolé, votre compte n'a pas encore été validé par un administrateur.");
       } else {
         toastError('Erreur de connexion', err.message);
       }
@@ -71,7 +73,9 @@ export default function LoginScreen({ navigation }) {
         {/* Mobile topbar */}
         <div className="auth-mobile-topbar">
           <img src={logo} alt="GlycoPilot" />
-          <button className="auth-mobile-topbar-link" onClick={goToSignin}>S'inscrire →</button>
+          <button type="button" className="auth-mobile-topbar-link" onClick={goToSignin}>
+            <span>S&apos;inscrire</span> <ArrowRight size={14} strokeWidth={2} aria-hidden />
+          </button>
         </div>
 
         <aside className="auth-aside">
@@ -90,9 +94,7 @@ export default function LoginScreen({ navigation }) {
             <span>Pas encore inscrit ?</span>
             <button className="aside-link" onClick={goToSignin}>S'inscrire →</button>
           </div>
-          <div className="aside-circles">
-            <div className="circle c1" /><div className="circle c2" /><div className="circle c3" />
-          </div>
+
         </aside>
 
         <main className="auth-main">
@@ -142,7 +144,7 @@ export default function LoginScreen({ navigation }) {
                 <span>📧</span>
                 <p>Un email vous sera envoyé à <strong>{pendingEmail}</strong> dès que votre licence sera validée.</p>
               </div>
-              <button className="submit-btn" style={{ marginBottom: 12 }} onClick={() => setPendingEmail(null)}>
+              <button className="submit-btn submit-btn-retry" onClick={() => setPendingEmail(null)}>
                 ← Réessayer avec un autre compte
               </button>
             </div>
@@ -157,36 +159,38 @@ export default function LoginScreen({ navigation }) {
       {/* ── Mobile topbar ── */}
       <div className="auth-mobile-topbar">
         <img src={logo} alt="GlycoPilot" />
-        <button className="auth-mobile-topbar-link" onClick={goToSignin}>S'inscrire →</button>
+        <button type="button" className="auth-mobile-topbar-link" onClick={goToSignin}>
+          <span>S&apos;inscrire</span> <ArrowRight size={14} strokeWidth={2} aria-hidden />
+        </button>
       </div>
 
       <aside className="auth-aside">
         <div className="aside-top"><img src={logo} alt="GlycoPilot" className="aside-logo" /></div>
         <div className="aside-body">
-          <div className="aside-tag">Connexion</div>
+          <div className="aside-tag">Espace Praticien</div>
           <h1 className="aside-title">
-            {isPasswordResetMode ? 'Réinitialiser\nvotre mot de passe' : 'Bon retour\nparmi nous'}
+            {isPasswordResetMode ? 'Récupération de mot de passe' : 'Ravis de vous revoir sur GlycoPilot'}
           </h1>
           <p className="aside-desc">
             {isPasswordResetMode
-              ? 'Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.'
-              : 'Connectez-vous à votre espace médecin pour accéder à vos patients, vos rapports et vos outils de suivi glycémique.'}
+              ? 'Indiquez votre adresse email professionnelle. Un lien sécurisé vous sera envoyé pour réinitialiser votre accès.'
+              : 'Connectez-vous à votre espace pour reprendre le suivi de vos patients avec des outils d\'analyse toujours plus performants.'}
           </p>
           {!isPasswordResetMode && (
             <ul className="aside-steps">
-              <li><span className="step-dot"/><span>Accédez à vos patients en temps réel</span></li>
-              <li><span className="step-dot"/><span>Consultez vos rapports intelligents</span></li>
-              <li><span className="step-dot"/><span>Gérez vos alertes glycémiques</span></li>
+              <li><span className="step-dot"/><span>Visualisation des glycémies en temps réel</span></li>
+              <li><span className="step-dot"/><span>Rapports intelligents et prédictifs</span></li>
+              <li><span className="step-dot"/><span>Gestion proactive des alertes médicales</span></li>
             </ul>
           )}
         </div>
         <div className="aside-bottom">
           <span>Pas encore de compte ?</span>
-          <button className="aside-link" onClick={goToSignin}>S'inscrire →</button>
+          <button className="aside-link" onClick={goToSignin}>
+            <span>S&apos;inscrire</span> <ArrowRight size={16} strokeWidth={2} />
+          </button>
         </div>
-        <div className="aside-circles">
-          <div className="circle c1" /><div className="circle c2" /><div className="circle c3" />
-        </div>
+
       </aside>
 
       <main className="auth-main">
@@ -200,15 +204,15 @@ export default function LoginScreen({ navigation }) {
               <section className="form-section">
                 <InputField
                   label="Email" value={email} onChangeText={setEmail}
-                  icon={<Mail size={16} color="#94A3B8"/>} placeholder="medecin@exemple.com" type="email"
+                  icon={<Mail size={16} />} placeholder="medecin@exemple.com" type="email"
                 />
                 <InputField
                   label="Mot de passe" value={password} onChangeText={setPassword}
-                  icon={<Lock size={16} color="#94A3B8"/>}
+                  icon={<Lock size={16} strokeWidth={1.75} />}
                   type={showPassword ? 'text' : 'password'} placeholder="••••••••"
                   rightElement={
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle">
-                      {showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle" aria-label={showPassword ? 'Masquer' : 'Afficher'}>
+                      {showPassword ? <EyeOff size={16} strokeWidth={2} /> : <Eye size={16} strokeWidth={2} />}
                     </button>
                   }
                 />
@@ -220,35 +224,55 @@ export default function LoginScreen({ navigation }) {
               <button className="submit-btn" onClick={handleLogin} disabled={loading}>
                 {loading
                   ? <span className="btn-loading"><span className="spinner"/>Connexion…</span>
-                  : <span>Se connecter <ChevronRight size={18}/></span>}
+                  : <><span>Se connecter</span> <LogIn size={18} strokeWidth={2} aria-hidden /></>}
               </button>
               {/* Lien inscription visible uniquement sur mobile */}
               <p className="auth-mobile-switch">
                 Pas encore de compte ?{' '}
-                <button className="auth-mobile-switch-btn" onClick={goToSignin}>S'inscrire</button>
+                <button type="button" className="auth-mobile-switch-btn" onClick={goToSignin}>
+                  <span>S&apos;inscrire</span> <UserPlus size={14} strokeWidth={2} aria-hidden />
+                </button>
               </p>
             </>
           ) : (
-            <>
-              <div className="form-header">
+            <div className="auth-forgot-panel">
+              <div className="form-header form-header-forgot">
                 <h2>Mot de passe oublié ?</h2>
-                <p>Un lien de réinitialisation sera envoyé à votre adresse email</p>
+                <div className="form-header-note" role="note">
+                  <span className="form-header-note-icon" aria-hidden>
+                    <Mail size={18} strokeWidth={1.75} />
+                  </span>
+                  <p className="form-header-note-text">
+                    Un lien de réinitialisation sera envoyé à votre adresse email.
+                  </p>
+                </div>
               </div>
-              <section className="form-section">
+              <section className="form-section form-section-forgot">
                 <InputField
-                  label="Votre email" value={resetEmail} onChangeText={setResetEmail}
-                  icon={<Mail size={16} color="#94A3B8"/>} placeholder="medecin@exemple.com" type="email"
+                  label="Votre email"
+                  name="reset-email"
+                  value={resetEmail}
+                  onChangeText={setResetEmail}
+                  icon={<Mail size={16} strokeWidth={1.75} />}
+                  placeholder="medecin@exemple.com"
+                  type="email"
+                  autoComplete="email"
                 />
               </section>
-              <button className="submit-btn" onClick={handlePasswordReset} disabled={isResettingPassword}>
+              <button type="button" className="submit-btn" onClick={handlePasswordReset} disabled={isResettingPassword}>
                 {isResettingPassword
                   ? <span className="btn-loading"><span className="spinner"/>Envoi en cours…</span>
-                  : <span>Envoyer le lien <ChevronRight size={18}/></span>}
+                  : <><span>Envoyer le lien</span> <Send size={18} strokeWidth={2} aria-hidden /></>}
               </button>
-              <button type="button" className="back-link" onClick={() => { setIsPasswordResetMode(false); setResetEmail(''); }}>
-                ← Retour à la connexion
+              <button
+                type="button"
+                className="back-link"
+                onClick={() => { setIsPasswordResetMode(false); setResetEmail(''); }}
+              >
+                <ArrowLeft size={16} strokeWidth={2} aria-hidden />
+                <span>Retour à la connexion</span>
               </button>
-            </>
+            </div>
           )}
         </div>
       </main>

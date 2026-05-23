@@ -7,34 +7,32 @@ from django.utils import timezone
 from apps.activities.models import UserActivity
 from apps.alerts.models import AlertEvent, AlertSeverity
 from apps.dashboard.services import HealthScoreService
+from apps.doctors.doctor_patient_access import _get_identity
 from apps.glycemia.models import Glycemia, GlycemiaHisto
 from apps.meals.models import UserMeal
 from apps.medications.models import UserMedication
 
 
 class DoctorPatientDataService:
-    """
-    Service dédié à la récupération des données patient pour les MÉDECINS.
-    Isole la logique du Dashboard Patient pour garantir l'indépendance.
-    """
-
     @staticmethod
-    def get_patient_dashboard(patient_user) -> dict:
-        """
-        Agrège un résumé des données de santé du patient pour le médecin.
-        """
+    def get_patient_dashboard(patient_account) -> dict:
         return {
-            "glucose": DoctorPatientDataService._get_glucose_data(patient_user),
-            "alerts": DoctorPatientDataService._get_alerts_data(patient_user),
-            "medication": DoctorPatientDataService._get_medication_data(patient_user),
-            "nutrition": DoctorPatientDataService._get_nutrition_data(patient_user),
-            "activity": DoctorPatientDataService._get_activity_data(patient_user),
-            "healthScore": HealthScoreService.calculate(patient_user),
+            "glucose": DoctorPatientDataService._get_glucose_data(patient_account),
+            "alerts": DoctorPatientDataService._get_alerts_data(patient_account),
+            "medication": DoctorPatientDataService._get_medication_data(patient_account),
+            "nutrition": DoctorPatientDataService._get_nutrition_data(patient_account),
+            "activity": DoctorPatientDataService._get_activity_data(patient_account),
+            "hba1c": DoctorPatientDataService._get_hba1c_data(patient_account),
+            "healthScore": HealthScoreService.calculate(patient_account),
         }
 
     @staticmethod
-    def _get_glucose_data(user) -> dict | None:
-        latest = Glycemia.objects.filter(user=user).order_by("-measured_at").first()
+    def _get_glucose_data(patient_account) -> dict | None:
+        latest = (
+            Glycemia.objects.filter(user=patient_account)
+            .order_by("-measured_at")
+            .first()
+        )
         if not latest:
             return None
 
@@ -46,13 +44,11 @@ class DoctorPatientDataService:
         }
 
     @staticmethod
-    def _get_alerts_data(user) -> list:
-        # Récupère les 3 dernières alertes déclenchées/envoyées
+    def _get_alerts_data(patient_account) -> list:
         alerts = AlertEvent.objects.filter(
-            user=user, status__in=["TRIGGERED", "SENT"]
+            user=patient_account, status__in=["TRIGGERED", "SENT"]
         ).order_by("-rule__severity", "-triggered_at")[:3]
 
-        result = []
         severity_map = {
             AlertSeverity.CRITICAL: "critical",
             AlertSeverity.HIGH: "high",
@@ -61,28 +57,36 @@ class DoctorPatientDataService:
             AlertSeverity.INFO: "info",
         }
 
+        result = []
         for alert in alerts:
-            result.append(
-                {
-                    "alertId": str(alert.id),
-                    "type": alert.rule.code.lower(),
-                    "severity": severity_map.get(alert.rule.severity, "medium"),
-                    "triggeredAt": alert.triggered_at,
-                }
+            rule = alert.rule
+            code = (getattr(rule, "code", None) or "alert") if rule else "alert"
+            severity = (
+                severity_map.get(rule.severity, "medium") if rule else "medium"
             )
-
+            result.append({
+                "alertId": str(alert.id),
+                "type": str(code).lower(),
+                "severity": severity,
+                "triggeredAt": alert.triggered_at,
+            })
         return result
 
     @staticmethod
-    def _get_medication_data(user) -> dict:
+    def _get_medication_data(patient_account) -> dict:
         next_dose = (
-            UserMedication.objects.filter(user=user, statut=True, taken_at__isnull=True, medication__isnull=False)
+            UserMedication.objects.filter(
+                user=patient_account,
+                statut=True,
+                taken_at__isnull=True,
+                medication__isnull=False,
+            )
             .select_related("medication")
             .order_by("start_date")
             .first()
         )
 
-        if not next_dose:
+        if not next_dose or not next_dose.medication:
             return {"nextDose": None}
 
         return {
@@ -94,20 +98,23 @@ class DoctorPatientDataService:
         }
 
     @staticmethod
-    def _get_nutrition_data(user) -> dict:
+    def _get_nutrition_data(patient_account) -> dict:
         since = timezone.now() - timedelta(hours=24)
-        meals = UserMeal.objects.filter(user=user, taken_at__gte=since).select_related(
-            "meal"
-        )
+        meals = UserMeal.objects.filter(
+            user=patient_account, taken_at__gte=since
+        ).select_related("meal")
 
         total_calories = 0
         total_carbs = 0
 
         for user_meal in meals:
-            if user_meal.meal.calories:
-                total_calories += user_meal.meal.calories
-            if user_meal.meal.glucose:
-                total_carbs += int(user_meal.meal.glucose)
+            meal = user_meal.meal
+            if not meal:
+                continue
+            if meal.calories:
+                total_calories += meal.calories
+            if meal.glucose:
+                total_carbs += int(meal.glucose)
 
         return {
             "calories": {"consumed": total_calories, "goal": 1800},
@@ -115,9 +122,11 @@ class DoctorPatientDataService:
         }
 
     @staticmethod
-    def _get_activity_data(user) -> dict:
+    def _get_activity_data(patient_account) -> dict:
         today = timezone.now().date()
-        activities = UserActivity.objects.filter(user=user, start__date=today)
+        activities = UserActivity.objects.filter(
+            user=patient_account, start__date=today
+        )
 
         total_minutes = 0
         for activity in activities:
@@ -130,10 +139,31 @@ class DoctorPatientDataService:
         }
 
     @staticmethod
-    def get_glycemia_history(user, limit=50) -> list:
-        history = GlycemiaHisto.objects.filter(user=user).order_by("-measured_at")[
-            :limit
-        ]
+    def _get_hba1c_data(patient_account) -> dict | None:
+        identity = _get_identity(patient_account)
+        if not identity:
+            return None
+
+        profile = identity.profiles.filter(role__name__iexact="PATIENT").first()
+        if not profile or not hasattr(profile, "patient_profile"):
+            return None
+
+        pp = profile.patient_profile
+        if pp.hba1c is None:
+            return None
+
+        measured_at = getattr(pp, "updated_at", None)
+        return {
+            "value": float(pp.hba1c),
+            "unit": "%",
+            "measuredAt": measured_at.isoformat() if measured_at else None,
+        }
+
+    @staticmethod
+    def get_glycemia_history(patient_account, limit=50) -> list:
+        history = GlycemiaHisto.objects.filter(user=patient_account).order_by(
+            "-measured_at"
+        )[:limit]
         return [
             {
                 "value": h.value,
@@ -153,36 +183,42 @@ class DoctorPatientDataService:
         ]
 
     @staticmethod
-    def get_meals_history(user, limit=50) -> list:
+    def get_meals_history(patient_account, limit=50) -> list:
         meals = (
-            UserMeal.objects.filter(user=user)
+            UserMeal.objects.filter(user=patient_account)
             .select_related("meal")
             .order_by("-taken_at")[:limit]
         )
-        return [
-            {
+        result = []
+        for m in meals:
+            if not m.meal:
+                continue
+            result.append({
                 "name": m.meal.name,
                 "calories": m.meal.calories,
                 "carbs": m.meal.glucose,
                 "takenAt": m.taken_at,
                 "photo": m.meal.link_photo,
-            }
-            for m in meals
-        ]
+            })
+        return result
 
     @staticmethod
-    def get_medications_history(user, limit=50) -> list:
+    def get_medications_history(patient_account, limit=50) -> list:
         meds = (
-            UserMedication.objects.filter(user=user)
+            UserMedication.objects.filter(user=patient_account)
             .select_related("medication")
             .order_by("-taken_at")[:limit]
         )
-        return [
-            {
-                "name": m.medication.name,
-                "dosage": m.medication.dosage,
-                "takenAt": m.taken_at,
-                "status": m.statut,
-            }
-            for m in meds
-        ]
+        result = []
+        for m in meds:
+            if not m.medication:
+                continue
+            result.append(
+                {
+                    "name": m.medication.name,
+                    "dosage": m.medication.dosage,
+                    "takenAt": m.taken_at,
+                    "status": m.statut,
+                }
+            )
+        return result

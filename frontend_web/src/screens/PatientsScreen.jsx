@@ -1,52 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  Users, Clock, Search, ChevronRight,
-  Mail, Phone, AlertCircle, Plus, X,
-  Activity, Utensils, Pill, Droplets, Heart, Footprints,
-  Flame, AlertTriangle, CheckCircle, Send, UserPlus,
-  Pencil, TrendingUp, XCircle
-} from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import AppIcon from '../components/AppIcon';
+import { dedupeDoctorTeamLists } from '../lib/careTeamInvites';
 import authService from '../services/authService';
 import { toastError, toastSuccess } from '../services/toastService';
-import Sidebar from '../components/Sidebar';
-import { getInitials, extractValue, toArr, hba1cBand } from '../lib/utils';
+import DoctorDashboardHeader from '../components/DoctorDashboardHeader';
+import { getInitials, extractValue, toArr, hba1cBand, parseDashboardGlucose } from '../lib/utils';
+
 import './css/patients.css';
 
 const apiClient = authService.getApiClient();
 
-const HBA1C_CACHE_PREFIX = 'hba1c-cache:';
-
-function readHba1cCache(patientId) {
-  if (!patientId) return null;
-  try {
-    const raw = localStorage.getItem(`${HBA1C_CACHE_PREFIX}${patientId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.value === 'number') {
-      return {
-        value: parsed.value,
-        unit: parsed.unit || '%',
-        measuredAt: parsed.measuredAt || null,
-      };
-    }
-  } catch (_e) {
-    return null;
-  }
-  return null;
-}
-
-function writeHba1cCache(patientId, value, measuredAt) {
-  if (!patientId || typeof value !== 'number') return;
-  try {
-    const payload = {
-      value,
-      unit: '%',
-      measuredAt: measuredAt || new Date().toISOString(),
-    };
-    localStorage.setItem(`${HBA1C_CACHE_PREFIX}${patientId}`, JSON.stringify(payload));
-  } catch (_e) {
-    // ignore storage failures
-  }
+function healthScoreOf(dash) {
+  const raw = extractValue(dash?.healthScore) ?? dash?.healthScore;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 function formatNextDose(nextDose) {
@@ -60,13 +28,33 @@ function formatNextDose(nextDose) {
   return label || time || null;
 }
 
+/** API care-team : status = "ACTIVE" | "PENDING" | "REJECTED" (StringRelatedField). */
+function formatInvitationDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function normalizeCareTeamStatus(status) {
+  if (status == null || status === '') return null;
+  if (typeof status === 'number') {
+    const legacy = { 0: 'INACTIVE', 1: 'PENDING', 2: 'ACTIVE' };
+    return legacy[status] ?? null;
+  }
+  return String(status).toUpperCase().trim();
+}
+
 function StatusBadge({ status }) {
+  const key = normalizeCareTeamStatus(status);
   const map = {
-    2: { label: 'Actif',       cls: 'badge-active' },
-    1: { label: 'En attente',  cls: 'badge-pending' },
-    0: { label: 'Inactif',     cls: 'badge-inactive' },
+    ACTIVE:   { label: 'Actif',      cls: 'badge-active' },
+    PENDING:  { label: 'En attente', cls: 'badge-pending' },
+    REJECTED: { label: 'Refusé',     cls: 'badge-inactive' },
+    DECLINED: { label: 'Refusé',     cls: 'badge-inactive' },
+    INACTIVE: { label: 'Inactif',    cls: 'badge-inactive' },
   };
-  const { label, cls } = map[status] || { label: 'Inconnu', cls: 'badge-inactive' };
+  const { label, cls } = map[key] || { label: 'Inconnu', cls: 'badge-inactive' };
   return <span className={`status-badge ${cls}`}>{label}</span>;
 }
 
@@ -102,20 +90,20 @@ function AddPatientModal({ onClose, onSuccess }) {
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title-row">
-            <div className="modal-icon-wrap"><Plus size={20} /></div>
+            <div className="modal-icon-wrap"><AppIcon name="user-plus" size={20} /></div>
             <div>
               <h2>Ajouter un patient</h2>
               <p>Invitez un patient à rejoindre votre équipe de soins</p>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose}><AppIcon name="x" size={20} /></button>
         </div>
 
         <div className="modal-body">
           <div className="mfield">
             <label>Email du patient <span className="required">*</span></label>
             <div className="minput-wrap">
-              <Mail size={15} />
+              <AppIcon name="mail" size={15} />
               <input
                 type="email"
                 placeholder="patient@exemple.com"
@@ -128,7 +116,7 @@ function AddPatientModal({ onClose, onSuccess }) {
           <div className="mfield">
             <label>Téléphone <span className="optional">(optionnel)</span></label>
             <div className="minput-wrap">
-              <Phone size={15} />
+              <AppIcon name="phone" size={15} />
               <input
                 type="tel"
                 placeholder="+33 6 00 00 00 00"
@@ -272,7 +260,7 @@ function AlertCard({ alert, index }) {
         <div className="alert-card-bar" style={{ background: c.bar }} />
         <div className="alert-card-body">
           <div className="alert-card-title" style={{ color: c.text }}>
-            <AlertTriangle size={13} /> {alert}
+            <AppIcon name="alert" size={13} /> {alert}
           </div>
         </div>
       </div>
@@ -294,7 +282,7 @@ function AlertCard({ alert, index }) {
       <div className="alert-card-bar" style={{ background: c.bar }} />
       <div className="alert-card-body">
         <div className="alert-card-title" style={{ color: c.text }}>
-          <AlertTriangle size={13} />
+          <AppIcon name="alert" size={13} />
           <span>{message}</span>
         </div>
         {alert.type && alert.message && (
@@ -328,7 +316,6 @@ function HealthScore({ score }) {
   );
 }
 
-/* ─── Carte HbA1c (lecture + édition) ─── */
 function HbA1cCard({ value, unit, measuredAt, onSave }) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState('');
@@ -355,8 +342,8 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
     try {
       await onSave(parsed);
       setEditing(false);
-    } catch (_e) {
-      /* l'erreur est déjà signalée à l'utilisateur en amont */
+    } catch {
+      // toast déjà affiché par onSave
     } finally {
       setSaving(false);
     }
@@ -365,7 +352,7 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
   return (
     <div className="hba1c-card" data-testid="hba1c-card">
       <div className="hba1c-top">
-        <div className="hba1c-icon"><TrendingUp size={18} /></div>
+        <div className="hba1c-icon"><AppIcon name="chart" size={18} /></div>
         <div className="hba1c-meta">
           <span className="hba1c-label">HbA1c (3 derniers mois)</span>
           {measuredAt && (
@@ -380,7 +367,7 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
             onClick={startEdit}
             aria-label={value != null ? "Modifier l'HbA1c" : "Renseigner l'HbA1c"}
           >
-            <Pencil size={14} /> {value != null ? 'Modifier' : 'Renseigner'}
+            <AppIcon name="chart" size={14} /> {value != null ? 'Modifier' : 'Renseigner'}
           </button>
         )}
       </div>
@@ -468,7 +455,6 @@ function PatientDashboardModal({ member, onClose }) {
   }, [patientId]);
 
   useEffect(() => {
-    // Pour 'custom', n'envoie la requête que si les deux dates sont remplies
     if (period === 'custom' && (!customStart || !customEnd)) return;
     const load = async () => {
       setLoadingData(true);
@@ -476,18 +462,39 @@ function PatientDashboardModal({ member, onClose }) {
       try {
         const dates = getPeriodDates();
         const qs = new URLSearchParams({ patient_user_id: patientId, ...dates }).toString();
-        const [d, m, med, g] = await Promise.all([
-          apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`),
-          apiClient.get(`/doctors/care-team/patient-meals/?${qs}`),
-          apiClient.get(`/doctors/care-team/patient-medications/?patient_user_id=${patientId}`),
-          apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`),
-        ]);
-        setDashboard(d.data);
-        setMeals(toArr(m.data, ['results', 'meals', 'data']));
-        setMedications(toArr(med.data, ['results', 'medications', 'data']));
-        setGlycemia(toArr(g.data, ['results', 'glycemia', 'data']));
+        const endpoints = [
+          ['dashboard', apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${patientId}`)],
+          ['meals', apiClient.get(`/doctors/care-team/patient-meals/?${qs}`)],
+          ['medications', apiClient.get(`/doctors/care-team/patient-medications/?patient_user_id=${patientId}`)],
+          ['glycemia', apiClient.get(`/doctors/care-team/patient-glycemia/?${qs}`)],
+        ];
+        const results = await Promise.allSettled(endpoints.map(([, p]) => p));
+        const failed = [];
+        results.forEach((r, i) => {
+          const key = endpoints[i][0];
+          if (r.status === 'rejected') {
+            failed.push(key);
+            return;
+          }
+          const data = r.value.data;
+          if (key === 'dashboard') setDashboard(data);
+          else if (key === 'meals') setMeals(toArr(data, ['results', 'meals', 'data']));
+          else if (key === 'medications') setMedications(toArr(data, ['results', 'medications', 'data']));
+          else if (key === 'glycemia') setGlycemia(toArr(data, ['results', 'glycemia', 'data']));
+        });
+        if (failed.length === endpoints.length) {
+          const first = results.find(r => r.status === 'rejected');
+          const msg = first?.reason?.response?.data?.error
+            || first?.reason?.response?.data?.detail
+            || first?.reason?.message
+            || 'Impossible de charger les données du patient';
+          throw new Error(msg);
+        }
+        if (failed.length > 0) {
+          toastError('Avertissement', `Certaines données n'ont pas pu être chargées : ${failed.join(', ')}`);
+        }
       } catch (err) {
-        toastError('Erreur', 'Impossible de charger les données du patient');
+        toastError('Erreur', err.message || 'Impossible de charger les données du patient');
       } finally {
         setLoadingData(false);
       }
@@ -497,18 +504,9 @@ function PatientDashboardModal({ member, onClose }) {
 
   const handleSaveHba1c = async (newValue) => {
     try {
-      const res = await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
+      await apiClient.patch(`/doctors/patients/${patientId}/medical/`, { hba1c: newValue });
       toastSuccess('HbA1c mis à jour', `Nouvelle valeur : ${newValue.toFixed(1)} %`);
-      const savedValue = res.data?.patient_details?.hba1c ?? newValue;
-      const measuredAt = new Date().toISOString();
-      writeHba1cCache(patientId, Number(savedValue), measuredAt);
-      try { await refreshDashboard(); } catch (_e) { /* no-op */ }
-      // Le backend patient-dashboard ne renvoie pas hba1c → on l'injecte localement
-      // pour que la valeur reste visible dans la modale après la sauvegarde.
-      setDashboard((prev) => ({
-        ...(prev ?? {}),
-        hba1c: { value: savedValue, unit: '%', measuredAt },
-      }));
+      await refreshDashboard();
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
       toastError('Erreur', msg);
@@ -517,25 +515,22 @@ function PatientDashboardModal({ member, onClose }) {
   };
 
   const tabs = [
-    { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <Heart size={15} /> },
-    { id: 'glycemia',    label: 'Glycémie',         icon: <Droplets size={15} /> },
-    { id: 'meals',       label: 'Repas',            icon: <Utensils size={15} /> },
-    { id: 'medications', label: 'Traitements',      icon: <Pill size={15} /> },
+    { id: 'dashboard',   label: 'Vue d\'ensemble', icon: <AppIcon name="grid" size={15} /> },
+    { id: 'glycemia',    label: 'Glycémie',         icon: <AppIcon name="droplets" size={15} /> },
+    { id: 'meals',       label: 'Repas',            icon: <AppIcon name="utensils" size={15} /> },
+    { id: 'medications', label: 'Traitements',      icon: <AppIcon name="pill" size={15} /> },
   ];
 
-  /* Statistiques glycémie */
   const glycValues = glycemia.map(g => parseFloat(g.value)).filter(v => !isNaN(v));
   const glycAvg    = glycValues.length ? (glycValues.reduce((a, b) => a + b, 0) / glycValues.length).toFixed(2) : null;
 
-  /* ── Extraction sécurisée des champs dashboard ──
-     L'API peut renvoyer un scalaire OU un objet { value, unit, trend, recordedAt, … }
-     pour chaque champ. On normalise ici une seule fois. */
+  const glucoseParsed = parseDashboardGlucose(dashboard?.glucose);
   const dash = dashboard ? {
     healthScore: extractValue(dashboard.healthScore) ?? dashboard.healthScore ?? 0,
     alerts:      dashboard.alerts ?? [],
-    glucose:     extractValue(dashboard.glucose),
-    glucoseUnit: typeof dashboard.glucose === 'object' ? (dashboard.glucose?.unit ?? 'mg/dL') : 'mg/dL',
-    glucoseDate: typeof dashboard.glucose === 'object' ? dashboard.glucose?.recordedAt : null,
+    glucose:     glucoseParsed.value,
+    glucoseUnit: glucoseParsed.unit,
+    glucoseDate: glucoseParsed.recordedAt,
     nutrition: {
       calories: {
         consumed: extractValue(dashboard.nutrition?.calories?.consumed ?? dashboard.nutrition?.calories),
@@ -558,16 +553,14 @@ function PatientDashboardModal({ member, onClose }) {
     },
     hba1c: (() => {
       const fromApi = extractValue(dashboard.hba1c);
-      if (fromApi != null) {
-        return {
-          value: fromApi,
-          unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
-          measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
-        };
+      if (fromApi == null) {
+        return { value: null, unit: '%', measuredAt: null };
       }
-      const cached = readHba1cCache(patientId);
-      if (cached) return cached;
-      return { value: null, unit: '%', measuredAt: null };
+      return {
+        value: fromApi,
+        unit: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.unit ?? '%') : '%',
+        measuredAt: typeof dashboard.hba1c === 'object' ? (dashboard.hba1c?.measuredAt ?? null) : null,
+      };
     })(),
   } : null;
 
@@ -582,13 +575,13 @@ function PatientDashboardModal({ member, onClose }) {
             <div>
               <h2 className="pdm-name">{p.first_name} {p.last_name}</h2>
               <div className="pdm-meta">
-                {p.email && <span><Mail size={12} /> {p.email}</span>}
-                {p.phone_number && <span><Phone size={12} /> {p.phone_number}</span>}
+                {p.email && <span><AppIcon name="mail" size={12} /> {p.email}</span>}
+                {p.phone_number && <span><AppIcon name="phone" size={12} /> {p.phone_number}</span>}
                 <StatusBadge status={member.status} />
               </div>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}><X size={20} /></button>
+          <button className="modal-close" onClick={onClose}><AppIcon name="x" size={20} /></button>
         </div>
 
         {/* ── Tabs + sélecteur période ── */}
@@ -662,9 +655,9 @@ function PatientDashboardModal({ member, onClose }) {
                     <HealthScore score={dash.healthScore} />
 
                     <div className="pdm-alerts-block">
-                      <div className="pdm-section-title"><AlertTriangle size={14} /> Alertes récentes</div>
+                      <div className="pdm-section-title"><AppIcon name="alert" size={14} /> Alertes récentes</div>
                       {(!dash.alerts || dash.alerts.length === 0) ? (
-                        <div className="pdm-no-alert"><CheckCircle size={16} /> Aucune alerte active</div>
+                        <div className="pdm-no-alert"><AppIcon name="check" size={16} /> Aucune alerte active</div>
                       ) : (
                         <div className="pdm-alerts-list">
                           {dash.alerts.map((a, i) => <AlertCard key={i} alert={a} index={i} />)}
@@ -674,10 +667,10 @@ function PatientDashboardModal({ member, onClose }) {
                   </div>
 
                   {/* Ligne 2 : métriques */}
-                  <div className="pdm-section-title" style={{ marginTop: 20 }}><Activity size={14} /> Métriques du jour</div>
+                  <div className="pdm-section-title" style={{ marginTop: 20 }}><AppIcon name="activity" size={14} /> Métriques du jour</div>
                   <div className="pdm-metrics-grid">
                     <MetricCard
-                      icon={<Droplets size={18} />}
+                      icon={<AppIcon name="droplets" size={18} />}
                       label="Glycémie actuelle"
                       value={dash.glucose != null ? dash.glucose : '—'}
                       unit={dash.glucose != null ? ` ${dash.glucoseUnit}` : ''}
@@ -689,7 +682,7 @@ function PatientDashboardModal({ member, onClose }) {
                           : null}
                     />
                     <MetricCard
-                      icon={<Flame size={18} />}
+                      icon={<AppIcon name="flame" size={18} />}
                       label="Calories"
                       value={dash.nutrition.calories.consumed}
                       unit=" kcal"
@@ -697,7 +690,7 @@ function PatientDashboardModal({ member, onClose }) {
                       color="#EA580C" colorBg="#FFF7ED"
                     />
                     <MetricCard
-                      icon={<Utensils size={18} />}
+                      icon={<AppIcon name="utensils" size={18} />}
                       label="Glucides"
                       value={dash.nutrition.carbs.grams}
                       unit=" g"
@@ -705,7 +698,7 @@ function PatientDashboardModal({ member, onClose }) {
                       color="#16A34A" colorBg="#F0FDF4"
                     />
                     <MetricCard
-                      icon={<Footprints size={18} />}
+                      icon={<AppIcon name="footsteps" size={18} />}
                       label="Pas"
                       value={dash.activity.steps.value != null
                         ? Number(dash.activity.steps.value).toLocaleString('fr-FR')
@@ -714,7 +707,7 @@ function PatientDashboardModal({ member, onClose }) {
                       color="#7C3AED" colorBg="#F5F3FF"
                     />
                     <MetricCard
-                      icon={<Activity size={18} />}
+                      icon={<AppIcon name="activity" size={18} />}
                       label="Minutes actives"
                       value={dash.activity.activeMinutes}
                       unit=" min"
@@ -722,7 +715,7 @@ function PatientDashboardModal({ member, onClose }) {
                       goalLabel="Objectif : 30 min/jour"
                     />
                     <MetricCard
-                      icon={<Pill size={18} />}
+                      icon={<AppIcon name="pill" size={18} />}
                       label="Prochain médicament"
                       value={dash.medication.nextDose ?? '—'}
                       color="#15803D" colorBg="#F0FDF4"
@@ -736,7 +729,7 @@ function PatientDashboardModal({ member, onClose }) {
               {activeTab === 'glycemia' && (
                 glycemia.length === 0 ? (
                   <div className="empty-state">
-                    <Droplets size={40} strokeWidth={1} />
+                    <AppIcon name="droplets" size={40} />
                     <p>Aucune mesure de glycémie enregistrée</p>
                   </div>
                 ) : (
@@ -817,7 +810,7 @@ function PatientDashboardModal({ member, onClose }) {
                           </strong>
                         </span>
                         <button className="gly-filter-clear" onClick={() => setGlycFilter('all')}>
-                          <X size={12} /> Effacer le filtre
+                          <AppIcon name="filter-x" size={12} /> Effacer le filtre
                         </button>
                       </div>
                     )}
@@ -859,15 +852,15 @@ function PatientDashboardModal({ member, onClose }) {
                                 <td>
                                   {isHigh ? (
                                     <span className="gly-status-badge gly-status-high">
-                                      <AlertTriangle size={11} /> Hyperglycémie
+                                      <AppIcon name="trend-up" size={11} /> Hyperglycémie
                                     </span>
                                   ) : isLow ? (
                                     <span className="gly-status-badge gly-status-low">
-                                      <AlertTriangle size={11} /> Hypoglycémie
+                                      <AppIcon name="trend-down" size={11} /> Hypoglycémie
                                     </span>
                                   ) : (
                                     <span className="gly-status-badge gly-status-normal">
-                                      <CheckCircle size={11} /> Normal
+                                      <AppIcon name="minus" size={11} /> Normal
                                     </span>
                                   )}
                                 </td>
@@ -886,7 +879,7 @@ function PatientDashboardModal({ member, onClose }) {
                       if (glycFilter==='normal') return !high&&!low; return true;
                     }).length === 0 && (
                       <div className="gly-empty-filter">
-                        <CheckCircle size={20} style={{ color: '#16A34A' }} />
+                        <AppIcon name="filter-x" size={20} />
                         Aucune mesure de ce type
                       </div>
                     )}
@@ -898,7 +891,7 @@ function PatientDashboardModal({ member, onClose }) {
               {activeTab === 'meals' && (
                 meals.length === 0 ? (
                   <div className="empty-state">
-                    <Utensils size={40} strokeWidth={1} />
+                    <AppIcon name="utensils" size={40} />
                     <p>Aucun repas enregistré</p>
                   </div>
                 ) : (
@@ -906,13 +899,13 @@ function PatientDashboardModal({ member, onClose }) {
                     {/* Résumé nutrition */}
                     <div className="meals-summary">
                       <div className="meals-sum-item">
-                        <Flame size={16} style={{ color: '#EA580C' }} />
+                        <AppIcon name="flame" size={16} />
                         <span className="meals-sum-val">{meals.reduce((acc, m) => acc + (m.calories ?? m.total_calories ?? m.kcal ?? m.energy ?? 0), 0)}</span>
                         <span className="meals-sum-lbl">kcal totales</span>
                       </div>
                       <div className="meals-sum-sep" />
                       <div className="meals-sum-item">
-                        <Utensils size={16} style={{ color: '#16A34A' }} />
+                        <AppIcon name="utensils" size={16} />
                         <span className="meals-sum-val">{meals.reduce((acc, m) => acc + (m.carbs ?? m.carbohydrates ?? m.glucides ?? m.carb_grams ?? 0), 0)} g</span>
                         <span className="meals-sum-lbl">Glucides totaux</span>
                       </div>
@@ -959,7 +952,7 @@ function PatientDashboardModal({ member, onClose }) {
               {activeTab === 'medications' && (
                 medications.length === 0 ? (
                   <div className="empty-state">
-                    <Pill size={40} strokeWidth={1} />
+                    <AppIcon name="pill" size={40} />
                     <p>Aucun médicament enregistré</p>
                   </div>
                 ) : (
@@ -1000,7 +993,7 @@ function PatientDashboardModal({ member, onClose }) {
                             <tr key={i}>
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <div className="med-icon-sm"><Pill size={13} /></div>
+                                  <div className="med-icon-sm"><AppIcon name="pill" size={13} /></div>
                                   <div>
                                     <strong>{medName || '—'}</strong>
                                     {medStart && (
@@ -1036,180 +1029,306 @@ function PatientDashboardModal({ member, onClose }) {
   );
 }
 
-/* ─── Card patient ──*/
-function PatientCard({ member, onClick }) {
-  const p = member.patient_details;
-  return (
-    <div className="patient-card" onClick={onClick} style={{ cursor: 'pointer' }}>
-      <div className="card-top">
-        <div className="patient-avatar">{getInitials(p.first_name, p.last_name)}</div>
-        <div className="patient-meta">
-          <h3 className="patient-name">{p.first_name} {p.last_name}</h3>
-          <StatusBadge status={member.status} />
-        </div>
-        <span className="role-badge">{member.role_label}</span>
-      </div>
-      <div className="card-body">
-        <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>
-        {p.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
-      </div>
-      <div className="card-footer">
-        <button className="card-btn" onClick={onClick}>
-          Voir le dossier <ChevronRight size={14} />
-        </button>
-      </div>
-    </div>
-  );
-}
+function PatientTableRow({ member, type, dashboard, onClick, onAccepted, onDeclined }) {
+  const p = member.patient_details ?? {};
 
-/** Invitation envoyée par le médecin → en attente de réponse du patient */
-function SentInviteCard({ invite }) {
-  const p = invite.patient_details;
-  return (
-    <div className="patient-card invite-card invite-sent">
-      <div className="card-top">
-        <div className="patient-avatar invite-avatar-sent"><Send size={18} /></div>
-        <div className="patient-meta">
-          <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : invite.invitation_email || '—'}</h3>
-          <span className="status-badge badge-pending">Invitation envoyée</span>
-        </div>
-      </div>
-      <div className="card-body" style={{ marginTop: 12 }}>
-        {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
-        {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
-      </div>
-      <div className="invite-waiting">
-        <Clock size={13} /> En attente de la réponse du patient
-      </div>
-    </div>
-  );
-}
+  const score = type === 'active' ? healthScoreOf(dashboard) : null;
+  const { value: glucoseVal, unit: glucoseUnit } = parseDashboardGlucose(dashboard?.glucose);
 
-/** Invitation reçue par le médecin → il peut l'accepter */
-function ReceivedInviteCard({ invite, onAccepted, onDeclined }) {
-  const p = invite.patient_details;
+
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
-  const [confirmingDecline, setConfirmingDecline] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
 
   const handleAccept = async (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setAccepting(true);
     try {
-      await apiClient.post('/doctors/care-team/accept-invitation/', {
-        id_team_member: invite.id_team_member,
+      await authService.getApiClient().post('/doctors/care-team/accept-invitation/', {
+        id_team_member: member.id_team_member,
       });
-      toastSuccess('Invitation acceptée', `${p?.first_name ?? ''} ${p?.last_name ?? ''} a rejoint votre équipe`);
-      onAccepted();
+      toastSuccess('Demande validée', `${p?.first_name ?? ''} ${p?.last_name ?? ''} a rejoint votre équipe`);
+      onAccepted?.();
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
-      toastError('Erreur', msg);
+      toastError('Erreur', err.message);
     } finally {
       setAccepting(false);
     }
   };
 
   const handleDecline = async (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setDeclining(true);
     try {
-      await apiClient.post('/doctors/care-team/decline-invitation/', {
-        id_team_member: invite.id_team_member,
+      await authService.getApiClient().post('/doctors/care-team/decline-invitation/', {
+        id_team_member: member.id_team_member,
       });
       toastSuccess('Demande refusée', `La demande de ${p?.first_name ?? ''} ${p?.last_name ?? ''} a été refusée`);
       onDeclined?.();
     } catch (err) {
-      const status = err.response?.status;
-      if (status === 404 || status === 405) {
-        toastError('Bientôt disponible', "Le refus d'invitation n'est pas encore activé côté serveur.");
-      } else {
-        const msg = err.response?.data?.error || err.response?.data?.detail || err.message;
-        toastError('Erreur', msg);
-      }
+      toastError('Erreur', err.message);
     } finally {
       setDeclining(false);
-      setConfirmingDecline(false);
+      setShowDeclineModal(false);
     }
   };
 
   return (
-    <div className="patient-card invite-card invite-received">
-      <div className="invite-received-banner">
-        <UserPlus size={13} /> Demande reçue d'un patient
-      </div>
-      <div className="card-top" style={{ marginTop: 12 }}>
-        <div className="patient-avatar invite-avatar-received">
-          {getInitials(p?.first_name, p?.last_name)}
-        </div>
-        <div className="patient-meta">
-          <h3 className="patient-name">{p?.first_name ? `${p.first_name} ${p.last_name}` : '—'}</h3>
-          <span className="status-badge badge-received">Souhaite que vous deveniez son médecin référent</span>
-        </div>
-      </div>
-      <div className="card-body" style={{ marginTop: 12 }}>
-        {p?.email && <div className="info-row"><Mail size={14} /><span>{p.email}</span></div>}
-        {p?.phone_number && <div className="info-row"><Phone size={14} /><span>{p.phone_number}</span></div>}
-      </div>
-
-      {confirmingDecline ? (
-        <div className="invite-decline-confirm" role="alertdialog" aria-label="Confirmer le refus">
-          <p className="invite-decline-msg">
-            <AlertTriangle size={14} /> Refuser cette demande ? Le patient ne pourra plus vous solliciter
-            tant qu'il n'envoie pas une nouvelle invitation.
-          </p>
-          <div className="invite-decline-actions">
-            <button
-              className="card-btn-cancel"
-              onClick={(e) => { e.stopPropagation(); setConfirmingDecline(false); }}
-              disabled={declining}
-            >
-              Annuler
-            </button>
-            <button className="card-btn-decline-confirm" onClick={handleDecline} disabled={declining}>
-              {declining
-                ? <><span className="mini-spinner-sm" /> Refus en cours…</>
-                : <><XCircle size={14} /> Confirmer le refus</>}
-            </button>
+    <>
+      <tr className={`patient-tr pt-row-${type}`} onClick={type === 'active' ? onClick : undefined} style={{ cursor: type === 'active' ? 'pointer' : 'default' }}>
+        <td>
+          <div className="pt-name-cell">
+            <div className={`patient-avatar pt-avatar pt-av-${type}`}>
+              {type === 'sent' ? <AppIcon name="send" size={16} /> : getInitials(p.first_name, p.last_name)}
+            </div>
+            <div>
+              <div className="pt-name">
+                {type === 'sent' && !p?.first_name ? (member.invitation_email || '—') : `${p?.first_name || ''} ${p?.last_name || ''}`.trim() || '—'}
+              </div>
+              <div className="pt-email">{p.email || '—'}</div>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div className="card-footer card-footer-split">
-          <button
-            className="card-btn-decline"
-            onClick={(e) => { e.stopPropagation(); setConfirmingDecline(true); }}
-            disabled={accepting}
-          >
-            <X size={14} /> Refuser
-          </button>
-          <button className="card-btn-accept" onClick={handleAccept} disabled={accepting}>
-            {accepting
-              ? <><span className="mini-spinner-sm" /> Acceptation…</>
-              : <><CheckCircle size={14} /> Accepter la demande</>}
-          </button>
-        </div>
+        </td>
+        <td>
+          {type === 'active' ? (
+            <span className="tb-status-badge tb-active">Actif</span>
+          ) : type === 'sent' ? (
+            <span className="tb-status-badge tb-sent">En attente</span>
+          ) : (
+            <span className="tb-status-badge tb-pending">À valider</span>
+          )}
+        </td>
+        <td>
+          <span className="pt-invite-date" title={member.created_at || undefined}>
+            {formatInvitationDate(member.created_at)}
+          </span>
+        </td>
+        <td>
+          {type === 'active' && score != null ? (
+            <span className="pt-score-text">{score}/100</span>
+          ) : <span className="pt-muted">—</span>}
+        </td>
+        <td>
+          {type === 'active' && glucoseVal != null ? (
+            <div className="pt-glucose">
+               <span className="pt-glucose-val">{glucoseVal}</span>
+               <span className="pt-glucose-unit">{glucoseUnit}</span>
+            </div>
+          ) : <span className="pt-muted">—</span>}
+        </td>
+        <td>
+          <div className="pt-actions-col">
+            {type === 'active' && (
+              <button className="pt-action-btn" onClick={(e) => { e.stopPropagation(); onClick(); }}>
+                <AppIcon name="eye" size={14} /> Ouvrir
+              </button>
+            )}
+            {type === 'sent' && (
+              <span className="pt-muted">—</span>
+            )}
+            {type === 'received' && (
+              <div className="pt-actions-row">
+                <button type="button" className="pt-btn-accept" onClick={handleAccept} disabled={accepting || declining}>
+                  {accepting ? '…' : <><AppIcon name="check" size={14} /> Accepter</>}
+                </button>
+                <button type="button" className="pt-btn-decline" onClick={(e) => { e.stopPropagation(); setShowDeclineModal(true); }} disabled={declining}>
+                  <AppIcon name="x" size={14} /> Refuser
+                </button>
+              </div>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {showDeclineModal && createPortal(
+        <div className="modal-overlay" onClick={() => setShowDeclineModal(false)}>
+          <div className="modal-box modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-row">
+                <div className="modal-icon-wrap modal-icon-neutral"><AppIcon name="user-x" size={20} /></div>
+                <div>
+                  <h2>Refuser la demande</h2>
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => setShowDeclineModal(false)}><AppIcon name="x" size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ fontSize: 14, color: 'var(--muted)' }}>
+              <p>Êtes-vous sûr de vouloir refuser la demande de <strong>{p?.first_name} {p?.last_name}</strong> ?</p>
+            </div>
+            <div className="modal-footer">
+              <button className="mbt-secondary" onClick={() => setShowDeclineModal(false)} disabled={declining}>Annuler</button>
+              <button type="button" className="mbt-primary mbt-danger" onClick={handleDecline} disabled={declining}>
+                {declining ? 'Refus…' : 'Confirmer le refus'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function PatientsDataTable({ rows, dashboards, onOpenPatient, onAccepted, onDeclined }) {
+  if (!rows.length) return null;
+
+  return (
+    <div className="patients-table-wrap">
+      <table className="patients-table">
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Statut</th>
+            <th>Date d&apos;invitation</th>
+            <th>Score santé</th>
+            <th>Dernière glycémie</th>
+            <th className="th-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((m) => (
+            <PatientTableRow
+              key={m.id_team_member}
+              member={m}
+              type={m._type}
+              dashboard={dashboards[m.patient_details?.id_user]}
+              onClick={() => onOpenPatient(m)}
+              onAccepted={onAccepted}
+              onDeclined={onDeclined}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PatientsStatusFilter({ value, onChange, receivedCount }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  const options = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'active', label: 'Actifs' },
+    {
+      value: 'received',
+      label: receivedCount > 0 ? `Demandes reçues (${receivedCount})` : 'Demandes reçues',
+    },
+    { value: 'sent', label: 'Invitations envoyées' },
+  ];
+
+  const selected = options.find((o) => o.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const close = (e) => {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [isOpen]);
+
+  return (
+    <div className="patients-status-filter" ref={rootRef}>
+      <button
+        type="button"
+        className={`patients-filter-trigger ${isOpen ? 'is-open' : ''}`}
+        onClick={() => setIsOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label="Filtrer par statut"
+      >
+        <span className="patients-filter-value">{selected.label}</span>
+        <AppIcon name="chevron" size={14} className={`patients-filter-chevron ${isOpen ? 'open' : ''}`} />
+      </button>
+      {isOpen && (
+        <ul className="patients-filter-dropdown" role="listbox" aria-label="Statuts">
+          {options.map((opt) => (
+            <li key={opt.value} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={opt.value === value}
+                className={`patients-filter-option ${opt.value === value ? 'selected' : ''}`}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+              >
+                {opt.label}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
 }
 
-export default function PatientsScreen({ navigation }) {
+function filterMembers(members, roleFilter, searchQuery) {
+  let list = members;
+  if (roleFilter !== 'all') {
+    list = list.filter((m) => m._type === roleFilter);
+  }
+  const q = searchQuery.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter((m) => {
+    const p = m.patient_details ?? {};
+    return (
+      p.first_name?.toLowerCase().includes(q) ||
+      p.last_name?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) ||
+      m.invitation_email?.toLowerCase().includes(q)
+    );
+  });
+}
+
+export default function PatientsScreen() {
   const [data,           setData]           = useState({ active_patients: [], pending_invites: [] });
   const [loading,        setLoading]        = useState(true);
+  const [refreshing,     setRefreshing]     = useState(false);
   const [error,          setError]          = useState(null);
   const [search,         setSearch]         = useState('');
-  const [tab,            setTab]            = useState('active');
+  const [roleFilter,     setRoleFilter]     = useState('all');
   const [showAddModal,   setShowAddModal]   = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [dashboards,     setDashboards]     = useState({});
 
-  const fetchTeam = useCallback(async () => {
+  const fetchTeam = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    setError(null);
     try {
       const res = await apiClient.get('/doctors/care-team/my-team/');
-      setData(res.data);
+      const teamData = res.data ?? {};
+      const pending = teamData.pending_invites ?? [];
+      const active = teamData.active_patients ?? [];
+      setData({ ...teamData, pending_invites: pending, active_patients: active });
+
+      const activeIds = active
+        .map(m => m.patient_details?.id_user)
+        .filter(Boolean);
+      if (activeIds.length > 0) {
+        const dashPromises = activeIds.map(pid =>
+          apiClient.get(`/doctors/care-team/patient-dashboard/?patient_user_id=${pid}`)
+            .then(r => ({ pid, data: r.data }))
+            .catch(() => ({ pid, data: null }))
+        );
+        const results = await Promise.all(dashPromises);
+        const dashMap = {};
+        results.forEach(r => {
+          if (r.data) dashMap[r.pid] = r.data;
+        });
+        setDashboards(dashMap);
+      } else {
+        setDashboards({});
+      }
     } catch (err) {
       setError('Impossible de charger la liste des patients.');
       toastError('Erreur', err.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -1221,107 +1340,143 @@ export default function PatientsScreen({ navigation }) {
     fetchTeam();
   };
 
-  const filtered = data.active_patients.filter(m => {
-    const p = m.patient_details;
-    const q = search.toLowerCase();
-    return (
-      p.first_name?.toLowerCase().includes(q) ||
-      p.last_name?.toLowerCase().includes(q) ||
-      p.email?.toLowerCase().includes(q)
-    );
-  });
+  const team = dedupeDoctorTeamLists(data);
+  const receivedCount = team.receivedInvites.length;
+  const activeCount = team.activePatients.length;
+  const sentCount = team.sentInvites.length;
 
-  const sentInvites     = data.pending_invites.filter(inv => inv.approved_by !== null);
-  const receivedInvites = data.pending_invites.filter(inv => inv.approved_by === null);
+  const refreshAfterInviteAction = () => fetchTeam({ silent: true });
 
-  const activeCount    = data.active_patients.length;
-  const sentCount      = sentInvites.length;
-  const receivedCount  = receivedInvites.length;
+  const pendingRows = filterMembers(
+    team.receivedInvites.map((m) => ({ ...m, _type: 'received' })),
+    roleFilter,
+    search
+  );
+  const activeRows = filterMembers(
+    team.activePatients.map((m) => ({ ...m, _type: 'active' })),
+    roleFilter,
+    search
+  );
+  const sentRows = filterMembers(
+    team.sentInvites.map((m) => ({ ...m, _type: 'sent' })),
+    roleFilter,
+    search
+  );
+  const rosterRows = [...activeRows, ...sentRows];
+  const showPendingSection = roleFilter === 'all' || roleFilter === 'received';
+  const showRosterSection = roleFilter === 'all' || roleFilter === 'active' || roleFilter === 'sent';
+  const hasAnyRow = pendingRows.length + rosterRows.length > 0;
 
   return (
-    <div className="patients-root">
-      <Sidebar activePage="patients" navigation={navigation} />
+    <main className="patients-main dash-main">
+        <DoctorDashboardHeader
+          title="Mes patients"
+          subtitle="Gérez votre équipe de soins, les invitations et les dossiers patients."
+          actions={(
+            <button type="button" className="dash-btn-primary" onClick={() => setShowAddModal(true)}>
+              <AppIcon name="user-plus" size={16} /> Ajouter un patient
+            </button>
+          )}
+        />
 
-      <main className="patients-main">
-        <header className="patients-header">
-          <div>
-            <h1>Mes patients</h1>
-            <p>Gérez votre équipe de soins et suivez vos patients</p>
+        <div className="dash-content">
+        <div className="patients-stats">
+          <div className="patients-stat">
+            <span className="patients-stat-value">{activeCount}</span>
+            <span className="patients-stat-label">Patients actifs</span>
           </div>
-          <button className="add-btn" onClick={() => setShowAddModal(true)}>
-            <Plus size={16} /> Ajouter un patient
-          </button>
-        </header>
+          <div className="patients-stat">
+            <span className="patients-stat-value">{receivedCount}</span>
+            <span className="patients-stat-label">Demandes à traiter</span>
+          </div>
+          <div className="patients-stat">
+            <span className="patients-stat-value">{sentCount}</span>
+            <span className="patients-stat-label">Invitations envoyées</span>
+          </div>
+        </div>
 
-        <div className="toolbar">
-          <div className="tabs">
-            <button className={`tab ${tab === 'active'   ? 'tab-active' : ''}`} onClick={() => setTab('active')}>
-              Mes patients <span className="tab-count">{activeCount}</span>
-            </button>
-            <button className={`tab ${tab === 'sent'     ? 'tab-active' : ''}`} onClick={() => setTab('sent')}>
-              Invitations envoyées <span className="tab-count">{sentCount}</span>
-            </button>
-            <button className={`tab tab-received ${tab === 'received' ? 'tab-active' : ''}`} onClick={() => setTab('received')}>
-              Demandes reçues
-              {receivedCount > 0
-                ? <span className="tab-count tab-count-received">{receivedCount}</span>
-                : <span className="tab-count">{receivedCount}</span>}
-            </button>
-          </div>
+        <div className="toolbar tb-users">
           <div className="search-wrapper">
-            <Search size={15} />
+            <AppIcon name="search" size={15} />
             <input
               type="text"
-              placeholder="Rechercher un patient…"
+              placeholder="Rechercher par nom ou email…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
+          <PatientsStatusFilter
+            value={roleFilter}
+            onChange={setRoleFilter}
+            receivedCount={receivedCount}
+          />
         </div>
 
         <div className="patients-content">
           {loading && (
-            <div className="state-center"><div className="big-spinner" /><p>Chargement des patients…</p></div>
+            <div className="state-center"><div className="big-spinner" /><p>Chargement…</p></div>
           )}
           {!loading && error && (
-            <div className="state-center state-error"><AlertCircle size={40} /><p>{error}</p></div>
+            <div className="state-center state-error"><AppIcon name="alert-circle" size={40} /><p>{error}</p></div>
           )}
 
-          {!loading && !error && tab === 'active' && (
-            filtered.length === 0
-              ? <div className="state-center"><Users size={48} strokeWidth={1} /><p>{search ? 'Aucun résultat.' : 'Aucun patient actif pour le moment.'}</p></div>
-              : <div className="cards-grid">
-                  {filtered.map(m => (
-                    <PatientCard key={m.id_team_member} member={m} onClick={() => setSelectedMember(m)} />
-                  ))}
-                </div>
+          {!loading && !error && !hasAnyRow && (
+            <div className="state-center">
+              <AppIcon name="users" size={48} />
+              <p>{search ? 'Aucun résultat pour cette recherche.' : 'Aucun patient pour le moment.'}</p>
+            </div>
           )}
 
+          {!loading && !error && hasAnyRow && (
+            <>
+              {showPendingSection && pendingRows.length > 0 && (
+                <section className="patients-section patients-section-pending">
+                  <div className="patients-section-head">
+                    <h2>Demandes à traiter</h2>
+                    <span className="patients-section-badge">{pendingRows.length}</span>
+                  </div>
+                  <p className="patients-section-desc">
+                    Demandes d&apos;ajout à votre équipe de soins.
+                  </p>
+                  <PatientsDataTable
+                    rows={pendingRows}
+                    dashboards={dashboards}
+                    onOpenPatient={setSelectedMember}
+                    onAccepted={refreshAfterInviteAction}
+                    onDeclined={refreshAfterInviteAction}
+                  />
+                </section>
+              )}
 
-          {!loading && !error && tab === 'sent' && (
-            sentInvites.length === 0
-              ? <div className="state-center"><Send size={48} strokeWidth={1} /><p>Aucune invitation envoyée en attente.</p></div>
-              : <div className="cards-grid">
-                  {sentInvites.map(inv => <SentInviteCard key={inv.id_team_member} invite={inv} />)}
-                </div>
-          )}
+              {showRosterSection && rosterRows.length > 0 && (
+                <section className="patients-section">
+                  <div className="patients-section-head">
+                    <h2>{roleFilter === 'sent' ? 'Invitations en attente' : 'Patients suivis'}</h2>
+                    <span className="patients-section-badge patients-section-badge-muted">{rosterRows.length}</span>
+                  </div>
+                  <PatientsDataTable
+                    rows={rosterRows}
+                    dashboards={dashboards}
+                    onOpenPatient={setSelectedMember}
+                    onAccepted={refreshAfterInviteAction}
+                    onDeclined={refreshAfterInviteAction}
+                  />
+                </section>
+              )}
 
-          {!loading && !error && tab === 'received' && (
-            receivedInvites.length === 0
-              ? <div className="state-center"><UserPlus size={48} strokeWidth={1} /><p>Aucune demande reçue.</p></div>
-              : <div className="cards-grid">
-                  {receivedInvites.map(inv => (
-                    <ReceivedInviteCard
-                      key={inv.id_team_member}
-                      invite={inv}
-                      onAccepted={() => { setLoading(true); fetchTeam(); }}
-                      onDeclined={() => { setLoading(true); fetchTeam(); }}
-                    />
-                  ))}
+              {showPendingSection && roleFilter === 'received' && pendingRows.length === 0 && (
+                <div className="state-center state-empty-section">
+                  <AppIcon name="inbox" size={40} />
+                  <p>Aucune demande en attente.</p>
                 </div>
+              )}
+            </>
           )}
         </div>
-      </main>
+        </div>
+      {refreshing && !loading && (
+        <div className="patients-refresh-hint" aria-live="polite">Mise à jour…</div>
+      )}
 
       {showAddModal && (
         <AddPatientModal
@@ -1335,6 +1490,6 @@ export default function PatientsScreen({ navigation }) {
           onClose={() => setSelectedMember(null)}
         />
       )}
-    </div>
+    </main>
   );
 }

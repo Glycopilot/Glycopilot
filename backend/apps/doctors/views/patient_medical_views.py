@@ -4,7 +4,6 @@ from rest_framework.views import APIView
 
 from apps.doctors.doctor_patient_access import verify_doctor_can_access_patient
 from apps.doctors.serializers import PatientHbA1cMedicalUpdateSerializer
-from apps.users.serializers import UserSerializer
 
 
 class DoctorPatientMedicalView(APIView):
@@ -34,4 +33,11 @@ class DoctorPatientMedicalView(APIView):
         pp.hba1c = serializer.validated_data["hba1c"]
         pp.save(update_fields=["hba1c", "updated_at"])
 
-        return Response(UserSerializer(user_identity).data)
+        return Response(
+            {
+                "patient_details": {
+                    "id_user": str(user_identity.id_user),
+                    "hba1c": float(pp.hba1c),
+                }
+            }
+        )

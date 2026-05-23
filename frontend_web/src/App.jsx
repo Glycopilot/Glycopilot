@@ -15,12 +15,18 @@ import SignInScreen from './screens/SignInScreen';
 import HomeScreen from './screens/HomeScreen';
 import PatientsScreen from './screens/PatientsScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import DoctorLayout from './layouts/DoctorLayout';
 import authService from './services/authService';
 import ErrorBoundary from './components/ErrorBoundary';
+import Tour from './components/tour/Tour';
+import { TourProvider } from './components/tour/TourProvider';
 import { registerAuthRedirect } from './lib/auth-redirect';
 import './styles/tokens.css';
 import './styles/polish.css';
 import './components/css/sidebar.css';
+import './components/css/glyco-icon.css';
+import './components/css/doctor-dashboard.css';
+import './layouts/doctor-layout.css';
 import './App.css';
 
 function RequireAuth({ children }) {
@@ -41,41 +47,26 @@ function AppRoutes() {
   }, [navigate]);
 
   return (
-    <div key={location.pathname} className="route-shell">
-      <Routes location={location}>
-        <Route
-          path="/"
-          element={<Navigate to={authService.isAuthenticated() ? '/home' : '/login'} replace />}
-        />
-        <Route path="/login"  element={<LoginScreen  navigation={navigation} />} />
-        <Route path="/signin" element={<SignInScreen navigation={navigation} />} />
-        <Route
-          path="/home"
-          element={
-            <RequireAuth>
-              <HomeScreen navigation={navigation} />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/patients"
-          element={
-            <RequireAuth>
-              <PatientsScreen navigation={navigation} />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <RequireAuth>
-              <ProfileScreen navigation={navigation} />
-            </RequireAuth>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </div>
+    <Routes location={location}>
+      <Route
+        path="/"
+        element={<Navigate to={authService.isAuthenticated() ? '/home' : '/login'} replace />}
+      />
+      <Route path="/login" element={<LoginScreen navigation={navigation} />} />
+      <Route path="/signin" element={<SignInScreen navigation={navigation} />} />
+      <Route
+        element={
+          <RequireAuth>
+            <DoctorLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/home" element={<HomeScreen />} />
+        <Route path="/patients" element={<PatientsScreen />} />
+        <Route path="/profile" element={<ProfileScreen />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
@@ -95,9 +86,12 @@ export default function App() {
         theme="light"
       />
       <BrowserRouter>
-        <div className="App">
-          <AppRoutes />
-        </div>
+        <TourProvider>
+          <div className="App">
+            <AppRoutes />
+            <Tour />
+          </div>
+        </TourProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

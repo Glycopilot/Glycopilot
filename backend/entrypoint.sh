@@ -118,11 +118,32 @@ if not AuthAccount.objects.filter(email="patient@example.com").exists():
     print("Created patient@example.com / StrongPass123!")
 
 if not AuthAccount.objects.filter(email="doctor@example.com").exists():
+    from apps.doctors.models import DoctorProfile
+    from apps.doctors.verification_service import verify_doctor_profile
+    from apps.doctors.models import VerificationStatus
+
     u = User.objects.create(first_name="Gregory", last_name="House")
     AuthAccount.objects.create_user(email="doctor@example.com", password="StrongPass123!", user_identity=u)
     role = Role.objects.get(name="DOCTOR")
     Profile.objects.create(user=u, role=role)
-    print("Created doctor@example.com / StrongPass123!")
+    for s in ['PENDING', 'VERIFIED', 'REJECTED']:
+        VerificationStatus.objects.get_or_create(label=s)
+    dp = DoctorProfile.objects.filter(profile__user=u).first()
+    if dp:
+        verify_doctor_profile(dp)
+    print("Created doctor@example.com / StrongPass123! (VERIFIED)")
+
+if not AuthAccount.objects.filter(email="superadmin@example.com").exists():
+    u = User.objects.create(first_name="Super", last_name="Admin")
+    acc = AuthAccount.objects.create_user(
+        email="superadmin@example.com", password="StrongPass123!", user_identity=u
+    )
+    acc.is_staff = True
+    acc.is_superuser = True
+    acc.save(update_fields=["is_staff", "is_superuser"])
+    Role.objects.get_or_create(name="SUPERADMIN")
+    Profile.objects.get_or_create(user=u, role=Role.objects.get(name="SUPERADMIN"))
+    print("Created superadmin@example.com / StrongPass123! (SUPERADMIN)")
 
 print('Seed data complete!')
 SEEDEOF

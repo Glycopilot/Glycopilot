@@ -1,0 +1,135 @@
+.glyco-icon {
+  object-fit: contain;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Icônes Lucide (portail médecin) */
+.app-icon {
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  color: currentColor;
+}
+
+.sidebar .app-icon,
+.sb-item .app-icon,
+.sb-logout .app-icon,
+.tour-help-btn .app-icon {
+  color: inherit;
+}
+
+.glyco-icon-s11 { width: 11px; height: 11px; }
+.glyco-icon-s12 { width: 12px; height: 12px; }
+.glyco-icon-s13 { width: 13px; height: 13px; }
+.glyco-icon-s14 { width: 14px; height: 14px; }
+.glyco-icon-s15 { width: 15px; height: 15px; }
+.glyco-icon-s16 { width: 16px; height: 16px; }
+.glyco-icon-s18 { width: 18px; height: 18px; }
+.glyco-icon-s20 { width: 20px; height: 20px; }
+.glyco-icon-s22 { width: 22px; height: 22px; }
+.glyco-icon-s40 { width: 40px; height: 40px; }
+.glyco-icon-s48 { width: 48px; height: 48px; }
+
+.glyco-icon--logo {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Petites icônes UI (pas Lucide) */
+.ui-glyph {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+  color: currentColor;
+}
+
+.ui-glyph-s12 { width: 12px; height: 12px; }
+.ui-glyph-s14 { width: 14px; height: 14px; }
+.ui-glyph-s15 { width: 15px; height: 15px; }
+.ui-glyph-s16 { width: 16px; height: 16px; }
+.ui-glyph-s18 { width: 18px; height: 18px; }
+.ui-glyph-s20 { width: 20px; height: 20px; }
+.ui-glyph-s22 { width: 22px; height: 22px; }
+
+.ui-chevron-right {
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(-45deg);
+  margin-left: 2px;
+}
+
+.ui-chevron-left {
+  transform: rotate(135deg);
+  margin-left: -2px;
+}
+
+.ui-chevron-down {
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-top: -2px;
+}
+
+.ui-close {
+  position: relative;
+}
+.ui-close::before,
+.ui-close::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70%;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+.ui-close::before { transform: translate(-50%, -50%) rotate(45deg); }
+.ui-close::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+.ui-menu {
+  background: linear-gradient(
+    to bottom,
+    currentColor 0 14%,
+    transparent 14% 43%,
+    currentColor 43% 57%,
+    transparent 57% 86%,
+    currentColor 86% 100%
+  );
+}
+
+.ui-eye {
+  border: 2px solid currentColor;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  box-sizing: border-box;
+}
+.ui-eye::after {
+  content: '';
+  display: block;
+  width: 35%;
+  height: 35%;
+  margin: 22% auto 0;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.ui-eye-off {
+  position: relative;
+  border: 2px solid currentColor;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  box-sizing: border-box;
+  opacity: 0.65;
+}
+.ui-eye-off::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -10%;
+  width: 120%;
+  height: 2px;
+  background: currentColor;
+  transform: rotate(-35deg);
+}

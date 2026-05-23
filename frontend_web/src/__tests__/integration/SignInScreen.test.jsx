@@ -13,13 +13,26 @@ jest.mock('../../services/toastService', () => ({
   toastError: jest.fn(),
   toastSuccess: jest.fn(),
 }));
+jest.mock('../../services/franceAddressService', () => ({
+  validateFrenchAddress: jest.fn(() => Promise.resolve({ valid: true })),
+  fetchCommunesByPostalCode: jest.fn(() => Promise.resolve([{ code: '75101', name: 'Paris' }])),
+  isValidPostalCodeFormat: jest.fn(() => true),
+  searchStreetAddresses: jest.fn(() => Promise.resolve([])),
+}));
 
 import SignInScreen from '../../screens/SignInScreen';
+import { validateFrenchAddress } from '../../services/franceAddressService';
 import authService from '../../services/authService';
 import { toastError } from '../../services/toastService';
 
 const navigation = { navigate: jest.fn() };
 const renderSignIn = () => render(<SignInScreen navigation={navigation} />);
+
+function pickCustomSelect(label, optionLabel) {
+  const field = screen.getByText(label, { selector: 'label' }).closest('.input-field');
+  fireEvent.click(field.querySelector('.custom-select-wrapper'));
+  fireEvent.click(screen.getByText(optionLabel));
+}
 
 async function fillValidForm() {
   await userEvent.type(screen.getByPlaceholderText('Dupont'), 'Dupont');
@@ -30,8 +43,8 @@ async function fillValidForm() {
   await userEvent.type(emailInputs[1], 'jean.dupont@test.com');
 
   await userEvent.type(screen.getByPlaceholderText('10001234567'), '12345678901');
-  await userEvent.type(screen.getByPlaceholderText('Ex : Cardiologue'), 'Généraliste');
-  await userEvent.type(screen.getByPlaceholderText(/123 Rue de l'Hôpital/), '1 rue Test, Paris');
+  pickCustomSelect('Spécialité', 'Médecin');
+  pickCustomSelect('Votre structure', 'Hôpital');
 
   const pwInputs = screen.getAllByPlaceholderText('••••••••');
   await userEvent.type(pwInputs[0], 'Password1');
@@ -87,6 +100,10 @@ describe('SignInScreen', () => {
   });
 
   describe('Validation séquentielle', () => {
+    beforeEach(() => {
+      validateFrenchAddress.mockResolvedValue({ valid: true });
+    });
+
     it('nom/prénom manquants', async () => {
       renderSignIn();
       clickSubmit();
@@ -141,10 +158,11 @@ describe('SignInScreen', () => {
       await userEvent.type(emails[1], 'a@test.com');
       await userEvent.type(screen.getByPlaceholderText('10001234567'), '12345');
       clickSubmit();
-      expect(toastError).toHaveBeenCalledWith('Erreur', 'Veuillez indiquer votre spécialité');
+      expect(toastError).toHaveBeenCalledWith('Erreur', 'Veuillez sélectionner votre spécialité');
     });
 
-    it('adresse manquante', async () => {
+    it('adresse invalide', async () => {
+      validateFrenchAddress.mockResolvedValueOnce({ valid: false, error: 'Veuillez saisir une adresse.' });
       renderSignIn();
       await userEvent.type(screen.getByPlaceholderText('Dupont'), 'Dupont');
       await userEvent.type(screen.getByPlaceholderText('Jean'), 'Jean');
@@ -152,9 +170,12 @@ describe('SignInScreen', () => {
       await userEvent.type(emails[0], 'a@test.com');
       await userEvent.type(emails[1], 'a@test.com');
       await userEvent.type(screen.getByPlaceholderText('10001234567'), '12345');
-      await userEvent.type(screen.getByPlaceholderText('Ex : Cardiologue'), 'Généraliste');
+      pickCustomSelect('Spécialité', 'Médecin');
+      pickCustomSelect('Votre structure', 'Hôpital');
       clickSubmit();
-      expect(toastError).toHaveBeenCalledWith('Erreur', "Veuillez indiquer l'adresse de votre centre médical");
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Erreur', 'Veuillez saisir une adresse.')
+      );
     });
 
     it('mot de passe < 8 caractères', async () => {
@@ -165,11 +186,13 @@ describe('SignInScreen', () => {
       await userEvent.type(emails[0], 'a@test.com');
       await userEvent.type(emails[1], 'a@test.com');
       await userEvent.type(screen.getByPlaceholderText('10001234567'), '12345');
-      await userEvent.type(screen.getByPlaceholderText('Ex : Cardiologue'), 'Généraliste');
-      await userEvent.type(screen.getByPlaceholderText(/123 Rue/), '1 rue');
+      pickCustomSelect('Spécialité', 'Médecin');
+      pickCustomSelect('Votre structure', 'Hôpital');
       await userEvent.type(screen.getAllByPlaceholderText('••••••••')[0], 'Ab1');
       clickSubmit();
-      expect(toastError).toHaveBeenCalledWith('Erreur', 'Le mot de passe doit contenir au moins 8 caractères');
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Erreur', 'Le mot de passe doit contenir au moins 8 caractères')
+      );
     });
 
     it('mot de passe sans chiffre', async () => {
@@ -180,11 +203,13 @@ describe('SignInScreen', () => {
       await userEvent.type(emails[0], 'a@test.com');
       await userEvent.type(emails[1], 'a@test.com');
       await userEvent.type(screen.getByPlaceholderText('10001234567'), '12345');
-      await userEvent.type(screen.getByPlaceholderText('Ex : Cardiologue'), 'Généraliste');
-      await userEvent.type(screen.getByPlaceholderText(/123 Rue/), '1 rue');
+      pickCustomSelect('Spécialité', 'Médecin');
+      pickCustomSelect('Votre structure', 'Hôpital');
       await userEvent.type(screen.getAllByPlaceholderText('••••••••')[0], 'Abcdefgh');
       clickSubmit();
-      expect(toastError).toHaveBeenCalledWith('Erreur', 'Le mot de passe doit contenir au moins un chiffre');
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Erreur', 'Le mot de passe doit contenir au moins un chiffre')
+      );
     });
 
     it('mot de passe sans majuscule', async () => {
@@ -195,11 +220,13 @@ describe('SignInScreen', () => {
       await userEvent.type(emails[0], 'a@test.com');
       await userEvent.type(emails[1], 'a@test.com');
       await userEvent.type(screen.getByPlaceholderText('10001234567'), '12345');
-      await userEvent.type(screen.getByPlaceholderText('Ex : Cardiologue'), 'Généraliste');
-      await userEvent.type(screen.getByPlaceholderText(/123 Rue/), '1 rue');
+      pickCustomSelect('Spécialité', 'Médecin');
+      pickCustomSelect('Votre structure', 'Hôpital');
       await userEvent.type(screen.getAllByPlaceholderText('••••••••')[0], 'abcdefg1');
       clickSubmit();
-      expect(toastError).toHaveBeenCalledWith('Erreur', 'Le mot de passe doit contenir au moins une lettre majuscule');
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Erreur', 'Le mot de passe doit contenir au moins une lettre majuscule')
+      );
     });
 
     it('mots de passe différents', async () => {
@@ -210,17 +237,23 @@ describe('SignInScreen', () => {
       await userEvent.type(emails[0], 'a@test.com');
       await userEvent.type(emails[1], 'a@test.com');
       await userEvent.type(screen.getByPlaceholderText('10001234567'), '12345');
-      await userEvent.type(screen.getByPlaceholderText('Ex : Cardiologue'), 'Généraliste');
-      await userEvent.type(screen.getByPlaceholderText(/123 Rue/), '1 rue');
+      pickCustomSelect('Spécialité', 'Médecin');
+      pickCustomSelect('Votre structure', 'Hôpital');
       const pwInputs = screen.getAllByPlaceholderText('••••••••');
       await userEvent.type(pwInputs[0], 'Password1');
       await userEvent.type(pwInputs[1], 'Password2');
       clickSubmit();
-      expect(toastError).toHaveBeenCalledWith('Erreur', 'Les mots de passe ne correspondent pas');
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Erreur', 'Les mots de passe ne correspondent pas')
+      );
     });
   });
 
   describe('Inscription réussie', () => {
+    beforeEach(() => {
+      validateFrenchAddress.mockResolvedValue({ valid: true });
+    });
+
     it('appelle authService.register avec les bons paramètres', async () => {
       renderSignIn();
       await fillValidForm();
@@ -234,8 +267,11 @@ describe('SignInScreen', () => {
           passwordConfirm: 'Password1',
           role: 'DOCTOR',
           licenseNumber: '12345678901',
-          specialty: 'Généraliste',
-          medicalCenterAddress: '1 rue Test, Paris',
+          specialty: 'Médecin',
+          medicalCenterName: 'Hôpital',
+          medicalCenterAddress: '',
+          medicalCenterPostalCode: '',
+          medicalCenterCity: '',
         })
       );
     });
@@ -258,12 +294,12 @@ describe('SignInScreen', () => {
       );
     });
 
-    it('bouton "Aller à la page de connexion" présent', async () => {
+    it('bouton de connexion présent sur la confirmation', async () => {
       renderSignIn();
       await fillValidForm();
       clickSubmit();
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /aller à la page de connexion/i })).toBeInTheDocument()
+        expect(document.querySelector('.verification-card .submit-btn')).toBeTruthy()
       );
     });
 
@@ -271,20 +307,28 @@ describe('SignInScreen', () => {
       renderSignIn();
       await fillValidForm();
       clickSubmit();
-      await waitFor(() => screen.getByRole('button', { name: /aller à la page de connexion/i }));
-      fireEvent.click(screen.getByRole('button', { name: /aller à la page de connexion/i }));
+      const loginBtn = await waitFor(() => {
+        const btn = document.querySelector('.verification-card .submit-btn');
+        expect(btn).toBeTruthy();
+        return btn;
+      });
+      fireEvent.click(loginBtn);
       expect(navigation.navigate).toHaveBeenCalledWith('/login');
     });
   });
 
   describe('Inscription échouée', () => {
+    beforeEach(() => {
+      validateFrenchAddress.mockResolvedValue({ valid: true });
+    });
+
     it('toastError si register rejette', async () => {
       authService.register = jest.fn().mockRejectedValue({ message: 'Email déjà utilisé' });
       renderSignIn();
       await fillValidForm();
       clickSubmit();
       await waitFor(() =>
-        expect(toastError).toHaveBeenCalledWith('Erreur inscription', 'Email déjà utilisé')
+        expect(toastError).toHaveBeenCalledWith('Inscription impossible', 'Email déjà utilisé')
       );
     });
 
@@ -343,6 +387,10 @@ describe('SignInScreen', () => {
   });
 
   describe('Écran post-inscription', () => {
+    beforeEach(() => {
+      validateFrenchAddress.mockResolvedValue({ valid: true });
+    });
+
     async function goToConfirmation() {
       renderSignIn();
       await fillValidForm();

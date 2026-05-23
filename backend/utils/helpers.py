@@ -1,5 +1,7 @@
 """Utility helpers for the backend API."""
 
+from utils.api_messages import humanize_api_message
+
 
 def format_serializer_errors(errors: dict) -> dict:
     """
@@ -19,15 +21,21 @@ def format_serializer_errors(errors: dict) -> dict:
 
     for field, value in errors.items():
         if isinstance(value, list):
-            flat[field] = str(value[0]) if value else "Erreur inconnue."
+            raw = str(value[0]) if value else ""
+            flat[field] = humanize_api_message(raw)
         elif isinstance(value, dict):
             for subfield, subvalue in value.items():
                 msg = subvalue[0] if isinstance(subvalue, list) and subvalue else str(subvalue)
-                flat[subfield] = str(msg)
+                flat[subfield] = humanize_api_message(str(msg))
         else:
-            flat[field] = str(value)
+            flat[field] = humanize_api_message(str(value))
 
-    # Priorité : non_field_errors > premier champ disponible
-    main_error = flat.get("non_field_errors") or next(iter(flat.values()), "Une erreur est survenue.")
+    # Priorité : email > non_field_errors > premier champ
+    main_error = (
+        flat.get("email")
+        or flat.get("non_field_errors")
+        or next(iter(flat.values()), None)
+    )
+    main_error = humanize_api_message(main_error)
 
     return {"error": main_error, "errors": flat}
