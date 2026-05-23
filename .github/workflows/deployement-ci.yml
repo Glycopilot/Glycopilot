@@ -178,6 +178,9 @@ jobs:
             docker compose --profile aws up -d --no-build --force-recreate backend_aws ai_service_aws medication_scheduler_aws nginx
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
+            docker compose --profile aws ps
+            curl -fsS http://127.0.0.1/
+            docker compose --profile aws exec -T backend_aws python manage.py db_runtime_check
             sudo systemctl start glycopilot-healthcheck.service
             sudo systemctl enable --now glycopilot-healthcheck.timer
             docker image prune -f
