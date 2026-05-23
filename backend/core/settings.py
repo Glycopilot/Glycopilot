@@ -97,8 +97,18 @@ ROOT_URLCONF = "core.urls"
 APPEND_SLASH = False
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+def _running_tests():
+    """pytest, manage.py test, ou CI (TESTING=true) → SQLite mémoire."""
+    if os.getenv("TESTING", "").lower() in ("1", "true", "yes"):
+        return True
+    if "test" in sys.argv:
+        return True
+    return any("pytest" in str(arg) for arg in sys.argv)
+
+
 # --- DATABASES ---
-if "test" in sys.argv or "pytest" in sys.argv[0]:
+if _running_tests():
     # Base de test en mémoire (rapide et isolée)
     DATABASES = {
         "default": {
