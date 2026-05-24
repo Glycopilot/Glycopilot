@@ -157,6 +157,38 @@ describe('LoginScreen', () => {
     });
   });
 
+  describe('ROLE_NOT_ALLOWED', () => {
+    it('toastError "Espace réservé aux médecins" si le rôle est rejeté', async () => {
+      mockLogin = jest.fn().mockRejectedValue({
+        code: 'ROLE_NOT_ALLOWED',
+        message: "Cet espace est réservé aux médecins.",
+      });
+      useAuth.mockReturnValue({ login: mockLogin, loading: false, error: null });
+      renderLogin();
+      await fillAndSubmit('patient@test.com', 'Password1');
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(
+          'Espace réservé aux médecins',
+          expect.stringMatching(/réservé aux médecins/i)
+        )
+      );
+      expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('utilise un message par défaut si err.message est vide', async () => {
+      mockLogin = jest.fn().mockRejectedValue({ code: 'ROLE_NOT_ALLOWED', message: '' });
+      useAuth.mockReturnValue({ login: mockLogin, loading: false, error: null });
+      renderLogin();
+      await fillAndSubmit('patient@test.com', 'Password1');
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(
+          'Espace réservé aux médecins',
+          expect.stringMatching(/application mobile/i)
+        )
+      );
+    });
+  });
+
   describe('ACCOUNT_PENDING', () => {
     beforeEach(() => {
       mockLogin = jest.fn().mockRejectedValue({ code: 'ACCOUNT_PENDING', message: '' });

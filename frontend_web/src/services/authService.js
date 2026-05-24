@@ -6,11 +6,20 @@ import { flattenAuthMe } from '../lib/utils';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8006/api';
 const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '10000', 10);
 
-const STORAGE_KEYS = ['access_token', 'refresh_token', 'user_id', 'user_email', 'user', 'user_role'];
+const STORAGE_KEY_ROLE = 'user_role';
+const STORAGE_KEYS = ['access_token', 'refresh_token', 'user_id', 'user_email', 'user', STORAGE_KEY_ROLE];
 
 // Espace web : réservé aux comptes de type "médecin". Les patients utilisent
 // l'application mobile. ADMIN / SUPERADMIN restent autorisés pour le support.
 const WEB_ALLOWED_ROLES = ['DOCTOR', 'ADMIN', 'SUPERADMIN'];
+
+function normalizeRole(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().toUpperCase() : null;
+}
+
+function isAllowedWebRole(role) {
+  return !!role && WEB_ALLOWED_ROLES.includes(role);
+}
 
 function decodeJwtPayload(token) {
   if (!token || typeof token !== 'string') return null;
@@ -26,21 +35,19 @@ function decodeJwtPayload(token) {
   }
 }
 
+function roleFromToken(token) {
+  return normalizeRole(decodeJwtPayload(token)?.role);
+}
+
+function roleFromUserPayload(user) {
+  const profiles = user?.identity?.profiles;
+  if (!Array.isArray(profiles) || profiles.length === 0) return null;
+  return normalizeRole(profiles[0]?.role_name);
+}
+
 function extractRoleFromLoginPayload(data) {
-  // 1) Priorité au claim "role" du JWT (mis par le backend dans get_tokens_for_user)
-  const fromToken = decodeJwtPayload(data?.access)?.role;
-  if (typeof fromToken === 'string' && fromToken.trim()) {
-    return fromToken.trim().toUpperCase();
-  }
-  // 2) Fallback : 1er profil retourné dans user.identity.profiles[*].role_name
-  const profiles = data?.user?.identity?.profiles;
-  if (Array.isArray(profiles) && profiles.length > 0) {
-    const name = profiles[0]?.role_name;
-    if (typeof name === 'string' && name.trim()) {
-      return name.trim().toUpperCase();
-    }
-  }
-  return null;
+  // Priorité au claim "role" du JWT, sinon fallback sur le 1er profil identity.
+  return roleFromToken(data?.access) || roleFromUserPayload(data?.user);
 }
 
 const apiClient = axios.create({
@@ -143,7 +150,7 @@ const authService = {
       // ── Garde-fou : seul un médecin (ou un admin) peut se connecter à l'espace web.
       // Les patients doivent passer par l'application mobile.
       const role = extractRoleFromLoginPayload(response.data);
-      if (role && !WEB_ALLOWED_ROLES.includes(role)) {
+      if (role && !isAllowedWebRole(role)) {
         clearSession();
         const err = new Error(
           "Cet espace est réservé aux médecins. " +
@@ -156,7 +163,7 @@ const authService = {
 
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
-      if (role) localStorage.setItem('user_role', role);
+      if (role) localStorage.setItem(STORAGE_KEY_ROLE, role);
       persistUser(user);
 
       return response.data;
@@ -248,14 +255,14 @@ const authService = {
       const { access } = response.data;
 
       // Vérifie une nouvelle fois le rôle embarqué dans le nouveau token.
-      const role = decodeJwtPayload(access)?.role;
-      if (role && !WEB_ALLOWED_ROLES.includes(String(role).toUpperCase())) {
+      const role = roleFromToken(access);
+      if (role && !isAllowedWebRole(role)) {
         clearSession();
         throw new Error('Accès web réservé aux médecins.');
       }
 
       localStorage.setItem('access_token', access);
-      if (role) localStorage.setItem('user_role', String(role).toUpperCase());
+      if (role) localStorage.setItem(STORAGE_KEY_ROLE, role);
       return response.data;
     } catch (error) {
       clearSession();
@@ -305,11 +312,9 @@ const authService = {
    */
   getRole() {
     try {
-      const stored = localStorage.getItem('user_role');
-      if (stored) return stored.toUpperCase();
-      const token = localStorage.getItem('access_token');
-      const role = decodeJwtPayload(token)?.role;
-      return role ? String(role).toUpperCase() : null;
+      const stored = normalizeRole(localStorage.getItem(STORAGE_KEY_ROLE));
+      if (stored) return stored;
+      return roleFromToken(localStorage.getItem('access_token'));
     } catch (_e) {
       return null;
     }
@@ -319,8 +324,7 @@ const authService = {
    * Vrai si le compte connecté est autorisé à accéder à l'espace médecin web.
    */
   isDoctor() {
-    const role = this.getRole();
-    return !!role && WEB_ALLOWED_ROLES.includes(role);
+    return isAllowedWebRole(this.getRole());
   },
 
   getApiClient() {

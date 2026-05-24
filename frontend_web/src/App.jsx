@@ -27,14 +27,17 @@ import './App.css';
 
 function RequireAuth({ children }) {
   const location = useLocation();
-  if (!authService.isAuthenticated()) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
-  }
+  const redirectToLogin = (extraState) => (
+    <Navigate to="/login" replace state={{ from: location, ...extraState }} />
+  );
+
+  if (!authService.isAuthenticated()) return redirectToLogin();
+
   // Garde-fou : un compte non-médecin (ex. patient) ne doit pas accéder à
   // l'espace médecin, même s'il a réussi à poser un access_token côté navigateur.
   if (!authService.isDoctor()) {
     authService.logout();
-    return <Navigate to="/login" replace state={{ from: location, reason: 'role' }} />;
+    return redirectToLogin({ reason: 'role' });
   }
   return children;
 }

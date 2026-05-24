@@ -812,7 +812,7 @@ describe('PatientsScreen', () => {
       );
     });
 
-    it('valeur < 3 → toastError, pas de POST', async () => {
+    it('valeur < 4 → toastError, pas de PATCH', async () => {
       await openDossier({ hba1c: { value: 6.8, unit: '%' } });
       fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
       const input = screen.getByLabelText('Valeur HbA1c');
@@ -826,7 +826,71 @@ describe('PatientsScreen', () => {
       );
     });
 
-    it('valeur > 20 → toastError, pas de POST', async () => {
+    it('valeur 3.5 (juste sous la borne backend) → toastError, pas de PATCH', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '3.5');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
+      expect(mockPatch).not.toHaveBeenCalledWith(
+        '/doctors/patients/1/medical/',
+        expect.anything()
+      );
+    });
+
+    it('valeur 16 → toastError, pas de PATCH', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '16');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      expect(toastError).toHaveBeenCalledWith('Valeur invalide', expect.any(String));
+      expect(mockPatch).not.toHaveBeenCalledWith(
+        '/doctors/patients/1/medical/',
+        expect.anything()
+      );
+    });
+
+    it('borne basse 4 acceptée → PATCH avec hba1c: 4', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '4');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() =>
+        expect(mockPatch).toHaveBeenCalledWith('/doctors/patients/1/medical/', { hba1c: 4 })
+      );
+    });
+
+    it('borne haute 15 acceptée → PATCH avec hba1c: 15', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '15');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() =>
+        expect(mockPatch).toHaveBeenCalledWith('/doctors/patients/1/medical/', { hba1c: 15 })
+      );
+    });
+
+    it('valeur à 2 décimales → arrondie à 1 décimale avant envoi', async () => {
+      await openDossier({ hba1c: { value: 6.8, unit: '%' } });
+      fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
+      const input = screen.getByLabelText('Valeur HbA1c');
+      await userEvent.clear(input);
+      await userEvent.type(input, '7.27');
+      fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+      await waitFor(() =>
+        expect(mockPatch).toHaveBeenCalledWith('/doctors/patients/1/medical/', { hba1c: 7.3 })
+      );
+    });
+
+    it('valeur > 15 (test historique avec 25) → toastError, pas de PATCH', async () => {
       await openDossier({ hba1c: { value: 6.8, unit: '%' } });
       fireEvent.click(screen.getByRole('button', { name: /modifier l'hba1c/i }));
       const input = screen.getByLabelText('Valeur HbA1c');
