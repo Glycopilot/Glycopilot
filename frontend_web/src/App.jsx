@@ -18,6 +18,8 @@ import ProfileScreen from './screens/ProfileScreen';
 import authService from './services/authService';
 import ErrorBoundary from './components/ErrorBoundary';
 import { registerAuthRedirect } from './lib/auth-redirect';
+import { TourProvider } from './components/tour/TourProvider';
+import Tour from './components/tour/Tour';
 import './styles/tokens.css';
 import './styles/polish.css';
 import './components/css/sidebar.css';
@@ -95,9 +97,12 @@ export default function App() {
         theme="light"
       />
       <BrowserRouter>
-        <div className="App">
-          <AppRoutes />
-        </div>
+        <TourProvider>
+          <div className="App">
+            <AppRoutes />
+            <Tour />
+          </div>
+        </TourProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );
