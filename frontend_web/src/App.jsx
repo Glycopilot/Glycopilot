@@ -30,6 +30,12 @@ function RequireAuth({ children }) {
   if (!authService.isAuthenticated()) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
+  // Garde-fou : un compte non-médecin (ex. patient) ne doit pas accéder à
+  // l'espace médecin, même s'il a réussi à poser un access_token côté navigateur.
+  if (!authService.isDoctor()) {
+    authService.logout();
+    return <Navigate to="/login" replace state={{ from: location, reason: 'role' }} />;
+  }
   return children;
 }
 

@@ -6,7 +6,42 @@ import { flattenAuthMe } from '../lib/utils';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8006/api';
 const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT || '10000', 10);
 
-const STORAGE_KEYS = ['access_token', 'refresh_token', 'user_id', 'user_email', 'user'];
+const STORAGE_KEYS = ['access_token', 'refresh_token', 'user_id', 'user_email', 'user', 'user_role'];
+
+// Espace web : réservé aux comptes de type "médecin". Les patients utilisent
+// l'application mobile. ADMIN / SUPERADMIN restent autorisés pour le support.
+const WEB_ALLOWED_ROLES = ['DOCTOR', 'ADMIN', 'SUPERADMIN'];
+
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') return null;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = payload.length % 4;
+    if (pad) payload = payload.padEnd(payload.length + (4 - pad), '=');
+    return JSON.parse(atob(payload));
+  } catch (_e) {
+    return null;
+  }
+}
+
+function extractRoleFromLoginPayload(data) {
+  // 1) Priorité au claim "role" du JWT (mis par le backend dans get_tokens_for_user)
+  const fromToken = decodeJwtPayload(data?.access)?.role;
+  if (typeof fromToken === 'string' && fromToken.trim()) {
+    return fromToken.trim().toUpperCase();
+  }
+  // 2) Fallback : 1er profil retourné dans user.identity.profiles[*].role_name
+  const profiles = data?.user?.identity?.profiles;
+  if (Array.isArray(profiles) && profiles.length > 0) {
+    const name = profiles[0]?.role_name;
+    if (typeof name === 'string' && name.trim()) {
+      return name.trim().toUpperCase();
+    }
+  }
+  return null;
+}
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -105,12 +140,30 @@ const authService = {
       const response = await apiClient.post('/auth/login/', { email, password });
       const { access, refresh, user } = response.data;
 
+      // ── Garde-fou : seul un médecin (ou un admin) peut se connecter à l'espace web.
+      // Les patients doivent passer par l'application mobile.
+      const role = extractRoleFromLoginPayload(response.data);
+      if (role && !WEB_ALLOWED_ROLES.includes(role)) {
+        clearSession();
+        const err = new Error(
+          "Cet espace est réservé aux médecins. " +
+          "Veuillez utiliser l'application mobile GlycoPilot pour les patients."
+        );
+        err.code = 'ROLE_NOT_ALLOWED';
+        err.role = role;
+        throw err;
+      }
+
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
+      if (role) localStorage.setItem('user_role', role);
       persistUser(user);
 
       return response.data;
     } catch (error) {
+      // On laisse remonter notre erreur enrichie sans la "perdre"
+      if (error?.code === 'ROLE_NOT_ALLOWED') throw error;
+
       const data = error.response?.data;
       const nonFieldErr = data?.non_field_errors?.[0];
       if (nonFieldErr) {
@@ -193,7 +246,16 @@ const authService = {
 
       const response = await axios.post(`${API_URL}/auth/refresh/`, { refresh: refreshToken });
       const { access } = response.data;
+
+      // Vérifie une nouvelle fois le rôle embarqué dans le nouveau token.
+      const role = decodeJwtPayload(access)?.role;
+      if (role && !WEB_ALLOWED_ROLES.includes(String(role).toUpperCase())) {
+        clearSession();
+        throw new Error('Accès web réservé aux médecins.');
+      }
+
       localStorage.setItem('access_token', access);
+      if (role) localStorage.setItem('user_role', String(role).toUpperCase());
       return response.data;
     } catch (error) {
       clearSession();
@@ -235,6 +297,30 @@ const authService = {
     } catch (_error) {
       return false;
     }
+  },
+
+  /**
+   * Retourne le rôle effectif du compte connecté (DOCTOR / ADMIN / SUPERADMIN / PATIENT / null).
+   * Lecture prioritaire : `user_role` en storage (posé au login), sinon décodage du JWT.
+   */
+  getRole() {
+    try {
+      const stored = localStorage.getItem('user_role');
+      if (stored) return stored.toUpperCase();
+      const token = localStorage.getItem('access_token');
+      const role = decodeJwtPayload(token)?.role;
+      return role ? String(role).toUpperCase() : null;
+    } catch (_e) {
+      return null;
+    }
+  },
+
+  /**
+   * Vrai si le compte connecté est autorisé à accéder à l'espace médecin web.
+   */
+  isDoctor() {
+    const role = this.getRole();
+    return !!role && WEB_ALLOWED_ROLES.includes(role);
   },
 
   getApiClient() {
