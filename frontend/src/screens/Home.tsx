@@ -28,6 +28,9 @@ import { toastError, toastInfo } from '../services/toastService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications } from '../services/pushService';
 import { WS_URL } from '../services/apiClient';
+import TutorialModal from '../components/tutorial/TutorialModal';
+import { useScreenTutorial } from '../hooks/useScreenTutorial';
+import { SCREEN_TUTORIALS } from '../constants/tutorial.constants';
 
 interface HomeScreenProps {
   navigation: any;
@@ -43,6 +46,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   const { todayIntakes } = useMedications();
   const { todaySteps, stepGoal } = usePedometer();
+  const { showTutorial, completeTutorial } = useScreenTutorial('home');
 
   // Calcul identique à medicins.tsx
   const medicationSummary = useMemo(() => {
@@ -240,6 +244,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      <TutorialModal
+        visible={showTutorial}
+        steps={SCREEN_TUTORIALS.home.steps}
+        accentColor={SCREEN_TUTORIALS.home.accentColor}
+        onComplete={completeTutorial}
+      />
     </Layout>
   );
 }

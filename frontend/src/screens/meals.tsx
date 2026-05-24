@@ -22,6 +22,9 @@ import BarcodeScannerModal from '../components/meals/BarcodeScannerModal';
 import AddMealModal from '../components/meals/AddMealModal';
 import { colors } from '../themes/colors';
 import { useMeals } from '../hooks/useMeals';
+import TutorialModal from '../components/tutorial/TutorialModal';
+import { useScreenTutorial } from '../hooks/useScreenTutorial';
+import { SCREEN_TUTORIALS } from '../constants/tutorial.constants';
 import mealService from '../services/mealService';
 import { toastSuccess, toastError } from '../services/toastService';
 import type {
@@ -358,6 +361,7 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
     deleteMeal,
   } = useMeals();
 
+  const { showTutorial, completeTutorial } = useScreenTutorial('meals');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -758,6 +762,13 @@ export default function NutritionScreen({ navigation }: Readonly<NutritionScreen
           onAddManually={() => { setShowScanner(false); setShowAdd(true); }}
         />
       </View>
+
+      <TutorialModal
+        visible={showTutorial}
+        steps={SCREEN_TUTORIALS.meals.steps}
+        accentColor={SCREEN_TUTORIALS.meals.accentColor}
+        onComplete={completeTutorial}
+      />
     </Layout>
   );
 }

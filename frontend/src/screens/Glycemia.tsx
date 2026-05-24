@@ -25,6 +25,9 @@ import {
 import Layout from '../components/common/Layout';
 import { colors } from '../themes/colors';
 import { useGlycemia } from '../hooks/useGlycemia';
+import TutorialModal from '../components/tutorial/TutorialModal';
+import { useScreenTutorial } from '../hooks/useScreenTutorial';
+import { SCREEN_TUTORIALS } from '../constants/tutorial.constants';
 import {
   GLYCEMIA_TARGET,
   getGlycemiaStatusColor,
@@ -109,6 +112,7 @@ export default function GlycemiaScreen({
     addManualReading,
   } = useGlycemia(7);
 
+  const { showTutorial, completeTutorial } = useScreenTutorial('glycemia');
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [value, setValue] = useState<string>('');
   const [context, setContext] = useState<MeasurementContext>('À jeun');
@@ -647,6 +651,13 @@ export default function GlycemiaScreen({
           </View>
         </Modal>
       </View>
+
+      <TutorialModal
+        visible={showTutorial}
+        steps={SCREEN_TUTORIALS.glycemia.steps}
+        accentColor={SCREEN_TUTORIALS.glycemia.accentColor}
+        onComplete={completeTutorial}
+      />
     </Layout>
   );
 }

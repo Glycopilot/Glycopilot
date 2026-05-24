@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { colors } from '../../themes/colors';
 import GlycemiaChartTooltip, { TooltipData } from './GlycemiaChartTooltip';
@@ -24,16 +24,56 @@ interface GlycemiaChartProps {
   chartWidth?: number;
   measurementCount?: number;
   measurements?: ChartMeasurement[];
+  zonePercentages?: { low: number; normal: number; high: number };
+  emptyMessage?: { title: string; subtitle: string };
 }
+
+type ActiveZone = 'low' | 'normal' | 'high' | null;
+
+const ZONE_INFO: Record<NonNullable<ActiveZone>, {
+  color: string; bg: string; barColor: string; label: string;
+  title: string; target: string; description: string;
+}> = {
+  low: {
+    color: '#EF4444',
+    bg: '#FEF2F2',
+    barColor: '#FEE2E2',
+    label: '< 70',
+    title: 'Hypoglycémie (< 70 mg/dL)',
+    target: '< 4% du temps',
+    description: 'Un taux trop bas peut provoquer des vertiges, tremblements et fatigue.',
+  },
+  normal: {
+    color: '#10B981',
+    bg: '#ECFDF5',
+    barColor: '#D1FAE5',
+    label: '70-180',
+    title: 'Plage cible — TIR (70–180 mg/dL)',
+    target: '> 70% du temps',
+    description: "L'objectif recommandé est de rester dans cette plage plus de 70% du temps (Time In Range).",
+  },
+  high: {
+    color: '#F59E0B',
+    bg: '#FFFBEB',
+    barColor: '#FEF3C7',
+    label: '> 180',
+    title: 'Hyperglycémie (> 180 mg/dL)',
+    target: '< 25% du temps',
+    description: 'Un taux trop élevé de façon répétée augmente le risque de complications.',
+  },
+};
 
 export default function GlycemiaChart({
   chartData,
   chartWidth,
   measurementCount = 0,
   measurements = [],
+  zonePercentages,
+  emptyMessage,
 }: GlycemiaChartProps): React.JSX.Element {
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [activeZone, setActiveZone] = useState<ActiveZone>(null);
 
   const resolvedWidth = chartWidth || width - 72;
   const isScrollable = resolvedWidth > width - 72;
@@ -184,9 +224,11 @@ export default function GlycemiaChart({
 
       {!hasValidData ? (
         <View style={styles.emptyChartState}>
-          <Text style={styles.emptyChartTitle}>Pas encore de données</Text>
+          <Text style={styles.emptyChartTitle}>
+            {emptyMessage?.title ?? 'Pas encore de données'}
+          </Text>
           <Text style={styles.emptyChartText}>
-            Ajoutez au moins une mesure pour voir votre courbe de glycémie
+            {emptyMessage?.subtitle ?? 'Ajoutez au moins une mesure pour voir votre courbe de glycémie'}
           </Text>
         </View>
       ) : (
@@ -215,7 +257,25 @@ export default function GlycemiaChart({
                 <LineChart
                   data={{
                     labels: chartData.labels.map(() => ''), // Labels vides dans le graphique
-                    datasets: chartData.datasets,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    datasets: [
+                      chartData.datasets[0],
+                      // Datasets fantômes pour forcer le range Y = [yMin, yMax]
+                      // et aligner les points avec les labels de l'axe custom
+                      // (withDots existe à runtime mais absent des types de cette version)
+                      {
+                        data: new Array(chartData.datasets[0].data.length).fill(yMin),
+                        color: () => 'rgba(0,0,0,0)',
+                        strokeWidth: 0,
+                        withDots: false,
+                      } as any,
+                      {
+                        data: new Array(chartData.datasets[0].data.length).fill(yMax),
+                        color: () => 'rgba(0,0,0,0)',
+                        strokeWidth: 0,
+                        withDots: false,
+                      } as any,
+                    ],
                   }}
                   width={resolvedWidth}
                   height={220}
@@ -242,6 +302,8 @@ export default function GlycemiaChart({
                     },
                   }}
                   bezier
+                  // @ts-ignore - withShadow existe à runtime mais absent des types de cette version
+                  withShadow={false}
                   style={styles.chart}
                   withInnerLines={true}
                   withOuterLines={false}
@@ -280,34 +342,51 @@ export default function GlycemiaChart({
 
           {/* Zones colorées */}
           <View style={styles.chartZones}>
-            <View style={styles.zoneIndicator}>
-              <View
-                style={[
-                  styles.zoneBar,
-                  { backgroundColor: '#FEE2E2', height: zoneHeights.low },
-                ]}
-              />
-              <Text style={styles.zoneLabel}>{'< 70'}</Text>
-            </View>
-            <View style={styles.zoneIndicator}>
-              <View
-                style={[
-                  styles.zoneBar,
-                  { backgroundColor: '#D1FAE5', height: zoneHeights.normal },
-                ]}
-              />
-              <Text style={styles.zoneLabel}>70-180</Text>
-            </View>
-            <View style={styles.zoneIndicator}>
-              <View
-                style={[
-                  styles.zoneBar,
-                  { backgroundColor: '#FEF3C7', height: zoneHeights.high },
-                ]}
-              />
-              <Text style={styles.zoneLabel}>{'>180'}</Text>
-            </View>
+            {(Object.entries(ZONE_INFO) as [NonNullable<ActiveZone>, typeof ZONE_INFO[NonNullable<ActiveZone>]][]).map(([zone, info]) => {
+              const barHeight = zoneHeights[zone];
+              const isActive = activeZone === zone;
+              return (
+                <TouchableOpacity
+                  key={zone}
+                  style={styles.zoneIndicator}
+                  onPress={() => setActiveZone(isActive ? null : zone)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.zoneBar, { backgroundColor: info.barColor, height: barHeight }]} />
+                  <Text style={[styles.zoneLabel, isActive && { color: info.color, fontWeight: '700' }]}>
+                    {info.label}
+                  </Text>
+                  <Text style={[styles.zoneHint, { color: info.color }]}>ⓘ</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
+
+          {/* Tooltip de zone */}
+          {activeZone && (
+            <View style={styles.zoneTooltip}>
+              <View style={styles.zoneTooltipHeader}>
+                <Text style={[styles.zoneTooltipTitle, { color: ZONE_INFO[activeZone].color }]}>
+                  {ZONE_INFO[activeZone].title}
+                </Text>
+                <TouchableOpacity onPress={() => setActiveZone(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.zoneTooltipClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              {zonePercentages !== undefined && (
+                <View style={styles.zoneTooltipPctRow}>
+                  <Text style={styles.zoneTooltipPctLabel}>Votre temps :</Text>
+                  <Text style={[styles.zoneTooltipPctValue, { color: ZONE_INFO[activeZone].color }]}>
+                    {zonePercentages[activeZone]}%
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.zoneTooltipTarget}>
+                Objectif : <Text style={{ fontWeight: '700', color: ZONE_INFO[activeZone].color }}>{ZONE_INFO[activeZone].target}</Text>
+              </Text>
+              <Text style={styles.zoneTooltipDesc}>{ZONE_INFO[activeZone].description}</Text>
+            </View>
+          )}
 
           {/* Info sur le nombre de mesures */}
           {measurementCount > 0 && (
@@ -432,6 +511,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+  zoneHint: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  zoneTooltip: {
+    marginTop: 12,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    padding: 14,
+    gap: 6,
+  },
+  zoneTooltipHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  zoneTooltipTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 8,
+  },
+  zoneTooltipClose: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  zoneTooltipPctRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  zoneTooltipPctLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  zoneTooltipPctValue: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  zoneTooltipTarget: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  zoneTooltipDesc: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 17,
   },
   chartFooter: {
     marginTop: 12,
