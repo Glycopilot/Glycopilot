@@ -32,7 +32,7 @@ def _security_header_value(name, default=None, allowed_values=None):
 ENV = config("Django_ENV", default=os.getenv("DJANGO_ENV", "development")).lower()
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(',')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # --- CLÉS SECRÈTES ---
 # En CI/tests : fallback pour que pytest puisse tourner (SECRET_KEY non définie).
