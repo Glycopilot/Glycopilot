@@ -30,9 +30,26 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState('');
   const { height: windowHeight } = useWindowDimensions();
 
   const PROCHE_ROLES = new Set(['FAMILY', 'CAREGIVER', 'NURSE', 'family', 'caregiver', 'nurse']);
+
+  const proceedAfterAuth = async () => {
+    const user = await authService.getCurrentUser();
+    toastSuccess('Connexion réussie', 'Bienvenue !');
+    setEmail('');
+    setPassword('');
+    setCode('');
+    setTwoFactorChallenge(null);
+    if (user?.role && PROCHE_ROLES.has(user.role)) {
+      navigation.reset?.({ index: 0, routes: [{ name: 'ProcheHome' }] });
+      navigation.navigate('ProcheHome');
+    } else {
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -42,20 +59,35 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
     setIsLoading(true);
     try {
-      await authService.login(email, password);
-      const user = await authService.getCurrentUser();
-      toastSuccess('Connexion réussie', 'Bienvenue !');
-      setEmail('');
-      setPassword('');
-      if (user?.role && PROCHE_ROLES.has(user.role)) {
-        navigation.reset?.({ index: 0, routes: [{ name: 'ProcheHome' }] });
-        navigation.navigate('ProcheHome');
-      } else {
-        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      const result = await authService.login(email, password);
+      // 2FA activée : un code a été envoyé par email, on passe à l'étape de saisie.
+      if (result.requires_2fa && result.challenge) {
+        setTwoFactorChallenge(result.challenge);
+        toastSuccess('Code envoyé', 'Saisissez le code reçu par email.');
+        return;
       }
+      await proceedAfterAuth();
     } catch (error) {
       const err = error as Error;
       toastError(err.message || 'Erreur de connexion', '');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerify2fa = async () => {
+    if (!twoFactorChallenge) return;
+    if (code.trim().length < 6) {
+      toastError('Code incomplet', 'Le code contient 6 chiffres.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await authService.verifyTwoFactor(twoFactorChallenge, code.trim());
+      await proceedAfterAuth();
+    } catch (error) {
+      const err = error as Error;
+      toastError(err.message || 'Code invalide', '');
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +134,42 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
       {/* === FORMULAIRE === */}
       <View style={styles.form}>
-        {!isPasswordResetMode ? (
+        {twoFactorChallenge ? (
+          <>
+            {/* === VÉRIFICATION 2FA (code reçu par email) === */}
+            <InputField
+              label="Code de vérification"
+              value={code}
+              onChangeText={setCode}
+              icon={<Lock size={20} color="#666" />}
+              placeholder="123456"
+              keyboardType="number-pad"
+              autoCorrect={false}
+            />
+
+            <CustomButton
+              title="Vérifier le code"
+              onPress={handleVerify2fa}
+              disabled={isLoading}
+              loading={isLoading}
+            />
+
+            <Text
+              style={{
+                marginTop: 16,
+                color: colors.textSecondary,
+                textAlign: 'center',
+                fontWeight: '500',
+              }}
+              onPress={() => {
+                setTwoFactorChallenge(null);
+                setCode('');
+              }}
+            >
+              Annuler
+            </Text>
+          </>
+        ) : !isPasswordResetMode ? (
           <>
             {/* EMAIL */}
             <InputField

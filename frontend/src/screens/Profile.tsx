@@ -26,6 +26,7 @@ import EmergencyContactsList from '../components/profile/EmergencyContactsList';
 import SettingsMenu, {
   type SettingMenuItem,
 } from '../components/profile/SettingsMenu';
+import TwoFactorCard from '../components/profile/TwoFactorCard';
 import ProfileActions from '../components/profile/ProfileActions';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import AddContactModal from '../components/profile/AddContactModal';
@@ -532,6 +533,8 @@ export default function ProfileScreen({
           onDeleteContact={removeContact}
           onEditContact={openEditContact}
         />
+
+        <TwoFactorCard />
 
         <SettingsMenu items={settingsMenu} />
 

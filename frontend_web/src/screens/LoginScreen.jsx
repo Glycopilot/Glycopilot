@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import authService from '../services/authService';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
 import InputField from '../components/InputField';
@@ -16,6 +17,9 @@ export default function LoginScreen({ navigation }) {
   const [resetEmail, setResetEmail]     = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [pendingEmail, setPendingEmail] = useState(null);
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState(null);
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   const { login, loading, error } = useAuth();
 
@@ -24,7 +28,13 @@ export default function LoginScreen({ navigation }) {
   const handleLogin = async () => {
     if (!email || !password) return toastError('Champs manquants', 'Veuillez remplir tous les champs.');
     try {
-      await login(email, password);
+      const result = await login(email, password);
+      // 2FA activée : un code a été envoyé par email, on passe à l'étape de saisie.
+      if (result?.requires_2fa && result?.challenge) {
+        setTwoFactorChallenge(result.challenge);
+        toastSuccess('Code envoyé', 'Saisissez le code reçu par email.');
+        return;
+      }
       toastSuccess('Connexion réussie', 'Bienvenue !');
       setEmail(''); setPassword('');
       navigation.navigate('/home');
@@ -34,6 +44,21 @@ export default function LoginScreen({ navigation }) {
       } else {
         toastError('Erreur de connexion', err.message);
       }
+    }
+  };
+
+  const handleVerify2fa = async () => {
+    if (code.trim().length < 6) return toastError('Code incomplet', 'Le code contient 6 chiffres.');
+    setVerifying(true);
+    try {
+      await authService.verifyTwoFactor(twoFactorChallenge, code.trim());
+      toastSuccess('Connexion réussie', 'Bienvenue !');
+      setEmail(''); setPassword(''); setCode(''); setTwoFactorChallenge(null);
+      navigation.navigate('/home');
+    } catch (err) {
+      toastError('Erreur', err.message);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -191,7 +216,28 @@ export default function LoginScreen({ navigation }) {
 
       <main className="auth-main">
         <div className="auth-form-wrapper auth-form-centered" onKeyPress={handleKeyPress}>
-          {!isPasswordResetMode ? (
+          {twoFactorChallenge ? (
+            <>
+              <div className="form-header">
+                <h2>Vérification en deux étapes</h2>
+                <p>Saisissez le code à 6 chiffres reçu par email</p>
+              </div>
+              <section className="form-section">
+                <InputField
+                  label="Code de vérification" value={code} onChangeText={setCode}
+                  icon={<Lock size={16} color="#94A3B8"/>} placeholder="123456" type="text"
+                />
+              </section>
+              <button className="submit-btn" onClick={handleVerify2fa} disabled={verifying}>
+                {verifying
+                  ? <span className="btn-loading"><span className="spinner"/>Vérification…</span>
+                  : <span>Vérifier le code <ChevronRight size={18}/></span>}
+              </button>
+              <button type="button" className="back-link" onClick={() => { setTwoFactorChallenge(null); setCode(''); }}>
+                ← Retour à la connexion
+              </button>
+            </>
+          ) : !isPasswordResetMode ? (
             <>
               <div className="form-header">
                 <h2>Connexion</h2>
