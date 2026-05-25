@@ -1,0 +1,4 @@
+# Copy to backend.target.tfbackend and replace with the target-account state bucket.
+bucket = "glycopilot-target-terraform-state"
+key    = "terraform/state/plan-a.tfstate"
+region = "eu-west-3"

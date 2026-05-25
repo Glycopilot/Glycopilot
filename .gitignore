@@ -94,6 +94,8 @@ crash.*.log
 # Fichiers de variables contenant des secrets potentiels
 *.tfvars
 *.tfvars.json
+*.tfbackend
+!*.tfbackend.example
 
 # Fichiers de surcharge (overrides)
 override.tf

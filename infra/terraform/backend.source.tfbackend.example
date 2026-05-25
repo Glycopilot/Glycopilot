@@ -1,0 +1,3 @@
+bucket = "glycopilot-aws-s3-bucket-img-artifacts"
+key    = "terraform/state/plan-a.tfstate"
+region = "eu-west-3"
