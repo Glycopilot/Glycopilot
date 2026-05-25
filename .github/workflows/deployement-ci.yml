@@ -11,6 +11,14 @@ on:
         description: '1. Déployer Backend sur Plan A (EC2)'
         type: boolean
         default: false
+      plan_common_infra:
+        description: '0a. Planifier le socle Terraform commun'
+        type: boolean
+        default: false
+      apply_common_infra:
+        description: '0b. Appliquer le socle Terraform commun après relecture'
+        type: boolean
+        default: false
       deploy_front_web:
         description: '2. Déployer Frontend Web (S3)'
         type: boolean
@@ -32,8 +40,120 @@ env:
   S3_BUCKET_LANDING_PAGE: ${{ vars.S3_BUCKET_LANDING_PAGE || vars.S3_BUCKET_FRONTEND || 'glycopilot-web-frontend-958587270787' }}
   S3_LANDING_PREFIX: ${{ vars.S3_LANDING_PREFIX || 'landing_page' }}
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
+  TF_IN_AUTOMATION: "true"
 
 jobs:
+  plan-common-infra:
+    name: Plan Common Infra (Terraform)
+    if: ${{ inputs.plan_common_infra || inputs.apply_common_infra }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: terraform-common-infra
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform fmt
+        run: terraform fmt -check -diff
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: |
+          terraform plan \
+            -input=false \
+            -no-color \
+            -var="enable_rds=true" \
+            -var="enable_plan_plus=false" \
+            -out=tfplan
+          terraform show -no-color tfplan > terraform-plan.txt
+          terraform show -json tfplan > tfplan.json
+
+      - name: Guard against destructive or Plan Plus changes
+        run: |
+          jq -e '[.resource_changes[]? | select(any(.change.actions[]; . == "delete"))] | length == 0' tfplan.json
+          jq -e '[.resource_changes[]? | select(.address | test("plan_plus"))] | length == 0' tfplan.json
+
+      - name: Upload Terraform plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-infra-plan
+          path: |
+            infra/terraform/terraform-plan.txt
+            infra/terraform/tfplan.json
+          retention-days: 7
+          if-no-files-found: error
+
+  apply-common-infra:
+    name: Apply Common Infra (Terraform)
+    if: ${{ inputs.apply_common_infra }}
+    needs: plan-common-infra
+    runs-on: ubuntu-latest
+    environment: common-infra-apply
+    concurrency:
+      group: terraform-common-infra
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan for apply
+        run: |
+          terraform plan \
+            -input=false \
+            -no-color \
+            -var="enable_rds=true" \
+            -var="enable_plan_plus=false" \
+            -out=tfplan
+          terraform show -json tfplan > tfplan.json
+
+      - name: Guard against destructive or Plan Plus changes
+        run: |
+          jq -e '[.resource_changes[]? | select(any(.change.actions[]; . == "delete"))] | length == 0' tfplan.json
+          jq -e '[.resource_changes[]? | select(.address | test("plan_plus"))] | length == 0' tfplan.json
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
+
   deploy-plan-a:
     name: Deploy Plan A (EC2)
     if: ${{ inputs.deploy_plan_a }}
