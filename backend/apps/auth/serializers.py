@@ -277,7 +277,8 @@ class AuthAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AuthAccount
-        fields = ["id_auth", "email", "identity", "created_at"]
+        fields = ["id_auth", "email", "identity", "created_at", "two_factor_enabled"]
+        read_only_fields = ["two_factor_enabled"]
 
 
 class AuthResponseSerializer(serializers.Serializer):

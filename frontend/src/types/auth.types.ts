@@ -17,9 +17,13 @@ export interface AuthTokens {
 }
 
 export interface LoginResponse {
-  access: string;
-  refresh: string;
-  user: User;
+  // Présents lors d'une connexion normale (ou après vérification 2FA)
+  access?: string;
+  refresh?: string;
+  user?: User;
+  // Présents quand la 2FA par email est activée : il faut vérifier un code
+  requires_2fa?: boolean;
+  challenge?: string;
 }
 
 export interface RegisterData {

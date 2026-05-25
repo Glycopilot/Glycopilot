@@ -24,6 +24,12 @@ from apps.auth.serializers import (
     LoginSerializer,
     RegisterSerializer,
 )
+from apps.auth.two_factor import (
+    generate_and_send_otp,
+    make_challenge,
+    read_challenge,
+    verify_otp,
+)
 from apps.profiles.models import Profile, Role
 from apps.users.models import AuthAccount, User
 from utils.helpers import format_serializer_errors
@@ -240,6 +246,22 @@ def login(request):
     if serializer.is_valid():
         user = serializer.validated_data["user"]
 
+        # 2FA par email (opt-in) : si activée, on n'émet pas les JWT tout de suite.
+        # On envoie un code et on renvoie un challenge à valider via /2fa/verify.
+        if getattr(user, "two_factor_enabled", False):
+            try:
+                generate_and_send_otp(user)
+            except Exception:
+                logger.exception("2FA code delivery failed at login.")
+                return Response(
+                    {"error": "Impossible d'envoyer le code de vérification. Réessayez."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            return Response(
+                {"requires_2fa": True, "challenge": make_challenge(user)},
+                status=status.HTTP_200_OK,
+            )
+
         # Générer les tokens JWT
         tokens = AuthResponseSerializer.get_tokens_for_user(user)
 
@@ -406,3 +428,113 @@ def me(request):
     """
     serializer = AuthAccountSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Authentification à deux facteurs (code par email, opt-in)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@api_view(["POST"])
+@allowed_roles(["patient", "doctor", "admin", "superadmin"])
+def send_2fa_code(request):
+    """
+    Envoie un code 2FA par email à l'utilisateur connecté.
+    Sert à confirmer l'activation ou la désactivation de la 2FA.
+
+    POST /api/auth/2fa/send-code  (Authorization: Bearer <access>)
+    """
+    try:
+        generate_and_send_otp(request.user)
+    except Exception:
+        logger.exception("2FA code delivery failed.")
+        return Response(
+            {"error": "Impossible d'envoyer le code. Réessayez."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    return Response({"message": "Code envoyé par email."}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@allowed_roles(["patient", "doctor", "admin", "superadmin"])
+def enable_2fa(request):
+    """
+    Active la 2FA après vérification d'un code reçu par email.
+
+    POST /api/auth/2fa/enable  (Authorization: Bearer <access>)
+    Body: { "code": "123456" }
+    """
+    account = request.user
+    if account.two_factor_enabled:
+        return Response(
+            {"message": "La 2FA est déjà activée."}, status=status.HTTP_200_OK
+        )
+
+    code = request.data.get("code", "")
+    if not verify_otp(account, code):
+        return Response(
+            {"error": "Code invalide ou expiré."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    account.two_factor_enabled = True
+    account.save(update_fields=["two_factor_enabled"])
+    return Response({"message": "2FA activée."}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@allowed_roles(["patient", "doctor", "admin", "superadmin"])
+def disable_2fa(request):
+    """
+    Désactive la 2FA après vérification d'un code reçu par email.
+
+    POST /api/auth/2fa/disable  (Authorization: Bearer <access>)
+    Body: { "code": "123456" }
+    """
+    account = request.user
+    if not account.two_factor_enabled:
+        return Response(
+            {"message": "La 2FA n'est pas activée."}, status=status.HTTP_200_OK
+        )
+
+    code = request.data.get("code", "")
+    if not verify_otp(account, code):
+        return Response(
+            {"error": "Code invalide ou expiré."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    account.two_factor_enabled = False
+    account.save(update_fields=["two_factor_enabled"])
+    return Response({"message": "2FA désactivée."}, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
+def verify_2fa(request):
+    """
+    Deuxième étape du login : valide le code et émet les JWT.
+
+    POST /api/auth/2fa/verify
+    Body: { "challenge": "<token reçu au login>", "code": "123456" }
+    """
+    challenge = request.data.get("challenge", "")
+    code = request.data.get("code", "")
+
+    account = read_challenge(challenge) if challenge else None
+    if account is None:
+        return Response(
+            {"error": "Session de connexion invalide ou expirée. Reconnectez-vous."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not verify_otp(account, code):
+        return Response(
+            {"error": "Code invalide ou expiré."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    tokens = AuthResponseSerializer.get_tokens_for_user(account)
+    return Response(tokens, status=status.HTTP_200_OK)
