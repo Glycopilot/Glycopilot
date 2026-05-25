@@ -13,6 +13,9 @@ import { Plus, Clock, CheckCircle } from 'lucide-react-native';
 import Layout from '../components/common/Layout';
 import { colors } from '../themes/colors';
 import { useMedications } from '../hooks/useMedications';
+import TutorialModal from '../components/tutorial/TutorialModal';
+import { useScreenTutorial } from '../hooks/useScreenTutorial';
+import { SCREEN_TUTORIALS } from '../constants/tutorial.constants';
 import { toastError } from '../services/toastService';
 import type { MedicationIntake, UserMedication } from '../types/medications.types';
 import IntakeCard from '../components/medications/IntakeCard';
@@ -49,6 +52,7 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
     loadHistory,
   } = useMedications();
 
+  const { showTutorial, completeTutorial } = useScreenTutorial('medications');
   const [currentTab, setCurrentTab] = useState<TabType>('toTake');
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -332,6 +336,13 @@ export default function MedicationsScreen({ navigation }: MedicationsScreenProps
           onUpdate={updateMedication}
         />
       </View>
+
+      <TutorialModal
+        visible={showTutorial}
+        steps={SCREEN_TUTORIALS.medications.steps}
+        accentColor={SCREEN_TUTORIALS.medications.accentColor}
+        onComplete={completeTutorial}
+      />
     </Layout>
   );
 }

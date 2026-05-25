@@ -25,6 +25,9 @@ import {
 import { useGlycemia } from '../hooks/useGlycemia';
 import useUser from '../hooks/useUser';
 import { generateMedicalReportHTML } from '../utils/pdfGenerator';
+import TutorialModal from '../components/tutorial/TutorialModal';
+import { useScreenTutorial } from '../hooks/useScreenTutorial';
+import { SCREEN_TUTORIALS } from '../constants/tutorial.constants';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +50,8 @@ interface GlucoseStats {
   min: number;
   max: number;
   timeInRange: number;
+  timeBelow: number;
+  timeAbove: number;
   stability: 'Bon' | 'Moyen' | 'Faible';
   variability: number;
 }
@@ -72,6 +77,7 @@ export default function GlucoseTrackingScreen({
 
   // Hook utilisateur pour récupérer nom et email
   const { user } = useUser();
+  const { showTutorial, completeTutorial } = useScreenTutorial('stats');
 
   // Déterminer le nombre de jours selon la période
   // En mode date personnalisée, on charge toujours 30 jours pour avoir l'historique
@@ -213,22 +219,26 @@ export default function GlucoseTrackingScreen({
         min: 0,
         max: 0,
         timeInRange: 0,
+        timeBelow: 0,
+        timeAbove: 0,
         stability: 'Faible',
         variability: 0,
       };
     }
 
     const values = measurements.map(m => m.value);
-    const average = Math.round(
-      values.reduce((a, b) => a + b, 0) / values.length
-    );
+    const total = values.length;
+    const average = Math.round(values.reduce((a, b) => a + b, 0) / total);
     const min = Math.min(...values);
     const max = Math.max(...values);
 
-    const inRange = values.filter(
-      v => v >= GLYCEMIA_TARGET.MIN && v <= GLYCEMIA_TARGET.MAX
-    ).length;
-    const timeInRange = Math.round((inRange / values.length) * 100);
+    const inRange = values.filter(v => v >= GLYCEMIA_TARGET.MIN && v <= GLYCEMIA_TARGET.MAX).length;
+    const below = values.filter(v => v < GLYCEMIA_TARGET.MIN).length;
+    const above = values.filter(v => v > GLYCEMIA_TARGET.MAX).length;
+
+    const timeInRange = Math.round((inRange / total) * 100);
+    const timeBelow = Math.round((below / total) * 100);
+    const timeAbove = Math.round((above / total) * 100);
 
     const variance =
       values.reduce((acc, val) => acc + Math.pow(val - average, 2), 0) /
@@ -244,6 +254,8 @@ export default function GlucoseTrackingScreen({
       min,
       max,
       timeInRange,
+      timeBelow,
+      timeAbove,
       stability,
       variability,
     };
@@ -467,11 +479,29 @@ export default function GlucoseTrackingScreen({
         return;
       }
 
+      // Calculer la plage de dates pour l'en-tête du rapport
+      const now = new Date();
+      let dateFrom: Date;
+      if (customDateMode && selectedDate) {
+        dateFrom = new Date(selectedDate);
+        dateFrom.setHours(0, 0, 0, 0);
+      } else if (selectedPeriod === 'Semaine') {
+        dateFrom = new Date(now);
+        dateFrom.setDate(dateFrom.getDate() - 7);
+      } else if (selectedPeriod === 'Mois') {
+        dateFrom = new Date(now);
+        dateFrom.setDate(dateFrom.getDate() - 30);
+      } else {
+        dateFrom = new Date(now);
+        dateFrom.setHours(0, 0, 0, 0);
+      }
+
       // Générer le HTML du rapport médical
       const htmlContent = generateMedicalReportHTML({
         period: selectedPeriod,
         measurements,
         stats,
+        dateRange: { from: dateFrom, to: now },
         selectedDate,
         customDateMode,
         patientName: user
@@ -594,6 +624,11 @@ export default function GlucoseTrackingScreen({
             chartWidth={chartWidth}
             measurementCount={measurements.length}
             measurements={chartMeasurements}
+            zonePercentages={{ low: stats.timeBelow, normal: stats.timeInRange, high: stats.timeAbove }}
+            emptyMessage={customDateMode && measurements.length === 0 ? {
+              title: 'Aucune donnée',
+              subtitle: `Pas de mesure enregistrée pour le ${selectedDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+            } : undefined}
           />
 
           {/* Cartes statistiques */}
@@ -645,6 +680,8 @@ export default function GlucoseTrackingScreen({
                     })(),
                   },
                 ]}
+                adjustsFontSizeToFit
+                numberOfLines={1}
               >
                 {stats.stability}
               </Text>
@@ -877,6 +914,13 @@ export default function GlucoseTrackingScreen({
         onReset={resetToToday}
         maxDate={new Date()}
         showResetButton={customDateMode}
+      />
+
+      <TutorialModal
+        visible={showTutorial}
+        steps={SCREEN_TUTORIALS.stats.steps}
+        accentColor={SCREEN_TUTORIALS.stats.accentColor}
+        onComplete={completeTutorial}
       />
     </Layout>
   );

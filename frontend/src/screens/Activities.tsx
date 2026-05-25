@@ -25,6 +25,9 @@ import {
 import Layout from '../components/common/Layout';
 import { colors } from '../themes/colors';
 import { usePedometer } from '../hooks/usePedometer';
+import TutorialModal from '../components/tutorial/TutorialModal';
+import { useScreenTutorial } from '../hooks/useScreenTutorial';
+import { SCREEN_TUTORIALS } from '../constants/tutorial.constants';
 import activityService, {
   type ReferenceActivity,
   type UserActivity,
@@ -55,6 +58,7 @@ export default function ActivityScreen({ navigation }: ActivityScreenProps): Rea
     startTracking,
     stopTracking,
   } = usePedometer();
+  const { showTutorial, completeTutorial } = useScreenTutorial('activities');
 
   // ── Objectif de pas ────────────────────────────────────────────────────────
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -498,6 +502,13 @@ export default function ActivityScreen({ navigation }: ActivityScreenProps): Rea
           </View>
         </Modal>
       </View>
+
+      <TutorialModal
+        visible={showTutorial}
+        steps={SCREEN_TUTORIALS.activities.steps}
+        accentColor={SCREEN_TUTORIALS.activities.accentColor}
+        onComplete={completeTutorial}
+      />
     </Layout>
   );
 }
