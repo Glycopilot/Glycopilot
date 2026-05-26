@@ -381,7 +381,6 @@ jobs:
             exit 1
           fi
 
-          aws s3api get-bucket-website --bucket "$S3_BUCKET_FRONTEND" >/tmp/frontend-bucket-website.json
           aws s3 sync ./frontend_web/build/ s3://${S3_BUCKET_FRONTEND}/ --delete
 
           {
