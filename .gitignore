@@ -93,7 +93,14 @@ crash.*.log
 
 # Fichiers de variables contenant des secrets potentiels
 *.tfvars
+*.tfvars.*
 *.tfvars.json
+!*.tfvars.example
+!*.tfvars.*.example
+!*.tfvars.plan-plus.example
+!*.tfvars.plan-plus.*.example
+!*.tfvars.target.example
+!*.tfvars.target.*.example
 *.tfbackend
 !*.tfbackend.example
 

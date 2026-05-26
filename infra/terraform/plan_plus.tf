@@ -5,11 +5,18 @@ locals {
     var.plan_plus_backend_secret_key_value_from,
     var.plan_plus_db_password_value_from,
     var.plan_plus_ai_internal_token_value_from,
+    var.plan_plus_repository_credentials_value_from,
   ])
 
   plan_plus_secret_policy_resources = distinct([
     for ref in local.plan_plus_secret_refs : join(":", slice(split(":", ref), 0, 7))
   ])
+
+  plan_plus_repository_credentials = var.plan_plus_repository_credentials_value_from != "" ? {
+    repositoryCredentials = {
+      credentialsParameter = var.plan_plus_repository_credentials_value_from
+    }
+  } : {}
 
   plan_plus_tags = {
     Environment = "PLAN_PLUS"
@@ -344,7 +351,7 @@ resource "aws_ecs_task_definition" "plan_plus" {
   tags = local.plan_plus_tags
 
   container_definitions = jsonencode([
-    {
+    merge({
       name      = "backend"
       image     = var.plan_plus_backend_image
       essential = true
@@ -386,8 +393,8 @@ resource "aws_ecs_task_definition" "plan_plus" {
         }
       }
       command = ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py import_medications --bdpm && daphne -b 0.0.0.0 -p 8000 core.asgi:application"]
-    },
-    {
+    }, local.plan_plus_repository_credentials),
+    merge({
       name      = "ai_service"
       image     = var.plan_plus_ai_service_image
       essential = true
@@ -413,7 +420,7 @@ resource "aws_ecs_task_definition" "plan_plus" {
           "awslogs-stream-prefix" = "ai"
         }
       }
-    }
+    }, local.plan_plus_repository_credentials)
   ])
 }
 

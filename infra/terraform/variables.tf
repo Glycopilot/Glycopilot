@@ -157,6 +157,12 @@ variable "plan_plus_ai_internal_token_value_from" {
   default     = ""
 }
 
+variable "plan_plus_repository_credentials_value_from" {
+  description = "ARN Secrets Manager optionnel contenant les credentials du registry privé pour ECS repositoryCredentials."
+  type        = string
+  default     = ""
+}
+
 variable "plan_plus_cpu" {
   description = "CPU Fargate pour la task Plan Plus."
   type        = string
