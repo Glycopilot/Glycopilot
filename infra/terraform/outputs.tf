@@ -94,6 +94,31 @@ output "plan_plus_ecs_cluster_name" {
   value       = var.enable_plan_plus ? aws_ecs_cluster.plan_plus[0].name : null
 }
 
+output "plan_plus_ecs_service_name" {
+  description = "Nom du service ECS Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_ecs_service.plan_plus[0].name : null
+}
+
+output "plan_plus_task_definition_arn" {
+  description = "ARN de la task definition Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_ecs_task_definition.plan_plus[0].arn : null
+}
+
+output "plan_plus_target_group_arn" {
+  description = "ARN du target group ALB Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_lb_target_group.plan_plus_backend[0].arn : null
+}
+
+output "plan_plus_ecs_security_group_id" {
+  description = "Security group ECS Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_security_group.plan_plus_ecs[0].id : null
+}
+
+output "plan_plus_public_subnet_ids" {
+  description = "Subnets publics utilisés par ECS/ALB Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? [aws_subnet.public_subnet.id, aws_subnet.plan_plus_public_2[0].id] : null
+}
+
 output "plan_plus_redis_endpoint" {
   description = "Endpoint Redis Plan Plus. Null tant que enable_plan_plus=false."
   value       = var.enable_plan_plus ? aws_elasticache_cluster.plan_plus_redis[0].cache_nodes[0].address : null

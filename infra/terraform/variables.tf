@@ -127,6 +127,18 @@ variable "plan_plus_allowed_hosts" {
   default     = "*"
 }
 
+variable "plan_plus_cors_allowed_origins" {
+  description = "Valeur Django CORS_ALLOWED_ORIGINS pour Plan Plus. Laisser vide si aucun frontend navigateur ne pointe encore vers l ALB."
+  type        = string
+  default     = ""
+}
+
+variable "plan_plus_csrf_trusted_origins" {
+  description = "Valeur Django CSRF_TRUSTED_ORIGINS pour Plan Plus. Par défaut réutilise CORS_ALLOWED_ORIGINS côté application si vide."
+  type        = string
+  default     = ""
+}
+
 variable "plan_plus_backend_secret_key_value_from" {
   description = "ARN Secrets Manager, ou ARN avec clé JSON, exposant SECRET_KEY au conteneur backend."
   type        = string

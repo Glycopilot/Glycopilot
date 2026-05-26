@@ -358,6 +358,8 @@ resource "aws_ecs_task_definition" "plan_plus" {
       environment = [
         { name = "DEBUG", value = "false" },
         { name = "ALLOWED_HOSTS", value = var.plan_plus_allowed_hosts },
+        { name = "CORS_ALLOWED_ORIGINS", value = var.plan_plus_cors_allowed_origins },
+        { name = "CSRF_TRUSTED_ORIGINS", value = var.plan_plus_csrf_trusted_origins },
         { name = "DB_ENGINE", value = "postgresql" },
         { name = "DB_HOST", value = aws_db_instance.postgres[0].address },
         { name = "DB_PORT", value = "5432" },
@@ -398,10 +400,10 @@ resource "aws_ecs_task_definition" "plan_plus" {
       ]
       environment = [
         { name = "django_url", value = "http://127.0.0.1:8000" },
-        { name = "django_internal_token", value = "" }
       ]
       secrets = [
-        { name = "internal_token", valueFrom = var.plan_plus_ai_internal_token_value_from }
+        { name = "internal_token", valueFrom = var.plan_plus_ai_internal_token_value_from },
+        { name = "django_internal_token", valueFrom = var.plan_plus_ai_internal_token_value_from }
       ]
       logConfiguration = {
         logDriver = "awslogs"
