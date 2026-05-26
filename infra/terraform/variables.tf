@@ -22,6 +22,12 @@ variable "data_bucket_name" {
   default     = "glycopilot-aws-s3-bucket-img-artifacts"
 }
 
+variable "frontend_bucket_name" {
+  description = "Bucket S3 du frontend web statique géré par le socle commun."
+  type        = string
+  default     = "glycopilot-web-frontend-958587270787"
+}
+
 variable "enable_rds" {
   description = "Active la création de la base PostgreSQL RDS du socle commun. Par défaut désactivé pour éviter tout coût involontaire."
   type        = bool

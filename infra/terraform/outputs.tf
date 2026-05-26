@@ -8,6 +8,16 @@ output "s3_bucket_name" {
   value       = aws_s3_bucket.media.bucket
 }
 
+output "frontend_bucket_name" {
+  description = "Nom du bucket S3 du frontend web statique."
+  value       = aws_s3_bucket.frontend_web.bucket
+}
+
+output "frontend_website_endpoint" {
+  description = "Endpoint website S3 du frontend web statique."
+  value       = aws_s3_bucket_website_configuration.frontend_web.website_endpoint
+}
+
 output "common_vpc_id" {
   description = "ID du VPC du socle commun."
   value       = aws_vpc.main.id
