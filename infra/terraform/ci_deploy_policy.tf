@@ -30,7 +30,7 @@ resource "aws_iam_user_policy" "plan_plus_ci_deploy" {
         Action = [
           "ecs:DescribeTaskDefinition",
         ]
-        Resource = local.plan_plus_task_family_arn
+        Resource = "*"
       },
       {
         Sid    = "RegisterPlanPlusTaskDefinitions"
