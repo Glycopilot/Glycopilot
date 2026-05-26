@@ -20,6 +20,10 @@ rds_deletion_protection     = true
 enable_plan_plus        = true
 plan_plus_desired_count = 0
 
+# Optional: attach minimal ECS deploy permissions to the GitHub Actions IAM user.
+enable_plan_plus_ci_deploy_policy = false
+plan_plus_ci_deploy_user_name     = "glycopilot-s3-user"
+
 # Use the same published images currently deployed by Plan A unless a newer
 # stable tag is intentionally selected.
   plan_plus_backend_image    = "ghcr.io/<org>/<repo>/<backend-image>:<tag>"

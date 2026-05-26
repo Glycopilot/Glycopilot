@@ -186,7 +186,20 @@ jobs:
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
             docker compose --profile aws ps
-            curl -fsS http://127.0.0.1/
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1/; then
+                break
+              fi
+
+              if [ "$i" -eq 30 ]; then
+                echo "Backend healthcheck failed after retries"
+                docker compose --profile aws ps
+                docker compose --profile aws logs --tail=100 backend_aws nginx
+                exit 1
+              fi
+
+              sleep 5
+            done
             docker compose --profile aws exec -T backend_aws python manage.py db_runtime_check
             sudo systemctl start glycopilot-healthcheck.service
             sudo systemctl enable --now glycopilot-healthcheck.timer

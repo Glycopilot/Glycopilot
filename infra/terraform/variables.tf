@@ -28,6 +28,18 @@ variable "frontend_bucket_name" {
   default     = "glycopilot-web-frontend-958587270787"
 }
 
+variable "enable_plan_plus_ci_deploy_policy" {
+  description = "Attache une policy IAM minimale à l'utilisateur GitHub Actions pour déployer Plan Plus ECS. À activer seulement sur le compte source/cible choisi."
+  type        = bool
+  default     = false
+}
+
+variable "plan_plus_ci_deploy_user_name" {
+  description = "Nom de l'utilisateur IAM utilisé par GitHub Actions pour le déploiement Plan Plus ECS."
+  type        = string
+  default     = "glycopilot-s3-user"
+}
+
 variable "enable_rds" {
   description = "Active la création de la base PostgreSQL RDS du socle commun. Par défaut désactivé pour éviter tout coût involontaire."
   type        = bool
