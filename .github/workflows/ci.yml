@@ -2,9 +2,9 @@ name: Continuous Integration (CI)
 
 on:
   push:
-    branches: [ main, develop, feat/plan-deploy ]
+    branches: [ main, develop, fix/profil-plus ]
   pull_request:
-    branches: [ main, develop, feat/plan-deploy ]
+    branches: [ main, develop, fix/profil-plus ]
   workflow_dispatch:
 
 jobs:
