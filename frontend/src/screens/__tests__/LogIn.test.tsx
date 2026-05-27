@@ -77,6 +77,58 @@ describe('LogIn Screen', () => {
         });
     });
 
+    it('shows 2FA code step when login requires verification', async () => {
+        (authService.login as jest.Mock).mockResolvedValue({
+            requires_2fa: true,
+            challenge: 'challenge-token',
+        });
+
+        const { getByPlaceholderText, getByText } = renderLogin();
+        fireEvent.changeText(getByPlaceholderText('user@example.com'), 'test@test.com');
+        fireEvent.changeText(getByPlaceholderText('••••••••'), 'password123');
+
+        await act(async () => { fireEvent.press(getByText('Se connecter')); });
+
+        await waitFor(() => {
+            expect(getByPlaceholderText('123456')).toBeTruthy();
+            expect(getByText('Vérifier le code')).toBeTruthy();
+        });
+        expect(mockNavigation.reset).not.toHaveBeenCalled();
+    });
+
+    it('verifies 2FA code and navigates after success', async () => {
+        (authService.login as jest.Mock).mockResolvedValue({
+            requires_2fa: true,
+            challenge: 'challenge-token',
+        });
+        (authService.verifyTwoFactor as jest.Mock).mockResolvedValue({
+            access: 'access-token',
+            refresh: 'refresh-token',
+            user: { id: '1' },
+        });
+        (authService.getCurrentUser as jest.Mock).mockResolvedValue({
+            id: '1',
+            role: 'patient',
+        });
+
+        const { getByPlaceholderText, getByText } = renderLogin();
+        fireEvent.changeText(getByPlaceholderText('user@example.com'), 'test@test.com');
+        fireEvent.changeText(getByPlaceholderText('••••••••'), 'password123');
+        await act(async () => { fireEvent.press(getByText('Se connecter')); });
+
+        await waitFor(() => expect(getByPlaceholderText('123456')).toBeTruthy());
+        fireEvent.changeText(getByPlaceholderText('123456'), '123456');
+        await act(async () => { fireEvent.press(getByText('Vérifier le code')); });
+
+        await waitFor(() => {
+            expect(authService.verifyTwoFactor).toHaveBeenCalledWith('challenge-token', '123456');
+            expect(mockNavigation.reset).toHaveBeenCalledWith({
+                index: 0,
+                routes: [{ name: 'Home' }],
+            });
+        });
+    });
+
     it('toggles password visibility', () => {
         const { getByTestId, getByPlaceholderText } = renderLogin();
         const eyeButton = getByTestId('Eye');

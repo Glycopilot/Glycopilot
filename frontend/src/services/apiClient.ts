@@ -15,8 +15,13 @@ const normalizeApiUrl = (url: string): string => {
   return /\/api(\/|$)/.test(trimmedUrl) ? trimmedUrl : `${trimmedUrl}/api`;
 };
 
-const API_URL = normalizeApiUrl(process.env.EXPO_PUBLIC_API_URL || '');
-const WS_URL = process.env.EXPO_PUBLIC_WS_URL || '';
+const DEFAULT_API_URL = 'http://15.188.114.169/api';
+const DEFAULT_WS_URL = 'ws://15.188.114.169';
+
+const API_URL = normalizeApiUrl(
+  process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL
+);
+const WS_URL = process.env.EXPO_PUBLIC_WS_URL || DEFAULT_WS_URL;
 
 const API_TIMEOUT = parseInt(
   process.env.EXPO_PUBLIC_API_TIMEOUT || '10000',

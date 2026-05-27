@@ -271,7 +271,8 @@ TEMPLATES = [
 
 
 # --- EMAIL / SMTP ---
-# Configuration optionnelle : si SMTP_* non renseignés ou vides, backend console en dev.
+# Configuration optionnelle : si SMTP_* n'est pas renseigné complètement,
+# on garde un backend console pour éviter de casser les flows auth/2FA.
 # Ne jamais mettre de secrets en défaut ; valeur vide = config non fournie.
 
 
@@ -309,18 +310,14 @@ _smtp_host = _env("SMTP_HOST")
 _smtp_user = _env("SMTP_USERNAME")
 _smtp_pass = _env("SMTP_PASSWORD")
 _smtp_configured = bool(_smtp_host and _smtp_user and _smtp_pass)
+_email_backend_override = _env("EMAIL_BACKEND")
 
-if _smtp_configured:
-    EMAIL_BACKEND = config(
-        "EMAIL_BACKEND",
-        default="django.core.mail.backends.smtp.EmailBackend",
-    )
+if _email_backend_override:
+    EMAIL_BACKEND = _email_backend_override
+elif _smtp_configured:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 else:
-    EMAIL_BACKEND = (
-        "django.core.mail.backends.console.EmailBackend"
-        if DEBUG
-        else "django.core.mail.backends.smtp.EmailBackend"
-    )
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 EMAIL_HOST = _smtp_host or ""
 EMAIL_PORT = _env_int("SMTP_PORT", 587)

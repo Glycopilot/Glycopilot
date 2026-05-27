@@ -167,7 +167,6 @@ const authService = {
   },
 
   async getCurrentUser(): Promise<User> {
-    console.log('DEBUG: authService.getCurrentUser hit');
     try {
       const response = await apiClient.get<Record<string, any>>('/users/me/');
       return mapToUser(response.data);
