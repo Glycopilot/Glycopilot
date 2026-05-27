@@ -6,6 +6,8 @@ instance_type    = "t3.micro"
 data_bucket_name = "glycopilot-target-data-bucket"
 frontend_bucket_name = "glycopilot-target-web-frontend"
 
+enable_observability_dashboard = false
+
 enable_rds                  = true
 rds_identifier              = "glycopilot-postgres"
 rds_database_name           = "glycopilot_prod_db"

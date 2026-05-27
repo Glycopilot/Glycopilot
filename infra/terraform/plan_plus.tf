@@ -450,6 +450,8 @@ resource "aws_ecs_service" "plan_plus" {
   depends_on = [aws_lb_listener.plan_plus_http]
 
   lifecycle {
+    ignore_changes = [task_definition]
+
     precondition {
       condition     = !var.enable_plan_plus || var.enable_rds
       error_message = "Plan Plus requiert enable_rds=true pour réutiliser la RDS canonique du socle."
