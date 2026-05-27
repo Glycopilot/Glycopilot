@@ -1,0 +1,32 @@
+# Copy this file outside source control before using it for the target account.
+# Keep Plan Plus disabled for the first target-account apply.
+
+aws_region       = "eu-west-3"
+instance_type    = "t3.micro"
+data_bucket_name = "glycopilot-target-data-bucket"
+frontend_bucket_name = "glycopilot-target-web-frontend"
+
+enable_rds                  = true
+rds_identifier              = "glycopilot-postgres"
+rds_database_name           = "glycopilot_prod_db"
+rds_master_username         = "glycopilot_prod_user"
+rds_instance_class          = "db.t4g.micro"
+rds_allocated_storage       = 20
+rds_backup_retention_period = 1
+rds_multi_az                = false
+rds_deletion_protection     = true
+
+# Plan Plus stays dormant until the target Plan A runtime is restored and tested.
+enable_plan_plus        = false
+plan_plus_desired_count = 0
+
+# Required only when enable_plan_plus=true.
+plan_plus_backend_image                  = ""
+plan_plus_ai_service_image               = ""
+plan_plus_allowed_hosts                  = "*"
+plan_plus_cors_allowed_origins           = ""
+plan_plus_csrf_trusted_origins           = ""
+plan_plus_backend_secret_key_value_from     = ""
+plan_plus_db_password_value_from            = ""
+plan_plus_ai_internal_token_value_from      = ""
+plan_plus_repository_credentials_value_from = ""

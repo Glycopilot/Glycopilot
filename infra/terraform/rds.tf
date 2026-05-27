@@ -75,4 +75,8 @@ resource "aws_db_instance" "postgres" {
   tags = {
     Name = var.rds_identifier
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }

@@ -7,28 +7,24 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      deploy_db_migrations:
-        description: '0. Executer les migrations DB (EC2 - Plan A)'
-        type: boolean
-        default: false
       deploy_plan_a:
         description: '1. Déployer Backend sur Plan A (EC2)'
         type: boolean
         default: false
-      deploy_plan_b:
-        description: '2. Déployer Backend sur Plan B (ECS/RDS)'
+      deploy_plan_plus:
+        description: '1b. Déployer Plan Plus sur ECS'
         type: boolean
         default: false
       deploy_front_web:
-        description: '3. Déployer Frontend Web (S3)'
+        description: '2. Déployer Frontend Web (S3)'
         type: boolean
         default: false
       deploy_landing_page:
-        description: '3b. Déployer Site Vitrine (S3 statique)'
+        description: '2b. Déployer Site Vitrine (S3 statique)'
         type: boolean
         default: false
       deploy_mobile:
-        description: '4. Compiler App Mobile (Expo EAS)'
+        description: '3. Compiler App Mobile (Expo EAS)'
         type: boolean
         default: false
 
@@ -40,30 +36,11 @@ env:
   S3_BUCKET_LANDING_PAGE: ${{ vars.S3_BUCKET_LANDING_PAGE || vars.S3_BUCKET_FRONTEND || 'glycopilot-web-frontend-958587270787' }}
   S3_LANDING_PREFIX: ${{ vars.S3_LANDING_PREFIX || 'landing_page' }}
   S3_BUCKET_MEDIA: ${{ vars.S3_BUCKET_MEDIA }}
+  PLAN_PLUS_ECS_CLUSTER: ${{ vars.PLAN_PLUS_ECS_CLUSTER || 'glycopilot-plan-plus-cluster' }}
+  PLAN_PLUS_ECS_SERVICE: ${{ vars.PLAN_PLUS_ECS_SERVICE || 'glycopilot-plan-plus-service' }}
+  PLAN_PLUS_ALB_URL: ${{ vars.PLAN_PLUS_ALB_URL || 'http://glycopilot-plan-plus-alb-442222566.eu-west-3.elb.amazonaws.com' }}
 
 jobs:
-  db-migrate-plan-a:
-    name: Run DB Migrations (EC2)
-    if: ${{ inputs.deploy_db_migrations }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Execute migrations on EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/ubuntu/glycopilot-app
-            docker compose --profile aws up -d
-            docker compose --profile aws exec -T backend_aws python manage.py migrate --noinput
-            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
-            docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
-            docker compose --profile aws exec -T backend_aws python manage.py import_medications
-            if [ -f data/import/CIS_bdpm.txt ]; then
-              docker compose --profile aws exec -T backend_aws python manage.py import_medications --bdpm
-            fi
-
   deploy-plan-a:
     name: Deploy Plan A (EC2)
     if: ${{ inputs.deploy_plan_a }}
@@ -208,20 +185,163 @@ jobs:
             docker compose --profile aws up -d --no-build --force-recreate backend_aws ai_service_aws medication_scheduler_aws nginx
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
+            docker compose --profile aws ps
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1/; then
+                break
+              fi
+
+              if [ "$i" -eq 30 ]; then
+                echo "Backend healthcheck failed after retries"
+                docker compose --profile aws ps
+                docker compose --profile aws logs --tail=100 backend_aws nginx
+                exit 1
+              fi
+
+              sleep 5
+            done
+            docker compose --profile aws exec -T backend_aws python manage.py db_runtime_check
             sudo systemctl start glycopilot-healthcheck.service
             sudo systemctl enable --now glycopilot-healthcheck.timer
             docker image prune -f
 
-  deploy-plan-b:
-    name: Deploy Plan B (disabled)
-    if: ${{ inputs.deploy_plan_b }}
+  deploy-plan-plus:
+    name: Deploy Plan Plus (ECS)
+    if: ${{ inputs.deploy_plan_plus }}
     runs-on: ubuntu-latest
     steps:
-      - name: Stop legacy Plan B deployment
+      - uses: actions/checkout@v4
+
+      - name: Prepare container image names
+        id: images
         run: |
-          echo "Plan B legacy deployment is intentionally disabled."
-          echo "Use the Terraform Common Foundation job for infra/terraform."
-          exit 1
+          REPOSITORY_LC="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          echo "backend_image=ghcr.io/${REPOSITORY_LC}/glycopilot-backend:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "ai_service_image=ghcr.io/${REPOSITORY_LC}/glycopilot-ai-service:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.images.outputs.backend_image }}
+          cache-from: type=gha,scope=glycopilot-backend
+          cache-to: type=gha,mode=max,scope=glycopilot-backend
+
+      - name: Build and push AI service image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ai_service
+          push: true
+          tags: ${{ steps.images.outputs.ai_service_image }}
+          cache-from: type=gha,scope=glycopilot-ai-service
+          cache-to: type=gha,mode=max,scope=glycopilot-ai-service
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Register new ECS task definition revision
+        id: task
+        env:
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend_image }}
+          AI_SERVICE_IMAGE: ${{ steps.images.outputs.ai_service_image }}
+        run: |
+          set -euo pipefail
+
+          current_task_definition="$(
+            aws ecs describe-services \
+              --cluster "$PLAN_PLUS_ECS_CLUSTER" \
+              --services "$PLAN_PLUS_ECS_SERVICE" \
+              --query 'services[0].taskDefinition' \
+              --output text
+          )"
+
+          aws ecs describe-task-definition \
+            --task-definition "$current_task_definition" \
+            --query 'taskDefinition' \
+            --output json > /tmp/current-task-definition.json
+
+          jq \
+            --arg backend_image "$BACKEND_IMAGE" \
+            --arg ai_service_image "$AI_SERVICE_IMAGE" \
+            'del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )
+            | .containerDefinitions = (
+              .containerDefinitions
+              | map(
+                if .name == "backend" then .image = $backend_image
+                elif .name == "ai_service" then .image = $ai_service_image
+                else .
+                end
+              )
+            )' \
+            /tmp/current-task-definition.json > /tmp/next-task-definition.json
+
+          new_task_definition="$(
+            aws ecs register-task-definition \
+              --cli-input-json file:///tmp/next-task-definition.json \
+              --query 'taskDefinition.taskDefinitionArn' \
+              --output text
+          )"
+
+          echo "task_definition=$new_task_definition" >> "$GITHUB_OUTPUT"
+          echo "Registered $new_task_definition"
+
+          {
+            echo "### Plan Plus ECS task definition"
+            echo ""
+            echo "- Backend image: \`$BACKEND_IMAGE\`"
+            echo "- AI service image: \`$AI_SERVICE_IMAGE\`"
+            echo "- Task definition: \`$new_task_definition\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Update Plan Plus ECS service
+        run: |
+          set -euo pipefail
+
+          aws ecs update-service \
+            --cluster "$PLAN_PLUS_ECS_CLUSTER" \
+            --service "$PLAN_PLUS_ECS_SERVICE" \
+            --task-definition "${{ steps.task.outputs.task_definition }}" \
+            --force-new-deployment
+
+          aws ecs wait services-stable \
+            --cluster "$PLAN_PLUS_ECS_CLUSTER" \
+            --services "$PLAN_PLUS_ECS_SERVICE"
+
+      - name: Smoke test Plan Plus ALB
+        run: |
+          set -euo pipefail
+
+          curl -fsS "$PLAN_PLUS_ALB_URL/"
+
+          {
+            echo "### Plan Plus smoke test"
+            echo ""
+            echo "- ALB URL: \`$PLAN_PLUS_ALB_URL/\`"
+            echo "- Result: OK"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-front-web:
     name: Deploy Frontend Web
@@ -260,7 +380,15 @@ jobs:
             echo "S3_BUCKET_FRONTEND repository variable is required."
             exit 1
           fi
+
           aws s3 sync ./frontend_web/build/ s3://${S3_BUCKET_FRONTEND}/ --delete
+
+          {
+            echo "### Frontend web deployment"
+            echo ""
+            echo "- Bucket: \`$S3_BUCKET_FRONTEND\`"
+            echo "- Website endpoint: \`http://${S3_BUCKET_FRONTEND}.s3-website.${AWS_REGION}.amazonaws.com\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-landing-page:
     name: Deploy Landing Page

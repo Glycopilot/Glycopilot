@@ -185,6 +185,10 @@ resource "aws_s3_bucket" "media" {
   tags = {
     Name = "glycopilot-media"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_versioning" "media_versioning" {
