@@ -18,6 +18,16 @@ output "frontend_website_endpoint" {
   value       = aws_s3_bucket_website_configuration.frontend_web.website_endpoint
 }
 
+output "observability_dashboard_name" {
+  description = "Nom du dashboard CloudWatch Glycopilot. Null tant que enable_observability_dashboard=false."
+  value       = var.enable_observability_dashboard ? aws_cloudwatch_dashboard.glycopilot[0].dashboard_name : null
+}
+
+output "observability_dashboard_url" {
+  description = "URL console AWS du dashboard CloudWatch Glycopilot. Null tant que enable_observability_dashboard=false."
+  value       = var.enable_observability_dashboard ? "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.glycopilot[0].dashboard_name}" : null
+}
+
 output "common_vpc_id" {
   description = "ID du VPC du socle commun."
   value       = aws_vpc.main.id

@@ -35,6 +35,10 @@ resource "aws_security_group" "rds" {
   tags = {
     Name = "${var.rds_identifier}-sg"
   }
+
+  lifecycle {
+    ignore_changes = [ingress]
+  }
 }
 
 resource "aws_db_instance" "postgres" {

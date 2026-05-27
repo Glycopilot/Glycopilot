@@ -40,6 +40,12 @@ variable "plan_plus_ci_deploy_user_name" {
   default     = "glycopilot-s3-user"
 }
 
+variable "enable_observability_dashboard" {
+  description = "Crée un dashboard CloudWatch léger pour suivre santé runtime et inducteurs de coûts."
+  type        = bool
+  default     = false
+}
+
 variable "enable_rds" {
   description = "Active la création de la base PostgreSQL RDS du socle commun. Par défaut désactivé pour éviter tout coût involontaire."
   type        = bool

@@ -24,6 +24,9 @@ plan_plus_desired_count = 0
 enable_plan_plus_ci_deploy_policy = false
 plan_plus_ci_deploy_user_name     = "glycopilot-s3-user"
 
+# Optional CloudWatch dashboard for presentation/ops.
+enable_observability_dashboard = false
+
 # Use the same published images currently deployed by Plan A unless a newer
 # stable tag is intentionally selected.
   plan_plus_backend_image    = "ghcr.io/<org>/<repo>/<backend-image>:<tag>"
