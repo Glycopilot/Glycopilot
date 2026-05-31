@@ -65,7 +65,7 @@ output "common_ec2_instance_id" {
 
 output "ssh_connection_string" {
   description = "Commande pour se connecter au serveur en SSH (avec clé projet)"
-  value       = "ssh -i infra/ssh/glycopilot_deploy_key ubuntu@${aws_eip.web_eip.public_ip}"
+  value       = "ssh -i ${var.ssh_private_key_path} ubuntu@${aws_eip.web_eip.public_ip}"
 }
 
 output "rds_endpoint" {

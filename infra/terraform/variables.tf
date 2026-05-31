@@ -16,6 +16,12 @@ variable "ssh_public_key" {
   default     = ""
 }
 
+variable "ssh_private_key_path" {
+  description = "Chemin local de la clé privée SSH utilisé uniquement pour afficher l'output de connexion."
+  type        = string
+  default     = "infra/ssh/glycopilot_deploy_key"
+}
+
 variable "data_bucket_name" {
   description = "Bucket S3 existant utilisé par le socle commun pour les médias, artefacts et backups."
   type        = string

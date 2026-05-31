@@ -6,6 +6,13 @@ instance_type    = "t3.micro"
 data_bucket_name = "glycopilot-target-data-bucket"
 frontend_bucket_name = "glycopilot-target-web-frontend"
 
+# SSH target account.
+# Generate a target-only key locally and never commit the private key:
+# ssh-keygen -t ed25519 -f infra/ssh/glycopilot_target_deploy_key -C "glycopilot-target-deploy"
+# ssh_public_key can either be pasted here from the .pub file or passed with -var.
+ssh_public_key       = ""
+ssh_private_key_path = "infra/ssh/glycopilot_target_deploy_key"
+
 enable_observability_dashboard = false
 
 enable_rds                  = true
