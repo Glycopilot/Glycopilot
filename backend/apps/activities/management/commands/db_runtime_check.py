@@ -21,6 +21,7 @@ class Command(BaseCommand):
         self.stdout.write(f"port={settings.get('PORT')}")
         self.stdout.write(f"name={settings.get('NAME')}")
         self.stdout.write(f"user={settings.get('USER')}")
+        self.stdout.write(f"sslmode={settings.get('OPTIONS', {}).get('sslmode', '')}")
         self.stdout.write(f"version={db_version}")
         self.stdout.write(f"auth_accounts={AuthAccount.objects.count()}")
         self.stdout.write(f"glycemia={Glycemia.objects.count()}")

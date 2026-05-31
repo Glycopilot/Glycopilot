@@ -121,19 +121,30 @@ else:
         db_user = config("DB_USER", default=os.getenv("POSTGRES_USER"))
         db_password = config("DB_PASSWORD", default=os.getenv("POSTGRES_PASSWORD"))
         db_host = config("DB_HOST", default="")
+        db_sslmode = config("DB_SSLMODE", default="")
+        if (
+            not db_sslmode
+            and ENV == "production"
+            and db_host
+            and db_host not in {"database_aws", "localhost", "127.0.0.1"}
+        ):
+            db_sslmode = "require"
         if ENV == "production" and not all([db_name, db_user, db_password, db_host]):
             raise ImproperlyConfigured(
                 "DB_NAME/DB_USER/DB_PASSWORD/DB_HOST (or POSTGRES_* equivalents) must be set in production."
             )
+        default_database = {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": db_name,
+            "USER": db_user,
+            "PASSWORD": db_password,
+            "HOST": db_host,
+            "PORT": config("DB_PORT", default=5432, cast=int),
+        }
+        if db_sslmode:
+            default_database["OPTIONS"] = {"sslmode": db_sslmode}
         DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": db_name,
-                "USER": db_user,
-                "PASSWORD": db_password,
-                "HOST": db_host,
-                "PORT": config("DB_PORT", default=5432, cast=int),
-            }
+            "default": default_database
         }
     elif DB_ENGINE == "mysql":
         DATABASES = {
@@ -198,6 +209,11 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG or ENV == "development"
 CORS_ALLOW_CREDENTIALS = True
 if not CORS_ALLOW_ALL_ORIGINS:
     CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+    CORS_ALLOWED_ORIGIN_REGEXES = config(
+        "CORS_ALLOWED_ORIGIN_REGEXES",
+        default=r"^http://localhost:\d+$,^http://127\.0\.0\.1:\d+$",
+        cast=Csv(),
+    )
     CSRF_TRUSTED_ORIGINS = config(
         "CSRF_TRUSTED_ORIGINS",
         default=config("CORS_ALLOWED_ORIGINS", default=""),
