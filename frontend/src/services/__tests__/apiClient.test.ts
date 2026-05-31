@@ -180,7 +180,7 @@ describe('apiClient URL reading', () => {
         delete process.env.EXPO_PUBLIC_API_URL;
         delete process.env.EXPO_PUBLIC_WS_URL;
         const { API_URL: defaultApiUrl, WS_URL: defaultWsUrl } = require('../apiClient');
-        expect(defaultApiUrl).toBe('http://15.188.114.169/api');
-        expect(defaultWsUrl).toBe('ws://15.188.114.169');
+        expect(defaultApiUrl).toBe('http://13.36.191.0/api');
+        expect(defaultWsUrl).toBe('ws://13.36.191.0/ws');
     });
 });

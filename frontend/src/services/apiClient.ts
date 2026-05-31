@@ -15,8 +15,8 @@ const normalizeApiUrl = (url: string): string => {
   return /\/api(\/|$)/.test(trimmedUrl) ? trimmedUrl : `${trimmedUrl}/api`;
 };
 
-const DEFAULT_API_URL = 'http://15.188.114.169/api';
-const DEFAULT_WS_URL = 'ws://15.188.114.169';
+const DEFAULT_API_URL = 'http://13.36.191.0/api';
+const DEFAULT_WS_URL = 'ws://13.36.191.0/ws';
 
 const API_URL = normalizeApiUrl(
   process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL

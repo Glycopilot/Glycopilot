@@ -102,7 +102,7 @@ function persistUser(user) {
 const authService = {
   async login(email, password) {
     try {
-      const response = await apiClient.post('/auth/login/', { email, password });
+      const response = await apiClient.post('/auth/login', { email, password });
       // 2FA activée : pas de tokens, l'appelant doit vérifier un code (verifyTwoFactor).
       if (response.data?.requires_2fa) {
         return response.data;
