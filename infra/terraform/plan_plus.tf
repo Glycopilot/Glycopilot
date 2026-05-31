@@ -370,6 +370,7 @@ resource "aws_ecs_task_definition" "plan_plus" {
         { name = "DB_ENGINE", value = "postgresql" },
         { name = "DB_HOST", value = aws_db_instance.postgres[0].address },
         { name = "DB_PORT", value = "5432" },
+        { name = "DB_SSLMODE", value = "require" },
         { name = "DB_NAME", value = var.rds_database_name },
         { name = "DB_USER", value = var.rds_master_username },
         { name = "REDIS_HOST", value = aws_elasticache_cluster.plan_plus_redis[0].cache_nodes[0].address },

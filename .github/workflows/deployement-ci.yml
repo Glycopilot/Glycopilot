@@ -121,6 +121,43 @@ jobs:
             exit 1
           fi
 
+          reject_placeholders() {
+            file="$1"
+            label="$2"
+            invalid_keys="$(
+              awk -F= '
+                /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+                $1 ~ /^[A-Za-z_][A-Za-z0-9_]*$/ {
+                  value=$0
+                  sub(/^[^=]*=/, "", value)
+                  if (value ~ /^<[^>]+>$/ || value ~ /ta_secret_key|your-secret|changeme|CHANGE_ME|REPLACE_ME|TODO/) {
+                    print $1
+                  }
+                }
+              ' "$file" | sort -u | tr '\n' ' '
+            )"
+            if [ -n "$invalid_keys" ]; then
+              echo "$label contains placeholder values for keys: $invalid_keys"
+              exit 1
+            fi
+          }
+
+          reject_secret_var() {
+            name="$1"
+            value="$2"
+            if [ -z "$value" ]; then
+              return 0
+            fi
+            case "$value" in
+              \<*\>|*ta_secret_key*|*your-secret*|*changeme*|*CHANGE_ME*|*REPLACE_ME*|*TODO*)
+                echo "$name contains a placeholder value."
+                exit 1
+                ;;
+            esac
+          }
+
+          reject_secret_var RUNTIME_DB_PASSWORD "${RUNTIME_DB_PASSWORD:-}"
+
           ssh \
             $SSH_OPTS \
             "$EC2_USERNAME@$EC2_HOST" \
@@ -141,18 +178,28 @@ jobs:
             -e "ssh -i ~/.ssh/glycopilot_ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30" \
             ./ "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/"
 
-          printf '%s\n' "$PROD_ENV_FILE" > backend/.env.prod
+          printf '%s\n' "$PROD_ENV_FILE" > backend/.env.prod.raw
+          reject_placeholders backend/.env.prod.raw PROD_ENV_FILE
+
+          if [ "$runtime_db_values" -eq 5 ]; then
+            grep -Ev '^(DB_NAME|DB_USER|DB_PASSWORD|POSTGRES_DB|POSTGRES_USER|POSTGRES_PASSWORD|DB_HOST|DB_PORT|DB_SSLMODE)=' \
+              backend/.env.prod.raw > backend/.env.prod || true
+          else
+            cp backend/.env.prod.raw backend/.env.prod
+          fi
           {
             if [ -n "${RUNTIME_DB_NAME:-}" ]; then printf 'DB_NAME=%s\n' "$RUNTIME_DB_NAME"; fi
             if [ -n "${RUNTIME_DB_USER:-}" ]; then printf 'DB_USER=%s\n' "$RUNTIME_DB_USER"; fi
             if [ -n "${RUNTIME_DB_PASSWORD:-}" ]; then printf 'DB_PASSWORD=%s\n' "$RUNTIME_DB_PASSWORD"; fi
           } >> backend/.env.prod
           printf '%s\n' "$AI_ENV_FILE" > ai_service/.env.prod
+          reject_placeholders ai_service/.env.prod AI_ENV_FILE
           {
             printf 'BACKEND_IMAGE=%s\n' "$BACKEND_IMAGE"
             printf 'AI_SERVICE_IMAGE=%s\n' "$AI_SERVICE_IMAGE"
             if [ -n "${RUNTIME_DB_HOST:-}" ]; then printf 'DB_HOST=%s\n' "$RUNTIME_DB_HOST"; fi
             if [ -n "${RUNTIME_DB_PORT:-}" ]; then printf 'DB_PORT=%s\n' "$RUNTIME_DB_PORT"; fi
+            if [ -n "${RUNTIME_DB_HOST:-}" ]; then printf 'DB_SSLMODE=require\n'; fi
           } > .env
           scp $SSH_OPTS backend/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/backend/.env.prod"
           scp $SSH_OPTS ai_service/.env.prod "$EC2_USERNAME@$EC2_HOST:/home/ubuntu/glycopilot-app/ai_service/.env.prod"
@@ -182,6 +229,14 @@ jobs:
             docker compose --profile aws pull backend_aws ai_service_aws medication_scheduler_aws nginx
             docker logout ghcr.io || true
             docker compose --profile aws up -d --no-build database_aws redis_aws
+            if docker compose --profile aws config | grep -q 'DB_HOST: .*rds.amazonaws.com'; then
+              echo "Checking RDS credentials from deployed env files before backend restart..."
+              docker run --rm \
+                --env-file backend/.env.prod \
+                --env-file .env \
+                postgres:16-alpine \
+                sh -c 'PGPASSWORD="$DB_PASSWORD" psql "host=$DB_HOST port=$DB_PORT dbname=$DB_NAME user=$DB_USER sslmode=require" -c "select current_database(), current_user;" >/dev/null'
+            fi
             docker compose --profile aws up -d --no-build --force-recreate backend_aws ai_service_aws medication_scheduler_aws nginx
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.profiles.models import Role; [Role.objects.get_or_create(name=r) for r in ['SUPERADMIN','ADMIN','PATIENT','DOCTOR']]"
             docker compose --profile aws exec -T backend_aws python manage.py shell -c "from apps.doctors.models.status import VerificationStatus, InvitationStatus; [VerificationStatus.objects.get_or_create(label=s) for s in ['PENDING','VERIFIED','REJECTED']]; [InvitationStatus.objects.get_or_create(label=s) for s in ['PENDING','ACTIVE','REJECTED','ENDED']]"
