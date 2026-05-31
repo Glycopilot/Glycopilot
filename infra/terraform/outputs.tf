@@ -8,6 +8,26 @@ output "s3_bucket_name" {
   value       = aws_s3_bucket.media.bucket
 }
 
+output "frontend_bucket_name" {
+  description = "Nom du bucket S3 du frontend web statique."
+  value       = aws_s3_bucket.frontend_web.bucket
+}
+
+output "frontend_website_endpoint" {
+  description = "Endpoint website S3 du frontend web statique."
+  value       = aws_s3_bucket_website_configuration.frontend_web.website_endpoint
+}
+
+output "observability_dashboard_name" {
+  description = "Nom du dashboard CloudWatch Glycopilot. Null tant que enable_observability_dashboard=false."
+  value       = var.enable_observability_dashboard ? aws_cloudwatch_dashboard.glycopilot[0].dashboard_name : null
+}
+
+output "observability_dashboard_url" {
+  description = "URL console AWS du dashboard CloudWatch Glycopilot. Null tant que enable_observability_dashboard=false."
+  value       = var.enable_observability_dashboard ? "https://${var.aws_region}.console.aws.amazon.com/cloudwatch/home?region=${var.aws_region}#dashboards:name=${aws_cloudwatch_dashboard.glycopilot[0].dashboard_name}" : null
+}
+
 output "common_vpc_id" {
   description = "ID du VPC du socle commun."
   value       = aws_vpc.main.id
@@ -77,4 +97,49 @@ output "rds_master_user_secret_arn" {
   description = "ARN du secret AWS-managed contenant le mot de passe master RDS. Null tant que enable_rds=false."
   value       = var.enable_rds ? aws_db_instance.postgres[0].master_user_secret[0].secret_arn : null
   sensitive   = true
+}
+
+output "plan_plus_enabled" {
+  description = "Indique si l infrastructure Plan Plus est active dans ce plan Terraform."
+  value       = var.enable_plan_plus
+}
+
+output "plan_plus_alb_dns_name" {
+  description = "DNS public de l ALB Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_lb.plan_plus[0].dns_name : null
+}
+
+output "plan_plus_ecs_cluster_name" {
+  description = "Nom du cluster ECS Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_ecs_cluster.plan_plus[0].name : null
+}
+
+output "plan_plus_ecs_service_name" {
+  description = "Nom du service ECS Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_ecs_service.plan_plus[0].name : null
+}
+
+output "plan_plus_task_definition_arn" {
+  description = "ARN de la task definition Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_ecs_task_definition.plan_plus[0].arn : null
+}
+
+output "plan_plus_target_group_arn" {
+  description = "ARN du target group ALB Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_lb_target_group.plan_plus_backend[0].arn : null
+}
+
+output "plan_plus_ecs_security_group_id" {
+  description = "Security group ECS Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_security_group.plan_plus_ecs[0].id : null
+}
+
+output "plan_plus_public_subnet_ids" {
+  description = "Subnets publics utilisés par ECS/ALB Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? [aws_subnet.public_subnet.id, aws_subnet.plan_plus_public_2[0].id] : null
+}
+
+output "plan_plus_redis_endpoint" {
+  description = "Endpoint Redis Plan Plus. Null tant que enable_plan_plus=false."
+  value       = var.enable_plan_plus ? aws_elasticache_cluster.plan_plus_redis[0].cache_nodes[0].address : null
 }

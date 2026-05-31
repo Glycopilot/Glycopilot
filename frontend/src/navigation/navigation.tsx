@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import LoginScreen from '../screens/LogIn';
 import SignInScreen from '../screens/SignIn';
+import OnboardingModal from '../components/onboarding/OnboardingModal';
 import HomeScreen from '../screens/Home';
 import StatsScreen from '../screens/Stats';
 import ProfileScreen from '../screens/Profile';
@@ -57,32 +59,42 @@ export default function AppNavigator() {
       setCurrentScreen(routes[0].name as ScreenName),
   };
 
-  // ─── Écrans patient ───────────────────────────────────────────────────────
+  // ─── Écrans auth ──────────────────────────────────────────────────────────
 
   if (currentScreen === 'Login') return <LoginScreen navigation={navigation} />;
   if (currentScreen === 'SignIn') return <SignInScreen navigation={navigation} />;
-  if (currentScreen === 'Home') return <HomeScreen navigation={navigation} />;
-  if (currentScreen === 'Stats') return <StatsScreen navigation={navigation} />;
-  if (currentScreen === 'Profile') return <ProfileScreen navigation={navigation} />;
-  if (currentScreen === 'Notifications') return <NotificationsScreen navigation={navigation} />;
-  if (currentScreen === 'Journal') return <JournalScreen navigation={navigation} />;
-  if (currentScreen === 'Repas') return <MealsScreen navigation={navigation} />;
-  if (currentScreen === 'Traitements') return <MedicationsScreen navigation={navigation} />;
-  if (currentScreen === 'Activite') return <ActivitiesScreen navigation={navigation} />;
-  if (currentScreen === 'Glycemia') return <GlycemiaScreen navigation={navigation} />;
-  if (currentScreen === 'SensorActivation') return <SensorActivationScreen navigation={navigation} />;
-  if (currentScreen === 'Predictions') return <PredictionsScreen navigation={navigation} />;
 
-  // ─── Écrans proche ────────────────────────────────────────────────────────
+  // ─── Écran actif (patient ou proche) ──────────────────────────────────────
 
-  if (currentScreen === 'ProcheActivation') return <ProcheActivationScreen navigation={navigation} />;
-  if (currentScreen === 'ProcheHome') return <ProcheHomeScreen navigation={navigation} />;
-  if (currentScreen === 'ProcheGlycemia') {
-    return <ProcheGlycemiaScreen navigation={navigation} patientName={prochePatientName} />;
-  }
-  if (currentScreen === 'ProcheMedications') {
-    return <ProcheMedicationsScreen navigation={navigation} />;
-  }
+  let screen: React.ReactElement | null = null;
 
-  return <LoginScreen navigation={navigation} />;
+  if (currentScreen === 'Home') screen = <HomeScreen navigation={navigation} />;
+  else if (currentScreen === 'Stats') screen = <StatsScreen navigation={navigation} />;
+  else if (currentScreen === 'Profile') screen = <ProfileScreen navigation={navigation} />;
+  else if (currentScreen === 'Notifications') screen = <NotificationsScreen navigation={navigation} />;
+  else if (currentScreen === 'Journal') screen = <JournalScreen navigation={navigation} />;
+  else if (currentScreen === 'Repas') screen = <MealsScreen navigation={navigation} />;
+  else if (currentScreen === 'Traitements') screen = <MedicationsScreen navigation={navigation} />;
+  else if (currentScreen === 'Activite') screen = <ActivitiesScreen navigation={navigation} />;
+  else if (currentScreen === 'Glycemia') screen = <GlycemiaScreen navigation={navigation} />;
+  else if (currentScreen === 'SensorActivation') screen = <SensorActivationScreen navigation={navigation} />;
+  else if (currentScreen === 'Predictions') screen = <PredictionsScreen navigation={navigation} />;
+  else if (currentScreen === 'ProcheActivation') screen = <ProcheActivationScreen navigation={navigation} />;
+  else if (currentScreen === 'ProcheHome') screen = <ProcheHomeScreen navigation={navigation} />;
+  else if (currentScreen === 'ProcheGlycemia') screen = <ProcheGlycemiaScreen navigation={navigation} patientName={prochePatientName} />;
+  else if (currentScreen === 'ProcheMedications') screen = <ProcheMedicationsScreen navigation={navigation} />;
+  else screen = <LoginScreen navigation={navigation} />;
+
+  return (
+    <View style={styles.root}>
+      {screen}
+      <OnboardingModal />
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

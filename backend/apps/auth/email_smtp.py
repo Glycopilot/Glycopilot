@@ -113,3 +113,34 @@ Cordialement."""
             logger.debug("Password reset email sent.")
     except Exception:
         logger.exception("Password reset email delivery failed.")
+
+
+def send_2fa_code_email(user_email: str, code: str) -> None:
+    """
+    Envoie le code de vérification à deux facteurs (6 chiffres).
+    Propage l'exception en cas d'échec d'envoi : l'appelant doit savoir que
+    le code n'est pas parti (sinon l'utilisateur ne pourrait jamais se connecter).
+    """
+    subject = "Glycopilot — Votre code de connexion"
+    message = f"""Bonjour,
+
+Voici votre code de connexion à Glycopilot :
+
+    {code}
+
+Ce code est valable 10 minutes. Ne le partagez avec personne.
+Si vous n'êtes pas à l'origine de cette connexion, changez votre mot de passe.
+
+Cordialement,
+L'équipe Glycopilot."""
+    from_email = settings.DEFAULT_FROM_EMAIL or "noreply@glycopilot.com"
+
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=from_email,
+        recipient_list=[user_email],
+        fail_silently=False,
+    )
+    if settings.DEBUG:
+        logger.debug("2FA code email sent.")

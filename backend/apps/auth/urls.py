@@ -22,4 +22,13 @@ urlpatterns = [
     path("me/", views.me),
     path("create-admin", views.create_admin_account, name="create_admin_account"),
     path("create-admin/", views.create_admin_account),
+    # 2FA par email (opt-in)
+    path("2fa/send-code", views.send_2fa_code, name="send_2fa_code"),
+    path("2fa/send-code/", views.send_2fa_code),
+    path("2fa/enable", views.enable_2fa, name="enable_2fa"),
+    path("2fa/enable/", views.enable_2fa),
+    path("2fa/disable", views.disable_2fa, name="disable_2fa"),
+    path("2fa/disable/", views.disable_2fa),
+    path("2fa/verify", views.verify_2fa, name="verify_2fa"),
+    path("2fa/verify/", views.verify_2fa),
 ]

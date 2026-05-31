@@ -45,13 +45,72 @@ const authService = {
         email,
         password,
       });
-      const { access, refresh, user } = response.data;
-      await storeAuthData(access, refresh, user);
-      return response.data;
+      const data = response.data;
+      // 2FA activée : pas de tokens à stocker, l'appelant doit vérifier un code.
+      if (data.requires_2fa) {
+        return data;
+      }
+      const { access, refresh, user } = data;
+      if (access && refresh && user) {
+        await storeAuthData(access, refresh, user);
+      }
+      return data;
     } catch (error) {
       const axiosError = error as AxiosError<ApiError>;
       const data = axiosError.response?.data;
       throw new Error(data?.error || data?.message || 'Erreur de connexion');
+    }
+  },
+
+  /** Deuxième étape du login : valide le code reçu par email et stocke les tokens. */
+  async verifyTwoFactor(challenge: string, code: string): Promise<LoginResponse> {
+    try {
+      const response = await apiClient.post<LoginResponse>('/auth/2fa/verify', {
+        challenge,
+        code,
+      });
+      const { access, refresh, user } = response.data;
+      if (access && refresh && user) {
+        await storeAuthData(access, refresh, user);
+      }
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<ApiError>;
+      const data = axiosError.response?.data;
+      throw new Error(data?.error || data?.message || 'Code invalide');
+    }
+  },
+
+  /** Envoie un code 2FA par email (pour activer/désactiver). Utilisateur connecté. */
+  async sendTwoFactorCode(): Promise<void> {
+    await apiClient.post('/auth/2fa/send-code');
+  },
+
+  async enableTwoFactor(code: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/2fa/enable', { code });
+    } catch (error) {
+      const data = (error as AxiosError<ApiError>).response?.data;
+      throw new Error(data?.error || data?.message || "Impossible d'activer la 2FA");
+    }
+  },
+
+  async disableTwoFactor(code: string): Promise<void> {
+    try {
+      await apiClient.post('/auth/2fa/disable', { code });
+    } catch (error) {
+      const data = (error as AxiosError<ApiError>).response?.data;
+      throw new Error(data?.error || data?.message || 'Impossible de désactiver la 2FA');
+    }
+  },
+
+  /** Indique si la 2FA par email est activée pour l'utilisateur connecté. */
+  async getTwoFactorStatus(): Promise<boolean> {
+    try {
+      const response = await apiClient.get<{ two_factor_enabled?: boolean }>('/auth/me');
+      return Boolean(response.data?.two_factor_enabled);
+    } catch {
+      return false;
     }
   },
 
@@ -108,7 +167,6 @@ const authService = {
   },
 
   async getCurrentUser(): Promise<User> {
-    console.log('DEBUG: authService.getCurrentUser hit');
     try {
       const response = await apiClient.get<Record<string, any>>('/users/me/');
       return mapToUser(response.data);

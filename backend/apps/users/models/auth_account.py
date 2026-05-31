@@ -47,6 +47,11 @@ class AuthAccount(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # --- Authentification à deux facteurs (code par email, opt-in) ---
+    two_factor_enabled = models.BooleanField(default=False)
+    otp_code_hash = models.CharField(max_length=128, blank=True, default="")
+    otp_expires_at = models.DateTimeField(null=True, blank=True)
+
     objects = AuthAccountManager()
 
     USERNAME_FIELD = "email"

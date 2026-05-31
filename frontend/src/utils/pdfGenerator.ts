@@ -15,6 +15,8 @@ interface GlucoseStats {
   min: number;
   max: number;
   timeInRange: number;
+  timeBelow: number;
+  timeAbove: number;
   stability: 'Bon' | 'Moyen' | 'Faible';
   variability: number;
 }
@@ -23,6 +25,7 @@ interface PdfReportData {
   period: string;
   measurements: GlucoseMeasurement[];
   stats: GlucoseStats;
+  dateRange?: { from: Date; to: Date };
   selectedDate?: Date;
   customDateMode?: boolean;
   patientName?: string;
@@ -55,6 +58,7 @@ export const generateMedicalReportHTML = (data: PdfReportData): string => {
     period,
     measurements,
     stats,
+    dateRange,
     selectedDate,
     customDateMode,
     patientName,
@@ -68,34 +72,41 @@ export const generateMedicalReportHTML = (data: PdfReportData): string => {
     day: 'numeric',
   });
 
-  const periodText =
-    customDateMode && selectedDate
-      ? selectedDate.toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })
-      : period;
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  // Calculer les statistiques supplémentaires
-  const hypoglycemiaCount = measurements.filter(
-    m => m.value < GLYCEMIA_TARGET.MIN
-  ).length;
-  const hyperglycemiaCount = measurements.filter(
-    m => m.value > GLYCEMIA_TARGET.MAX
-  ).length;
+  let periodText: string;
+  if (customDateMode && selectedDate) {
+    periodText = `Journée du ${formatDate(selectedDate)}`;
+  } else if (dateRange) {
+    const sameDay = dateRange.from.toDateString() === dateRange.to.toDateString();
+    periodText = sameDay
+      ? `Journée du ${formatDate(dateRange.from)}`
+      : `Du ${formatDate(dateRange.from)} au ${formatDate(dateRange.to)}`;
+  } else {
+    periodText = period;
+  }
+
+  // Utiliser les stats calculées dans l'app (timeBelow / timeAbove)
+  const { timeInRange, timeBelow, timeAbove } = stats;
+
+  // Counts pour le tableau d'analyse détaillée
+  const hypoglycemiaCount = measurements.filter(m => m.value < GLYCEMIA_TARGET.MIN).length;
+  const hyperglycemiaCount = measurements.filter(m => m.value > GLYCEMIA_TARGET.MAX).length;
   const normalCount = measurements.filter(
     m => m.value >= GLYCEMIA_TARGET.MIN && m.value <= GLYCEMIA_TARGET.MAX
   ).length;
 
-  const hypoglycemiaPercent =
-    measurements.length > 0
-      ? Math.round((hypoglycemiaCount / measurements.length) * 100)
-      : 0;
-  const hyperglycemiaPercent =
-    measurements.length > 0
-      ? Math.round((hyperglycemiaCount / measurements.length) * 100)
-      : 0;
+  // Helper pour afficher le % dans la barre TIR seulement si la zone est assez large
+  const tirLabel = (pct: number) => (pct >= 6 ? `${pct}%` : '');
+
+  // Indicateur visuel pour chaque zone TIR (✓ ou ✗ selon objectif)
+  const tirStatus = (pct: number, target: 'below4' | 'above70' | 'below25') => {
+    if (target === 'above70') return pct >= 70 ? '✓' : '✗';
+    if (target === 'below4') return pct <= 4 ? '✓' : '✗';
+    return pct <= 25 ? '✓' : '✗';
+  };
+  const tirStatusColor = (ok: string) => (ok === '✓' ? '#10B981' : '#EF4444');
 
   // Générer les lignes du tableau
   const tableRows = measurements
@@ -370,7 +381,7 @@ export const generateMedicalReportHTML = (data: PdfReportData): string => {
       
       <!-- Titre -->
       <h1 class="title">Rapport de Suivi Glycémique</h1>
-      <p class="subtitle">Période : ${periodText} • ${measurements.length} mesure${measurements.length > 1 ? 's' : ''}</p>
+      <p class="subtitle">${periodText} &nbsp;•&nbsp; ${measurements.length} mesure${measurements.length > 1 ? 's' : ''}</p>
       
       <!-- Informations Patient -->
       ${
@@ -415,6 +426,52 @@ export const generateMedicalReportHTML = (data: PdfReportData): string => {
         </div>
       </div>
       
+      <!-- Barre TIR -->
+      <div class="section">
+        <h2 class="section-title">Répartition du temps glycémique (TIR)</h2>
+
+        <!-- Barre segmentée -->
+        <div style="display:flex; height:36px; border-radius:8px; overflow:hidden; margin-bottom:16px;">
+          <div style="width:${timeBelow}%; min-width:${timeBelow > 0 ? '2px' : '0'}; background-color:#EF4444; display:flex; align-items:center; justify-content:center;">
+            <span style="color:#fff; font-size:12px; font-weight:700;">${tirLabel(timeBelow)}</span>
+          </div>
+          <div style="width:${timeInRange}%; min-width:${timeInRange > 0 ? '2px' : '0'}; background-color:#10B981; display:flex; align-items:center; justify-content:center;">
+            <span style="color:#fff; font-size:13px; font-weight:700;">${tirLabel(timeInRange)}</span>
+          </div>
+          <div style="width:${timeAbove}%; min-width:${timeAbove > 0 ? '2px' : '0'}; background-color:#F59E0B; display:flex; align-items:center; justify-content:center;">
+            <span style="color:#fff; font-size:12px; font-weight:700;">${tirLabel(timeAbove)}</span>
+          </div>
+        </div>
+
+        <!-- Légende avec objectifs -->
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+          <div style="background:#FEF2F2; border-radius:10px; padding:14px;">
+            <div style="font-size:11px; font-weight:600; color:#6B7280; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Hypoglycémie</div>
+            <div style="font-size:11px; color:#6B7280; margin-bottom:8px;">&lt; ${GLYCEMIA_TARGET.MIN} mg/dL</div>
+            <div style="font-size:28px; font-weight:800; color:#EF4444; line-height:1;">${timeBelow}%</div>
+            <div style="margin-top:8px; font-size:11px; color:${tirStatusColor(tirStatus(timeBelow, 'below4'))}; font-weight:600;">
+              ${tirStatus(timeBelow, 'below4')} Objectif &lt; 4%
+            </div>
+          </div>
+          <div style="background:#ECFDF5; border-radius:10px; padding:14px;">
+            <div style="font-size:11px; font-weight:600; color:#6B7280; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Plage cible</div>
+            <div style="font-size:11px; color:#6B7280; margin-bottom:8px;">${GLYCEMIA_TARGET.MIN}–${GLYCEMIA_TARGET.MAX} mg/dL</div>
+            <div style="font-size:28px; font-weight:800; color:#10B981; line-height:1;">${timeInRange}%</div>
+            <div style="margin-top:8px; font-size:11px; color:${tirStatusColor(tirStatus(timeInRange, 'above70'))}; font-weight:600;">
+              ${tirStatus(timeInRange, 'above70')} Objectif &gt; 70%
+            </div>
+          </div>
+          <div style="background:#FFFBEB; border-radius:10px; padding:14px;">
+            <div style="font-size:11px; font-weight:600; color:#6B7280; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Hyperglycémie</div>
+            <div style="font-size:11px; color:#6B7280; margin-bottom:8px;">&gt; ${GLYCEMIA_TARGET.MAX} mg/dL</div>
+            <div style="font-size:28px; font-weight:800; color:#F59E0B; line-height:1;">${timeAbove}%</div>
+            <div style="margin-top:8px; font-size:11px; color:${tirStatusColor(tirStatus(timeAbove, 'below25'))}; font-weight:600;">
+              ${tirStatus(timeAbove, 'below25')} Objectif &lt; 25%
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Analyse détaillée -->
       <div class="section">
         <h2 class="section-title">Analyse Détaillée</h2>
@@ -432,12 +489,12 @@ export const generateMedicalReportHTML = (data: PdfReportData): string => {
           
           <div class="analysis-card">
             <div class="analysis-label">Hypoglycémies (&lt; ${GLYCEMIA_TARGET.MIN})</div>
-            <div class="analysis-value" style="color: #EF4444;">${hypoglycemiaCount} (${hypoglycemiaPercent}%)</div>
+            <div class="analysis-value" style="color: #EF4444;">${hypoglycemiaCount} (${timeBelow}%)</div>
           </div>
-          
+
           <div class="analysis-card">
             <div class="analysis-label">Hyperglycémies (&gt; ${GLYCEMIA_TARGET.MAX})</div>
-            <div class="analysis-value" style="color: #F59E0B;">${hyperglycemiaCount} (${hyperglycemiaPercent}%)</div>
+            <div class="analysis-value" style="color: #F59E0B;">${hyperglycemiaCount} (${timeAbove}%)</div>
           </div>
           
           <div class="analysis-card">

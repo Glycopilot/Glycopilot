@@ -8,6 +8,7 @@ import { flattenAuthMe } from '../lib/utils';
 import passwordService from '../services/passwordService';
 import { toastError, toastSuccess } from '../services/toastService';
 import Sidebar from '../components/Sidebar';
+import TwoFactorSection from '../components/TwoFactorSection';
 import './css/Profile.css';
 
 const apiClient = authService.getApiClient();
@@ -252,6 +253,8 @@ export default function ProfileScreen({ navigation }) {
               </button>
             )}
           </section>
+
+          <TwoFactorSection />
         </div>
       </main>
     </div>

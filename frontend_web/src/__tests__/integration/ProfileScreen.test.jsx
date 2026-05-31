@@ -9,6 +9,10 @@ jest.mock('../../services/authService', () => {
     default: {
       getApiClient: () => apiClient,
       getStoredUser: jest.fn(() => null),
+      getTwoFactorStatus: jest.fn().mockResolvedValue(false),
+      sendTwoFactorCode: jest.fn().mockResolvedValue(undefined),
+      enableTwoFactor: jest.fn().mockResolvedValue(undefined),
+      disableTwoFactor: jest.fn().mockResolvedValue(undefined),
     },
   };
 });

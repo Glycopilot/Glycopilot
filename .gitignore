@@ -83,13 +83,26 @@ ai_service/artifacts/patients/
 *.tfstate
 *.tfstate.*
 
+# Terraform plans can contain sensitive values from variables and provider data
+*.tfplan
+*.tfplan.json
+
 # Crash log files
 crash.log
 crash.*.log
 
 # Fichiers de variables contenant des secrets potentiels
 *.tfvars
+*.tfvars.*
 *.tfvars.json
+!*.tfvars.example
+!*.tfvars.*.example
+!*.tfvars.plan-plus.example
+!*.tfvars.plan-plus.*.example
+!*.tfvars.target.example
+!*.tfvars.target.*.example
+*.tfbackend
+!*.tfbackend.example
 
 # Fichiers de surcharge (overrides)
 override.tf

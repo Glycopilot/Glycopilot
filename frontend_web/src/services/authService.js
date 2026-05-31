@@ -103,6 +103,10 @@ const authService = {
   async login(email, password) {
     try {
       const response = await apiClient.post('/auth/login/', { email, password });
+      // 2FA activée : pas de tokens, l'appelant doit vérifier un code (verifyTwoFactor).
+      if (response.data?.requires_2fa) {
+        return response.data;
+      }
       const { access, refresh, user } = response.data;
 
       localStorage.setItem('access_token', access);
@@ -120,6 +124,52 @@ const authService = {
       }
       const message = data?.error || data?.detail || 'Erreur de connexion';
       throw new Error(message);
+    }
+  },
+
+  // Deuxième étape du login : valide le code reçu par email et stocke les tokens.
+  async verifyTwoFactor(challenge, code) {
+    try {
+      const response = await apiClient.post('/auth/2fa/verify/', { challenge, code });
+      const { access, refresh, user } = response.data;
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      persistUser(user);
+      return response.data;
+    } catch (error) {
+      const data = error.response?.data;
+      throw new Error(data?.error || data?.detail || 'Code invalide');
+    }
+  },
+
+  async sendTwoFactorCode() {
+    await apiClient.post('/auth/2fa/send-code/');
+  },
+
+  async enableTwoFactor(code) {
+    try {
+      await apiClient.post('/auth/2fa/enable/', { code });
+    } catch (error) {
+      const data = error.response?.data;
+      throw new Error(data?.error || data?.detail || "Impossible d'activer la 2FA");
+    }
+  },
+
+  async disableTwoFactor(code) {
+    try {
+      await apiClient.post('/auth/2fa/disable/', { code });
+    } catch (error) {
+      const data = error.response?.data;
+      throw new Error(data?.error || data?.detail || 'Impossible de désactiver la 2FA');
+    }
+  },
+
+  async getTwoFactorStatus() {
+    try {
+      const response = await apiClient.get('/auth/me/');
+      return Boolean(response.data?.two_factor_enabled);
+    } catch {
+      return false;
     }
   },
 
