@@ -180,7 +180,7 @@ describe('apiClient URL reading', () => {
         delete process.env.EXPO_PUBLIC_API_URL;
         delete process.env.EXPO_PUBLIC_WS_URL;
         const { API_URL: defaultApiUrl, WS_URL: defaultWsUrl } = require('../apiClient');
-        expect(defaultApiUrl).toBe('http://13.36.191.0/api');
-        expect(defaultWsUrl).toBe('ws://13.36.191.0/ws');
+        expect(defaultApiUrl).toBe('https://api.glycopilot.tech/api');
+        expect(defaultWsUrl).toBe('wss://api.glycopilot.tech/ws');
     });
 });

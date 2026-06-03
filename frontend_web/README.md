@@ -26,7 +26,7 @@ npm install
 
 | Variable | Défaut | Rôle |
 | --- | --- | --- |
-| `REACT_APP_API_URL` | `http://localhost:8006/api` | URL de base de l'API Django |
+| `REACT_APP_API_URL` | `https://api.glycopilot.tech/api` | URL de base de l'API Django |
 | `REACT_APP_API_TIMEOUT` | `10000` | Timeout des requêtes axios (ms) |
 | `HOST` | `0.0.0.0` | Interface d'écoute du dev server (utile en Docker) |
 | `PORT` | `3000` | Port du dev server |

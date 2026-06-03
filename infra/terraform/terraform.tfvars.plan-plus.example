@@ -21,8 +21,8 @@ enable_plan_plus        = true
 plan_plus_desired_count = 0
 
 # Optional: attach minimal ECS deploy permissions to the GitHub Actions IAM user.
-enable_plan_plus_ci_deploy_policy = false
-plan_plus_ci_deploy_user_name     = "glycopilot-s3-user"
+enable_plan_plus_ci_deploy_policy = true
+plan_plus_ci_deploy_user_name     = "github_action"
 
 # Optional CloudWatch dashboard for presentation/ops.
 enable_observability_dashboard = false

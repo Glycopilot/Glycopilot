@@ -6,6 +6,10 @@ instance_type    = "t3.micro"
 data_bucket_name = "glycopilot-target-data-bucket"
 frontend_bucket_name = "glycopilot-target-web-frontend"
 
+enable_frontend_cloudfront              = true
+frontend_cloudfront_aliases             = ["www.glycopilot.tech"]
+frontend_cloudfront_acm_certificate_arn = "arn:aws:acm:us-east-1:<account-id>:certificate/<frontend-certificate-id>"
+
 # SSH target account.
 # Generate a target-only key locally and never commit the private key:
 # ssh-keygen -t ed25519 -f infra/ssh/glycopilot_target_deploy_key -C "glycopilot-target-deploy"
@@ -32,9 +36,10 @@ plan_plus_desired_count = 0
 # Required only when enable_plan_plus=true.
 plan_plus_backend_image                  = ""
 plan_plus_ai_service_image               = ""
-plan_plus_allowed_hosts                  = "*"
-plan_plus_cors_allowed_origins           = ""
-plan_plus_csrf_trusted_origins           = ""
+plan_plus_alb_certificate_arn            = "arn:aws:acm:eu-west-3:<account-id>:certificate/<api-admin-certificate-id>"
+plan_plus_allowed_hosts                  = "api.glycopilot.tech,admin.glycopilot.tech"
+plan_plus_cors_allowed_origins           = "https://www.glycopilot.tech"
+plan_plus_csrf_trusted_origins           = "https://www.glycopilot.tech,https://admin.glycopilot.tech"
 plan_plus_backend_secret_key_value_from     = ""
 plan_plus_db_password_value_from            = ""
 plan_plus_ai_internal_token_value_from      = ""
