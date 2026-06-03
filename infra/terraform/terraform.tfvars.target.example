@@ -10,6 +10,9 @@ enable_frontend_cloudfront              = true
 frontend_cloudfront_aliases             = ["www.glycopilot.tech"]
 frontend_cloudfront_acm_certificate_arn = "arn:aws:acm:us-east-1:<account-id>:certificate/<frontend-certificate-id>"
 
+enable_frontend_web_ci_deploy_policy = true
+frontend_web_ci_deploy_user_name     = "github_action"
+
 # SSH target account.
 # Generate a target-only key locally and never commit the private key:
 # ssh-keygen -t ed25519 -f infra/ssh/glycopilot_target_deploy_key -C "glycopilot-target-deploy"

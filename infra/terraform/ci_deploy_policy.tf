@@ -59,3 +59,22 @@ resource "aws_iam_user_policy" "plan_plus_ci_deploy" {
     ]
   })
 }
+
+resource "aws_iam_user_policy" "frontend_web_ci_deploy" {
+  count = var.enable_frontend_web_ci_deploy_policy && var.enable_frontend_cloudfront ? 1 : 0
+
+  name = "glycopilot-frontend-web-ci-deploy"
+  user = var.frontend_web_ci_deploy_user_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "InvalidateFrontendCloudFront"
+        Effect   = "Allow"
+        Action   = ["cloudfront:CreateInvalidation"]
+        Resource = aws_cloudfront_distribution.frontend_web[0].arn
+      }
+    ]
+  })
+}

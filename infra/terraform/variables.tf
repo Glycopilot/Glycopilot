@@ -70,6 +70,18 @@ variable "plan_plus_ci_deploy_user_name" {
   default     = "glycopilot-s3-user"
 }
 
+variable "enable_frontend_web_ci_deploy_policy" {
+  description = "Attache une policy IAM minimale à l'utilisateur GitHub Actions pour invalider CloudFront après le déploiement du frontend web."
+  type        = bool
+  default     = false
+}
+
+variable "frontend_web_ci_deploy_user_name" {
+  description = "Nom de l'utilisateur IAM utilisé par GitHub Actions pour le déploiement du frontend web."
+  type        = string
+  default     = "github_action"
+}
+
 variable "enable_observability_dashboard" {
   description = "Crée un dashboard CloudWatch léger pour suivre santé runtime et inducteurs de coûts."
   type        = bool
