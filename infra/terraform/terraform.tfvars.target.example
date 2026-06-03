@@ -5,6 +5,7 @@ aws_region       = "eu-west-3"
 instance_type    = "t3.micro"
 data_bucket_name = "glycopilot-target-data-bucket"
 frontend_bucket_name = "glycopilot-target-web-frontend"
+landing_bucket_name  = "glycopilot-fr-landing"
 
 enable_frontend_cloudfront              = true
 frontend_cloudfront_aliases             = ["www.glycopilot.tech"]
@@ -12,6 +13,13 @@ frontend_cloudfront_acm_certificate_arn = "arn:aws:acm:us-east-1:<account-id>:ce
 
 enable_frontend_web_ci_deploy_policy = true
 frontend_web_ci_deploy_user_name     = "github_action"
+
+enable_landing_cloudfront              = true
+landing_cloudfront_aliases             = ["glycopilot.fr", "www.glycopilot.fr"]
+landing_cloudfront_acm_certificate_arn = "arn:aws:acm:us-east-1:<account-id>:certificate/<landing-certificate-id>"
+
+enable_landing_ci_deploy_policy = true
+landing_ci_deploy_user_name     = "github_action"
 
 # SSH target account.
 # Generate a target-only key locally and never commit the private key:

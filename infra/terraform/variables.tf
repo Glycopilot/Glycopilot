@@ -58,6 +58,36 @@ variable "frontend_cloudfront_price_class" {
   default     = "PriceClass_100"
 }
 
+variable "landing_bucket_name" {
+  description = "Bucket S3 du site vitrine statique glycopilot.fr."
+  type        = string
+  default     = "glycopilot-fr-landing"
+}
+
+variable "enable_landing_cloudfront" {
+  description = "Crée une distribution CloudFront devant le bucket du site vitrine."
+  type        = bool
+  default     = false
+}
+
+variable "landing_cloudfront_aliases" {
+  description = "Domaines custom CloudFront du site vitrine. Le certificat ACM doit couvrir tous ces alias."
+  type        = list(string)
+  default     = []
+}
+
+variable "landing_cloudfront_acm_certificate_arn" {
+  description = "ARN ACM us-east-1 utilisé par CloudFront pour les alias du site vitrine."
+  type        = string
+  default     = ""
+}
+
+variable "landing_cloudfront_price_class" {
+  description = "Price class CloudFront du site vitrine."
+  type        = string
+  default     = "PriceClass_100"
+}
+
 variable "enable_plan_plus_ci_deploy_policy" {
   description = "Attache une policy IAM minimale à l'utilisateur GitHub Actions pour déployer Plan Plus ECS. À activer seulement sur le compte source/cible choisi."
   type        = bool
@@ -78,6 +108,18 @@ variable "enable_frontend_web_ci_deploy_policy" {
 
 variable "frontend_web_ci_deploy_user_name" {
   description = "Nom de l'utilisateur IAM utilisé par GitHub Actions pour le déploiement du frontend web."
+  type        = string
+  default     = "github_action"
+}
+
+variable "enable_landing_ci_deploy_policy" {
+  description = "Attache une policy IAM minimale à l'utilisateur GitHub Actions pour déployer le site vitrine."
+  type        = bool
+  default     = false
+}
+
+variable "landing_ci_deploy_user_name" {
+  description = "Nom de l'utilisateur IAM utilisé par GitHub Actions pour le déploiement du site vitrine."
   type        = string
   default     = "github_action"
 }

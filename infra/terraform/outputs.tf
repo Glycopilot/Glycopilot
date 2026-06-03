@@ -28,6 +28,26 @@ output "frontend_cloudfront_domain_name" {
   value       = var.enable_frontend_cloudfront ? aws_cloudfront_distribution.frontend_web[0].domain_name : null
 }
 
+output "landing_bucket_name" {
+  description = "Nom du bucket S3 du site vitrine glycopilot.fr."
+  value       = aws_s3_bucket.landing.bucket
+}
+
+output "landing_website_endpoint" {
+  description = "Endpoint website S3 du site vitrine."
+  value       = aws_s3_bucket_website_configuration.landing.website_endpoint
+}
+
+output "landing_cloudfront_distribution_id" {
+  description = "ID de la distribution CloudFront du site vitrine. Null tant que CloudFront est désactivé."
+  value       = var.enable_landing_cloudfront ? aws_cloudfront_distribution.landing[0].id : null
+}
+
+output "landing_cloudfront_domain_name" {
+  description = "Nom de domaine CloudFront à utiliser comme cible CNAME DNS du site vitrine. Null tant que CloudFront est désactivé."
+  value       = var.enable_landing_cloudfront ? aws_cloudfront_distribution.landing[0].domain_name : null
+}
+
 output "observability_dashboard_name" {
   description = "Nom du dashboard CloudWatch Glycopilot. Null tant que enable_observability_dashboard=false."
   value       = var.enable_observability_dashboard ? aws_cloudwatch_dashboard.glycopilot[0].dashboard_name : null
