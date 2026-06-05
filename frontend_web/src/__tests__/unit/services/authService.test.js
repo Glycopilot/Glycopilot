@@ -128,7 +128,7 @@ describe('authService', () => {
         },
       });
       const result = await authService.login('doc@test.com', 'Password1');
-      expect(apiClient.post).toHaveBeenCalledWith('/auth/login/', { email: 'doc@test.com', password: 'Password1' });
+      expect(apiClient.post).toHaveBeenCalledWith('/auth/login', { email: 'doc@test.com', password: 'Password1' });
       expect(localStorage.getItem('access_token')).toBe('access-token');
       expect(localStorage.getItem('refresh_token')).toBe('refresh-token');
       expect(localStorage.getItem('user_id')).toBe('u-1');

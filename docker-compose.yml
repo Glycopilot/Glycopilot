@@ -128,7 +128,8 @@ services:
     restart: always
     # Crée un secret GitHub spécifique AI_ENV_FILE si elle a ses propres secrets
     env_file:
-      - ./ai_service/.env.prod 
+      - path: ./ai_service/.env.prod
+        format: raw
     networks:
       - glycopilot-network
     expose:
@@ -165,7 +166,12 @@ services:
     container_name: glycopilot-db-aws
     restart: always
     env_file:
-      - ./backend/.env.prod
+      - path: ./backend/.env.prod
+        format: raw
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-glycopilot_rollback_db}
+      POSTGRES_USER: ${POSTGRES_USER:-glycopilot_rollback_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-glycopilot_rollback_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -202,7 +208,8 @@ services:
     container_name: glycopilot-back-aws
     restart: always
     env_file:
-      - ./backend/.env.prod
+      - path: ./backend/.env.prod
+        format: raw
     environment:
       Django_ENV: production
       DB_ENGINE: postgresql
@@ -215,8 +222,6 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     depends_on:
-      database_aws:
-        condition: service_healthy
       redis_aws:
         condition: service_healthy
     networks:
@@ -234,7 +239,8 @@ services:
     container_name: glycopilot-med-scheduler-aws
     restart: always
     env_file:
-      - ./backend/.env.prod
+      - path: ./backend/.env.prod
+        format: raw
     environment:
       Django_ENV: production
       DB_ENGINE: postgresql

@@ -16,6 +16,12 @@ variable "ssh_public_key" {
   default     = ""
 }
 
+variable "ssh_private_key_path" {
+  description = "Chemin local de la clé privée SSH utilisé uniquement pour afficher l'output de connexion."
+  type        = string
+  default     = "infra/ssh/glycopilot_deploy_key"
+}
+
 variable "data_bucket_name" {
   description = "Bucket S3 existant utilisé par le socle commun pour les médias, artefacts et backups."
   type        = string
@@ -28,6 +34,60 @@ variable "frontend_bucket_name" {
   default     = "glycopilot-web-frontend-958587270787"
 }
 
+variable "enable_frontend_cloudfront" {
+  description = "Crée une distribution CloudFront devant le bucket frontend web."
+  type        = bool
+  default     = false
+}
+
+variable "frontend_cloudfront_aliases" {
+  description = "Domaines custom CloudFront du frontend web. Le certificat ACM doit couvrir tous ces alias."
+  type        = list(string)
+  default     = []
+}
+
+variable "frontend_cloudfront_acm_certificate_arn" {
+  description = "ARN ACM us-east-1 utilisé par CloudFront pour les alias du frontend web."
+  type        = string
+  default     = ""
+}
+
+variable "frontend_cloudfront_price_class" {
+  description = "Price class CloudFront. PriceClass_100 limite la diffusion aux zones les moins coûteuses."
+  type        = string
+  default     = "PriceClass_100"
+}
+
+variable "landing_bucket_name" {
+  description = "Bucket S3 du site vitrine statique glycopilot.fr."
+  type        = string
+  default     = "glycopilot-fr-landing"
+}
+
+variable "enable_landing_cloudfront" {
+  description = "Crée une distribution CloudFront devant le bucket du site vitrine."
+  type        = bool
+  default     = false
+}
+
+variable "landing_cloudfront_aliases" {
+  description = "Domaines custom CloudFront du site vitrine. Le certificat ACM doit couvrir tous ces alias."
+  type        = list(string)
+  default     = []
+}
+
+variable "landing_cloudfront_acm_certificate_arn" {
+  description = "ARN ACM us-east-1 utilisé par CloudFront pour les alias du site vitrine."
+  type        = string
+  default     = ""
+}
+
+variable "landing_cloudfront_price_class" {
+  description = "Price class CloudFront du site vitrine."
+  type        = string
+  default     = "PriceClass_100"
+}
+
 variable "enable_plan_plus_ci_deploy_policy" {
   description = "Attache une policy IAM minimale à l'utilisateur GitHub Actions pour déployer Plan Plus ECS. À activer seulement sur le compte source/cible choisi."
   type        = bool
@@ -38,6 +98,30 @@ variable "plan_plus_ci_deploy_user_name" {
   description = "Nom de l'utilisateur IAM utilisé par GitHub Actions pour le déploiement Plan Plus ECS."
   type        = string
   default     = "glycopilot-s3-user"
+}
+
+variable "enable_frontend_web_ci_deploy_policy" {
+  description = "Attache une policy IAM minimale à l'utilisateur GitHub Actions pour invalider CloudFront après le déploiement du frontend web."
+  type        = bool
+  default     = false
+}
+
+variable "frontend_web_ci_deploy_user_name" {
+  description = "Nom de l'utilisateur IAM utilisé par GitHub Actions pour le déploiement du frontend web."
+  type        = string
+  default     = "github_action"
+}
+
+variable "enable_landing_ci_deploy_policy" {
+  description = "Attache une policy IAM minimale à l'utilisateur GitHub Actions pour déployer le site vitrine."
+  type        = bool
+  default     = false
+}
+
+variable "landing_ci_deploy_user_name" {
+  description = "Nom de l'utilisateur IAM utilisé par GitHub Actions pour le déploiement du site vitrine."
+  type        = string
+  default     = "github_action"
 }
 
 variable "enable_observability_dashboard" {
@@ -141,6 +225,12 @@ variable "plan_plus_backend_image" {
 
 variable "plan_plus_ai_service_image" {
   description = "Image complète du service IA Plan Plus. Obligatoire uniquement si enable_plan_plus=true."
+  type        = string
+  default     = ""
+}
+
+variable "plan_plus_alb_certificate_arn" {
+  description = "ARN ACM eu-west-3 pour exposer Plan Plus en HTTPS via l ALB. Laisser vide pour ne créer que le listener HTTP."
   type        = string
   default     = ""
 }

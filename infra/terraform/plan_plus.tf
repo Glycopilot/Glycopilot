@@ -201,7 +201,7 @@ resource "aws_lb_target_group" "plan_plus_backend" {
     unhealthy_threshold = 5
     timeout             = 5
     interval            = 30
-    matcher             = "200"
+    matcher             = "200,400"
   }
 
   tags = merge(local.plan_plus_tags, {
@@ -215,6 +215,23 @@ resource "aws_lb_listener" "plan_plus_http" {
   load_balancer_arn = aws_lb.plan_plus[0].arn
   port              = 80
   protocol          = "HTTP"
+
+  tags = local.plan_plus_tags
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.plan_plus_backend[0].arn
+  }
+}
+
+resource "aws_lb_listener" "plan_plus_https" {
+  count = var.enable_plan_plus && var.plan_plus_alb_certificate_arn != "" ? 1 : 0
+
+  load_balancer_arn = aws_lb.plan_plus[0].arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.plan_plus_alb_certificate_arn
 
   tags = local.plan_plus_tags
 

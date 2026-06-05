@@ -1,8 +1,8 @@
-resource "aws_s3_bucket" "frontend_web" {
-  bucket = var.frontend_bucket_name
+resource "aws_s3_bucket" "landing" {
+  bucket = var.landing_bucket_name
 
   tags = {
-    Name = "glycopilot-web-frontend"
+    Name = "glycopilot-fr-landing"
   }
 
   lifecycle {
@@ -10,16 +10,16 @@ resource "aws_s3_bucket" "frontend_web" {
   }
 }
 
-resource "aws_s3_bucket_ownership_controls" "frontend_web" {
-  bucket = aws_s3_bucket.frontend_web.id
+resource "aws_s3_bucket_ownership_controls" "landing" {
+  bucket = aws_s3_bucket.landing.id
 
   rule {
     object_ownership = "BucketOwnerEnforced"
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "frontend_web" {
-  bucket = aws_s3_bucket.frontend_web.id
+resource "aws_s3_bucket_public_access_block" "landing" {
+  bucket = aws_s3_bucket.landing.id
 
   block_public_acls       = false
   ignore_public_acls      = false
@@ -27,8 +27,8 @@ resource "aws_s3_bucket_public_access_block" "frontend_web" {
   restrict_public_buckets = false
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "frontend_web" {
-  bucket = aws_s3_bucket.frontend_web.id
+resource "aws_s3_bucket_server_side_encryption_configuration" "landing" {
+  bucket = aws_s3_bucket.landing.id
 
   rule {
     bucket_key_enabled       = false
@@ -40,8 +40,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "frontend_web" {
   }
 }
 
-resource "aws_s3_bucket_website_configuration" "frontend_web" {
-  bucket = aws_s3_bucket.frontend_web.id
+resource "aws_s3_bucket_website_configuration" "landing" {
+  bucket = aws_s3_bucket.landing.id
 
   index_document {
     suffix = "index.html"
@@ -52,8 +52,8 @@ resource "aws_s3_bucket_website_configuration" "frontend_web" {
   }
 }
 
-resource "aws_s3_bucket_policy" "frontend_web_public_read" {
-  bucket = aws_s3_bucket.frontend_web.id
+resource "aws_s3_bucket_policy" "landing_public_read" {
+  bucket = aws_s3_bucket.landing.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -63,10 +63,10 @@ resource "aws_s3_bucket_policy" "frontend_web_public_read" {
         Effect    = "Allow"
         Principal = "*"
         Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.frontend_web.arn}/*"
+        Resource  = "${aws_s3_bucket.landing.arn}/*"
       }
       ],
-      var.enable_frontend_cloudfront ? [
+      var.enable_landing_cloudfront ? [
         {
           Sid    = "AllowCloudFrontServicePrincipalReadOnly"
           Effect = "Allow"
@@ -74,10 +74,10 @@ resource "aws_s3_bucket_policy" "frontend_web_public_read" {
             Service = "cloudfront.amazonaws.com"
           }
           Action   = "s3:GetObject"
-          Resource = "${aws_s3_bucket.frontend_web.arn}/*"
+          Resource = "${aws_s3_bucket.landing.arn}/*"
           Condition = {
             StringEquals = {
-              "AWS:SourceArn" = aws_cloudfront_distribution.frontend_web[0].arn
+              "AWS:SourceArn" = aws_cloudfront_distribution.landing[0].arn
             }
           }
         }
@@ -85,36 +85,36 @@ resource "aws_s3_bucket_policy" "frontend_web_public_read" {
     )
   })
 
-  depends_on = [aws_s3_bucket_public_access_block.frontend_web]
+  depends_on = [aws_s3_bucket_public_access_block.landing]
 }
 
-resource "aws_cloudfront_origin_access_control" "frontend_web" {
-  count = var.enable_frontend_cloudfront ? 1 : 0
+resource "aws_cloudfront_origin_access_control" "landing" {
+  count = var.enable_landing_cloudfront ? 1 : 0
 
-  name                              = "${var.frontend_bucket_name}-oac"
-  description                       = "Acces CloudFront au bucket frontend Glycopilot"
+  name                              = "${var.landing_bucket_name}-oac"
+  description                       = "Acces CloudFront au bucket landing Glycopilot"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
 
-resource "aws_cloudfront_distribution" "frontend_web" {
-  count = var.enable_frontend_cloudfront ? 1 : 0
+resource "aws_cloudfront_distribution" "landing" {
+  count = var.enable_landing_cloudfront ? 1 : 0
 
   enabled             = true
-  comment             = "Glycopilot web frontend"
+  comment             = "Glycopilot landing page"
   default_root_object = "index.html"
-  price_class         = var.frontend_cloudfront_price_class
-  aliases             = var.frontend_cloudfront_aliases
+  price_class         = var.landing_cloudfront_price_class
+  aliases             = var.landing_cloudfront_aliases
 
   origin {
-    domain_name              = aws_s3_bucket.frontend_web.bucket_regional_domain_name
-    origin_id                = "s3-${aws_s3_bucket.frontend_web.bucket}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.frontend_web[0].id
+    domain_name              = aws_s3_bucket.landing.bucket_regional_domain_name
+    origin_id                = "s3-${aws_s3_bucket.landing.bucket}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.landing[0].id
   }
 
   default_cache_behavior {
-    target_origin_id       = "s3-${aws_s3_bucket.frontend_web.bucket}"
+    target_origin_id       = "s3-${aws_s3_bucket.landing.bucket}"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
 
@@ -153,15 +153,15 @@ resource "aws_cloudfront_distribution" "frontend_web" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = var.frontend_cloudfront_acm_certificate_arn
+    acm_certificate_arn      = var.landing_cloudfront_acm_certificate_arn
     minimum_protocol_version = "TLSv1.2_2021"
     ssl_support_method       = "sni-only"
   }
 
   lifecycle {
     precondition {
-      condition     = var.frontend_cloudfront_acm_certificate_arn != ""
-      error_message = "frontend_cloudfront_acm_certificate_arn est requis pour activer CloudFront."
+      condition     = var.landing_cloudfront_acm_certificate_arn != ""
+      error_message = "landing_cloudfront_acm_certificate_arn est requis pour activer CloudFront."
     }
   }
 }

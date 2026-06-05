@@ -18,6 +18,36 @@ output "frontend_website_endpoint" {
   value       = aws_s3_bucket_website_configuration.frontend_web.website_endpoint
 }
 
+output "frontend_cloudfront_distribution_id" {
+  description = "ID de la distribution CloudFront du frontend web. Null tant que CloudFront est désactivé."
+  value       = var.enable_frontend_cloudfront ? aws_cloudfront_distribution.frontend_web[0].id : null
+}
+
+output "frontend_cloudfront_domain_name" {
+  description = "Nom de domaine CloudFront à utiliser comme cible CNAME DNS. Null tant que CloudFront est désactivé."
+  value       = var.enable_frontend_cloudfront ? aws_cloudfront_distribution.frontend_web[0].domain_name : null
+}
+
+output "landing_bucket_name" {
+  description = "Nom du bucket S3 du site vitrine glycopilot.fr."
+  value       = aws_s3_bucket.landing.bucket
+}
+
+output "landing_website_endpoint" {
+  description = "Endpoint website S3 du site vitrine."
+  value       = aws_s3_bucket_website_configuration.landing.website_endpoint
+}
+
+output "landing_cloudfront_distribution_id" {
+  description = "ID de la distribution CloudFront du site vitrine. Null tant que CloudFront est désactivé."
+  value       = var.enable_landing_cloudfront ? aws_cloudfront_distribution.landing[0].id : null
+}
+
+output "landing_cloudfront_domain_name" {
+  description = "Nom de domaine CloudFront à utiliser comme cible CNAME DNS du site vitrine. Null tant que CloudFront est désactivé."
+  value       = var.enable_landing_cloudfront ? aws_cloudfront_distribution.landing[0].domain_name : null
+}
+
 output "observability_dashboard_name" {
   description = "Nom du dashboard CloudWatch Glycopilot. Null tant que enable_observability_dashboard=false."
   value       = var.enable_observability_dashboard ? aws_cloudwatch_dashboard.glycopilot[0].dashboard_name : null
@@ -65,7 +95,7 @@ output "common_ec2_instance_id" {
 
 output "ssh_connection_string" {
   description = "Commande pour se connecter au serveur en SSH (avec clé projet)"
-  value       = "ssh -i infra/ssh/glycopilot_deploy_key ubuntu@${aws_eip.web_eip.public_ip}"
+  value       = "ssh -i ${var.ssh_private_key_path} ubuntu@${aws_eip.web_eip.public_ip}"
 }
 
 output "rds_endpoint" {
@@ -107,6 +137,11 @@ output "plan_plus_enabled" {
 output "plan_plus_alb_dns_name" {
   description = "DNS public de l ALB Plan Plus. Null tant que enable_plan_plus=false."
   value       = var.enable_plan_plus ? aws_lb.plan_plus[0].dns_name : null
+}
+
+output "plan_plus_https_listener_arn" {
+  description = "ARN du listener HTTPS Plan Plus. Null si aucun certificat ALB n est fourni."
+  value       = var.enable_plan_plus && var.plan_plus_alb_certificate_arn != "" ? aws_lb_listener.plan_plus_https[0].arn : null
 }
 
 output "plan_plus_ecs_cluster_name" {

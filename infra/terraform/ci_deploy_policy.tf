@@ -59,3 +59,63 @@ resource "aws_iam_user_policy" "plan_plus_ci_deploy" {
     ]
   })
 }
+
+resource "aws_iam_user_policy" "frontend_web_ci_deploy" {
+  count = var.enable_frontend_web_ci_deploy_policy && var.enable_frontend_cloudfront ? 1 : 0
+
+  name = "glycopilot-frontend-web-ci-deploy"
+  user = var.frontend_web_ci_deploy_user_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "InvalidateFrontendCloudFront"
+        Effect   = "Allow"
+        Action   = ["cloudfront:CreateInvalidation"]
+        Resource = aws_cloudfront_distribution.frontend_web[0].arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy" "landing_ci_deploy" {
+  count = var.enable_landing_ci_deploy_policy ? 1 : 0
+
+  name = "glycopilot-landing-ci-deploy"
+  user = var.landing_ci_deploy_user_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = concat([
+      {
+        Sid    = "ListLandingBucket"
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketLocation",
+          "s3:ListBucket",
+        ]
+        Resource = aws_s3_bucket.landing.arn
+      },
+      {
+        Sid    = "SyncLandingObjects"
+        Effect = "Allow"
+        Action = [
+          "s3:DeleteObject",
+          "s3:GetObject",
+          "s3:PutObject",
+        ]
+        Resource = "${aws_s3_bucket.landing.arn}/*"
+      }
+      ],
+      var.enable_landing_cloudfront ? [
+        {
+          Sid      = "InvalidateLandingCloudFront"
+          Effect   = "Allow"
+          Action   = ["cloudfront:CreateInvalidation"]
+          Resource = aws_cloudfront_distribution.landing[0].arn
+        }
+      ] : []
+    )
+  })
+}
