@@ -41,6 +41,12 @@ export default function LoginScreen({ navigation }) {
     } catch (err) {
       if (err.code === 'ACCOUNT_PENDING') {
         setPendingEmail(email);
+      } else if (err.code === 'ROLE_NOT_ALLOWED') {
+        toastError(
+          'Espace réservé aux médecins',
+          err.message ||
+            "Cet espace est réservé aux médecins. Utilisez l'application mobile GlycoPilot pour les patients."
+        );
       } else {
         toastError('Erreur de connexion', err.message);
       }

@@ -3,19 +3,15 @@ describe('logger', () => {
 
   afterEach(() => {
     jest.resetModules();
-    Object.defineProperty(process.env, 'NODE_ENV', {
-      value: originalEnv,
-      configurable: true,
-    });
+    process.env.NODE_ENV = originalEnv;
     jest.restoreAllMocks();
   });
 
   function loadLoggerWithEnv(env) {
     jest.resetModules();
-    Object.defineProperty(process.env, 'NODE_ENV', {
-      value: env,
-      configurable: true,
-    });
+    // Assignation directe : Object.defineProperty se comporte différemment
+    // selon les versions de Node — l'API standard de process.env est plus fiable.
+    process.env.NODE_ENV = env;
     return require('../../../lib/logger');
   }
 

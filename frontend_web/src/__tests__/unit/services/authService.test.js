@@ -370,4 +370,132 @@ describe('authService', () => {
       await expect(authService.getCurrentUser()).rejects.toThrow('Non authentifié');
     });
   });
+
+  describe('contrôle de rôle (espace médecin)', () => {
+    // Fabrique un JWT factice (header.payload.signature) — signature non vérifiée côté front.
+    const makeJwt = (payloadObj) => {
+      const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64');
+      const body   = Buffer.from(JSON.stringify(payloadObj)).toString('base64');
+      return `${header}.${body}.sig`;
+    };
+
+    it('login : un compte DOCTOR est accepté et user_role est stocké', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: {
+          access:  makeJwt({ role: 'DOCTOR' }),
+          refresh: 'r',
+          user:    { id_auth: 'u', email: 'doc@test.com' },
+        },
+      });
+      await authService.login('doc@test.com', 'Password1');
+      expect(localStorage.getItem('user_role')).toBe('DOCTOR');
+      expect(localStorage.getItem('access_token')).toBeTruthy();
+    });
+
+    it('login : un compte PATIENT est rejeté avec ROLE_NOT_ALLOWED et la session purgée', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: {
+          access:  makeJwt({ role: 'PATIENT' }),
+          refresh: 'r',
+          user:    { id_auth: 'u', email: 'patient@test.com' },
+        },
+      });
+      await expect(authService.login('patient@test.com', 'Password1'))
+        .rejects.toMatchObject({ code: 'ROLE_NOT_ALLOWED', role: 'PATIENT' });
+      expect(localStorage.getItem('access_token')).toBeNull();
+      expect(localStorage.getItem('refresh_token')).toBeNull();
+      expect(localStorage.getItem('user_role')).toBeNull();
+    });
+
+    it('login : fallback sur identity.profiles[0].role_name si le JWT n\'a pas de role', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: {
+          access:  'plain-non-jwt',
+          refresh: 'r',
+          user: {
+            id_auth: 'u',
+            email: 'p@test.com',
+            identity: { profiles: [{ role_name: 'PATIENT' }] },
+          },
+        },
+      });
+      await expect(authService.login('p@test.com', 'Password1'))
+        .rejects.toMatchObject({ code: 'ROLE_NOT_ALLOWED', role: 'PATIENT' });
+      expect(localStorage.getItem('access_token')).toBeNull();
+    });
+
+    it('login : un compte ADMIN est autorisé', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: { access: makeJwt({ role: 'ADMIN' }), refresh: 'r', user: { id_auth: 'u' } },
+      });
+      await authService.login('admin@test.com', 'Password1');
+      expect(localStorage.getItem('user_role')).toBe('ADMIN');
+    });
+
+    it('login : ne plante pas si aucune info de rôle (rétro-compat)', async () => {
+      apiClient.post.mockResolvedValueOnce({
+        data: { access: 'plain-non-jwt', refresh: 'r', user: { id_auth: 'u' } },
+      });
+      await authService.login('x@y.z', 'Password1');
+      expect(localStorage.getItem('access_token')).toBe('plain-non-jwt');
+      expect(localStorage.getItem('user_role')).toBeNull();
+    });
+
+    it('refreshToken : rejette si le nouveau token est PATIENT et purge la session', async () => {
+      localStorage.setItem('refresh_token', 'r');
+      axios.post.mockResolvedValueOnce({ data: { access: makeJwt({ role: 'PATIENT' }) } });
+      await expect(authService.refreshToken()).rejects.toThrow(/réservé aux médecins/);
+      expect(localStorage.getItem('access_token')).toBeNull();
+      expect(localStorage.getItem('refresh_token')).toBeNull();
+    });
+
+    it('refreshToken : accepte un nouveau token DOCTOR et persiste le rôle', async () => {
+      localStorage.setItem('refresh_token', 'r');
+      axios.post.mockResolvedValueOnce({ data: { access: makeJwt({ role: 'DOCTOR' }) } });
+      await authService.refreshToken();
+      expect(localStorage.getItem('user_role')).toBe('DOCTOR');
+      expect(localStorage.getItem('access_token')).toBeTruthy();
+    });
+
+    it('getRole : retourne le rôle stocké quand disponible', () => {
+      localStorage.setItem('user_role', 'DOCTOR');
+      expect(authService.getRole()).toBe('DOCTOR');
+    });
+
+    it('getRole : décode le JWT si aucun rôle stocké, en majuscules', () => {
+      localStorage.setItem('access_token', makeJwt({ role: 'doctor' }));
+      expect(authService.getRole()).toBe('DOCTOR');
+    });
+
+    it('getRole : retourne null si aucun token ni rôle stocké', () => {
+      expect(authService.getRole()).toBeNull();
+    });
+
+    it('getRole : tolère un token malformé', () => {
+      localStorage.setItem('access_token', 'pas-un-jwt-valide');
+      expect(authService.getRole()).toBeNull();
+    });
+
+    it('getRole : tolère un storage indisponible', () => {
+      const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('blocked');
+      });
+      expect(authService.getRole()).toBeNull();
+      getItem.mockRestore();
+    });
+
+    it.each(['DOCTOR', 'ADMIN', 'SUPERADMIN'])('isDoctor : vrai pour %s', (role) => {
+      localStorage.setItem('user_role', role);
+      expect(authService.isDoctor()).toBe(true);
+    });
+
+    it.each(['PATIENT', 'INCONNU'])('isDoctor : faux pour %s', (role) => {
+      localStorage.setItem('user_role', role);
+      expect(authService.isDoctor()).toBe(false);
+    });
+
+    it('isDoctor : faux si aucune info de rôle', () => {
+      expect(authService.isDoctor()).toBe(false);
+    });
+  });
 });

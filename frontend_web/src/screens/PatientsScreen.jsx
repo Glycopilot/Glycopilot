@@ -347,13 +347,16 @@ function HbA1cCard({ value, unit, measuredAt, onSave }) {
 
   const save = async () => {
     const parsed = parseFloat(String(draft).replace(',', '.'));
-    if (!Number.isFinite(parsed) || parsed < 3 || parsed > 20) {
-      toastError('Valeur invalide', "L'HbA1c doit être un nombre entre 3 et 20 %");
+    // Le backend accepte une valeur entre 4 et 15 % avec 1 décimale max
+    // (PatientHbA1cMedicalUpdateSerializer). On valide pareil côté UI.
+    if (!Number.isFinite(parsed) || parsed < 4 || parsed > 15) {
+      toastError('Valeur invalide', "L'HbA1c doit être un nombre entre 4 et 15 %");
       return;
     }
+    const rounded = Math.round(parsed * 10) / 10;
     setSaving(true);
     try {
-      await onSave(parsed);
+      await onSave(rounded);
       setEditing(false);
     } catch (_e) {
       /* l'erreur est déjà signalée à l'utilisateur en amont */
